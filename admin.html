@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin-Portal - Antragswesen</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Login-Bereich -->
+  <div class="start-page" id="loginSection">
+    <div class="bg-decoration">
+      <div class="bg-circle bg-circle-1"></div>
+      <div class="bg-circle bg-circle-2"></div>
+      <div class="bg-grid"></div>
+    </div>
+
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-icon">🔐</div>
+        <h2>Admin-Anmeldung</h2>
+      </div>
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="username">Benutzername</label>
+          <input type="text" id="username" placeholder="Benutzername" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="password">Passwort</label>
+          <input type="password" id="password" placeholder="Passwort" required autocomplete="current-password">
+        </div>
+        <div id="loginError" class="login-error" style="display: none;">
+          Ungültige Zugangsdaten. Bitte versuchen Sie es erneut.
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">
+          Anmelden
+        </button>
+      </form>
+      <div class="login-hint">
+        <a href="index.html" class="btn btn-secondary btn-sm" style="margin-top: 1rem;">← Zurück zur Übersicht</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin-Bereich (nach Login sichtbar) -->
+  <div id="adminSection" style="display: none;">
+    <header class="header">
+      <h1>
+        <span class="icon">⚙️</span>
+        Admin-Portal
+      </h1>
+      <div class="header-right">
+        <a href="index.html" class="btn btn-secondary btn-sm">← Zurück</a>
+        <button class="btn btn-danger btn-sm" onclick="logout()">Abmelden</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="dashboard">
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('insassen')">👤 Insassen</button>
+          <button class="tab" onclick="switchTab('mitarbeiter')">🛡️ Mitarbeiter</button>
+          <button class="tab" onclick="switchTab('termine')">📅 Termine</button>
+        </div>
+
+        <!-- Insassen-Verwaltung -->
+        <section class="section" id="insassenSection">
+          <div class="section-header">
+            <h2>👤 Insassen-Verwaltung <span class="count" id="insassenCount">0</span></h2>
+            <button class="btn btn-primary" onclick="openNewInsasseModal()">+ Neuer Insasse</button>
+          </div>
+          <div class="user-list" id="insassenList">
+            <!-- Dynamisch gefüllt -->
+          </div>
+        </section>
+
+        <!-- Mitarbeiter-Verwaltung -->
+        <section class="section" id="mitarbeiterSection" style="display: none;">
+          <div class="section-header">
+            <h2>🛡️ Mitarbeiter-Verwaltung <span class="count" id="mitarbeiterCount">0</span></h2>
+            <button class="btn btn-primary" onclick="openNewMitarbeiterModal()">+ Neuer Mitarbeiter</button>
+          </div>
+          <div class="user-list" id="mitarbeiterList">
+            <!-- Dynamisch gefüllt -->
+          </div>
+        </section>
+
+        <!-- Termin-Verwaltung -->
+        <section class="section" id="termineSection" style="display: none;">
+          <div class="section-header">
+            <h2>📅 Allgemeine Termine <span class="count" id="termineCount">0</span></h2>
+            <button class="btn btn-primary" onclick="openNewAdminTerminModal()">+ Neuer Termin</button>
+          </div>
+          <p class="section-hint">Diese Termine sind für alle Mitarbeiter sichtbar.</p>
+          <div class="termin-list" id="adminTerminList">
+            <!-- Dynamisch gefüllt -->
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Neuer Insasse -->
+  <div class="modal-overlay" id="newInsasseModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Neuer Insasse</h3>
+        <button class="modal-close" onclick="closeModal('newInsasseModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="insVorname">Vorname</label>
+            <input type="text" id="insVorname" placeholder="Vorname" required>
+          </div>
+          <div class="form-group">
+            <label for="insNachname">Nachname</label>
+            <input type="text" id="insNachname" placeholder="Nachname" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="insGeburtsdatum">Geburtsdatum</label>
+          <input type="date" id="insGeburtsdatum" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="insJva">Haus</label>
+            <select id="insJva" onchange="updateInsasseStationen()">
+              <option value="">Bitte wählen...</option>
+              <option value="haus1">Haus 1</option>
+              <option value="haus2">Haus 2</option>
+              <option value="haus3">Haus 3</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="insStation">Station</label>
+            <select id="insStation" disabled>
+              <option value="">Erst Haus wählen...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('newInsasseModal')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="createInsasse()">Anlegen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Insasse bearbeiten -->
+  <div class="modal-overlay" id="editInsasseModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Insasse bearbeiten</h3>
+        <button class="modal-close" onclick="closeModal('editInsasseModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editInsId">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editInsVorname">Vorname</label>
+            <input type="text" id="editInsVorname" placeholder="Vorname" required>
+          </div>
+          <div class="form-group">
+            <label for="editInsNachname">Nachname</label>
+            <input type="text" id="editInsNachname" placeholder="Nachname" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="editInsGeburtsdatum">Geburtsdatum</label>
+          <input type="date" id="editInsGeburtsdatum" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editInsJva">Haus</label>
+            <select id="editInsJva" onchange="updateEditInsasseStationen()">
+              <option value="">Bitte wählen...</option>
+              <option value="haus1">Haus 1</option>
+              <option value="haus2">Haus 2</option>
+              <option value="haus3">Haus 3</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="editInsStation">Station</label>
+            <select id="editInsStation" disabled>
+              <option value="">Erst Haus wählen...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('editInsasseModal')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="saveInsasse()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Neuer Mitarbeiter -->
+  <div class="modal-overlay" id="newMitarbeiterModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Neuer Mitarbeiter</h3>
+        <button class="modal-close" onclick="closeModal('newMitarbeiterModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="mitVorname">Vorname</label>
+            <input type="text" id="mitVorname" placeholder="Vorname" required>
+          </div>
+          <div class="form-group">
+            <label for="mitNachname">Nachname</label>
+            <input type="text" id="mitNachname" placeholder="Nachname" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="mitGeburtsdatum">Geburtsdatum</label>
+          <input type="date" id="mitGeburtsdatum" required>
+        </div>
+        <div class="form-group">
+          <label>Rolle</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="mitRolle" value="mitarbeiter" checked onchange="updateMitarbeiterFields()">
+              <span class="radio-label">👷 Mitarbeiter</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="mitRolle" value="stationsleitung" onchange="updateMitarbeiterFields()">
+              <span class="radio-label">📋 Stationsleitung</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="mitRolle" value="haus-leitung" onchange="updateMitarbeiterFields()">
+              <span class="radio-label">🏛️ Hausleitung</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Haus/Häuser <span id="mitJvaHint" class="hint">(Mehrfachauswahl möglich)</span></label>
+          <div class="checkbox-group" id="mitJvaCheckboxes">
+            <label class="checkbox-option">
+              <input type="checkbox" name="mitJva" value="haus1" onchange="updateMitarbeiterStationen()">
+              <span class="checkbox-label">Haus 1</span>
+            </label>
+            <label class="checkbox-option">
+              <input type="checkbox" name="mitJva" value="haus2" onchange="updateMitarbeiterStationen()">
+              <span class="checkbox-label">Haus 2</span>
+            </label>
+            <label class="checkbox-option">
+              <input type="checkbox" name="mitJva" value="haus3" onchange="updateMitarbeiterStationen()">
+              <span class="checkbox-label">Haus 3</span>
+            </label>
+          </div>
+          <div id="mitJvaWarning" class="field-warning" style="display: none;"></div>
+        </div>
+        <div class="form-group" id="mitStationGroup">
+          <label for="mitStation">Station</label>
+          <select id="mitStation" disabled>
+            <option value="">Erst Haus wählen...</option>
+          </select>
+          <div id="mitStationWarning" class="field-warning" style="display: none;"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('newMitarbeiterModal')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="createMitarbeiter()">Anlegen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Mitarbeiter bearbeiten -->
+  <div class="modal-overlay" id="editMitarbeiterModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Mitarbeiter bearbeiten</h3>
+        <button class="modal-close" onclick="closeModal('editMitarbeiterModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editMitId">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editMitVorname">Vorname</label>
+            <input type="text" id="editMitVorname" placeholder="Vorname" required>
+          </div>
+          <div class="form-group">
+            <label for="editMitNachname">Nachname</label>
+            <input type="text" id="editMitNachname" placeholder="Nachname" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="editMitGeburtsdatum">Geburtsdatum</label>
+          <input type="date" id="editMitGeburtsdatum" required>
+        </div>
+        <div class="form-group">
+          <label>Rolle</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="editMitRolle" value="mitarbeiter" onchange="updateEditMitarbeiterFields()">
+              <span class="radio-label">👷 Mitarbeiter</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="editMitRolle" value="stationsleitung" onchange="updateEditMitarbeiterFields()">
+              <span class="radio-label">📋 Stationsleitung</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="editMitRolle" value="haus-leitung" onchange="updateEditMitarbeiterFields()">
+              <span class="radio-label">🏛️ Hausleitung</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Haus/Häuser <span id="editMitJvaHint" class="hint">(Mehrfachauswahl möglich)</span></label>
+          <div class="checkbox-group" id="editMitJvaCheckboxes">
+            <label class="checkbox-option">
+              <input type="checkbox" name="editMitJva" value="haus1" onchange="updateEditMitarbeiterStationen()">
+              <span class="checkbox-label">Haus 1</span>
+            </label>
+            <label class="checkbox-option">
+              <input type="checkbox" name="editMitJva" value="haus2" onchange="updateEditMitarbeiterStationen()">
+              <span class="checkbox-label">Haus 2</span>
+            </label>
+            <label class="checkbox-option">
+              <input type="checkbox" name="editMitJva" value="haus3" onchange="updateEditMitarbeiterStationen()">
+              <span class="checkbox-label">Haus 3</span>
+            </label>
+          </div>
+          <div id="editMitJvaWarning" class="field-warning" style="display: none;"></div>
+        </div>
+        <div class="form-group" id="editMitStationGroup">
+          <label for="editMitStation">Station</label>
+          <select id="editMitStation" disabled>
+            <option value="">Erst Haus wählen...</option>
+          </select>
+          <div id="editMitStationWarning" class="field-warning" style="display: none;"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('editMitarbeiterModal')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="saveMitarbeiter()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Neuer Admin-Termin -->
+  <div class="modal-overlay" id="adminTerminModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Neuer allgemeiner Termin</h3>
+        <button class="modal-close" onclick="closeModal('adminTerminModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="adminTerminTitel">Titel <span class="required">*</span></label>
+          <input type="text" id="adminTerminTitel" placeholder="Titel des Termins" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="adminTerminBeschreibung">Beschreibung</label>
+          <textarea id="adminTerminBeschreibung" placeholder="Optionale Beschreibung..." rows="3"></textarea>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="adminTerminDatum">Datum <span class="required">*</span></label>
+            <input type="date" id="adminTerminDatum" required>
+          </div>
+          <div class="form-group">
+            <label for="adminTerminUhrzeit">Uhrzeit (optional)</label>
+            <input type="time" id="adminTerminUhrzeit">
+          </div>
+        </div>
+        
+        <input type="hidden" id="adminTerminEditId">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('adminTerminModal')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="speichereAdminTermin()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // ============================================
+    // LOGIN
+    // ============================================
+    
+    function handleLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      
+      if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+        sessionStorage.setItem('adminLoggedIn', 'true');
+        showAdminSection();
+      } else {
+        document.getElementById('loginError').style.display = 'block';
+      }
+    }
+    
+    function logout() {
+      sessionStorage.removeItem('adminLoggedIn');
+      location.reload();
+    }
+    
+    function showAdminSection() {
+      document.getElementById('loginSection').style.display = 'none';
+      document.getElementById('adminSection').style.display = 'block';
+      renderUsers();
+    }
+    
+    // Check if already logged in
+    if (sessionStorage.getItem('adminLoggedIn') === 'true') {
+      showAdminSection();
+    }
+
+    // ============================================
+    // TAB-WECHSEL
+    // ============================================
+    
+    function switchTab(tab) {
+      const tabs = document.querySelectorAll('.tab');
+      tabs.forEach(t => t.classList.remove('active'));
+      
+      document.getElementById('insassenSection').style.display = 'none';
+      document.getElementById('mitarbeiterSection').style.display = 'none';
+      document.getElementById('termineSection').style.display = 'none';
+      
+      if (tab === 'insassen') {
+        tabs[0].classList.add('active');
+        document.getElementById('insassenSection').style.display = 'block';
+      } else if (tab === 'mitarbeiter') {
+        tabs[1].classList.add('active');
+        document.getElementById('mitarbeiterSection').style.display = 'block';
+      } else if (tab === 'termine') {
+        tabs[2].classList.add('active');
+        document.getElementById('termineSection').style.display = 'block';
+        renderAdminTermine();
+      }
+    }
+
+    // ============================================
+    // INSASSEN
+    // ============================================
+    
+    function openNewInsasseModal() {
+      document.getElementById('insVorname').value = '';
+      document.getElementById('insNachname').value = '';
+      document.getElementById('insGeburtsdatum').value = '';
+      document.getElementById('insJva').value = '';
+      document.getElementById('insStation').innerHTML = '<option value="">Erst Haus wählen...</option>';
+      document.getElementById('insStation').disabled = true;
+      openModal('newInsasseModal');
+    }
+    
+    function updateInsasseStationen() {
+      const haus = document.getElementById('insJva').value;
+      const stationSelect = document.getElementById('insStation');
+      
+      if (!haus) {
+        stationSelect.innerHTML = '<option value="">Erst Haus wählen...</option>';
+        stationSelect.disabled = true;
+        return;
+      }
+      
+      const stationen = HAUS_CONFIG[haus].stationen;
+      stationSelect.innerHTML = '<option value="">Bitte wählen...</option>' +
+        stationen.map(s => `<option value="${s}">Station ${s}</option>`).join('');
+      stationSelect.disabled = false;
+    }
+    
+    function createInsasse() {
+      const vorname = document.getElementById('insVorname').value.trim();
+      const nachname = document.getElementById('insNachname').value.trim();
+      const geburtsdatum = document.getElementById('insGeburtsdatum').value;
+      const jva = document.getElementById('insJva').value;
+      const station = document.getElementById('insStation').value;
+      
+      if (!vorname || !nachname) {
+        alert('Bitte Vor- und Nachname eingeben.');
+        return;
+      }
+      if (!geburtsdatum) {
+        alert('Bitte Geburtsdatum eingeben.');
+        return;
+      }
+      if (!jva || !station) {
+        alert('Bitte Haus und Station auswählen.');
+        return;
+      }
+      
+      userSystem.createInsasse({ vorname, nachname, geburtsdatum, jva, station });
+      closeModal('newInsasseModal');
+      renderUsers();
+    }
+    
+    function openEditInsasseModal(id) {
+      const user = userSystem.getUser(id);
+      if (!user) return;
+      
+      document.getElementById('editInsId').value = id;
+      document.getElementById('editInsVorname').value = user.vorname;
+      document.getElementById('editInsNachname').value = user.nachname;
+      document.getElementById('editInsGeburtsdatum').value = user.geburtsdatum;
+      document.getElementById('editInsJva').value = user.jva;
+      updateEditInsasseStationen();
+      document.getElementById('editInsStation').value = user.station;
+      
+      openModal('editInsasseModal');
+    }
+    
+    function updateEditInsasseStationen() {
+      const haus = document.getElementById('editInsJva').value;
+      const stationSelect = document.getElementById('editInsStation');
+      
+      if (!haus) {
+        stationSelect.innerHTML = '<option value="">Erst Haus wählen...</option>';
+        stationSelect.disabled = true;
+        return;
+      }
+      
+      const stationen = HAUS_CONFIG[haus].stationen;
+      stationSelect.innerHTML = '<option value="">Bitte wählen...</option>' +
+        stationen.map(s => `<option value="${s}">Station ${s}</option>`).join('');
+      stationSelect.disabled = false;
+    }
+    
+    function saveInsasse() {
+      if (!confirm('Sind Sie sicher, dass Sie die Änderungen speichern möchten?')) return;
+      
+      const id = document.getElementById('editInsId').value;
+      const vorname = document.getElementById('editInsVorname').value.trim();
+      const nachname = document.getElementById('editInsNachname').value.trim();
+      const geburtsdatum = document.getElementById('editInsGeburtsdatum').value;
+      const jva = document.getElementById('editInsJva').value;
+      const station = document.getElementById('editInsStation').value;
+      
+      if (!vorname || !nachname) {
+        alert('Bitte Vor- und Nachname eingeben.');
+        return;
+      }
+      if (!geburtsdatum) {
+        alert('Bitte Geburtsdatum eingeben.');
+        return;
+      }
+      if (!jva || !station) {
+        alert('Bitte Haus und Station auswählen.');
+        return;
+      }
+      
+      userSystem.updateUser(id, { vorname, nachname, geburtsdatum, jva, station });
+      closeModal('editInsasseModal');
+      renderUsers();
+    }
+    
+    function deleteInsasse(id, name) {
+      if (!confirm(`Sind Sie sicher, dass Sie den Insassen "${name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
+      
+      userSystem.deleteUser(id);
+      renderUsers();
+    }
+
+    // ============================================
+    // MITARBEITER
+    // ============================================
+    
+    function openNewMitarbeiterModal() {
+      document.getElementById('mitVorname').value = '';
+      document.getElementById('mitNachname').value = '';
+      document.getElementById('mitGeburtsdatum').value = '';
+      document.querySelector('input[name="mitRolle"][value="mitarbeiter"]').checked = true;
+      document.querySelectorAll('input[name="mitJva"]').forEach(cb => cb.checked = false);
+      document.getElementById('mitStation').innerHTML = '<option value="">Erst Haus wählen...</option>';
+      document.getElementById('mitStation').disabled = true;
+      document.getElementById('mitJvaWarning').style.display = 'none';
+      document.getElementById('mitStationWarning').style.display = 'none';
+      updateMitarbeiterFields();
+      openModal('newMitarbeiterModal');
+    }
+    
+    function updateMitarbeiterFields() {
+      const rolle = document.querySelector('input[name="mitRolle"]:checked').value;
+      const stationGroup = document.getElementById('mitStationGroup');
+      const hausHint = document.getElementById('mitJvaHint');
+      
+      if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
+        stationGroup.style.display = 'none';
+        hausHint.textContent = '(Ein Haus auswählen)';
+      } else if (rolle === 'stationsleitung') {
+        stationGroup.style.display = 'block';
+        hausHint.textContent = '(Mehrfachauswahl möglich)';
+      } else {
+        // Normaler Mitarbeiter
+        stationGroup.style.display = 'block';
+        hausHint.textContent = '(Mehrfachauswahl möglich)';
+      }
+      
+      updateMitarbeiterStationen();
+    }
+    
+    function updateMitarbeiterStationen() {
+      const rolle = document.querySelector('input[name="mitRolle"]:checked').value;
+      const selectedHaeuser = Array.from(document.querySelectorAll('input[name="mitJva"]:checked')).map(cb => cb.value);
+      const stationSelect = document.getElementById('mitStation');
+      const hausWarning = document.getElementById('mitJvaWarning');
+      const stationWarning = document.getElementById('mitStationWarning');
+      
+      hausWarning.style.display = 'none';
+      stationWarning.style.display = 'none';
+      
+      // Prüfen auf bereits existierende Hausleitung (nur bei Hausleitung Rolle)
+      if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
+        for (const haus of selectedHaeuser) {
+          if (userSystem.hasJvaLeitung(haus)) {
+            hausWarning.textContent = `⚠️ Für ${getHausName(haus)} existiert bereits eine Hausleitung.`;
+            hausWarning.style.display = 'block';
+            break;
+          }
+        }
+      }
+      
+      // Bei Hausleitung keine Station nötig
+      if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
+        stationSelect.innerHTML = '<option value="">Nicht erforderlich</option>';
+        stationSelect.disabled = true;
+        return;
+      }
+      
+      if (selectedHaeuser.length === 0) {
+        stationSelect.innerHTML = '<option value="">Erst Haus wählen...</option>';
+        stationSelect.disabled = true;
+        return;
+      }
+      
+      // Stationen sammeln (nur von ausgewählten Häusern)
+      let allStationen = [];
+      selectedHaeuser.forEach(haus => {
+        HAUS_CONFIG[haus].stationen.forEach(s => {
+          const key = `${haus}-${s}`;
+          if (!allStationen.find(st => st.key === key)) {
+            allStationen.push({ key, haus, station: s, label: `${getHausName(haus)} - Station ${s}` });
+          }
+        });
+      });
+      
+      stationSelect.innerHTML = '<option value="">Bitte wählen...</option>' +
+        allStationen.map(s => `<option value="${s.key}">${s.label}</option>`).join('');
+      stationSelect.disabled = false;
+    }
+    
+    function createMitarbeiter() {
+      const vorname = document.getElementById('mitVorname').value.trim();
+      const nachname = document.getElementById('mitNachname').value.trim();
+      const geburtsdatum = document.getElementById('mitGeburtsdatum').value;
+      const rolle = document.querySelector('input[name="mitRolle"]:checked').value;
+      const selectedHaeuser = Array.from(document.querySelectorAll('input[name="mitJva"]:checked')).map(cb => cb.value);
+      const stationValue = document.getElementById('mitStation').value;
+      
+      if (!vorname || !nachname) {
+        alert('Bitte Vor- und Nachname eingeben.');
+        return;
+      }
+      if (!geburtsdatum) {
+        alert('Bitte Geburtsdatum eingeben.');
+        return;
+      }
+      if (selectedHaeuser.length === 0) {
+        alert('Bitte mindestens ein Haus auswählen.');
+        return;
+      }
+      
+      // Validierungen für Hausleitung
+      if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
+        if (selectedHaeuser.length > 1) {
+          alert('Eine Hausleitung kann nur einem Haus zugeordnet werden.');
+          return;
+        }
+        if (userSystem.hasJvaLeitung(selectedHaeuser[0])) {
+          alert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine Hausleitung.`);
+          return;
+        }
+        userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
+      } else if (rolle === 'stationsleitung') {
+        // Stationsleitung - Einschränkungen prüfen
+        if (!stationValue) {
+          alert('Bitte eine Station auswählen.');
+          return;
+        }
+        const [haus, station] = stationValue.split('-');
+        if (userSystem.hasStationsleitung(haus, station)) {
+          alert(`Für ${getHausName(haus)} Station ${station} existiert bereits eine Stationsleitung.`);
+          return;
+        }
+        userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
+      } else {
+        // Normaler Mitarbeiter - keine Einschränkungen
+        if (!stationValue) {
+          alert('Bitte eine Station auswählen.');
+          return;
+        }
+        const [haus, station] = stationValue.split('-');
+        userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
+      }
+      
+      closeModal('newMitarbeiterModal');
+      renderUsers();
+    }
+    
+    function openEditMitarbeiterModal(id) {
+      const user = userSystem.getUser(id);
+      if (!user) return;
+      
+      document.getElementById('editMitId').value = id;
+      document.getElementById('editMitVorname').value = user.vorname;
+      document.getElementById('editMitNachname').value = user.nachname;
+      document.getElementById('editMitGeburtsdatum').value = user.geburtsdatum;
+      document.querySelector(`input[name="editMitRolle"][value="${user.rolle}"]`).checked = true;
+      
+      // JVAs setzen
+      document.querySelectorAll('input[name="editMitJva"]').forEach(cb => {
+        cb.checked = user.jvas && user.jvas.includes(cb.value);
+      });
+      
+      document.getElementById('editMitJvaWarning').style.display = 'none';
+      document.getElementById('editMitStationWarning').style.display = 'none';
+      
+      updateEditMitarbeiterFields();
+      
+      // Station setzen (falls vorhanden)
+      if (user.rolle === 'stationsleitung' && user.station && user.jvas) {
+        setTimeout(() => {
+          const stationValue = `${user.jvas[0]}-${user.station}`;
+          document.getElementById('editMitStation').value = stationValue;
+        }, 50);
+      }
+      
+      openModal('editMitarbeiterModal');
+    }
+    
+    function updateEditMitarbeiterFields() {
+      const rolle = document.querySelector('input[name="editMitRolle"]:checked').value;
+      const stationGroup = document.getElementById('editMitStationGroup');
+      const hausHint = document.getElementById('editMitJvaHint');
+      
+      if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
+        stationGroup.style.display = 'none';
+        hausHint.textContent = '(Ein Haus auswählen)';
+      } else {
+        stationGroup.style.display = 'block';
+        hausHint.textContent = '(Mehrfachauswahl möglich)';
+      }
+      
+      updateEditMitarbeiterStationen();
+    }
+    
+    function updateEditMitarbeiterStationen() {
+      const rolle = document.querySelector('input[name="editMitRolle"]:checked').value;
+      const selectedHaeuser = Array.from(document.querySelectorAll('input[name="editMitJva"]:checked')).map(cb => cb.value);
+      const stationSelect = document.getElementById('editMitStation');
+      const userId = document.getElementById('editMitId').value;
+      const hausWarning = document.getElementById('editMitJvaWarning');
+      const stationWarning = document.getElementById('editMitStationWarning');
+      
+      hausWarning.style.display = 'none';
+      stationWarning.style.display = 'none';
+      
+      // Prüfen auf bereits existierende Hausleitung (nur bei Hausleitung Rolle)
+      if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
+        for (const haus of selectedHaeuser) {
+          const existing = userSystem.getJvaLeitung(haus, userId);
+          if (existing) {
+            hausWarning.textContent = `⚠️ Für ${getHausName(haus)} existiert bereits eine Hausleitung (${existing.vorname} ${existing.nachname}).`;
+            hausWarning.style.display = 'block';
+            break;
+          }
+        }
+      }
+      
+      // Bei Hausleitung keine Station nötig
+      if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
+        stationSelect.innerHTML = '<option value="">Nicht erforderlich</option>';
+        stationSelect.disabled = true;
+        return;
+      }
+      
+      if (selectedHaeuser.length === 0) {
+        stationSelect.innerHTML = '<option value="">Erst Haus wählen...</option>';
+        stationSelect.disabled = true;
+        return;
+      }
+      
+      let allStationen = [];
+      selectedHaeuser.forEach(haus => {
+        HAUS_CONFIG[haus].stationen.forEach(s => {
+          const key = `${haus}-${s}`;
+          if (!allStationen.find(st => st.key === key)) {
+            allStationen.push({ key, haus, station: s, label: `${getHausName(haus)} - Station ${s}` });
+          }
+        });
+      });
+      
+      stationSelect.innerHTML = '<option value="">Bitte wählen...</option>' +
+        allStationen.map(s => `<option value="${s.key}">${s.label}</option>`).join('');
+      stationSelect.disabled = false;
+    }
+    
+    function saveMitarbeiter() {
+      if (!confirm('Sind Sie sicher, dass Sie die Änderungen speichern möchten?')) return;
+      
+      const id = document.getElementById('editMitId').value;
+      const vorname = document.getElementById('editMitVorname').value.trim();
+      const nachname = document.getElementById('editMitNachname').value.trim();
+      const geburtsdatum = document.getElementById('editMitGeburtsdatum').value;
+      const rolle = document.querySelector('input[name="editMitRolle"]:checked').value;
+      const selectedHaeuser = Array.from(document.querySelectorAll('input[name="editMitJva"]:checked')).map(cb => cb.value);
+      const stationValue = document.getElementById('editMitStation').value;
+      
+      if (!vorname || !nachname) {
+        alert('Bitte Vor- und Nachname eingeben.');
+        return;
+      }
+      if (!geburtsdatum) {
+        alert('Bitte Geburtsdatum eingeben.');
+        return;
+      }
+      if (selectedHaeuser.length === 0) {
+        alert('Bitte mindestens ein Haus auswählen.');
+        return;
+      }
+      
+      if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
+        if (selectedHaeuser.length > 1) {
+          alert('Eine Hausleitung kann nur einem Haus zugeordnet werden.');
+          return;
+        }
+        const existing = userSystem.getJvaLeitung(selectedHaeuser[0], id);
+        if (existing) {
+          alert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine Hausleitung.`);
+          return;
+        }
+        userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
+      } else if (rolle === 'stationsleitung') {
+        // Stationsleitung - Einschränkungen prüfen
+        if (!stationValue) {
+          alert('Bitte eine Station auswählen.');
+          return;
+        }
+        const [haus, station] = stationValue.split('-');
+        const existing = userSystem.getStationsleitung(haus, station, id);
+        if (existing) {
+          alert(`Für ${getHausName(haus)} Station ${station} existiert bereits eine Stationsleitung.`);
+          return;
+        }
+        userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
+      } else {
+        // Normaler Mitarbeiter - keine Einschränkungen
+        if (!stationValue) {
+          alert('Bitte eine Station auswählen.');
+          return;
+        }
+        const [haus, station] = stationValue.split('-');
+        userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
+      }
+      
+      closeModal('editMitarbeiterModal');
+      renderUsers();
+    }
+    
+    function deleteMitarbeiter(id, name) {
+      if (!confirm(`Sind Sie sicher, dass Sie den Mitarbeiter "${name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
+      
+      userSystem.deleteUser(id);
+      renderUsers();
+    }
+
+    // ============================================
+    // PASSWORT & KOPIEREN
+    // ============================================
+    
+    function resetUserPassword(id) {
+      if (!confirm('Sind Sie sicher, dass Sie das Passwort zurücksetzen möchten?')) return;
+      
+      const newPassword = userSystem.resetPassword(id);
+      if (newPassword) {
+        alert(`Neues Passwort: ${newPassword}`);
+        renderUsers();
+      }
+    }
+    
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        // Visuelles Feedback
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '✓';
+        setTimeout(() => btn.textContent = originalText, 1000);
+      }).catch(err => {
+        alert('Kopieren fehlgeschlagen. Bitte manuell kopieren.');
+      });
+    }
+
+    // ============================================
+    // RENDERING
+    // ============================================
+    
+    function renderUsers() {
+      const insassenList = document.getElementById('insassenList');
+      const mitarbeiterList = document.getElementById('mitarbeiterList');
+      
+      const insassen = userSystem.getInsassen();
+      const mitarbeiter = userSystem.getMitarbeiter();
+      
+      document.getElementById('insassenCount').textContent = insassen.length;
+      document.getElementById('mitarbeiterCount').textContent = mitarbeiter.length;
+      
+      // Insassen rendern
+      if (insassen.length === 0) {
+        insassenList.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">👤</div>
+            <p>Noch keine Insassen angelegt.</p>
+          </div>
+        `;
+      } else {
+        insassenList.innerHTML = insassen.map(user => `
+          <div class="user-card">
+            <div class="user-card-main">
+              <div class="user-avatar">👤</div>
+              <div class="user-info">
+                <div class="user-name">
+                  ${user.insassenNummer ? `<span class="insassen-nummer">${user.insassenNummer}</span>` : ''}
+                  ${escapeHtml(user.vorname)} ${escapeHtml(user.nachname)}
+                </div>
+                <div class="user-meta">
+                  <span>📅 ${formatDateOnly(user.geburtsdatum)}</span>
+                  <span>🏢 ${getHausName(user.jva)} - Station ${user.station}</span>
+                </div>
+                <div class="user-credentials">
+                  <span class="credential-inline">
+                    <strong>Benutzer:</strong> <code>${user.username || '-'}</code>
+                  </span>
+                  <span class="credential-inline">
+                    <strong>Passwort:</strong> <code>${user.password || '-'}</code>
+                    <button class="btn-copy-inline" onclick="copyText('${user.password}')" title="Kopieren">📋</button>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="user-actions">
+              <button class="btn btn-secondary btn-sm" onclick="resetUserPassword('${user.id}')">
+                🔑 Neues Passwort
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="openEditInsasseModal('${user.id}')">
+                ✏️ Bearbeiten
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="deleteInsasse('${user.id}', '${escapeHtml(user.vorname)} ${escapeHtml(user.nachname)}')">
+                🗑️ Löschen
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+      
+      // Mitarbeiter rendern
+      if (mitarbeiter.length === 0) {
+        mitarbeiterList.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🛡️</div>
+            <p>Noch keine Mitarbeiter angelegt.</p>
+          </div>
+        `;
+      } else {
+        mitarbeiterList.innerHTML = mitarbeiter.map(user => {
+          const hausNames = user.jvas ? user.jvas.map(j => getHausName(j)).join(', ') : '-';
+          const stationInfo = (user.rolle === 'stationsleitung' || user.rolle === 'mitarbeiter') && user.station ? ` - Station ${user.station}` : '';
+          
+          // Icon basierend auf Rolle
+          let roleIcon = '👷';
+          if (user.rolle === 'jva-leitung' || user.rolle === 'haus-leitung') roleIcon = '🏛️';
+          else if (user.rolle === 'stationsleitung') roleIcon = '📋';
+          
+          return `
+            <div class="user-card">
+              <div class="user-card-main">
+                <div class="user-avatar">${roleIcon}</div>
+                <div class="user-info">
+                  <div class="user-name">${escapeHtml(user.vorname)} ${escapeHtml(user.nachname)}</div>
+                  <div class="user-role-badge ${user.rolle}">${getRolleText(user.rolle)}</div>
+                  <div class="user-meta">
+                    <span>📅 ${formatDateOnly(user.geburtsdatum)}</span>
+                    <span>🏢 ${hausNames}${stationInfo}</span>
+                  </div>
+                  <div class="user-credentials">
+                    <span class="credential-inline">
+                      <strong>Benutzer:</strong> <code>${user.username || '-'}</code>
+                    </span>
+                    <span class="credential-inline">
+                      <strong>Passwort:</strong> <code>${user.password || '-'}</code>
+                      <button class="btn-copy-inline" onclick="copyText('${user.password}')" title="Kopieren">📋</button>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="user-actions">
+                <button class="btn btn-secondary btn-sm" onclick="resetUserPassword('${user.id}')">
+                  🔑 Neues Passwort
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="openEditMitarbeiterModal('${user.id}')">
+                  ✏️ Bearbeiten
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteMitarbeiter('${user.id}', '${escapeHtml(user.vorname)} ${escapeHtml(user.nachname)}')">
+                  🗑️ Löschen
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // ============================================
+    // ADMIN TERMINE
+    // ============================================
+    
+    function renderAdminTermine() {
+      const liste = document.getElementById('adminTerminList');
+      const termine = terminSystem.getAlleAdminTermine();
+      
+      document.getElementById('termineCount').textContent = termine.length;
+      
+      if (termine.length === 0) {
+        liste.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📅</div>
+            <p>Noch keine allgemeinen Termine angelegt.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      liste.innerHTML = termine.map(termin => {
+        const datum = new Date(termin.datum);
+        const formatDatum = datum.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+        const vergangen = datum < new Date(new Date().setHours(0,0,0,0));
+        
+        return `
+          <div class="termin-card ${vergangen ? 'vergangen' : ''}">
+            <div class="termin-card-main">
+              <div class="termin-datum-box">
+                <span class="termin-tag">${datum.getDate()}</span>
+                <span class="termin-monat">${datum.toLocaleDateString('de-DE', { month: 'short' })}</span>
+              </div>
+              <div class="termin-info">
+                <div class="termin-titel-admin">${escapeHtml(termin.titel)}</div>
+                <div class="termin-meta-admin">
+                  <span>📅 ${formatDatum}</span>
+                  ${termin.uhrzeit ? `<span>🕐 ${termin.uhrzeit} Uhr</span>` : ''}
+                </div>
+                ${termin.beschreibung ? `<p class="termin-beschreibung-admin">${escapeHtml(termin.beschreibung)}</p>` : ''}
+              </div>
+            </div>
+            <div class="termin-actions">
+              <button class="btn btn-danger btn-sm" onclick="deleteAdminTermin('${termin.id}')">
+                🗑️ Löschen
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function openNewAdminTerminModal() {
+      document.getElementById('adminTerminTitel').value = '';
+      document.getElementById('adminTerminBeschreibung').value = '';
+      document.getElementById('adminTerminDatum').value = new Date().toISOString().split('T')[0];
+      document.getElementById('adminTerminUhrzeit').value = '';
+      document.getElementById('adminTerminEditId').value = '';
+      openModal('adminTerminModal');
+    }
+    
+    function speichereAdminTermin() {
+      const titel = document.getElementById('adminTerminTitel').value.trim();
+      const beschreibung = document.getElementById('adminTerminBeschreibung').value.trim();
+      const datum = document.getElementById('adminTerminDatum').value;
+      const uhrzeit = document.getElementById('adminTerminUhrzeit').value;
+      
+      if (!titel) {
+        alert('Bitte geben Sie einen Titel ein.');
+        return;
+      }
+      if (!datum) {
+        alert('Bitte wählen Sie ein Datum.');
+        return;
+      }
+      
+      terminSystem.createTermin({
+        titel,
+        beschreibung,
+        datum,
+        uhrzeit: uhrzeit || null,
+        typ: 'admin',
+        erstelltVonId: 'admin',
+        erstelltVonName: 'Administrator'
+      });
+      
+      closeModal('adminTerminModal');
+      renderAdminTermine();
+    }
+    
+    function deleteAdminTermin(terminId) {
+      if (!confirm('Möchten Sie diesen Termin wirklich löschen?')) return;
+      
+      terminSystem.deleteTermin(terminId);
+      renderAdminTermine();
+    }
+
+    // Initial rendern falls eingeloggt
+    if (sessionStorage.getItem('adminLoggedIn') === 'true') {
+      renderUsers();
+    }
+  </script>
+</body>
+</html>

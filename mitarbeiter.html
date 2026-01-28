@@ -1,0 +1,2408 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mitarbeiter-Portal - Antragswesen</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <!-- Login-Bereich -->
+  <div class="start-page" id="loginSection">
+    <div class="bg-decoration">
+      <div class="bg-circle bg-circle-1"></div>
+      <div class="bg-circle bg-circle-2"></div>
+      <div class="bg-grid"></div>
+    </div>
+
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-icon">🛡️</div>
+        <h2>Mitarbeiter-Portal</h2>
+      </div>
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="username">Benutzername</label>
+          <input type="text" id="username" placeholder="Benutzername" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="password">Passwort</label>
+          <input type="password" id="password" placeholder="Passwort" required autocomplete="current-password">
+        </div>
+        <div id="loginError" class="login-error" style="display: none;">
+          Ungültige Zugangsdaten. Bitte versuchen Sie es erneut.
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">
+          Anmelden
+        </button>
+      </form>
+      <div class="login-hint">
+        <a href="index.html" class="btn btn-secondary btn-sm" style="margin-top: 1rem;">← Zurück zur Übersicht</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Portal-Bereich (nach Login sichtbar) -->
+  <div id="portalSection" style="display: none;">
+    <header class="header">
+      <h1>
+        <span class="icon">🛡️</span>
+        Mitarbeiter-Portal
+      </h1>
+      <div class="header-right">
+        <div class="user-badge">
+          <div>
+            <div class="role" id="userRole">Mitarbeiter</div>
+            <div class="name" id="userName">-</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Abmelden</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- Übersicht (Dashboard) -->
+      <div class="dashboard" id="dashboardView">
+        <!-- Postfach / Benachrichtigungen -->
+        <section class="section notification-section" id="notificationSection" style="display: none;">
+          <div class="section-header">
+            <h2>📬 Postfach <span class="count" id="notificationCount">0</span></h2>
+            <button class="btn btn-sm" onclick="markAllNotificationsRead()" id="markAllReadBtn" style="display: none;">
+              Alle als gelesen markieren
+            </button>
+          </div>
+          <div class="notification-dashboard-list" id="notificationList">
+            <!-- Dynamisch gefüllt -->
+          </div>
+        </section>
+
+        <!-- Kalender / Terminübersicht -->
+        <section class="section kalender-section" id="kalenderSection">
+          <div class="kalender-header-bar">
+            <h2>📅 Terminübersicht</h2>
+            <div class="kalender-toolbar">
+              <div class="kalender-view-buttons">
+                <button type="button" class="view-btn" id="viewTagBtn" onclick="setKalenderAnsicht('tag')">Tag</button>
+                <button type="button" class="view-btn" id="viewWocheBtn" onclick="setKalenderAnsicht('woche')">Woche</button>
+                <button type="button" class="view-btn active" id="viewMonatBtn" onclick="setKalenderAnsicht('monat')">Monat</button>
+              </div>
+              <div class="kalender-nav">
+                <button type="button" class="nav-btn" onclick="kalenderZurueck()" title="Zurück">◀</button>
+                <button type="button" class="nav-btn heute-btn" onclick="kalenderHeute()">Heute</button>
+                <span class="kalender-anzeige" id="kalenderAnzeige">Januar 2024</span>
+                <button type="button" class="nav-btn" onclick="kalenderVor()" title="Vor">▶</button>
+              </div>
+              <button type="button" class="btn btn-primary btn-sm" onclick="openTerminModal()">+ Neuer Termin</button>
+            </div>
+          </div>
+          <div class="kalender-content">
+            <div class="kalender-main" id="kalenderMain">
+              <!-- Dynamisch gefüllt: Tag, Woche oder Monat -->
+            </div>
+            <div class="termine-sidebar" id="termineSidebar">
+              <h4 id="termineSidebarTitel">Termine heute</h4>
+              <div id="termineSidebarListe">
+                <!-- Dynamisch gefüllt -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Info-Box für Zuständigkeitsbereich -->
+        <div class="info-banner" id="zustaendigkeitInfo">
+          <!-- Wird dynamisch gefüllt -->
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('offen')">Offene Anträge</button>
+          <button class="tab" onclick="switchTab('bearbeitung')">Meine Anträge und Aufgaben</button>
+          <button class="tab" onclick="switchTab('eroeffnung')">📋 Pers. Eröffnung</button>
+          <button class="tab" onclick="switchTab('historie')">Erledigt</button>
+        </div>
+
+        <!-- Offene Anträge -->
+        <section class="section" id="offenSection">
+          <div class="section-header">
+            <h2>Offene Anträge <span class="count" id="offenCount">0</span></h2>
+            <div class="sort-controls">
+              <label for="sortierungOffen">Sortieren:</label>
+              <select id="sortierungOffen" onchange="renderAntraege()">
+                <option value="datum-neu">Neueste zuerst</option>
+                <option value="datum-alt">Älteste zuerst</option>
+                <option value="antragsteller-az">Antragsteller A-Z</option>
+                <option value="antragsteller-za">Antragsteller Z-A</option>
+              </select>
+            </div>
+          </div>
+          <div class="antrag-list" id="offenList">
+            <!-- Dynamisch gefüllt -->
+          </div>
+        </section>
+
+        <!-- Meine Anträge und Aufgaben -->
+        <section class="section" id="bearbeitungSection" style="display: none;">
+          <div class="section-header">
+            <h2>Meine Anträge und Aufgaben <span class="count" id="bearbeitungCount">0</span></h2>
+            <div class="sort-controls">
+              <label for="sortierung">Sortieren:</label>
+              <select id="sortierung" onchange="renderAntraege()">
+                <option value="datum-neu">Neueste zuerst</option>
+                <option value="datum-alt">Älteste zuerst</option>
+                <option value="antragsteller-az">Antragsteller A-Z</option>
+                <option value="antragsteller-za">Antragsteller Z-A</option>
+              </select>
+            </div>
+          </div>
+          <div class="antrag-list" id="bearbeitungList">
+            <!-- Dynamisch gefüllt -->
+          </div>
+        </section>
+
+        <!-- Persönliche Eröffnung -->
+        <section class="section" id="eroeffnungSection" style="display: none;">
+          <div class="section-header">
+            <h2>Warten auf persönliche Eröffnung <span class="count" id="eroeffnungCount">0</span></h2>
+            <div class="sort-controls">
+              <label for="sortierungEroeffnung">Sortieren:</label>
+              <select id="sortierungEroeffnung" onchange="renderAntraege()">
+                <option value="datum-neu">Neueste zuerst</option>
+                <option value="datum-alt">Älteste zuerst</option>
+                <option value="antragsteller-az">Antragsteller A-Z</option>
+                <option value="antragsteller-za">Antragsteller Z-A</option>
+              </select>
+            </div>
+          </div>
+          <p class="section-hint">Diese Anträge wurden bearbeitet, aber für persönliche Eröffnung markiert. Bestätigen Sie nach dem Gespräch mit dem Insassen.</p>
+          <div class="antrag-list" id="eroeffnungList">
+            <!-- Dynamisch gefüllt -->
+          </div>
+        </section>
+
+        <!-- Erledigt / Historie -->
+        <section class="section" id="historieSection" style="display: none;">
+          <div class="section-header">
+            <h2>Erledigte Anträge <span class="count" id="historieCount">0</span></h2>
+            <div class="sort-controls">
+              <label for="sortierungHistorie">Sortieren:</label>
+              <select id="sortierungHistorie" onchange="renderAntraege()">
+                <option value="datum-neu">Neueste zuerst</option>
+                <option value="datum-alt">Älteste zuerst</option>
+                <option value="antragsteller-az">Antragsteller A-Z</option>
+                <option value="antragsteller-za">Antragsteller Z-A</option>
+              </select>
+            </div>
+          </div>
+          <div class="antrag-list" id="historieList">
+            <!-- Dynamisch gefüllt -->
+          </div>
+        </section>
+      </div>
+
+      <!-- Antrags-Detailansicht -->
+      <div class="dashboard" id="antragDetailView" style="display: none;">
+        <div class="back-navigation">
+          <button class="btn btn-secondary btn-sm" onclick="closeAntragDetail()">← Zurück zur Übersicht</button>
+        </div>
+        
+        <div class="detail-view-container" id="antragDetailContent">
+          <!-- Wird dynamisch gefüllt -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Entscheiden -->
+  <div class="modal-overlay" id="entscheidenModal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3>Entscheidung treffen</h3>
+        <button class="modal-close" onclick="closeModal('entscheidenModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="entscheidungBegruendung">Begründung <span class="required">*</span></label>
+          <textarea id="entscheidungBegruendung" placeholder="Begründung eingeben (Pflichtfeld)..." rows="4" required></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-option persoenlich-eroeffnen">
+            <input type="checkbox" id="entscheidungPersoenlichEroeffnen">
+            <span class="checkbox-label">📋 Persönlich eröffnen</span>
+          </label>
+          <p class="field-hint">Wenn aktiviert: Keine automatische Benachrichtigung. Das Ergebnis wird erst nach persönlicher Bestätigung übermittelt.</p>
+        </div>
+        
+        <input type="hidden" id="entscheidenAntragId">
+      </div>
+      <div class="modal-footer bearbeiten-actions">
+        <button class="btn btn-success" onclick="handleEntscheidung('genehmigt')">
+          ✓ Genehmigen
+        </button>
+        <button class="btn btn-danger" onclick="handleEntscheidung('abgelehnt')">
+          ✕ Ablehnen
+        </button>
+        <button class="btn btn-warning" onclick="handleEntscheidung('teilweise-genehmigt')">
+          ⚡ Teilweise genehmigen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Aufgabe erstellen -->
+  <div class="modal-overlay" id="aufgabeModal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3>Aufgabe erstellen</h3>
+        <button class="modal-close" onclick="closeModal('aufgabeModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Aufgabe zuweisen an:</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="aufgabeZiel" value="insasse" onchange="toggleAufgabeZiel('insasse')">
+              <span class="radio-label">👤 Insasse (Antragsteller)</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="aufgabeZiel" value="mitarbeiter" onchange="toggleAufgabeZiel('mitarbeiter')">
+              <span class="radio-label">👷 Mitarbeitende</span>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Mitarbeiter-Auswahl (hierarchisch) -->
+        <div id="mitarbeiterAuswahl" style="display: none;">
+          <div class="form-group">
+            <label for="aufgabeJva">Haus auswählen</label>
+            <select id="aufgabeJva" onchange="loadAufgabeStationen()">
+              <option value="">-- Haus wählen --</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="aufgabeBereich">Bereich auswählen</label>
+            <select id="aufgabeBereich" onchange="loadAufgabeMitarbeiter()">
+              <option value="">-- Bereich wählen --</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="aufgabePerson">Person auswählen</label>
+            <select id="aufgabePerson">
+              <option value="">-- Person wählen --</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="aufgabeBeschreibung">Aufgabenbeschreibung</label>
+          <textarea id="aufgabeBeschreibung" placeholder="Beschreiben Sie die Aufgabe..." rows="4"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="aufgabeFrist">Frist (optional)</label>
+          <input type="date" id="aufgabeFrist">
+          <p class="field-hint">Bei Überschreitung der Frist werden tägliche Erinnerungen gesendet.</p>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-option">
+            <input type="checkbox" id="aufgabePdfAnhaengen">
+            <span class="checkbox-label">📄 PDF erstellen und anhängen</span>
+          </label>
+        </div>
+        
+        <input type="hidden" id="aufgabeAntragId">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('aufgabeModal')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="sendeAufgabe()">Aufgabe senden</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Aufgabe lösen -->
+  <div class="modal-overlay" id="aufgabeLoesungModal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3>Aufgabe bearbeiten</h3>
+        <button class="modal-close" onclick="closeModal('aufgabeLoesungModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="aufgabe-info" id="aufgabeLoesungInfo">
+          <!-- Wird dynamisch gefüllt -->
+        </div>
+        
+        <div class="form-group">
+          <label for="aufgabeLoesungText">Lösung / Antwort</label>
+          <textarea id="aufgabeLoesungText" placeholder="Beschreiben Sie die Lösung der Aufgabe..." rows="4"></textarea>
+        </div>
+        
+        <input type="hidden" id="aufgabeLoesungId">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('aufgabeLoesungModal')">Abbrechen</button>
+        <button class="btn btn-success" onclick="erledigeAufgabe()">Aufgabe erledigen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Neuer Termin -->
+  <div class="modal-overlay" id="terminModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Neuer Termin</h3>
+        <button class="modal-close" onclick="closeModal('terminModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="terminTitel">Titel <span class="required">*</span></label>
+          <input type="text" id="terminTitel" placeholder="Titel des Termins" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="terminBeschreibung">Beschreibung</label>
+          <textarea id="terminBeschreibung" placeholder="Optionale Beschreibung..." rows="3"></textarea>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="terminDatum">Datum <span class="required">*</span></label>
+            <input type="date" id="terminDatum" required>
+          </div>
+          <div class="form-group">
+            <label for="terminUhrzeit">Uhrzeit (optional)</label>
+            <input type="time" id="terminUhrzeit">
+          </div>
+        </div>
+        
+        <div class="form-group" id="terminSichtbarkeitGruppe">
+          <label>Sichtbarkeit</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="terminSichtbarkeit" value="persoenlich" checked onchange="updateTerminSichtbarkeit()">
+              <span class="radio-label">🔒 Nur für mich</span>
+            </label>
+            <label class="radio-option" id="terminHausOption" style="display: none;">
+              <input type="radio" name="terminSichtbarkeit" value="haus" onchange="updateTerminSichtbarkeit()">
+              <span class="radio-label">🏠 Mein Haus</span>
+            </label>
+            <label class="radio-option" id="terminStationOption" style="display: none;">
+              <input type="radio" name="terminSichtbarkeit" value="station" onchange="updateTerminSichtbarkeit()">
+              <span class="radio-label">📍 Meine Station</span>
+            </label>
+          </div>
+        </div>
+        
+        <input type="hidden" id="terminEditId">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('terminModal')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="speichereTermin()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Termin-Details -->
+  <div class="modal-overlay" id="terminDetailModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Termin-Details</h3>
+        <button class="modal-close" onclick="closeModal('terminDetailModal')">&times;</button>
+      </div>
+      <div class="modal-body" id="terminDetailContent">
+        <!-- Wird dynamisch gefüllt -->
+      </div>
+      <div class="modal-footer" id="terminDetailFooter">
+        <button class="btn btn-secondary" onclick="closeModal('terminDetailModal')">Schließen</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    let currentSession = null;
+    let currentAntragId = null;
+
+    // ============================================
+    // LOGIN
+    // ============================================
+    
+    function handleLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      
+      const result = sessionManager.login(username, password, 'mitarbeiter');
+      
+      if (result.success) {
+        currentSession = result.user;
+        showPortal();
+      } else {
+        document.getElementById('loginError').style.display = 'block';
+      }
+    }
+    
+    function logout() {
+      sessionManager.logout();
+      currentSession = null;
+      location.reload();
+    }
+    
+    function showPortal() {
+      document.getElementById('loginSection').style.display = 'none';
+      document.getElementById('portalSection').style.display = 'block';
+      document.getElementById('userName').textContent = currentSession.name;
+      document.getElementById('userRole').textContent = getRolleText(currentSession.rolle);
+      
+      // Zuständigkeitsbereich anzeigen
+      updateZustaendigkeitInfo();
+      
+      // Überfällige Aufgaben prüfen (sendet Erinnerungen)
+      aufgabenSystem.pruefeUeberfaelligeAufgaben();
+      
+      renderAntraege();
+      renderNotifications();
+      renderKalender();
+      
+      // Benachrichtigungen und überfällige Aufgaben periodisch prüfen
+      setInterval(() => {
+        aufgabenSystem.pruefeUeberfaelligeAufgaben();
+        renderNotifications();
+        renderAntraege();
+      }, 60000); // Jede Minute prüfen
+    }
+
+    // ============================================
+    // BENACHRICHTIGUNGEN (POSTFACH)
+    // ============================================
+    
+    function renderNotifications() {
+      if (!currentSession) return;
+      
+      const list = document.getElementById('notificationList');
+      const notifications = notificationSystem.getAllNotifications(currentSession.userId);
+      const section = document.getElementById('notificationSection');
+      const unreadCount = notificationSystem.getUnreadCount(currentSession.userId);
+      
+      document.getElementById('notificationCount').textContent = unreadCount;
+      
+      // "Alle als gelesen" Button nur anzeigen, wenn es ungelesene gibt
+      const markAllBtn = document.getElementById('markAllReadBtn');
+      markAllBtn.style.display = unreadCount > 0 ? 'inline-block' : 'none';
+      
+      if (notifications.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+      
+      section.style.display = 'block';
+      
+      // Alle Benachrichtigungen anzeigen (mit Scroll)
+      const displayNotifications = notifications;
+      
+      list.innerHTML = displayNotifications.map(n => {
+        const typeClass = n.type || 'info';
+        const unreadClass = n.gelesen ? 'read' : 'unread';
+        
+        return `
+          <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${n.id}', '${n.antragId || ''}')">
+            <div class="notification-card-icon">${getNotificationIcon(n.type)}</div>
+            <div class="notification-card-content">
+              <div class="notification-card-title">${n.title}</div>
+              <div class="notification-card-message">${n.message}</div>
+              <div class="notification-card-time">${formatDate(n.erstelltAm)}</div>
+            </div>
+            ${!n.gelesen ? '<div class="notification-card-dot"></div>' : ''}
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function getNotificationIcon(type) {
+      switch(type) {
+        case 'aufgabe': return '📋';
+        case 'aufgabe-erledigt': return '✓';
+        case 'aufgabe-ueberfaellig': return '⚠️';
+        case 'aufgabe-geloescht': return '🗑️';
+        case 'genehmigt': return '✓';
+        case 'abgelehnt': return '✕';
+        case 'teilweise-genehmigt': return '⚡';
+        default: return 'ℹ';
+      }
+    }
+    
+    function getVerlaufIcon(typ) {
+      switch(typ) {
+        case 'erstellt': return '📄';
+        case 'genommen': return '📥';
+        case 'uebernommen': return '🔄';
+        case 'sachlich-geprueft': return '🔍';
+        case 'entscheidung': return '⚖️';
+        case 'entscheidung-geplant': return '📋';
+        case 'persoenlich-eroeffnet': return '🗣️';
+        case 'aufgabe-erstellt': return '📋';
+        case 'aufgabe-erledigt': return '✓';
+        case 'aufgabe-geloescht': return '🗑️';
+        case 'vollzogen': return '✅';
+        case 'veraktet': return '🗂️';
+        default: return '•';
+      }
+    }
+    
+    function handleNotificationClick(notificationId, antragId) {
+      notificationSystem.markAsRead(notificationId);
+      renderNotifications();
+      
+      // Wenn ein Antrag verknüpft ist, zur Detailansicht wechseln
+      if (antragId) {
+        const antrag = antragSystem.getAntrag(antragId);
+        if (antrag && antrag.bearbeiterId === currentSession.userId) {
+          openAntragDetail(antragId);
+        }
+      }
+    }
+    
+    function markAllNotificationsRead() {
+      if (!currentSession) return;
+      notificationSystem.markAllAsRead(currentSession.userId);
+      renderNotifications();
+    }
+    
+    function updateZustaendigkeitInfo() {
+      const info = document.getElementById('zustaendigkeitInfo');
+      const hausNames = currentSession.jvas ? currentSession.jvas.map(j => getHausName(j)).join(', ') : '-';
+      
+      if (currentSession.rolle === 'jva-leitung' || currentSession.rolle === 'haus-leitung') {
+        info.innerHTML = `
+          <div class="info-content">
+            <span class="info-icon">🏛️</span>
+            <span>Als <strong>Hausleitung</strong> sehen Sie alle Anträge des <strong>${hausNames}</strong> (alle Stationen)</span>
+          </div>
+        `;
+      } else if (currentSession.rolle === 'stationsleitung') {
+        info.innerHTML = `
+          <div class="info-content">
+            <span class="info-icon">📋</span>
+            <span>Als <strong>Stationsleitung</strong> sehen Sie alle Anträge des <strong>${hausNames} - Station ${currentSession.station}</strong></span>
+          </div>
+        `;
+      } else {
+        info.innerHTML = `
+          <div class="info-content">
+            <span class="info-icon">👷</span>
+            <span>Als <strong>Mitarbeiter</strong> sehen Sie offene Anträge des <strong>${hausNames} - Station ${currentSession.station}</strong> und Ihre persönlich bearbeiteten Anträge</span>
+          </div>
+        `;
+      }
+    }
+    
+    // Check if already logged in
+    const existingSession = sessionManager.getSession();
+    if (existingSession && existingSession.type === 'mitarbeiter') {
+      currentSession = existingSession;
+      showPortal();
+    }
+
+    // ============================================
+    // TAB-WECHSEL
+    // ============================================
+    
+    function switchTab(tab) {
+      const tabs = document.querySelectorAll('.tab');
+      tabs.forEach(t => t.classList.remove('active'));
+      
+      document.getElementById('offenSection').style.display = 'none';
+      document.getElementById('bearbeitungSection').style.display = 'none';
+      document.getElementById('eroeffnungSection').style.display = 'none';
+      document.getElementById('historieSection').style.display = 'none';
+      
+      if (tab === 'offen') {
+        tabs[0].classList.add('active');
+        document.getElementById('offenSection').style.display = 'block';
+      } else if (tab === 'bearbeitung') {
+        tabs[1].classList.add('active');
+        document.getElementById('bearbeitungSection').style.display = 'block';
+      } else if (tab === 'eroeffnung') {
+        tabs[2].classList.add('active');
+        document.getElementById('eroeffnungSection').style.display = 'block';
+      } else {
+        tabs[3].classList.add('active');
+        document.getElementById('historieSection').style.display = 'block';
+      }
+    }
+
+    // ============================================
+    // ANTRAGS-CARDS (ÜBERSICHT)
+    // ============================================
+    
+    function renderAntragCard(antrag, mode = 'offen') {
+      const statusClass = antrag.status;
+      const isOwnAntrag = antrag.bearbeiterId === currentSession.userId;
+      
+      let detailsHtml = '';
+      let typeLabel = '';
+      
+      if (antrag.type === 'teilhabegeld') {
+        typeLabel = '💰 Teilhabegeld';
+        detailsHtml = `<p><strong>Monat:</strong> ${formatMonat(antrag.monat)}</p>`;
+      } else if (antrag.type === 'eigentum') {
+        typeLabel = '👕 Eigentum in der Kammer';
+        const aktionText = antrag.aktion === 'aufstocken' ? 'Kleidung aufstocken' : 'Kleidung tauschen';
+        detailsHtml = `
+          <p><strong>Aktion:</strong> ${aktionText}</p>
+          <p><strong>Kleidung:</strong> ${antrag.kleidung.join(', ')}</p>
+        `;
+      }
+      
+      // Antrags-Nummer anzeigen
+      const antragsNummer = antrag.antragsNummer ? `<span class="antrags-nummer">${antrag.antragsNummer}</span>` : '';
+      
+      // Insassen-Info mit Insassen-Nummer
+      const insassenNummer = antrag.insassenNummer ? `<span class="insassen-nummer">${antrag.insassenNummer}</span>` : '';
+      const insassenInfo = `
+        <div class="antrag-insasse">
+          <span class="insasse-icon">👤</span>
+          <span>${insassenNummer} <strong>${antrag.insasseName}</strong> (${getHausName(antrag.insasseJva)} - Station ${antrag.insasseStation})</span>
+        </div>
+      `;
+      
+      let actionsHtml = '';
+      let bearbeiterInfo = '';
+      
+      if (mode === 'offen') {
+        actionsHtml = `
+          <div class="antrag-actions">
+            <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${antrag.id}', false, true)">
+              📂 Öffnen
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="nehmeAntrag('${antrag.id}')">
+              📥 Antrag nehmen
+            </button>
+          </div>
+        `;
+      } else if (mode === 'bearbeitung') {
+        // Bearbeiter-Info anzeigen (wichtig für Leitungen)
+        if (antrag.bearbeiterName) {
+          bearbeiterInfo = `
+            <div class="bearbeiter-info ${isOwnAntrag ? 'own' : ''}">
+              <span class="bearbeiter-icon">${isOwnAntrag ? '👤' : '👷'}</span>
+              <span>Bearbeitet von: <strong>${antrag.bearbeiterName}</strong>${isOwnAntrag ? ' (Sie)' : ''}</span>
+            </div>
+          `;
+        }
+        
+        // Nur eigene Anträge können bearbeitet werden
+        if (isOwnAntrag) {
+          actionsHtml = `
+            <div class="antrag-actions">
+              <button class="btn btn-primary btn-sm" onclick="openAntragDetail('${antrag.id}')">
+                Öffnen
+              </button>
+            </div>
+          `;
+        }
+      } else if (mode === 'eroeffnung') {
+        // Anträge die auf persönliche Eröffnung warten
+        const ergebnisText = antrag.geplantesErgebnis === 'genehmigt' ? '✓ Genehmigt' : 
+                            antrag.geplantesErgebnis === 'abgelehnt' ? '✕ Abgelehnt' : '⚡ Teilweise genehmigt';
+        const ergebnisClass = antrag.geplantesErgebnis;
+        
+        bearbeiterInfo = `
+          <div class="eroeffnung-info">
+            <div class="eroeffnung-ergebnis ${ergebnisClass}">
+              <strong>Geplantes Ergebnis:</strong> ${ergebnisText}
+            </div>
+            ${antrag.geplanteBegruendung ? `<div class="eroeffnung-begruendung"><strong>Begründung:</strong> ${antrag.geplanteBegruendung}</div>` : ''}
+          </div>
+        `;
+        
+        actionsHtml = `
+          <div class="antrag-actions">
+            <button class="btn btn-success btn-sm" onclick="bestaetigeEroeffnung('${antrag.id}')">
+              ✓ Persönlich eröffnet
+            </button>
+          </div>
+        `;
+      } else if (mode === 'historie') {
+        // Erledigte Anträge können geöffnet werden (Verlauf ansehen, verakten)
+        if (antrag.begruendung) {
+          detailsHtml += `<p class="antrag-feedback"><strong>Begründung:</strong> ${antrag.begruendung}</p>`;
+        }
+        if (antrag.bearbeiterName) {
+          bearbeiterInfo = `
+            <div class="bearbeiter-info ${antrag.bearbeiterId === currentSession.userId ? 'own' : ''}">
+              <span class="bearbeiter-icon">👷</span>
+              <span>Bearbeitet von: <strong>${antrag.bearbeiterName}</strong>${antrag.bearbeiterId === currentSession.userId ? ' (Sie)' : ''}${antrag.persoenlichEroeffnet ? ' 📋' : ''}</span>
+            </div>
+          `;
+        }
+        // Öffnen-Button für erledigte Anträge
+        actionsHtml = `
+          <div class="antrag-actions">
+            <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${antrag.id}', true)">
+              📂 Öffnen
+            </button>
+          </div>
+        `;
+      }
+      
+      return `
+        <div class="antrag-card">
+          ${insassenInfo}
+          <div class="antrag-header">
+            <span class="antrag-type">${antragsNummer} ${typeLabel}</span>
+            <span class="status-badge ${statusClass}">
+              ${getStatusIcon(antrag.status)} ${getStatusText(antrag.status)}
+            </span>
+          </div>
+          <div class="antrag-body">
+            ${detailsHtml}
+            <p class="antrag-date">Eingereicht: ${formatDate(antrag.erstelltAm)}</p>
+            ${antrag.bearbeitetAm ? `<p class="antrag-date">Bearbeitet: ${formatDate(antrag.bearbeitetAm)}</p>` : ''}
+          </div>
+          ${bearbeiterInfo}
+          ${actionsHtml}
+        </div>
+      `;
+    }
+
+    // Aufgaben-Karte rendern
+    function renderAufgabeCard(aufgabe) {
+      const antrag = antragSystem.getAntrag(aufgabe.antragId);
+      const antragsNummer = antrag ? antrag.antragsNummer : aufgabe.antragsNummer;
+      const istErsteller = aufgabe.erstelltVonId === currentSession.userId;
+      
+      // Frist-Anzeige
+      let fristHtml = '';
+      if (aufgabe.fristDatum) {
+        const frist = new Date(aufgabe.fristDatum);
+        const heute = new Date();
+        heute.setHours(0, 0, 0, 0);
+        frist.setHours(0, 0, 0, 0);
+        const istUeberfaellig = heute > frist && aufgabe.status === 'offen';
+        fristHtml = `<p class="${istUeberfaellig ? 'frist-ueberfaellig' : 'frist-info'}"><strong>Frist:</strong> ${frist.toLocaleDateString('de-DE')}${istUeberfaellig ? ' ⚠️ Überfällig!' : ''}</p>`;
+      }
+      
+      return `
+        <div class="antrag-card aufgabe-card ${aufgabe.fristDatum && new Date() > new Date(aufgabe.fristDatum) && aufgabe.status === 'offen' ? 'ueberfaellig' : ''}">
+          <div class="aufgabe-header">
+            <span class="aufgabe-icon">📋</span>
+            <span class="aufgabe-label">Aufgabe</span>
+            <span class="status-badge ${aufgabe.status === 'offen' ? 'in-bearbeitung' : 'genehmigt'}">
+              ${aufgabe.status === 'offen' ? '⏳ Offen' : '✓ Erledigt'}
+            </span>
+          </div>
+          <div class="antrag-body">
+            <p><strong>Zum Antrag:</strong> ${antragsNummer || aufgabe.antragId}</p>
+            <p><strong>Von:</strong> ${aufgabe.erstelltVonName}</p>
+            <p><strong>Beschreibung:</strong> ${aufgabe.beschreibung}</p>
+            ${fristHtml}
+            <p class="antrag-date">Erstellt: ${formatDate(aufgabe.erstelltAm)}</p>
+          </div>
+          ${aufgabe.status === 'offen' ? `
+            <div class="antrag-actions">
+              <button class="btn btn-primary btn-sm" onclick="openAufgabeLoesungModal('${aufgabe.id}')">
+                Aufgabe bearbeiten
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${aufgabe.antragId}')">
+                Antrag öffnen
+              </button>
+              ${istErsteller ? `
+                <button class="btn btn-danger btn-sm" onclick="loescheAufgabeUndUebernehme('${aufgabe.id}')">
+                  🗑️ Löschen & übernehmen
+                </button>
+              ` : ''}
+            </div>
+          ` : `
+            <div class="aufgabe-loesung">
+              <p><strong>Lösung:</strong> ${aufgabe.loesung || '-'}</p>
+              <p class="antrag-date">Erledigt: ${formatDate(aufgabe.erledigtAm)}</p>
+            </div>
+          `}
+        </div>
+      `;
+    }
+    
+    // Aufgabe löschen und Antrag übernehmen (aus Aufgaben-Übersicht)
+    function loescheAufgabeUndUebernehme(aufgabeId) {
+      if (!confirm('Möchten Sie diese Aufgabe wirklich löschen und den Antrag übernehmen?')) return;
+      
+      zuruecknehmenAufgabe(aufgabeId);
+    }
+    
+    // Aufgabe zurücknehmen (separater Button)
+    function zuruecknehmenAufgabe(aufgabeId) {
+      const aufgabe = aufgabenSystem.getAufgabe(aufgabeId);
+      if (!aufgabe) return;
+      
+      // Prüfen ob aktueller Benutzer der Ersteller ist
+      if (aufgabe.erstelltVonId !== currentSession.userId) {
+        alert('Sie können nur Aufgaben zurücknehmen, die Sie selbst erstellt haben.');
+        return;
+      }
+      
+      if (!confirm('Möchten Sie diese Aufgabe wirklich zurücknehmen? Die Aufgabe wird aus der Liste des Bearbeiters entfernt und der Antrag an Sie übergeben.')) return;
+      
+      // Aufgabe löschen
+      aufgabenSystem.loescheAufgabe(aufgabeId, currentSession.userId, currentSession.name);
+      
+      // Antrag übernehmen (wenn nicht bereits bei mir)
+      const antrag = antragSystem.getAntrag(aufgabe.antragId);
+      if (antrag && antrag.bearbeiterId !== currentSession.userId) {
+        antragSystem.uebernehmeAntrag(aufgabe.antragId, currentSession, 'Aufgabe zurückgenommen');
+      }
+      
+      // Benachrichtigung an die Person, die die Aufgabe hatte
+      notificationSystem.createNotification(
+        aufgabe.zugewiesenAnId,
+        'aufgabe-geloescht',
+        '🔙 Aufgabe zurückgenommen',
+        `Die Aufgabe zum Antrag ${aufgabe.antragsNummer} wurde von ${currentSession.name} zurückgenommen.`,
+        aufgabe.antragId
+      );
+      
+      // Wenn wir in der Detailansicht sind, diese aktualisieren
+      if (currentAntragId === aufgabe.antragId) {
+        openAntragDetail(aufgabe.antragId);
+      } else {
+        renderAntraege();
+      }
+      renderNotifications();
+    }
+
+    // ============================================
+    // ANTRAGS-DETAILANSICHT
+    // ============================================
+    
+    function openAntragDetail(antragId, isHistorie = false, isOffen = false) {
+      const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag) return;
+      
+      currentAntragId = antragId;
+      const istOffen = antrag.status === 'offen';
+      const istErledigt = antrag.erledigt || ['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(antrag.status);
+      
+      // Prüfen ob der aktuelle Benutzer berechtigt ist
+      const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(antragId);
+      const meineOffeneAufgabe = aufgabenZuAntrag.find(a => a.zugewiesenAnId === currentSession.userId && a.status === 'offen');
+      const hatOffeneAufgabe = !!meineOffeneAufgabe;
+      // Aufgabenkette: Jeder der eine Aufgabe erstellt oder erhalten hat, hat vollen Zugriff
+      const hatAufgabeErhalten = aufgabenZuAntrag.some(a => a.zugewiesenAnId === currentSession.userId);
+      const hatAufgabeErstellt = aufgabenZuAntrag.some(a => a.erstelltVonId === currentSession.userId);
+      const hatErledigteAufgabe = aufgabenZuAntrag.some(a => a.zugewiesenAnId === currentSession.userId && a.status === 'erledigt');
+      // Aktivitätsbezug: Jeder der bereits eine Aktion am Antrag durchgeführt hat (z.B. Entscheidung getroffen)
+      const hatAmAntragGearbeitet = aktivitaetenSystem.istMitarbeiterBeteiligt(antragId, currentSession.userId);
+      const istBearbeiter = antrag.bearbeiterId === currentSession.userId;
+      // Alle Beteiligten (Aufgaben oder Aktivitäten) haben vollen Zugriff
+      const istAufgabenBeteiligter = hatAufgabeErhalten || hatAufgabeErstellt || hatAmAntragGearbeitet;
+      const kannVollziehenVerakten = istBearbeiter || istAufgabenBeteiligter;
+      
+      // Prozess-Status berechnen
+      const prozessStatus = berechneProzessStatus(antrag);
+      
+      // Geburtsdatum formatieren
+      let geburtsdatumFormatiert = '-';
+      if (antrag.insasseGeburtsdatum) {
+        const d = new Date(antrag.insasseGeburtsdatum);
+        geburtsdatumFormatiert = d.toLocaleDateString('de-DE');
+      }
+      
+      // Antragstyp-spezifische Details
+      let anliegenHtml = '';
+      if (antrag.type === 'teilhabegeld') {
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>💰 Teilhabegeld</h4>
+            <div class="detail-row">
+              <span class="detail-label">Monat:</span>
+              <span class="detail-value">${formatMonat(antrag.monat)}</span>
+            </div>
+          </div>
+        `;
+      } else if (antrag.type === 'eigentum') {
+        const aktionText = antrag.aktion === 'aufstocken' ? 'Kleidung aufstocken' : 'Kleidung tauschen';
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>👕 Eigentum in der Kammer</h4>
+            <div class="detail-row">
+              <span class="detail-label">Aktion:</span>
+              <span class="detail-value">${aktionText}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Kleidungsstücke:</span>
+              <span class="detail-value">${antrag.kleidung.join(', ')}</span>
+            </div>
+            ${antrag.antragBegruendung ? `
+              <div class="detail-row">
+                <span class="detail-label">Begründung des Antragstellers:</span>
+                <span class="detail-value">${antrag.antragBegruendung}</span>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+      
+      // Aufgaben zu diesem Antrag laden
+      const aufgaben = aufgabenSystem.getAufgabenZuAntrag(antragId);
+      let aufgabenHtml = '';
+      if (aufgaben.length > 0) {
+        aufgabenHtml = `
+          <div class="detail-section">
+            <h3>📋 Zugehörige Aufgaben</h3>
+            <div class="aufgaben-liste">
+              ${aufgaben.map(a => {
+                const istErsteller = a.erstelltVonId === currentSession.userId;
+                let fristHtml = '';
+                if (a.fristDatum) {
+                  const frist = new Date(a.fristDatum);
+                  const heute = new Date();
+                  heute.setHours(0, 0, 0, 0);
+                  frist.setHours(0, 0, 0, 0);
+                  const istUeberfaellig = heute > frist && a.status === 'offen';
+                  fristHtml = `<p class="${istUeberfaellig ? 'frist-ueberfaellig' : 'frist-info'}"><strong>Frist:</strong> ${frist.toLocaleDateString('de-DE')}${istUeberfaellig ? ' ⚠️ Überfällig!' : ''}</p>`;
+                }
+                return `
+                  <div class="aufgabe-item ${a.status} ${a.fristDatum && new Date() > new Date(a.fristDatum) && a.status === 'offen' ? 'ueberfaellig' : ''}">
+                    <div class="aufgabe-item-header">
+                      <span class="status-badge ${a.status === 'offen' ? 'in-bearbeitung' : 'genehmigt'}">
+                        ${a.status === 'offen' ? '⏳ Offen' : '✓ Erledigt'}
+                      </span>
+                      <span class="aufgabe-datum">${formatDate(a.erstelltAm)}</span>
+                    </div>
+                    <p><strong>An:</strong> ${a.zugewiesenAnName}</p>
+                    <p><strong>Von:</strong> ${a.erstelltVonName}</p>
+                    <p><strong>Beschreibung:</strong> ${a.beschreibung}</p>
+                    ${fristHtml}
+                    ${a.loesung ? `<p><strong>Lösung:</strong> ${a.loesung}</p>` : ''}
+                    ${istErsteller && a.status === 'offen' ? `
+                      <div class="aufgabe-item-actions">
+                        <button class="btn btn-danger btn-sm" onclick="zuruecknehmenAufgabe('${a.id}')">
+                          🔙 Aufgabe zurücknehmen
+                        </button>
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+      
+      // Verlauf/Aktivitäten zu diesem Antrag laden
+      const aktivitaeten = aktivitaetenSystem.getAktivitaetenZuAntrag(antragId);
+      let verlaufHtml = '';
+      if (aktivitaeten.length > 0) {
+        verlaufHtml = `
+          <div class="detail-section">
+            <h3>📜 Bearbeitungsverlauf</h3>
+            <div class="verlauf-liste">
+              ${aktivitaeten.map(a => `
+                <div class="verlauf-item">
+                  <div class="verlauf-item-marker">
+                    <span class="verlauf-icon">${getVerlaufIcon(a.typ)}</span>
+                    <span class="verlauf-line"></span>
+                  </div>
+                  <div class="verlauf-item-content">
+                    <div class="verlauf-item-header">
+                      <span class="verlauf-beschreibung">${a.beschreibung}</span>
+                      <span class="verlauf-datum">${formatDate(a.erstelltAm)}</span>
+                    </div>
+                    <div class="verlauf-item-meta">
+                      <span class="verlauf-benutzer">
+                        ${a.benutzerTyp === 'insasse' ? '👤' : '👷'} ${a.benutzerName}
+                      </span>
+                    </div>
+                    ${a.details && a.details.begruendung ? `
+                      <div class="verlauf-details">
+                        <em>Begründung: ${a.details.begruendung}</em>
+                      </div>
+                    ` : ''}
+                    ${a.details && a.details.loesung ? `
+                      <div class="verlauf-details">
+                        <em>Lösung: ${a.details.loesung}</em>
+                      </div>
+                    ` : ''}
+                    ${a.details && a.details.beschreibung && a.typ === 'aufgabe-erstellt' ? `
+                      <div class="verlauf-details">
+                        <em>Aufgabe: ${a.details.beschreibung}</em>
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      
+      // Prozess-Grafik HTML generieren
+      const prozessGrafikHtml = `
+        <div class="prozess-grafik">
+          <div class="prozess-schritt ${prozessStatus.eingang}">
+            <div class="prozess-icon">📥</div>
+            <div class="prozess-label">Eingang</div>
+          </div>
+          <div class="prozess-pfeil ${prozessStatus.eingang === 'erledigt' ? 'aktiv' : ''}">→</div>
+          <div class="prozess-schritt ${prozessStatus.pruefung}">
+            <div class="prozess-icon">🔍</div>
+            <div class="prozess-label">Prüfung</div>
+          </div>
+          <div class="prozess-pfeil ${prozessStatus.pruefung === 'erledigt' ? 'aktiv' : ''}">→</div>
+          <div class="prozess-schritt ${prozessStatus.entscheiden}">
+            <div class="prozess-icon">⚖️</div>
+            <div class="prozess-label">Entscheiden</div>
+          </div>
+          <div class="prozess-pfeil ${prozessStatus.entscheiden === 'erledigt' ? 'aktiv' : ''}">→</div>
+          <div class="prozess-schritt ${prozessStatus.bekanntgabe}">
+            <div class="prozess-icon">📢</div>
+            <div class="prozess-label">Bekanntgabe</div>
+          </div>
+          <div class="prozess-pfeil ${prozessStatus.bekanntgabe === 'erledigt' ? 'aktiv' : ''}">→</div>
+          <div class="prozess-schritt ${prozessStatus.vollzug}">
+            <div class="prozess-icon">✅</div>
+            <div class="prozess-label">Vollzug</div>
+          </div>
+          <div class="prozess-pfeil ${prozessStatus.vollzug === 'erledigt' ? 'aktiv' : ''}">→</div>
+          <div class="prozess-schritt ${prozessStatus.abschluss}">
+            <div class="prozess-icon">🗂️</div>
+            <div class="prozess-label">Abschluss</div>
+          </div>
+        </div>
+      `;
+      
+      const html = `
+        <div class="detail-header">
+          <h2>Antrag ${antrag.antragsNummer || antrag.id}</h2>
+          <span class="status-badge ${antrag.status}">
+            ${getStatusIcon(antrag.status)} ${getStatusText(antrag.status)}
+          </span>
+        </div>
+        
+        ${prozessGrafikHtml}
+        
+        <div class="detail-two-column">
+          <!-- Linke Spalte: Daten und Aktionen -->
+          <div class="detail-main">
+            <div class="detail-section">
+              <h3>📋 Grunddaten</h3>
+              <div class="detail-grid">
+                <div class="detail-box">
+                  <h4>Antragsdaten</h4>
+                  <div class="detail-row">
+                    <span class="detail-label">Antrags-ID:</span>
+                    <span class="detail-value">${antrag.antragsNummer || antrag.id}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Eingereicht am:</span>
+                    <span class="detail-value">${formatDate(antrag.erstelltAm)}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value">${getStatusText(antrag.status)}</span>
+                  </div>
+                </div>
+                
+                <div class="detail-box">
+                  <h4>Stammdaten des Gefangenen</h4>
+                  <div class="detail-row">
+                    <span class="detail-label">Name:</span>
+                    <span class="detail-value">${antrag.insasseName}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Geburtsdatum:</span>
+                    <span class="detail-value">${geburtsdatumFormatiert}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Insassen-ID:</span>
+                    <span class="detail-value">${antrag.insassenNummer || '-'}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Haus:</span>
+                    <span class="detail-value">${getHausName(antrag.insasseJva)}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Station:</span>
+                    <span class="detail-value">${antrag.insasseStation}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="detail-section">
+              <h3>📝 Anliegen</h3>
+              ${anliegenHtml}
+            </div>
+            
+            ${aufgabenHtml}
+            
+            ${antrag.bescheidPdf ? `
+              <div class="detail-section">
+                <h3>📄 Bescheid</h3>
+                <div class="bescheid-download">
+                  <p>Ein Bescheid wurde für diesen Antrag erstellt.</p>
+                  <button class="btn btn-secondary" onclick="downloadBescheidPdf('${antrag.id}')">
+                    📥 Bescheid herunterladen
+                  </button>
+                </div>
+              </div>
+            ` : ''}
+            
+            <div class="detail-section">
+              <h3>⚙️ Aktionen</h3>
+              ${istOffen ? `
+                <div class="offen-hinweis">
+                  <span class="hinweis-icon">📥</span>
+                  <span>Dieser Antrag wurde noch nicht zur Bearbeitung genommen.</span>
+                </div>
+              ` : ''}
+              ${!istOffen && !istErledigt && !antrag.sachlichGeprueft ? `
+                <div class="pruefung-hinweis">
+                  <span class="hinweis-icon">ℹ️</span>
+                  <span>Der Antrag muss zunächst sachlich/fachlich geprüft werden, bevor eine Entscheidung getroffen werden kann.</span>
+                </div>
+              ` : ''}
+              ${!istOffen && !istErledigt && antrag.sachlichGeprueft ? `
+                <div class="pruefung-erfolgt">
+                  <span class="erfolgt-icon">✓</span>
+                  <span>Sachliche/fachliche Prüfung erfolgt am ${new Date(antrag.sachlichGeprueftAm).toLocaleDateString('de-DE')} durch ${antrag.sachlichGeprueftVon}</span>
+                </div>
+              ` : ''}
+              ${istErledigt && !antrag.veraktet ? `
+                <div class="entscheidung-erfolgt">
+                  <span class="erfolgt-icon">⚖️</span>
+                  <span>Entscheidung: ${getStatusText(antrag.status)} am ${new Date(antrag.bearbeitetAm).toLocaleDateString('de-DE')}</span>
+                </div>
+              ` : ''}
+              
+              ${istErledigt && !antrag.veraktet && kannVollziehenVerakten && (antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') ? `
+                <div class="vollzug-checkbox">
+                  <label class="checkbox-option vollzug-option">
+                    <input type="checkbox" id="vollzogenCheckbox" ${antrag.vollzogen ? 'checked disabled' : ''} onchange="toggleVollzogen('${antrag.id}', this.checked)">
+                    <span class="checkbox-label">✓ Antrag vollzogen</span>
+                  </label>
+                  ${antrag.vollzogen ? `
+                    <span class="vollzug-info">am ${new Date(antrag.vollzogenAm).toLocaleDateString('de-DE')} durch ${antrag.vollzogenVon}</span>
+                  ` : ''}
+                </div>
+              ` : ''}
+              
+              ${hatOffeneAufgabe ? `
+                <div class="aufgabe-hinweis">
+                  <span class="hinweis-icon">📋</span>
+                  <span>Sie haben eine offene Aufgabe zu diesem Antrag.</span>
+                </div>
+              ` : ''}
+              
+              <div class="action-buttons">
+                ${istOffen ? `
+                  <button class="btn btn-primary btn-large" onclick="nehmeAntragUndBleibeInDetail('${antrag.id}')">
+                    📥 Antrag nehmen
+                  </button>
+                ` : ''}
+                ${hatOffeneAufgabe ? `
+                  <button class="btn btn-primary btn-large" onclick="openAufgabeLoesungModal('${meineOffeneAufgabe.id}')">
+                    📝 Aufgabe bearbeiten
+                  </button>
+                ` : ''}
+                ${!istOffen && !istErledigt && (istBearbeiter || istAufgabenBeteiligter) ? `
+                  ${!antrag.sachlichGeprueft ? `
+                    <button class="btn btn-warning btn-large" onclick="markiereAlsGeprueft('${antrag.id}')">
+                      🔍 Sachlich/fachlich geprüft
+                    </button>
+                  ` : ''}
+                  <button class="btn btn-primary btn-large ${!antrag.sachlichGeprueft ? 'disabled' : ''}" 
+                          onclick="${antrag.sachlichGeprueft ? `openEntscheidenModal('${antrag.id}')` : 'alert(\"Bitte prüfen Sie den Antrag zunächst sachlich/fachlich.\")'}"
+                          ${!antrag.sachlichGeprueft ? 'title="Antrag muss erst geprüft werden"' : ''}>
+                    ⚖️ Entscheiden
+                  </button>
+                  <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
+                    📋 Aufgabe erstellen
+                  </button>
+                ` : ''}
+                ${istErledigt && !antrag.veraktet && kannVollziehenVerakten ? `
+                  <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
+                    📋 Aufgabe erstellen
+                  </button>
+                ` : ''}
+                ${!antrag.veraktet && kannVollziehenVerakten ? `
+                  ${istErledigt && (antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') ? `
+                    <button class="btn btn-secondary btn-large ${!antrag.vollzogen ? 'disabled' : ''}" 
+                            onclick="${antrag.vollzogen ? `veraktenAntrag('${antrag.id}')` : 'alert(\"Bitte markieren Sie zunächst den Antrag als vollzogen.\")'}"
+                            ${!antrag.vollzogen ? 'title="Antrag muss erst als vollzogen markiert werden"' : ''}>
+                      📄 Verakten
+                    </button>
+                  ` : `
+                    <button class="btn btn-secondary btn-large" onclick="veraktenAntrag('${antrag.id}')">
+                      📄 Verakten
+                    </button>
+                  `}
+                ` : ''}
+              </div>
+            </div>
+          </div>
+          
+          <!-- Rechte Spalte: Verlauf -->
+          <div class="detail-sidebar">
+            ${verlaufHtml || '<div class="detail-section"><h3>📜 Bearbeitungsverlauf</h3><p class="empty-hint">Noch keine Aktivitäten.</p></div>'}
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('antragDetailContent').innerHTML = html;
+      document.getElementById('dashboardView').style.display = 'none';
+      document.getElementById('antragDetailView').style.display = 'block';
+    }
+    
+    function closeAntragDetail() {
+      document.getElementById('antragDetailView').style.display = 'none';
+      document.getElementById('dashboardView').style.display = 'block';
+      currentAntragId = null;
+      renderAntraege();
+    }
+
+    // ============================================
+    // SACHLICHE/FACHLICHE PRÜFUNG
+    // ============================================
+    
+    function markiereAlsGeprueft(antragId) {
+      if (!confirm('Bestätigen Sie, dass Sie den Antrag sachlich und fachlich geprüft haben?')) return;
+      
+      // Antrag als geprüft markieren
+      antragSystem.markiereAlsGeprueft(antragId, currentSession.userId, currentSession.name);
+      
+      // Detailansicht aktualisieren
+      openAntragDetail(antragId);
+    }
+
+    // ============================================
+    // ENTSCHEIDEN
+    // ============================================
+    
+    function openEntscheidenModal(antragId) {
+      const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag.sachlichGeprueft) {
+        alert('Bitte prüfen Sie den Antrag zunächst sachlich/fachlich.');
+        return;
+      }
+      document.getElementById('entscheidenAntragId').value = antragId;
+      document.getElementById('entscheidungBegruendung').value = '';
+      document.getElementById('entscheidungPersoenlichEroeffnen').checked = false;
+      openModal('entscheidenModal');
+    }
+    
+    function handleEntscheidung(status) {
+      const antragId = document.getElementById('entscheidenAntragId').value;
+      const begruendung = document.getElementById('entscheidungBegruendung').value.trim();
+      const persoenlichEroeffnen = document.getElementById('entscheidungPersoenlichEroeffnen').checked;
+      
+      // Begründung ist für alle Entscheidungen Pflicht
+      if (!begruendung) {
+        alert('Bitte geben Sie eine Begründung für Ihre Entscheidung an.');
+        return;
+      }
+      
+      // Bescheid-PDF erstellen und im Antrag speichern
+      const bescheidPdf = generateBescheidPdf(antragId, status, begruendung);
+      
+      // Antrag abschließen mit Bescheid
+      antragSystem.abschliessenAntrag(antragId, status, begruendung || null, persoenlichEroeffnen, bescheidPdf);
+      closeModal('entscheidenModal');
+      
+      // Zurück zur Übersicht
+      closeAntragDetail();
+      
+      // Wenn persönlich eröffnen, zum entsprechenden Tab wechseln
+      if (persoenlichEroeffnen) {
+        switchTab('eroeffnung');
+      }
+    }
+    
+    // Bescheid-PDF generieren
+    function generateBescheidPdf(antragId, status, begruendung) {
+      const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag) return null;
+      
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Bescheid', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Aktenzeichen: ${antrag.antragsNummer || antrag.id}`, 20, 35);
+      doc.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`, 20, 42);
+      
+      // Anrede
+      doc.setFontSize(11);
+      const vorname = antrag.insasseName.split(' ')[0] || '';
+      const nachname = antrag.insasseName.split(' ').slice(1).join(' ') || antrag.insasseName;
+      doc.text(`Sehr geehrte/r Herr/Frau ${antrag.insasseName},`, 20, 60);
+      
+      // Beschreibung des Anliegens
+      let anliegenText = '';
+      if (antrag.type === 'teilhabegeld') {
+        anliegenText = `Beantragung von Teilhabegeld für ${formatMonat(antrag.monat)}`;
+      } else if (antrag.type === 'eigentum') {
+        const aktionText = antrag.aktion === 'aufstocken' ? 'Aufstockung' : 'Tausch';
+        anliegenText = `${aktionText} von Eigentum in der Kammer (${antrag.kleidung.join(', ')})`;
+      }
+      
+      // Entscheidungstext
+      let entscheidungText = '';
+      if (status === 'genehmigt') {
+        entscheidungText = 'genehmigt';
+      } else if (status === 'teilweise-genehmigt') {
+        entscheidungText = 'teilweise genehmigt';
+      } else if (status === 'abgelehnt') {
+        entscheidungText = 'abgelehnt';
+      }
+      
+      // Antragsdatum formatieren
+      const antragsDatum = new Date(antrag.erstelltAm).toLocaleDateString('de-DE');
+      
+      // Haupttext
+      const hauptText = `Ihr Antrag ${antrag.antragsNummer || antrag.id} vom ${antragsDatum} (${anliegenText}) wird hiermit ${entscheidungText}.`;
+      const hauptTextLines = doc.splitTextToSize(hauptText, 170);
+      doc.text(hauptTextLines, 20, 75);
+      
+      let yPos = 75 + (hauptTextLines.length * 6) + 10;
+      
+      // Begründung
+      if (begruendung) {
+        doc.text('Die Entscheidung erfolgt aufgrund folgender Begründung:', 20, yPos);
+        yPos += 8;
+        const begruendungLines = doc.splitTextToSize(begruendung, 170);
+        doc.text(begruendungLines, 20, yPos);
+        yPos += begruendungLines.length * 6 + 10;
+      }
+      
+      // Rechtsmittelbelehrung
+      yPos += 10;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Rechtsmittelbelehrung:', 20, yPos);
+      doc.setFont('helvetica', 'normal');
+      yPos += 8;
+      const rechtsmittelText = 'Gegen diese Entscheidung können Sie innerhalb von zwei Wochen auf Basis von §§ 109 ff. Strafvollzugsgesetz (StVollzG) beim Landgericht Hamburg Einspruch erheben.';
+      const rechtsmittelLines = doc.splitTextToSize(rechtsmittelText, 170);
+      doc.text(rechtsmittelLines, 20, yPos);
+      
+      // Footer
+      yPos = 250;
+      doc.text(`${getJvaName(antrag.insasseJva)}`, 20, yPos);
+      doc.text(`Bearbeiter: ${currentSession.name}`, 20, yPos + 7);
+      
+      // Als Base64 zurückgeben
+      return doc.output('datauristring');
+    }
+    
+    // Bescheid-PDF herunterladen
+    function downloadBescheidPdf(antragId) {
+      const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag || !antrag.bescheidPdf) {
+        alert('Kein Bescheid vorhanden.');
+        return;
+      }
+      
+      // Base64-URL in Link umwandeln und downloaden
+      const link = document.createElement('a');
+      link.href = antrag.bescheidPdf;
+      link.download = `Bescheid_${antrag.antragsNummer || antrag.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // ============================================
+    // AUFGABE ERSTELLEN
+    // ============================================
+    
+    function openAufgabeModal(antragId) {
+      document.getElementById('aufgabeAntragId').value = antragId;
+      document.getElementById('aufgabeBeschreibung').value = '';
+      document.getElementById('aufgabeFrist').value = '';
+      document.getElementById('aufgabePdfAnhaengen').checked = false;
+      
+      // Radio-Buttons zurücksetzen
+      document.querySelectorAll('input[name="aufgabeZiel"]').forEach(r => r.checked = false);
+      document.getElementById('mitarbeiterAuswahl').style.display = 'none';
+      
+      // JVAs laden
+      loadAufgabeJvas();
+      
+      openModal('aufgabeModal');
+    }
+    
+    function toggleAufgabeZiel(ziel) {
+      if (ziel === 'mitarbeiter') {
+        document.getElementById('mitarbeiterAuswahl').style.display = 'block';
+      } else {
+        document.getElementById('mitarbeiterAuswahl').style.display = 'none';
+      }
+    }
+    
+    function loadAufgabeJvas() {
+      const select = document.getElementById('aufgabeJva');
+      select.innerHTML = '<option value="">-- Haus wählen --</option>';
+      
+      // HAUS_CONFIG aus app.js verwenden
+      Object.entries(HAUS_CONFIG).forEach(([id, config]) => {
+        select.innerHTML += `<option value="${id}">${config.name}</option>`;
+      });
+    }
+    
+    function loadAufgabeStationen() {
+      const hausId = document.getElementById('aufgabeJva').value;
+      const bereichSelect = document.getElementById('aufgabeBereich');
+      bereichSelect.innerHTML = '<option value="">-- Bereich wählen --</option>';
+      document.getElementById('aufgabePerson').innerHTML = '<option value="">-- Person wählen --</option>';
+      
+      if (!hausId) return;
+      
+      // Hausleitung als Option
+      bereichSelect.innerHTML += `<option value="haus-leitung">Hausleitung</option>`;
+      
+      // Stationen aus HAUS_CONFIG holen
+      const hausConfig = HAUS_CONFIG[hausId];
+      if (hausConfig && hausConfig.stationen) {
+        hausConfig.stationen.forEach(station => {
+          bereichSelect.innerHTML += `<option value="station-${station}">Station ${station}</option>`;
+        });
+      }
+    }
+    
+    function loadAufgabeMitarbeiter() {
+      const hausId = document.getElementById('aufgabeJva').value;
+      const bereich = document.getElementById('aufgabeBereich').value;
+      const personSelect = document.getElementById('aufgabePerson');
+      personSelect.innerHTML = '<option value="">-- Person wählen --</option>';
+      
+      if (!hausId || !bereich) return;
+      
+      // Alle Mitarbeiter aus dem System holen
+      const alleMitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter');
+      let gefiltert = [];
+      
+      if (bereich === 'haus-leitung' || bereich === 'jva-leitung') {
+        // Hausleitung dieses Hauses
+        gefiltert = alleMitarbeiter.filter(u => 
+          (u.rolle === 'jva-leitung' || u.rolle === 'haus-leitung') &&
+          u.jvas && u.jvas.includes(hausId)
+        );
+      } else if (bereich.startsWith('station-')) {
+        const station = bereich.replace('station-', '');
+        // Alle Mitarbeiter dieser Station (unabhängig von Rolle)
+        gefiltert = alleMitarbeiter.filter(u => 
+          u.station === station &&
+          u.jvas && u.jvas.includes(hausId)
+        );
+      }
+      
+      if (gefiltert.length === 0) {
+        personSelect.innerHTML = '<option value="">-- Keine Mitarbeiter gefunden --</option>';
+        return;
+      }
+      
+      gefiltert.forEach(m => {
+        const rolleText = getRolleText(m.rolle);
+        personSelect.innerHTML += `<option value="${m.id}">${m.vorname} ${m.nachname} (${rolleText})</option>`;
+      });
+    }
+    
+    function sendeAufgabe() {
+      const antragId = document.getElementById('aufgabeAntragId').value;
+      const antrag = antragSystem.getAntrag(antragId);
+      const beschreibung = document.getElementById('aufgabeBeschreibung').value.trim();
+      const fristDatum = document.getElementById('aufgabeFrist').value;
+      const pdfAnhaengen = document.getElementById('aufgabePdfAnhaengen').checked;
+      
+      const zielRadio = document.querySelector('input[name="aufgabeZiel"]:checked');
+      if (!zielRadio) {
+        alert('Bitte wählen Sie aus, wem die Aufgabe zugewiesen werden soll.');
+        return;
+      }
+      
+      if (!beschreibung) {
+        alert('Bitte geben Sie eine Aufgabenbeschreibung ein.');
+        return;
+      }
+      
+      let zugewiesenAnId, zugewiesenAnName, zugewiesenAnTyp;
+      
+      if (zielRadio.value === 'insasse') {
+        // Aufgabe an den Antragsteller
+        zugewiesenAnId = antrag.insasseId;
+        zugewiesenAnName = antrag.insasseName;
+        zugewiesenAnTyp = 'insasse';
+      } else {
+        // Aufgabe an Mitarbeiter
+        const personId = document.getElementById('aufgabePerson').value;
+        if (!personId) {
+          alert('Bitte wählen Sie eine Person aus.');
+          return;
+        }
+        const person = userSystem.getUser(personId);
+        zugewiesenAnId = personId;
+        zugewiesenAnName = `${person.vorname} ${person.nachname}`;
+        zugewiesenAnTyp = 'mitarbeiter';
+      }
+      
+      // PDF erstellen wenn gewünscht
+      let anhangPdf = null;
+      if (pdfAnhaengen) {
+        anhangPdf = generateAufgabePdf(antrag, beschreibung);
+      }
+      
+      // Aufgabe erstellen
+      aufgabenSystem.createAufgabe({
+        antragId: antragId,
+        antragsNummer: antrag.antragsNummer,
+        erstelltVonId: currentSession.userId,
+        erstelltVonName: currentSession.name,
+        zugewiesenAnId: zugewiesenAnId,
+        zugewiesenAnName: zugewiesenAnName,
+        zugewiesenAnTyp: zugewiesenAnTyp,
+        beschreibung: beschreibung,
+        fristDatum: fristDatum || null,
+        anhangPdf: anhangPdf
+      });
+      
+      // Benachrichtigung erstellen
+      notificationSystem.createNotification(
+        zugewiesenAnId,
+        'aufgabe',
+        '📋 Neue Aufgabe',
+        `Sie haben eine neue Aufgabe zum Antrag ${antrag.antragsNummer || antragId} erhalten.`,
+        antragId
+      );
+      
+      closeModal('aufgabeModal');
+      alert('Aufgabe wurde erfolgreich erstellt und zugewiesen.');
+      
+      // Detailansicht aktualisieren
+      openAntragDetail(antragId);
+    }
+
+    // ============================================
+    // AUFGABE LÖSEN (für Mitarbeiter)
+    // ============================================
+    
+    function openAufgabeLoesungModal(aufgabeId) {
+      const aufgabe = aufgabenSystem.getAufgabe(aufgabeId);
+      if (!aufgabe) return;
+      
+      document.getElementById('aufgabeLoesungId').value = aufgabeId;
+      document.getElementById('aufgabeLoesungText').value = '';
+      
+      document.getElementById('aufgabeLoesungInfo').innerHTML = `
+        <div class="detail-box">
+          <div class="detail-row">
+            <span class="detail-label">Aufgabe von:</span>
+            <span class="detail-value">${aufgabe.erstelltVonName}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Zum Antrag:</span>
+            <span class="detail-value">${aufgabe.antragsNummer || aufgabe.antragId}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Beschreibung:</span>
+            <span class="detail-value">${aufgabe.beschreibung}</span>
+          </div>
+        </div>
+      `;
+      
+      openModal('aufgabeLoesungModal');
+    }
+    
+    function erledigeAufgabe() {
+      const aufgabeId = document.getElementById('aufgabeLoesungId').value;
+      const loesung = document.getElementById('aufgabeLoesungText').value.trim();
+      
+      if (!loesung) {
+        alert('Bitte beschreiben Sie die Lösung der Aufgabe.');
+        return;
+      }
+      
+      const aufgabe = aufgabenSystem.erledigeAufgabe(aufgabeId, loesung);
+      
+      // Benachrichtigung an den Ersteller
+      notificationSystem.createNotification(
+        aufgabe.erstelltVonId,
+        'aufgabe-erledigt',
+        '✓ Aufgabe erledigt',
+        `Ihre Aufgabe zum Antrag ${aufgabe.antragsNummer || aufgabe.antragId} wurde erledigt.`,
+        aufgabe.antragId
+      );
+      
+      closeModal('aufgabeLoesungModal');
+      
+      // Antrag direkt öffnen, um weiter zu bearbeiten (Entscheiden, Aufgabe erstellen, Verakten)
+      openAntragDetail(aufgabe.antragId);
+    }
+
+    // ============================================
+    // ANTRAG VOLLZOGEN (Kontrollkästchen)
+    // ============================================
+    
+    function toggleVollzogen(antragId, checked) {
+      if (checked) {
+        antragSystem.markiereAlsVollzogen(antragId, currentSession.userId, currentSession.name);
+        // Detailansicht aktualisieren um den Verakten-Button zu aktivieren
+        openAntragDetail(antragId);
+      }
+    }
+
+    // ============================================
+    // VERAKTEN (PDF)
+    // ============================================
+    
+    function veraktenAntrag(antragId) {
+      const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag) return;
+      
+      // Antrag als veraktet markieren
+      antragSystem.verakteAntrag(antragId, currentSession.userId, currentSession.name);
+      
+      // PDF generieren und herunterladen
+      generateAntragPdf(antrag);
+      
+      // Zurück zur Übersicht oder Detailansicht aktualisieren
+      closeAntragDetail();
+    }
+    
+    function generateAntragPdf(antrag) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      // Titel
+      doc.setFontSize(18);
+      doc.text('Antragsakte', 105, 20, { align: 'center' });
+      
+      // Antrags-ID
+      doc.setFontSize(12);
+      doc.text(`Antrags-Nr.: ${antrag.antragsNummer || antrag.id}`, 20, 35);
+      doc.text(`Status: ${getStatusText(antrag.status)}`, 20, 42);
+      doc.text(`Erstellt am: ${formatDate(antrag.erstelltAm)}`, 20, 49);
+      
+      // Trennlinie
+      doc.line(20, 55, 190, 55);
+      
+      // Stammdaten
+      doc.setFontSize(14);
+      doc.text('Stammdaten des Antragstellers', 20, 65);
+      doc.setFontSize(11);
+      doc.text(`Name: ${antrag.insasseName}`, 25, 75);
+      doc.text(`Insassen-ID: ${antrag.insassenNummer || '-'}`, 25, 82);
+      doc.text(`Haus: ${getHausName(antrag.insasseJva)}`, 25, 89);
+      doc.text(`Station: ${antrag.insasseStation}`, 25, 96);
+      
+      // Trennlinie
+      doc.line(20, 102, 190, 102);
+      
+      // Anliegen
+      doc.setFontSize(14);
+      doc.text('Anliegen', 20, 112);
+      doc.setFontSize(11);
+      
+      let yPos = 122;
+      if (antrag.type === 'teilhabegeld') {
+        doc.text('Art: Teilhabegeld', 25, yPos);
+        doc.text(`Monat: ${formatMonat(antrag.monat)}`, 25, yPos + 7);
+        yPos += 20;
+      } else if (antrag.type === 'eigentum') {
+        const aktionText = antrag.aktion === 'aufstocken' ? 'Kleidung aufstocken' : 'Kleidung tauschen';
+        doc.text('Art: Eigentum in der Kammer', 25, yPos);
+        doc.text(`Aktion: ${aktionText}`, 25, yPos + 7);
+        doc.text(`Kleidung: ${antrag.kleidung.join(', ')}`, 25, yPos + 14);
+        yPos += 27;
+      }
+      
+      // Sachliche/fachliche Prüfung (wenn erfolgt)
+      if (antrag.sachlichGeprueft) {
+        doc.line(20, yPos, 190, yPos);
+        yPos += 10;
+        doc.setFontSize(14);
+        doc.text('Sachliche/Fachliche Prüfung', 20, yPos);
+        yPos += 10;
+        doc.setFontSize(11);
+        doc.text(`Geprüft von: ${antrag.sachlichGeprueftVon || '-'}`, 25, yPos);
+        doc.text(`Am: ${antrag.sachlichGeprueftAm ? formatDate(antrag.sachlichGeprueftAm) : '-'}`, 25, yPos + 7);
+        doc.text('Ergebnis: Antrag sachlich und fachlich geprüft', 25, yPos + 14);
+        yPos += 27;
+      }
+      
+      // Entscheidung (wenn vorhanden)
+      if (antrag.bearbeitetAm) {
+        doc.line(20, yPos, 190, yPos);
+        yPos += 10;
+        doc.setFontSize(14);
+        doc.text('Entscheidung', 20, yPos);
+        yPos += 10;
+        doc.setFontSize(11);
+        doc.text(`Bearbeitet von: ${antrag.bearbeiterName || '-'}`, 25, yPos);
+        doc.text(`Am: ${formatDate(antrag.bearbeitetAm)}`, 25, yPos + 7);
+        doc.text(`Ergebnis: ${getStatusText(antrag.status)}`, 25, yPos + 14);
+        yPos += 21;
+        if (antrag.begruendung) {
+          const splitText = doc.splitTextToSize(`Begründung: ${antrag.begruendung}`, 160);
+          doc.text(splitText, 25, yPos);
+          yPos += splitText.length * 6 + 5;
+        }
+      }
+      
+      // Vollzug (wenn vorhanden)
+      if (antrag.vollzogen) {
+        doc.line(20, yPos, 190, yPos);
+        yPos += 10;
+        doc.setFontSize(14);
+        doc.text('Vollzug', 20, yPos);
+        yPos += 10;
+        doc.setFontSize(11);
+        doc.text(`Vollzogen von: ${antrag.vollzogenVon || '-'}`, 25, yPos);
+        doc.text(`Am: ${antrag.vollzogenAm ? formatDate(antrag.vollzogenAm) : '-'}`, 25, yPos + 7);
+        yPos += 20;
+      }
+      
+      // Fußzeile
+      doc.setFontSize(9);
+      doc.text(`Generiert am: ${new Date().toLocaleString('de-DE')}`, 20, 280);
+      doc.text(`Veraktet von: ${currentSession.name}`, 20, 285);
+      
+      // Download
+      doc.save(`Antrag_${antrag.antragsNummer || antrag.id}.pdf`);
+    }
+    
+    function generateAufgabePdf(antrag, beschreibung) {
+      // Hier könnte ein PDF-Objekt als Base64 zurückgegeben werden
+      // Für Demonstrationszwecke geben wir nur einen String zurück
+      return `aufgabe_${antrag.antragsNummer}_${Date.now()}.pdf`;
+    }
+
+    // ============================================
+    // SONSTIGE FUNKTIONEN
+    // ============================================
+
+    // Berechnet den aktuellen Prozess-Status für die grafische Darstellung
+    function berechneProzessStatus(antrag) {
+      const status = {
+        eingang: 'ausstehend',
+        pruefung: 'ausstehend',
+        entscheiden: 'ausstehend',
+        bekanntgabe: 'ausstehend',
+        vollzug: 'ausstehend',
+        abschluss: 'ausstehend'
+      };
+      
+      // Eingang - immer erledigt wenn Antrag existiert
+      if (antrag.status === 'offen') {
+        status.eingang = 'aktiv';
+      } else {
+        status.eingang = 'erledigt';
+      }
+      
+      // Prüfung - wenn genommen aber noch nicht geprüft
+      if (antrag.status === 'in-bearbeitung' && !antrag.sachlichGeprueft) {
+        status.pruefung = 'aktiv';
+      } else if (antrag.sachlichGeprueft || antrag.erledigt) {
+        status.pruefung = 'erledigt';
+      }
+      
+      // Entscheiden - wenn geprüft aber noch nicht entschieden
+      if (antrag.status === 'in-bearbeitung' && antrag.sachlichGeprueft && !antrag.erledigt) {
+        status.entscheiden = 'aktiv';
+      } else if (antrag.erledigt) {
+        status.entscheiden = 'erledigt';
+      }
+      
+      // Bekanntgabe - wenn entschieden, aber bei pers. Eröffnung noch nicht durchgeführt
+      if (antrag.erledigt && antrag.persoenlichEroeffnen && !antrag.persoenlichEroeffnet) {
+        status.bekanntgabe = 'aktiv';
+      } else if (antrag.erledigt && (!antrag.persoenlichEroeffnen || antrag.persoenlichEroeffnet)) {
+        status.bekanntgabe = 'erledigt';
+      }
+      
+      // Vollzug - wenn Bekanntgabe erfolgt, aber noch nicht vollzogen
+      // Nur relevant für genehmigt/teilweise-genehmigt
+      const istGenehmigt = antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt';
+      const bekanntgabeErfolgt = antrag.erledigt && (!antrag.persoenlichEroeffnen || antrag.persoenlichEroeffnet);
+      
+      if (istGenehmigt && bekanntgabeErfolgt && !antrag.vollzogen) {
+        status.vollzug = 'aktiv';
+      } else if (antrag.vollzogen) {
+        status.vollzug = 'erledigt';
+      } else if (antrag.status === 'abgelehnt' && bekanntgabeErfolgt) {
+        // Bei Ablehnung ist Vollzug nicht erforderlich, aber wir markieren es als erledigt/übersprungen
+        status.vollzug = 'uebersprungen';
+      }
+      
+      // Abschluss - wenn vollzogen aber noch nicht veraktet
+      if ((antrag.vollzogen || antrag.status === 'abgelehnt') && !antrag.veraktet && bekanntgabeErfolgt) {
+        status.abschluss = 'aktiv';
+      } else if (antrag.veraktet) {
+        status.abschluss = 'erledigt';
+      }
+      
+      return status;
+    }
+
+    function nehmeAntrag(antragId) {
+      if (!currentSession) return;
+      
+      const result = antragSystem.nehmeAntrag(antragId, currentSession);
+      if (result) {
+        renderAntraege();
+        // Automatisch zum "Meine Anträge und Aufgaben" Tab wechseln
+        switchTab('bearbeitung');
+      }
+    }
+    
+    function nehmeAntragUndBleibeInDetail(antragId) {
+      if (!currentSession) return;
+      
+      const result = antragSystem.nehmeAntrag(antragId, currentSession);
+      if (result) {
+        // Detailansicht aktualisieren (bleibt in der Detailansicht)
+        openAntragDetail(antragId);
+        renderAntraege();
+      }
+    }
+
+    function bestaetigeEroeffnung(antragId) {
+      if (confirm('Haben Sie das Ergebnis dem Insassen persönlich mitgeteilt?')) {
+        // Antrag vor der Bestätigung holen, um Daten für Benachrichtigung zu haben
+        const antrag = antragSystem.getAntrag(antragId);
+        const geplantesErgebnis = antrag.geplantesErgebnis;
+        const geplanteBegruendung = antrag.geplanteBegruendung;
+        
+        // Persönliche Eröffnung bestätigen
+        antragSystem.bestaetigePersoenlicheEroeffnung(antragId);
+        
+        // Benachrichtigung an den Insassen senden
+        const antragsTyp = antrag.type === 'teilhabegeld' ? 'Teilhabegeld' : 'Eigentum in der Kammer';
+        let title, message;
+        
+        if (geplantesErgebnis === 'genehmigt') {
+          title = '✓ Antrag genehmigt (persönlich eröffnet)';
+          message = `Ihr Antrag "${antragsTyp}" (${antrag.antragsNummer}) wurde genehmigt. Das Ergebnis wurde Ihnen persönlich mitgeteilt.`;
+        } else if (geplantesErgebnis === 'abgelehnt') {
+          title = '✕ Antrag abgelehnt (persönlich eröffnet)';
+          message = `Ihr Antrag "${antragsTyp}" (${antrag.antragsNummer}) wurde leider abgelehnt. Das Ergebnis wurde Ihnen persönlich mitgeteilt.${geplanteBegruendung ? ' Begründung: ' + geplanteBegruendung : ''}`;
+        } else if (geplantesErgebnis === 'teilweise-genehmigt') {
+          title = '⚡ Antrag teilweise genehmigt (persönlich eröffnet)';
+          message = `Ihr Antrag "${antragsTyp}" (${antrag.antragsNummer}) wurde teilweise genehmigt. Das Ergebnis wurde Ihnen persönlich mitgeteilt.${geplanteBegruendung ? ' Hinweis: ' + geplanteBegruendung : ''}`;
+        }
+        
+        if (title && antrag.insasseId) {
+          notificationSystem.createNotification(antrag.insasseId, geplantesErgebnis, title, message, antragId);
+        }
+        
+        renderAntraege();
+      }
+    }
+
+    function renderAntraege() {
+      if (!currentSession) return;
+      
+      const offenList = document.getElementById('offenList');
+      const bearbeitungList = document.getElementById('bearbeitungList');
+      const eroeffnungList = document.getElementById('eroeffnungList');
+      const historieList = document.getElementById('historieList');
+      
+      let offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(currentSession);
+      let inBearbeitungAntraege = antragSystem.getInBearbeitungAntraege(currentSession);
+      let wartendeEroeffnungen = antragSystem.getWartendeEroeffnungen(currentSession.userId);
+      let historieAntraege = antragSystem.getHistorieMitarbeiter(currentSession);
+      
+      // Aufgaben für den aktuellen Benutzer laden
+      let meineAufgaben = aufgabenSystem.getOffeneAufgaben(currentSession.userId);
+      
+      // Sortierfunktion erstellen
+      const erstelleSortierFunktion = (sortierung) => {
+        return (a, b) => {
+          switch (sortierung) {
+            case 'datum-alt':
+              return new Date(a.erstelltAm) - new Date(b.erstelltAm);
+            case 'datum-neu':
+              return new Date(b.erstelltAm) - new Date(a.erstelltAm);
+            case 'antragsteller-az':
+              const nameA = a.insasseName || a.zugewiesenAnName || '';
+              const nameB = b.insasseName || b.zugewiesenAnName || '';
+              return nameA.localeCompare(nameB, 'de');
+            case 'antragsteller-za':
+              const nameA2 = a.insasseName || a.zugewiesenAnName || '';
+              const nameB2 = b.insasseName || b.zugewiesenAnName || '';
+              return nameB2.localeCompare(nameA2, 'de');
+            default:
+              return new Date(b.erstelltAm) - new Date(a.erstelltAm);
+          }
+        };
+      };
+      
+      // Sortierung für jede Liste anwenden
+      const sortierungOffen = document.getElementById('sortierungOffen')?.value || 'datum-neu';
+      const sortierungBearbeitung = document.getElementById('sortierung')?.value || 'datum-neu';
+      const sortierungEroeffnung = document.getElementById('sortierungEroeffnung')?.value || 'datum-neu';
+      const sortierungHistorie = document.getElementById('sortierungHistorie')?.value || 'datum-neu';
+      
+      offeneAntraege = [...offeneAntraege].sort(erstelleSortierFunktion(sortierungOffen));
+      inBearbeitungAntraege = [...inBearbeitungAntraege].sort(erstelleSortierFunktion(sortierungBearbeitung));
+      meineAufgaben = [...meineAufgaben].sort(erstelleSortierFunktion(sortierungBearbeitung));
+      wartendeEroeffnungen = [...wartendeEroeffnungen].sort(erstelleSortierFunktion(sortierungEroeffnung));
+      historieAntraege = [...historieAntraege].sort(erstelleSortierFunktion(sortierungHistorie));
+      
+      document.getElementById('offenCount').textContent = offeneAntraege.length;
+      document.getElementById('bearbeitungCount').textContent = inBearbeitungAntraege.length + meineAufgaben.length;
+      document.getElementById('eroeffnungCount').textContent = wartendeEroeffnungen.length;
+      document.getElementById('historieCount').textContent = historieAntraege.length;
+      
+      // Offene Anträge
+      if (offeneAntraege.length === 0) {
+        offenList.innerHTML = '<div class="empty-state"><div class="icon">✓</div><p>Keine offenen Anträge vorhanden.</p></div>';
+      } else {
+        offenList.innerHTML = offeneAntraege.map(a => renderAntragCard(a, 'offen')).join('');
+      }
+      
+      // Meine Anträge und Aufgaben
+      let bearbeitungHtml = '';
+      
+      // Erst Aufgaben
+      if (meineAufgaben.length > 0) {
+        bearbeitungHtml += '<h3 class="subsection-title">📋 Meine Aufgaben</h3>';
+        bearbeitungHtml += meineAufgaben.map(a => renderAufgabeCard(a)).join('');
+      }
+      
+      // Dann Anträge in Bearbeitung
+      if (inBearbeitungAntraege.length > 0) {
+        bearbeitungHtml += '<h3 class="subsection-title">📄 Anträge in Bearbeitung</h3>';
+        bearbeitungHtml += inBearbeitungAntraege.map(a => renderAntragCard(a, 'bearbeitung')).join('');
+      }
+      
+      if (bearbeitungHtml === '') {
+        bearbeitungList.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>Keine Anträge oder Aufgaben vorhanden.</p></div>';
+      } else {
+        bearbeitungList.innerHTML = bearbeitungHtml;
+      }
+      
+      // Wartende Eröffnungen
+      if (wartendeEroeffnungen.length === 0) {
+        eroeffnungList.innerHTML = '<div class="empty-state"><div class="icon">✓</div><p>Keine Anträge warten auf persönliche Eröffnung.</p></div>';
+      } else {
+        eroeffnungList.innerHTML = wartendeEroeffnungen.map(a => renderAntragCard(a, 'eroeffnung')).join('');
+      }
+      
+      // Historie
+      if (historieAntraege.length === 0) {
+        historieList.innerHTML = '<div class="empty-state"><div class="icon">📜</div><p>Noch keine erledigten Anträge.</p></div>';
+      } else {
+        historieList.innerHTML = historieAntraege.map(a => renderAntragCard(a, 'historie')).join('');
+      }
+    }
+
+    // ============================================
+    // KALENDER-FUNKTIONEN
+    // ============================================
+    
+    let kalenderDatum = new Date(); // Aktuelles Referenzdatum
+    let kalenderAnsicht = 'monat'; // 'tag', 'woche', 'monat'
+    let ausgewaehltesDatum = new Date(); // Für Sidebar
+    
+    const WOCHENTAGE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    const WOCHENTAGE_LANG = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+    const MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+    
+    function setKalenderAnsicht(ansicht) {
+      kalenderAnsicht = ansicht;
+      document.querySelectorAll('.kalender-view-buttons .view-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`view${ansicht.charAt(0).toUpperCase() + ansicht.slice(1)}Btn`).classList.add('active');
+      renderKalender();
+    }
+    
+    function kalenderHeute() {
+      kalenderDatum = new Date();
+      ausgewaehltesDatum = new Date();
+      renderKalender();
+    }
+    
+    function kalenderZurueck() {
+      if (kalenderAnsicht === 'tag') {
+        kalenderDatum.setDate(kalenderDatum.getDate() - 1);
+      } else if (kalenderAnsicht === 'woche') {
+        kalenderDatum.setDate(kalenderDatum.getDate() - 7);
+      } else {
+        kalenderDatum.setMonth(kalenderDatum.getMonth() - 1);
+      }
+      renderKalender();
+    }
+    
+    function kalenderVor() {
+      if (kalenderAnsicht === 'tag') {
+        kalenderDatum.setDate(kalenderDatum.getDate() + 1);
+      } else if (kalenderAnsicht === 'woche') {
+        kalenderDatum.setDate(kalenderDatum.getDate() + 7);
+      } else {
+        kalenderDatum.setMonth(kalenderDatum.getMonth() + 1);
+      }
+      renderKalender();
+    }
+    
+    function renderKalender() {
+      if (!currentSession) return;
+      
+      try {
+        updateKalenderAnzeige();
+        
+        if (kalenderAnsicht === 'tag') {
+          renderTagAnsicht();
+        } else if (kalenderAnsicht === 'woche') {
+          renderWocheAnsicht();
+        } else {
+          renderMonatAnsicht();
+        }
+        
+        renderTermineSidebar();
+      } catch (error) {
+        console.error('Fehler beim Rendern des Kalenders:', error);
+        const main = document.getElementById('kalenderMain');
+        if (main) {
+          main.innerHTML = '<p style="color: red; padding: 1rem;">Fehler beim Laden des Kalenders. Bitte Seite neu laden.</p>';
+        }
+      }
+    }
+    
+    function updateKalenderAnzeige() {
+      const anzeige = document.getElementById('kalenderAnzeige');
+      if (kalenderAnsicht === 'tag') {
+        anzeige.textContent = kalenderDatum.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      } else if (kalenderAnsicht === 'woche') {
+        const startOfWeek = getStartOfWeek(kalenderDatum);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        anzeige.textContent = `${startOfWeek.getDate()}. - ${endOfWeek.getDate()}. ${MONATE[endOfWeek.getMonth()]} ${endOfWeek.getFullYear()}`;
+      } else {
+        anzeige.textContent = `${MONATE[kalenderDatum.getMonth()]} ${kalenderDatum.getFullYear()}`;
+      }
+    }
+    
+    function getStartOfWeek(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      return new Date(d.setDate(diff));
+    }
+    
+    function renderTagAnsicht() {
+      const main = document.getElementById('kalenderMain');
+      const termine = terminSystem.getTermineFuerTag(currentSession, kalenderDatum);
+      const heute = new Date().toDateString();
+      const istHeute = kalenderDatum.toDateString() === heute;
+      
+      let html = `
+        <div class="kalender-tag-ansicht">
+          <div class="tag-header ${istHeute ? 'heute' : ''}">
+            <div class="tag-datum">
+              <span class="tag-wochentag">${WOCHENTAGE_LANG[(kalenderDatum.getDay() + 6) % 7]}</span>
+              <span class="tag-nummer-gross">${kalenderDatum.getDate()}</span>
+              <span class="tag-monat-jahr">${MONATE[kalenderDatum.getMonth()]} ${kalenderDatum.getFullYear()}</span>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openTerminModalMitDatum('${kalenderDatum.toISOString().split('T')[0]}')">+ Termin</button>
+          </div>
+          <div class="tag-termine">
+            ${termine.length === 0 ? '<p class="keine-termine">Keine Termine an diesem Tag</p>' : ''}
+            ${termine.map(t => renderTerminBlock(t)).join('')}
+          </div>
+        </div>
+      `;
+      main.innerHTML = html;
+      ausgewaehltesDatum = new Date(kalenderDatum);
+    }
+    
+    function renderWocheAnsicht() {
+      const main = document.getElementById('kalenderMain');
+      const startOfWeek = getStartOfWeek(kalenderDatum);
+      const heute = new Date().toDateString();
+      
+      let headerHtml = '<div class="woche-header">';
+      let tageHtml = '<div class="woche-tage">';
+      
+      for (let i = 0; i < 7; i++) {
+        const tag = new Date(startOfWeek);
+        tag.setDate(tag.getDate() + i);
+        const istHeute = tag.toDateString() === heute;
+        const termine = terminSystem.getTermineFuerTag(currentSession, tag);
+        
+        headerHtml += `
+          <div class="woche-tag-header ${istHeute ? 'heute' : ''}" onclick="waehleTagInWoche('${tag.toISOString()}')">
+            <span class="woche-wochentag">${WOCHENTAGE[i]}</span>
+            <span class="woche-tag-nummer">${tag.getDate()}</span>
+          </div>
+        `;
+        
+        tageHtml += `
+          <div class="woche-tag-spalte ${istHeute ? 'heute' : ''}" onclick="waehleTagInWoche('${tag.toISOString()}')">
+            ${termine.length === 0 ? '<div class="keine-termine-klein">-</div>' : ''}
+            ${termine.slice(0, 4).map(t => `
+              <div class="woche-termin" style="background: ${getTerminFarbe(t.typ)}20; border-left: 3px solid ${getTerminFarbe(t.typ)};" onclick="event.stopPropagation(); zeigeTerminDetails('${t.id}')">
+                ${t.uhrzeit ? `<span class="woche-termin-zeit">${t.uhrzeit}</span>` : ''}
+                <span class="woche-termin-titel">${t.titel}</span>
+              </div>
+            `).join('')}
+            ${termine.length > 4 ? `<div class="mehr-termine-klein">+${termine.length - 4} weitere</div>` : ''}
+          </div>
+        `;
+      }
+      
+      headerHtml += '</div>';
+      tageHtml += '</div>';
+      
+      main.innerHTML = `<div class="kalender-woche-ansicht">${headerHtml}${tageHtml}</div>`;
+    }
+    
+    function waehleTagInWoche(datumIso) {
+      ausgewaehltesDatum = new Date(datumIso);
+      renderTermineSidebar();
+    }
+    
+    function renderMonatAnsicht() {
+      const main = document.getElementById('kalenderMain');
+      const jahr = kalenderDatum.getFullYear();
+      const monat = kalenderDatum.getMonth();
+      const termine = terminSystem.getTermineFuerMonat(currentSession, jahr, monat);
+      
+      const ersterTag = new Date(jahr, monat, 1);
+      const letzterTag = new Date(jahr, monat + 1, 0);
+      const anzahlTage = letzterTag.getDate();
+      const startWochentag = (ersterTag.getDay() + 6) % 7;
+      
+      const heute = new Date().toDateString();
+      
+      let html = `
+        <div class="kalender-monat-ansicht">
+          <div class="kalender-header">
+            ${WOCHENTAGE.map(wt => `<div class="kalender-wochentag">${wt}</div>`).join('')}
+          </div>
+          <div class="kalender-tage">
+      `;
+      
+      // Leere Felder am Anfang
+      for (let i = 0; i < startWochentag; i++) {
+        html += '<div class="kalender-tag leer"></div>';
+      }
+      
+      // Tage des Monats
+      for (let tag = 1; tag <= anzahlTage; tag++) {
+        const datum = new Date(jahr, monat, tag);
+        const datumString = datum.toDateString();
+        const istHeute = datumString === heute;
+        const istAusgewaehlt = datumString === ausgewaehltesDatum.toDateString();
+        const tagesTermine = termine.filter(t => new Date(t.datum).toDateString() === datumString);
+        
+        const terminMarkierungen = tagesTermine.slice(0, 3).map(t => 
+          `<div class="termin-marker" style="background: ${getTerminFarbe(t.typ)};" title="${t.titel}"></div>`
+        ).join('');
+        
+        const mehrTermine = tagesTermine.length > 3 ? `<div class="mehr-termine">+${tagesTermine.length - 3}</div>` : '';
+        
+        html += `
+          <div class="kalender-tag ${istHeute ? 'heute' : ''} ${istAusgewaehlt ? 'ausgewaehlt' : ''} ${tagesTermine.length > 0 ? 'hat-termine' : ''}" 
+               onclick="waehleTagImMonat('${datum.toISOString()}')">
+            <span class="tag-nummer">${tag}</span>
+            <div class="termin-markers">${terminMarkierungen}${mehrTermine}</div>
+          </div>
+        `;
+      }
+      
+      html += '</div></div>';
+      main.innerHTML = html;
+    }
+    
+    function waehleTagImMonat(datumIso) {
+      ausgewaehltesDatum = new Date(datumIso);
+      renderKalender();
+    }
+    
+    function renderTermineSidebar() {
+      const titel = document.getElementById('termineSidebarTitel');
+      const liste = document.getElementById('termineSidebarListe');
+      const termine = terminSystem.getTermineFuerTag(currentSession, ausgewaehltesDatum);
+      
+      const formatDatum = ausgewaehltesDatum.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+      titel.textContent = `📅 ${formatDatum}`;
+      
+      if (termine.length === 0) {
+        liste.innerHTML = `
+          <p class="keine-termine">Keine Termine</p>
+          <button class="btn btn-primary btn-sm btn-full" onclick="openTerminModalMitDatum('${ausgewaehltesDatum.toISOString().split('T')[0]}')">+ Termin hinzufügen</button>
+        `;
+        return;
+      }
+      
+      liste.innerHTML = termine.map(t => `
+        <div class="termin-item" onclick="zeigeTerminDetails('${t.id}')" style="border-left-color: ${getTerminFarbe(t.typ)}">
+          <div class="termin-item-header">
+            <span class="termin-typ-badge" style="background: ${getTerminFarbe(t.typ)}">${getTerminTypText(t.typ)}</span>
+            ${t.uhrzeit ? `<span class="termin-uhrzeit">${t.uhrzeit}</span>` : ''}
+          </div>
+          <div class="termin-titel">${t.titel}</div>
+        </div>
+      `).join('') + `
+        <button class="btn btn-outline btn-sm btn-full" style="margin-top: 0.5rem;" onclick="openTerminModalMitDatum('${ausgewaehltesDatum.toISOString().split('T')[0]}')">+ Termin</button>
+      `;
+    }
+    
+    function renderTerminBlock(termin) {
+      return `
+        <div class="termin-block" onclick="zeigeTerminDetails('${termin.id}')" style="border-left-color: ${getTerminFarbe(termin.typ)}">
+          <div class="termin-block-header">
+            <span class="termin-typ-badge" style="background: ${getTerminFarbe(termin.typ)}">${getTerminTypText(termin.typ)}</span>
+            ${termin.uhrzeit ? `<span class="termin-block-zeit">${termin.uhrzeit} Uhr</span>` : '<span class="termin-block-zeit">Ganztägig</span>'}
+          </div>
+          <div class="termin-block-titel">${termin.titel}</div>
+          ${termin.beschreibung ? `<div class="termin-block-beschreibung">${termin.beschreibung}</div>` : ''}
+          <div class="termin-block-meta">Von: ${termin.erstelltVonName}</div>
+        </div>
+      `;
+    }
+    
+    function getTerminFarbe(typ) {
+      switch (typ) {
+        case 'admin': return '#e5484d';
+        case 'persoenlich': return '#3d8bfd';
+        case 'aufgabe': return '#f0a500';
+        case 'haus': return '#2eb872';
+        case 'station': return '#a187d1';
+        default: return '#7c8da6';
+      }
+    }
+    
+    function getTerminTypText(typ) {
+      switch (typ) {
+        case 'admin': return 'Allgemein';
+        case 'persoenlich': return 'Persönlich';
+        case 'aufgabe': return 'Aufgabe';
+        case 'haus': return 'Haus';
+        case 'station': return 'Station';
+        default: return 'Termin';
+      }
+    }
+    
+    function zeigeTerminDetails(terminId) {
+      const termin = terminSystem.termine.find(t => t.id === terminId);
+      if (!termin) return;
+      
+      const datum = new Date(termin.datum);
+      const formatDatum = datum.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      
+      let html = `
+        <div class="termin-detail-header" style="border-left: 4px solid ${getTerminFarbe(termin.typ)}; padding-left: 1rem;">
+          <span class="termin-typ-badge" style="background: ${getTerminFarbe(termin.typ)}">${getTerminTypText(termin.typ)}</span>
+          <h4 style="margin: 0.5rem 0;">${termin.titel}</h4>
+        </div>
+        <div class="termin-detail-body">
+          <p><strong>📅 Datum:</strong> ${formatDatum}</p>
+          ${termin.uhrzeit ? `<p><strong>🕐 Uhrzeit:</strong> ${termin.uhrzeit} Uhr</p>` : '<p><strong>🕐 Zeit:</strong> Ganztägig</p>'}
+          ${termin.beschreibung ? `<p><strong>📝 Beschreibung:</strong> ${termin.beschreibung}</p>` : ''}
+          <p><strong>👤 Erstellt von:</strong> ${termin.erstelltVonName}</p>
+          ${termin.antragId ? `<p><strong>📋 Zum Antrag:</strong> <a href="#" onclick="closeModal('terminDetailModal'); openAntragDetail('${termin.antragId}'); return false;">Antrag öffnen</a></p>` : ''}
+        </div>
+      `;
+      
+      document.getElementById('terminDetailContent').innerHTML = html;
+      
+      let footerHtml = '<button class="btn btn-secondary" onclick="closeModal(\'terminDetailModal\')">Schließen</button>';
+      if (termin.erstelltVonId === currentSession.userId && termin.typ !== 'aufgabe') {
+        footerHtml += `<button class="btn btn-danger" onclick="loescheTermin('${termin.id}')">🗑️ Löschen</button>`;
+      }
+      document.getElementById('terminDetailFooter').innerHTML = footerHtml;
+      
+      openModal('terminDetailModal');
+    }
+    
+    function openTerminModal() {
+      document.getElementById('terminTitel').value = '';
+      document.getElementById('terminBeschreibung').value = '';
+      document.getElementById('terminDatum').value = ausgewaehltesDatum.toISOString().split('T')[0];
+      document.getElementById('terminUhrzeit').value = '';
+      document.getElementById('terminEditId').value = '';
+      document.querySelector('input[name="terminSichtbarkeit"][value="persoenlich"]').checked = true;
+      
+      const hausOption = document.getElementById('terminHausOption');
+      const stationOption = document.getElementById('terminStationOption');
+      
+      if (currentSession.rolle === 'jva-leitung' || currentSession.rolle === 'haus-leitung') {
+        hausOption.style.display = 'block';
+        stationOption.style.display = 'none';
+      } else if (currentSession.rolle === 'stationsleitung') {
+        hausOption.style.display = 'none';
+        stationOption.style.display = 'block';
+      } else {
+        hausOption.style.display = 'none';
+        stationOption.style.display = 'none';
+      }
+      
+      openModal('terminModal');
+    }
+    
+    function openTerminModalMitDatum(datum) {
+      closeModal('terminDetailModal');
+      ausgewaehltesDatum = new Date(datum);
+      openTerminModal();
+    }
+    
+    function updateTerminSichtbarkeit() {
+      // Kann für zukünftige Erweiterungen genutzt werden
+    }
+    
+    function speichereTermin() {
+      const titel = document.getElementById('terminTitel').value.trim();
+      const beschreibung = document.getElementById('terminBeschreibung').value.trim();
+      const datum = document.getElementById('terminDatum').value;
+      const uhrzeit = document.getElementById('terminUhrzeit').value;
+      const sichtbarkeit = document.querySelector('input[name="terminSichtbarkeit"]:checked').value;
+      
+      if (!titel) {
+        alert('Bitte geben Sie einen Titel ein.');
+        return;
+      }
+      if (!datum) {
+        alert('Bitte wählen Sie ein Datum.');
+        return;
+      }
+      
+      const terminData = {
+        titel,
+        beschreibung,
+        datum,
+        uhrzeit: uhrzeit || null,
+        typ: sichtbarkeit,
+        erstelltVonId: currentSession.userId,
+        erstelltVonName: currentSession.name
+      };
+      
+      if (sichtbarkeit === 'haus' && currentSession.jvas && currentSession.jvas.length > 0) {
+        terminData.hausId = currentSession.jvas[0];
+      } else if (sichtbarkeit === 'station' && currentSession.jvas && currentSession.jvas.length > 0) {
+        terminData.hausId = currentSession.jvas[0];
+        terminData.stationId = currentSession.station;
+      }
+      
+      terminSystem.createTermin(terminData);
+      closeModal('terminModal');
+      renderKalender();
+    }
+    
+    function loescheTermin(terminId) {
+      if (!confirm('Möchten Sie diesen Termin wirklich löschen?')) return;
+      
+      terminSystem.deleteTermin(terminId);
+      closeModal('terminDetailModal');
+      renderKalender();
+    }
+  </script>
+</body>
+</html>

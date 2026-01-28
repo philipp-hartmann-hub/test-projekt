@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insassen-Portal - Antragswesen</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Login-Bereich -->
+  <div class="start-page" id="loginSection">
+    <div class="bg-decoration">
+      <div class="bg-circle bg-circle-1"></div>
+      <div class="bg-circle bg-circle-2"></div>
+      <div class="bg-grid"></div>
+    </div>
+
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-icon">👤</div>
+        <h2>Insassen-Portal</h2>
+      </div>
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="username">Benutzername</label>
+          <input type="text" id="username" placeholder="Benutzername" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="password">Passwort</label>
+          <input type="password" id="password" placeholder="Passwort" required autocomplete="current-password">
+        </div>
+        <div id="loginError" class="login-error" style="display: none;">
+          Ungültige Zugangsdaten. Bitte versuchen Sie es erneut.
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">
+          Anmelden
+        </button>
+      </form>
+      <div class="login-hint">
+        <a href="index.html" class="btn btn-secondary btn-sm" style="margin-top: 1rem;">← Zurück zur Übersicht</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Portal-Bereich (nach Login sichtbar) -->
+  <div id="portalSection" style="display: none;">
+    <header class="header">
+      <h1>
+        <span class="icon">👤</span>
+        Insassen-Portal
+      </h1>
+      <div class="header-right">
+        <div class="user-badge">
+          <div>
+            <div class="role">Insasse</div>
+            <div class="name" id="userName">-</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Abmelden</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="dashboard">
+        <!-- Benachrichtigungs-Bereich (zentral im Dashboard) -->
+        <section class="section notification-section" id="notificationSection">
+          <div class="section-header">
+            <h2>🔔 Nachrichten <span class="count" id="notificationCount">0</span></h2>
+            <button class="btn btn-sm" onclick="markAllNotificationsRead()" id="markAllReadBtn" style="display: none;">
+              Alle als gelesen markieren
+            </button>
+          </div>
+          <div class="notification-dashboard-list" id="notificationList">
+            <!-- Dynamisch gefüllt -->
+          </div>
+        </section>
+
+        <!-- Neuer Antrag Button -->
+        <div class="action-bar">
+          <button class="btn btn-primary" onclick="openModal('newAntragModal')">
+            + Neuer Antrag
+          </button>
+        </div>
+
+        <!-- Aufgaben-Bereich für Insassen -->
+        <section class="section aufgaben-section" id="aufgabenSection" style="display: none;">
+          <div class="section-header">
+            <h2>📋 Meine Aufgaben <span class="count" id="aufgabenCount">0</span></h2>
+          </div>
+          <p class="section-hint">Diese Aufgaben wurden Ihnen zugewiesen und benötigen Ihre Mitwirkung.</p>
+          <div class="antrag-list" id="aufgabenList">
+            <!-- Dynamisch gefüllt -->
+          </div>
+        </section>
+
+        <!-- Zweispaltiges Layout -->
+        <div class="two-column-layout">
+          <!-- Linke Spalte: Eingereichte Anträge / Historie -->
+          <div class="column-main">
+            <!-- Tabs -->
+            <div class="tabs">
+              <button class="tab active" onclick="switchTab('aktiv')">Eingereichte Anträge</button>
+              <button class="tab" onclick="switchTab('historie')">Historie</button>
+            </div>
+
+            <!-- Aktive Anträge -->
+            <section class="section" id="aktivSection">
+              <div class="section-header">
+                <h2>Eingereichte Anträge <span class="count" id="aktivCount">0</span></h2>
+              </div>
+              <div class="antrag-list" id="aktivList">
+                <!-- Dynamisch gefüllt -->
+              </div>
+            </section>
+
+            <!-- Historie -->
+            <section class="section" id="historieSection" style="display: none;">
+              <div class="section-header">
+                <h2>Abgeschlossene Anträge <span class="count" id="historieCount">0</span></h2>
+              </div>
+              <div class="antrag-list" id="historieList">
+                <!-- Dynamisch gefüllt -->
+              </div>
+            </section>
+          </div>
+
+          <!-- Rechte Spalte: Entwürfe -->
+          <div class="column-sidebar">
+            <section class="section entwuerfe-section">
+              <div class="section-header">
+                <h2>📝 Entwürfe <span class="count" id="entwuerfeCount">0</span></h2>
+              </div>
+              <div class="antrag-list" id="entwuerfeList">
+                <!-- Dynamisch gefüllt -->
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Neuer Antrag -->
+  <div class="modal-overlay" id="newAntragModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Neuer Antrag</h3>
+        <button class="modal-close" onclick="closeModal('newAntragModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Antragsart</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="antragType" value="teilhabegeld" checked onchange="toggleAntragFields()">
+              <span class="radio-label">💰 Teilhabegeld</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="antragType" value="eigentum" onchange="toggleAntragFields()">
+              <span class="radio-label">👕 Eigentum in der Kammer</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Teilhabegeld Felder -->
+        <div id="teilhabegeldFields">
+          <div class="form-group">
+            <label for="monatSelect">Monat auswählen</label>
+            <input type="month" id="monatSelect">
+          </div>
+        </div>
+
+        <!-- Eigentum Felder -->
+        <div id="eigentumFields" style="display: none;">
+          <div class="form-group">
+            <label>Aktion</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="eigentumAktion" value="aufstocken" checked>
+                <span class="radio-label">📦 Kleidung aufstocken</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="eigentumAktion" value="tauschen">
+                <span class="radio-label">🔄 Kleidung tauschen</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Kleidungsstücke (Mehrfachauswahl möglich)</label>
+            <div class="checkbox-group">
+              <label class="checkbox-option">
+                <input type="checkbox" name="kleidung" value="Oberteil">
+                <span class="checkbox-label">👔 Oberteil</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" name="kleidung" value="Pullover">
+                <span class="checkbox-label">🧥 Pullover</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" name="kleidung" value="Unterwäsche/Socken">
+                <span class="checkbox-label">🧦 Unterwäsche/Socken</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" name="kleidung" value="Hose">
+                <span class="checkbox-label">👖 Hose</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" name="kleidung" value="Jacke">
+                <span class="checkbox-label">🧥 Jacke</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="eigentumBegruendung">Begründung <span class="required">*</span></label>
+            <textarea id="eigentumBegruendung" placeholder="Bitte begründen Sie Ihren Antrag..." rows="3" required></textarea>
+            <p class="field-hint">Eine Begründung ist für diesen Antrag erforderlich.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer modal-footer-triple">
+        <button class="btn btn-secondary" onclick="closeModal('newAntragModal')">Abbrechen</button>
+        <button class="btn btn-outline" onclick="saveAsEntwurf()">📝 Als Entwurf speichern</button>
+        <button class="btn btn-primary" onclick="submitNewAntrag()">Einreichen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Entwurf bearbeiten -->
+  <div class="modal-overlay" id="entwurfModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Entwurf bearbeiten</h3>
+        <button class="modal-close" onclick="closeModal('entwurfModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Antragsart</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="entwurfType" value="teilhabegeld" onchange="toggleEntwurfFields()">
+              <span class="radio-label">💰 Teilhabegeld</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="entwurfType" value="eigentum" onchange="toggleEntwurfFields()">
+              <span class="radio-label">👕 Eigentum in der Kammer</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Teilhabegeld Felder -->
+        <div id="entwurfTeilhabegeldFields">
+          <div class="form-group">
+            <label for="entwurfMonatSelect">Monat auswählen</label>
+            <input type="month" id="entwurfMonatSelect">
+          </div>
+        </div>
+
+        <!-- Eigentum Felder -->
+        <div id="entwurfEigentumFields" style="display: none;">
+          <div class="form-group">
+            <label>Aktion</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="entwurfEigentumAktion" value="aufstocken">
+                <span class="radio-label">📦 Kleidung aufstocken</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="entwurfEigentumAktion" value="tauschen">
+                <span class="radio-label">🔄 Kleidung tauschen</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Kleidungsstücke (Mehrfachauswahl möglich)</label>
+            <div class="checkbox-group">
+              <label class="checkbox-option">
+                <input type="checkbox" name="entwurfKleidung" value="Oberteil">
+                <span class="checkbox-label">👔 Oberteil</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" name="entwurfKleidung" value="Pullover">
+                <span class="checkbox-label">🧥 Pullover</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" name="entwurfKleidung" value="Unterwäsche/Socken">
+                <span class="checkbox-label">🧦 Unterwäsche/Socken</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" name="entwurfKleidung" value="Hose">
+                <span class="checkbox-label">👖 Hose</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" name="entwurfKleidung" value="Jacke">
+                <span class="checkbox-label">🧥 Jacke</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="entwurfEigentumBegruendung">Begründung <span class="required">*</span></label>
+            <textarea id="entwurfEigentumBegruendung" placeholder="Bitte begründen Sie Ihren Antrag..." rows="3" required></textarea>
+            <p class="field-hint">Eine Begründung ist für diesen Antrag erforderlich.</p>
+          </div>
+        </div>
+
+        <input type="hidden" id="entwurfId">
+      </div>
+      <div class="modal-footer modal-footer-triple">
+        <button class="btn btn-danger" onclick="deleteEntwurf()">Löschen</button>
+        <button class="btn btn-outline" onclick="updateEntwurf()">📝 Speichern</button>
+        <button class="btn btn-primary" onclick="submitEntwurf()">Einreichen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Teilweise genehmigten Antrag bearbeiten -->
+  <div class="modal-overlay" id="editAntragModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Antrag bearbeiten</h3>
+        <button class="modal-close" onclick="closeModal('editAntragModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="info-box warning">
+          <strong>⚡ Teilweise genehmigt</strong>
+          <p id="editBegruendung">-</p>
+        </div>
+        
+        <!-- Für Teilhabegeld -->
+        <div id="editTeilhabegeldFields">
+          <div class="form-group">
+            <label for="editMonatSelect">Neuen Monat auswählen</label>
+            <input type="month" id="editMonatSelect">
+          </div>
+        </div>
+
+        <!-- Für Eigentum -->
+        <div id="editEigentumFields" style="display: none;">
+          <div class="form-group">
+            <label>Aktion</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="editEigentumAktion" value="aufstocken">
+                <span class="radio-label">📦 Kleidung aufstocken</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="editEigentumAktion" value="tauschen">
+                <span class="radio-label">🔄 Kleidung tauschen</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Kleidungsstücke (Mehrfachauswahl möglich)</label>
+            <div class="checkbox-group" id="editKleidungCheckboxes">
+              <label class="checkbox-option">
+                <input type="checkbox" name="editKleidung" value="Oberteil">
+                <span class="checkbox-label">👔 Oberteil</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" name="editKleidung" value="Pullover">
+                <span class="checkbox-label">🧥 Pullover</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" name="editKleidung" value="Unterwäsche/Socken">
+                <span class="checkbox-label">🧦 Unterwäsche/Socken</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" name="editKleidung" value="Hose">
+                <span class="checkbox-label">👖 Hose</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" name="editKleidung" value="Jacke">
+                <span class="checkbox-label">🧥 Jacke</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <input type="hidden" id="editAntragId">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" onclick="deleteAntrag()">Endgültig löschen</button>
+        <button class="btn btn-primary" onclick="resubmitAntrag()">Erneut einreichen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Aufgabe bearbeiten (Insasse) -->
+  <div class="modal-overlay" id="aufgabeInsasseModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Aufgabe bearbeiten</h3>
+        <button class="modal-close" onclick="closeModal('aufgabeInsasseModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="aufgabe-info" id="aufgabeInsasseInfo">
+          <!-- Dynamisch gefüllt -->
+        </div>
+        
+        <div class="form-group">
+          <label for="aufgabeInsasseLoesung">Ihre Antwort / Lösung</label>
+          <textarea id="aufgabeInsasseLoesung" placeholder="Beschreiben Sie Ihre Antwort oder Lösung..." rows="4"></textarea>
+        </div>
+        
+        <input type="hidden" id="aufgabeInsasseId">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('aufgabeInsasseModal')">Abbrechen</button>
+        <button class="btn btn-success" onclick="erledigeInsassenAufgabe()">Aufgabe erledigen</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    let currentSession = null;
+
+    // ============================================
+    // LOGIN
+    // ============================================
+    
+    function handleLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      
+      const result = sessionManager.login(username, password, 'insasse');
+      
+      if (result.success) {
+        currentSession = result.user;
+        showPortal();
+      } else {
+        document.getElementById('loginError').style.display = 'block';
+      }
+    }
+    
+    function logout() {
+      sessionManager.logout();
+      currentSession = null;
+      location.reload();
+    }
+    
+    function showPortal() {
+      document.getElementById('loginSection').style.display = 'none';
+      document.getElementById('portalSection').style.display = 'block';
+      document.getElementById('userName').textContent = currentSession.name;
+      renderAntraege();
+      renderNotifications();
+      updateNotificationBadge();
+      
+      // Benachrichtigungen und Aufgaben periodisch prüfen
+      setInterval(() => {
+        renderNotifications();
+        renderAntraege();
+        updateNotificationBadge();
+      }, 10000); // Alle 10 Sekunden
+    }
+    
+    // Check if already logged in
+    const existingSession = sessionManager.getSession();
+    if (existingSession && existingSession.type === 'insasse') {
+      currentSession = existingSession;
+      showPortal();
+    }
+
+    // ============================================
+    // BENACHRICHTIGUNGEN
+    // ============================================
+    
+    function updateNotificationBadge() {
+      if (!currentSession) return;
+      
+      const count = notificationSystem.getUnreadCount(currentSession.userId);
+      document.getElementById('notificationCount').textContent = count;
+      
+      // "Alle als gelesen" Button nur anzeigen, wenn es ungelesene gibt
+      const markAllBtn = document.getElementById('markAllReadBtn');
+      markAllBtn.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+    
+    function renderNotifications() {
+      if (!currentSession) return;
+      
+      const list = document.getElementById('notificationList');
+      const notifications = notificationSystem.getAllNotifications(currentSession.userId);
+      const section = document.getElementById('notificationSection');
+      
+      if (notifications.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+      
+      section.style.display = 'block';
+      
+      // Alle Benachrichtigungen anzeigen (mit Scroll)
+      const displayNotifications = notifications;
+      
+      list.innerHTML = displayNotifications.map(n => {
+        const typeClass = n.type || 'info';
+        const unreadClass = n.gelesen ? 'read' : 'unread';
+        
+        return `
+          <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${n.id}', '${n.antragId || ''}')">
+            <div class="notification-card-icon">${getNotificationIcon(n.type)}</div>
+            <div class="notification-card-content">
+              <div class="notification-card-title">${n.title}</div>
+              <div class="notification-card-message">${n.message}</div>
+              <div class="notification-card-time">${formatDate(n.erstelltAm)}</div>
+            </div>
+            ${!n.gelesen ? '<div class="notification-card-dot"></div>' : ''}
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function getNotificationIcon(type) {
+      switch(type) {
+        case 'genehmigt': return '✓';
+        case 'abgelehnt': return '✕';
+        case 'teilweise-genehmigt': return '⚡';
+        case 'aufgabe': return '📋';
+        case 'aufgabe-erledigt': return '✓';
+        case 'aufgabe-ueberfaellig': return '⚠️';
+        case 'aufgabe-geloescht': return '🗑️';
+        default: return 'ℹ';
+      }
+    }
+    
+    function handleNotificationClick(notificationId, antragId) {
+      notificationSystem.markAsRead(notificationId);
+      updateNotificationBadge();
+      renderNotifications();
+      
+      // Wenn ein Antrag verknüpft ist, zur entsprechenden Ansicht wechseln
+      if (antragId) {
+        const antrag = antragSystem.getAntrag(antragId);
+        if (antrag && antrag.erledigt) {
+          switchTab('historie');
+        }
+      }
+    }
+    
+    function markAllNotificationsRead() {
+      if (!currentSession) return;
+      notificationSystem.markAllAsRead(currentSession.userId);
+      updateNotificationBadge();
+      renderNotifications();
+    }
+
+    // ============================================
+    // TAB-WECHSEL
+    // ============================================
+    
+    function switchTab(tab) {
+      const tabs = document.querySelectorAll('.tab');
+      tabs.forEach(t => t.classList.remove('active'));
+      
+      document.getElementById('aktivSection').style.display = 'none';
+      document.getElementById('historieSection').style.display = 'none';
+      
+      if (tab === 'aktiv') {
+        tabs[0].classList.add('active');
+        document.getElementById('aktivSection').style.display = 'block';
+      } else {
+        tabs[1].classList.add('active');
+        document.getElementById('historieSection').style.display = 'block';
+      }
+    }
+
+    // ============================================
+    // ANTRÄGE
+    // ============================================
+    
+    function toggleAntragFields() {
+      const type = document.querySelector('input[name="antragType"]:checked').value;
+      document.getElementById('teilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
+      document.getElementById('eigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
+    }
+
+    function toggleEntwurfFields() {
+      const type = document.querySelector('input[name="entwurfType"]:checked').value;
+      document.getElementById('entwurfTeilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
+      document.getElementById('entwurfEigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
+    }
+
+    function getNewAntragData() {
+      const type = document.querySelector('input[name="antragType"]:checked').value;
+      
+      if (type === 'teilhabegeld') {
+        const monat = document.getElementById('monatSelect').value;
+        if (!monat) {
+          return { type, data: { monat }, valid: false, error: 'Bitte wählen Sie einen Monat aus.' };
+        }
+        // Prüfen ob bereits ein Antrag für diesen Monat existiert
+        if (antragSystem.hatTeilhabegeldAntragFuerMonat(currentSession.userId, monat)) {
+          const monatFormatiert = new Date(monat + '-01').toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+          return { type, data: { monat }, valid: false, error: `Sie haben bereits einen Teilhabegeld-Antrag für ${monatFormatiert} gestellt. Pro Monat ist nur ein Antrag möglich.` };
+        }
+        return { type, data: { monat }, valid: true, error: null };
+      } else {
+        const aktion = document.querySelector('input[name="eigentumAktion"]:checked').value;
+        const kleidungCheckboxes = document.querySelectorAll('input[name="kleidung"]:checked');
+        const kleidung = Array.from(kleidungCheckboxes).map(cb => cb.value);
+        const antragBegruendung = document.getElementById('eigentumBegruendung').value.trim();
+        
+        if (kleidung.length === 0) {
+          return { type, data: { aktion, kleidung, antragBegruendung }, valid: false, error: 'Bitte wählen Sie mindestens ein Kleidungsstück aus.' };
+        }
+        if (!antragBegruendung) {
+          return { type, data: { aktion, kleidung, antragBegruendung }, valid: false, error: 'Bitte geben Sie eine Begründung für Ihren Antrag an.' };
+        }
+        return { type, data: { aktion, kleidung, antragBegruendung }, valid: true, error: null };
+      }
+    }
+
+    function submitNewAntrag() {
+      if (!currentSession) return;
+      
+      const { type, data, valid, error } = getNewAntragData();
+      
+      if (!valid) {
+        alert(error);
+        return;
+      }
+      
+      antragSystem.createAntrag(type, data, currentSession, false);
+      
+      closeModal('newAntragModal');
+      renderAntraege();
+      resetNewAntragForm();
+    }
+
+    function saveAsEntwurf() {
+      if (!currentSession) return;
+      
+      const { type, data } = getNewAntragData();
+      
+      // Bei Entwürfen ist keine Validierung nötig - kann unvollständig sein
+      antragSystem.createAntrag(type, data, currentSession, true);
+      
+      closeModal('newAntragModal');
+      renderAntraege();
+      resetNewAntragForm();
+      
+      // Hinweis anzeigen
+      alert('Entwurf wurde gespeichert! Sie finden ihn in der rechten Spalte.');
+    }
+
+    function resetNewAntragForm() {
+      document.getElementById('monatSelect').value = '';
+      document.querySelectorAll('input[name="kleidung"]').forEach(cb => cb.checked = false);
+      document.getElementById('eigentumBegruendung').value = '';
+      document.querySelector('input[name="antragType"][value="teilhabegeld"]').checked = true;
+      document.querySelector('input[name="eigentumAktion"][value="aufstocken"]').checked = true;
+      toggleAntragFields();
+    }
+
+    // ============================================
+    // ENTWÜRFE
+    // ============================================
+
+    function openEntwurfModal(entwurfId) {
+      const entwurf = antragSystem.getAntrag(entwurfId);
+      if (!entwurf || entwurf.status !== 'entwurf') return;
+      
+      document.getElementById('entwurfId').value = entwurfId;
+      
+      // Typ setzen
+      document.querySelector(`input[name="entwurfType"][value="${entwurf.type}"]`).checked = true;
+      toggleEntwurfFields();
+      
+      if (entwurf.type === 'teilhabegeld') {
+        document.getElementById('entwurfMonatSelect').value = entwurf.monat || '';
+      } else {
+        if (entwurf.aktion) {
+          document.querySelector(`input[name="entwurfEigentumAktion"][value="${entwurf.aktion}"]`).checked = true;
+        }
+        document.querySelectorAll('input[name="entwurfKleidung"]').forEach(cb => {
+          cb.checked = entwurf.kleidung && entwurf.kleidung.includes(cb.value);
+        });
+        document.getElementById('entwurfEigentumBegruendung').value = entwurf.antragBegruendung || '';
+      }
+      
+      openModal('entwurfModal');
+    }
+
+    function getEntwurfData() {
+      const type = document.querySelector('input[name="entwurfType"]:checked').value;
+      
+      if (type === 'teilhabegeld') {
+        const monat = document.getElementById('entwurfMonatSelect').value;
+        if (!monat) {
+          return { type, monat, valid: false, error: 'Bitte wählen Sie einen Monat aus.' };
+        }
+        // Prüfen ob bereits ein Antrag für diesen Monat existiert (aber dieser Entwurf ausschließen)
+        const entwurfId = document.getElementById('entwurfId').value;
+        const existierenderAntrag = antragSystem.antraege.find(a => 
+          a.type === 'teilhabegeld' && 
+          a.insasseId === currentSession.userId && 
+          a.monat === monat &&
+          a.status !== 'entwurf' &&
+          a.id !== entwurfId
+        );
+        if (existierenderAntrag) {
+          const monatFormatiert = new Date(monat + '-01').toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+          return { type, monat, valid: false, error: `Sie haben bereits einen Teilhabegeld-Antrag für ${monatFormatiert} gestellt. Pro Monat ist nur ein Antrag möglich.` };
+        }
+        return { type, monat, valid: true, error: null };
+      } else {
+        const aktionRadio = document.querySelector('input[name="entwurfEigentumAktion"]:checked');
+        const aktion = aktionRadio ? aktionRadio.value : 'aufstocken';
+        const kleidungCheckboxes = document.querySelectorAll('input[name="entwurfKleidung"]:checked');
+        const kleidung = Array.from(kleidungCheckboxes).map(cb => cb.value);
+        const antragBegruendung = document.getElementById('entwurfEigentumBegruendung').value.trim();
+        
+        if (kleidung.length === 0) {
+          return { type, aktion, kleidung, antragBegruendung, valid: false, error: 'Bitte wählen Sie mindestens ein Kleidungsstück aus.' };
+        }
+        if (!antragBegruendung) {
+          return { type, aktion, kleidung, antragBegruendung, valid: false, error: 'Bitte geben Sie eine Begründung für Ihren Antrag an.' };
+        }
+        return { type, aktion, kleidung, antragBegruendung, valid: true, error: null };
+      }
+    }
+
+    function updateEntwurf() {
+      const entwurfId = document.getElementById('entwurfId').value;
+      const data = getEntwurfData();
+      
+      antragSystem.updateEntwurf(entwurfId, data);
+      
+      closeModal('entwurfModal');
+      renderAntraege();
+    }
+
+    function submitEntwurf() {
+      const entwurfId = document.getElementById('entwurfId').value;
+      const data = getEntwurfData();
+      
+      if (!data.valid) {
+        alert(data.error);
+        return;
+      }
+      
+      // Erst Daten aktualisieren, dann einreichen
+      antragSystem.updateEntwurf(entwurfId, data);
+      antragSystem.submitEntwurf(entwurfId);
+      
+      closeModal('entwurfModal');
+      renderAntraege();
+      
+      // Zum aktiven Anträge-Tab wechseln
+      switchTab('aktiv');
+    }
+
+    function deleteEntwurf() {
+      const entwurfId = document.getElementById('entwurfId').value;
+      if (confirm('Möchten Sie diesen Entwurf wirklich löschen?')) {
+        antragSystem.deleteAntrag(entwurfId);
+        closeModal('entwurfModal');
+        renderAntraege();
+      }
+    }
+
+    function renderAntragCard(antrag, mode = 'aktiv') {
+      const statusClass = antrag.status;
+      const isTeilweiseGenehmigt = antrag.status === 'teilweise-genehmigt';
+      const isEntwurf = antrag.status === 'entwurf';
+      
+      // Antrags-Nummer anzeigen
+      const antragsNummer = antrag.antragsNummer ? `<span class="antrags-nummer">${antrag.antragsNummer}</span> ` : '';
+      
+      let detailsHtml = '';
+      let typeLabel = '';
+      
+      if (antrag.type === 'teilhabegeld') {
+        typeLabel = '💰 Teilhabegeld';
+        if (antrag.monat) {
+          detailsHtml = `<p><strong>Monat:</strong> ${formatMonat(antrag.monat)}</p>`;
+        } else {
+          detailsHtml = `<p class="incomplete"><em>Monat noch nicht ausgewählt</em></p>`;
+        }
+      } else if (antrag.type === 'eigentum') {
+        typeLabel = '👕 Eigentum in der Kammer';
+        const aktionText = antrag.aktion === 'aufstocken' ? 'Kleidung aufstocken' : 'Kleidung tauschen';
+        if (antrag.kleidung && antrag.kleidung.length > 0) {
+          detailsHtml = `
+            <p><strong>Aktion:</strong> ${aktionText}</p>
+            <p><strong>Kleidung:</strong> ${antrag.kleidung.join(', ')}</p>
+            ${antrag.antragBegruendung ? `<p><strong>Begründung:</strong> ${antrag.antragBegruendung}</p>` : ''}
+          `;
+        } else {
+          detailsHtml = `
+            <p><strong>Aktion:</strong> ${aktionText}</p>
+            <p class="incomplete"><em>Keine Kleidungsstücke ausgewählt</em></p>
+          `;
+        }
+      }
+      
+      let actionsHtml = '';
+      
+      if (isEntwurf) {
+        actionsHtml = `
+          <div class="antrag-actions">
+            <button class="btn btn-primary btn-sm" onclick="openEntwurfModal('${antrag.id}')">
+              📝 Bearbeiten
+            </button>
+          </div>
+        `;
+      } else if (mode === 'historie') {
+        // Erledigte Anträge (genehmigt/abgelehnt)
+        if (antrag.begruendung) {
+          actionsHtml = `
+            <div class="antrag-feedback">
+              <strong>Begründung:</strong> ${antrag.begruendung}
+            </div>
+          `;
+        }
+        if (antrag.bescheidPdf) {
+          actionsHtml += `
+            <div class="antrag-actions">
+              <button class="btn btn-secondary btn-sm" onclick="downloadBescheidPdf('${antrag.id}')">
+                📄 Bescheid herunterladen
+              </button>
+            </div>
+          `;
+        }
+      }
+      
+      return `
+        <div class="antrag-card ${isTeilweiseGenehmigt ? 'teilweise-genehmigt' : ''} ${isEntwurf ? 'entwurf' : ''}">
+          <div class="antrag-header">
+            <span class="antrag-type">${antragsNummer}${typeLabel}</span>
+            <span class="status-badge ${statusClass}">
+              ${getStatusIcon(antrag.status)} ${getStatusText(antrag.status)}
+            </span>
+          </div>
+          <div class="antrag-body">
+            ${detailsHtml}
+            <p class="antrag-date">${isEntwurf ? 'Gespeichert' : 'Erstellt'}: ${formatDate(antrag.erstelltAm)}</p>
+            ${antrag.bearbeitetAm ? `<p class="antrag-date">Bearbeitet: ${formatDate(antrag.bearbeitetAm)}</p>` : ''}
+          </div>
+          ${actionsHtml}
+        </div>
+      `;
+    }
+    
+    // Bescheid-PDF herunterladen
+    function downloadBescheidPdf(antragId) {
+      const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag || !antrag.bescheidPdf) {
+        alert('Kein Bescheid vorhanden.');
+        return;
+      }
+      
+      const link = document.createElement('a');
+      link.href = antrag.bescheidPdf;
+      link.download = `Bescheid_${antrag.antragsNummer || antrag.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function openEditModal(antragId) {
+      const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag) return;
+      
+      document.getElementById('editAntragId').value = antragId;
+      document.getElementById('editBegruendung').textContent = antrag.begruendung || 'Keine Begründung angegeben';
+      
+      if (antrag.type === 'teilhabegeld') {
+        document.getElementById('editTeilhabegeldFields').style.display = 'block';
+        document.getElementById('editEigentumFields').style.display = 'none';
+        document.getElementById('editMonatSelect').value = antrag.monat;
+      } else {
+        document.getElementById('editTeilhabegeldFields').style.display = 'none';
+        document.getElementById('editEigentumFields').style.display = 'block';
+        
+        document.querySelector(`input[name="editEigentumAktion"][value="${antrag.aktion}"]`).checked = true;
+        
+        document.querySelectorAll('input[name="editKleidung"]').forEach(cb => {
+          cb.checked = antrag.kleidung.includes(cb.value);
+        });
+      }
+      
+      openModal('editAntragModal');
+    }
+
+    function resubmitAntrag() {
+      const antragId = document.getElementById('editAntragId').value;
+      const antrag = antragSystem.getAntrag(antragId);
+      
+      if (antrag.type === 'teilhabegeld') {
+        const monat = document.getElementById('editMonatSelect').value;
+        if (!monat) {
+          alert('Bitte wählen Sie einen Monat aus.');
+          return;
+        }
+        antragSystem.updateAntragMonat(antragId, monat);
+      } else {
+        const aktion = document.querySelector('input[name="editEigentumAktion"]:checked').value;
+        const kleidungCheckboxes = document.querySelectorAll('input[name="editKleidung"]:checked');
+        const kleidung = Array.from(kleidungCheckboxes).map(cb => cb.value);
+        
+        if (kleidung.length === 0) {
+          alert('Bitte wählen Sie mindestens ein Kleidungsstück aus.');
+          return;
+        }
+        
+        antragSystem.updateAntragEigentum(antragId, aktion, kleidung);
+      }
+      
+      closeModal('editAntragModal');
+      renderAntraege();
+    }
+
+    function deleteAntrag() {
+      const antragId = document.getElementById('editAntragId').value;
+      if (confirm('Möchten Sie diesen Antrag wirklich endgültig löschen?')) {
+        antragSystem.deleteAntrag(antragId);
+        closeModal('editAntragModal');
+        renderAntraege();
+      }
+    }
+
+    function renderAntraege() {
+      if (!currentSession) return;
+      
+      const entwuerfeList = document.getElementById('entwuerfeList');
+      const aktivList = document.getElementById('aktivList');
+      const historieList = document.getElementById('historieList');
+      const aufgabenList = document.getElementById('aufgabenList');
+      const aufgabenSection = document.getElementById('aufgabenSection');
+      
+      const entwuerfe = antragSystem.getEntwuerfeInsasse(currentSession.userId);
+      const aktiveAntraege = antragSystem.getAktiveAntraegeInsasse(currentSession.userId);
+      const historieAntraege = antragSystem.getHistorieInsasse(currentSession.userId);
+      
+      // Aufgaben für den Insassen laden
+      const meineAufgaben = aufgabenSystem.getOffeneAufgaben(currentSession.userId);
+      
+      document.getElementById('entwuerfeCount').textContent = entwuerfe.length;
+      document.getElementById('aktivCount').textContent = aktiveAntraege.length;
+      document.getElementById('historieCount').textContent = historieAntraege.length;
+      document.getElementById('aufgabenCount').textContent = meineAufgaben.length;
+      
+      // Aufgaben anzeigen
+      if (meineAufgaben.length === 0) {
+        aufgabenSection.style.display = 'none';
+      } else {
+        aufgabenSection.style.display = 'block';
+        aufgabenList.innerHTML = meineAufgaben.map(a => renderAufgabeCard(a)).join('');
+      }
+      
+      // Entwürfe
+      if (entwuerfe.length === 0) {
+        entwuerfeList.innerHTML = '<div class="empty-state"><div class="icon">📝</div><p>Keine Entwürfe vorhanden.</p><p class="hint">Klicken Sie auf "+ Neuer Antrag" und dann "Als Entwurf speichern"</p></div>';
+      } else {
+        entwuerfeList.innerHTML = entwuerfe.map(a => renderAntragCard(a, 'entwurf')).join('');
+      }
+      
+      // Aktive Anträge
+      if (aktiveAntraege.length === 0) {
+        aktivList.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Keine eingereichten Anträge vorhanden.</p></div>';
+      } else {
+        aktivList.innerHTML = aktiveAntraege.map(a => renderAntragCard(a, 'aktiv')).join('');
+      }
+      
+      // Historie
+      if (historieAntraege.length === 0) {
+        historieList.innerHTML = '<div class="empty-state"><div class="icon">📜</div><p>Noch keine abgeschlossenen Anträge.</p></div>';
+      } else {
+        historieList.innerHTML = historieAntraege.map(a => renderAntragCard(a, 'historie')).join('');
+      }
+    }
+
+    // ============================================
+    // AUFGABEN FÜR INSASSEN
+    // ============================================
+    
+    function renderAufgabeCard(aufgabe) {
+      const antrag = antragSystem.getAntrag(aufgabe.antragId);
+      const antragsNummer = antrag ? antrag.antragsNummer : aufgabe.antragsNummer;
+      
+      return `
+        <div class="antrag-card aufgabe-card">
+          <div class="aufgabe-header">
+            <span class="aufgabe-icon">📋</span>
+            <span class="aufgabe-label">Aufgabe</span>
+            <span class="status-badge in-bearbeitung">⏳ Offen</span>
+          </div>
+          <div class="antrag-body">
+            <p><strong>Zum Antrag:</strong> ${antragsNummer || aufgabe.antragId}</p>
+            <p><strong>Von:</strong> ${aufgabe.erstelltVonName}</p>
+            <p><strong>Beschreibung:</strong> ${aufgabe.beschreibung}</p>
+            <p class="antrag-date">Erhalten: ${formatDate(aufgabe.erstelltAm)}</p>
+          </div>
+          <div class="antrag-actions">
+            <button class="btn btn-primary btn-sm" onclick="openAufgabeInsasseModal('${aufgabe.id}')">
+              Aufgabe bearbeiten
+            </button>
+          </div>
+        </div>
+      `;
+    }
+    
+    function openAufgabeInsasseModal(aufgabeId) {
+      const aufgabe = aufgabenSystem.getAufgabe(aufgabeId);
+      if (!aufgabe) return;
+      
+      document.getElementById('aufgabeInsasseId').value = aufgabeId;
+      document.getElementById('aufgabeInsasseLoesung').value = '';
+      
+      document.getElementById('aufgabeInsasseInfo').innerHTML = `
+        <div class="detail-box">
+          <div class="detail-row">
+            <span class="detail-label">Aufgabe von:</span>
+            <span class="detail-value">${aufgabe.erstelltVonName}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Zum Antrag:</span>
+            <span class="detail-value">${aufgabe.antragsNummer || aufgabe.antragId}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Beschreibung:</span>
+            <span class="detail-value">${aufgabe.beschreibung}</span>
+          </div>
+        </div>
+      `;
+      
+      openModal('aufgabeInsasseModal');
+    }
+    
+    function erledigeInsassenAufgabe() {
+      const aufgabeId = document.getElementById('aufgabeInsasseId').value;
+      const loesung = document.getElementById('aufgabeInsasseLoesung').value.trim();
+      
+      if (!loesung) {
+        alert('Bitte geben Sie Ihre Antwort oder Lösung ein.');
+        return;
+      }
+      
+      const aufgabe = aufgabenSystem.erledigeAufgabe(aufgabeId, loesung);
+      
+      // Benachrichtigung an den Ersteller
+      notificationSystem.createNotification(
+        aufgabe.erstelltVonId,
+        'aufgabe-erledigt',
+        '✓ Aufgabe erledigt',
+        `Die Aufgabe zum Antrag ${aufgabe.antragsNummer || aufgabe.antragId} wurde vom Insassen erledigt.`,
+        aufgabe.antragId
+      );
+      
+      closeModal('aufgabeInsasseModal');
+      alert('Ihre Antwort wurde gesendet.');
+      renderAntraege();
+    }
+  </script>
+</body>
+</html>
