@@ -24,6 +24,1164 @@ const HAUS_CONFIG = {
 // Alias für Kompatibilität
 const JVA_CONFIG = HAUS_CONFIG;
 
+// ============================================
+// ÜBERSETZUNGSSYSTEM
+// ============================================
+
+const TRANSLATIONS = {
+  de: {
+    // Allgemein
+    'app.title': 'Antragswesen',
+    'app.logout': 'Abmelden',
+    'app.save': 'Speichern',
+    'app.cancel': 'Abbrechen',
+    'app.delete': 'Löschen',
+    'app.edit': 'Bearbeiten',
+    'app.close': 'Schließen',
+    'app.back': 'Zurück',
+    'app.search': 'Suchen',
+    'app.yes': 'Ja',
+    'app.no': 'Nein',
+    'app.loading': 'Laden...',
+    'app.language': 'Sprache',
+    
+    // Login
+    'login.title': 'Anmeldung',
+    'login.username': 'Benutzername',
+    'login.password': 'Passwort',
+    'login.submit': 'Anmelden',
+    'login.error': 'Ungültige Anmeldedaten',
+    
+    // Navigation / Tabs
+    'nav.openApplications': 'Offene Anträge',
+    'nav.myApplicationsTasks': 'Meine Anträge und Aufgaben',
+    'nav.personalOpening': 'Pers. Eröffnung',
+    'nav.completed': 'Erledigt',
+    'nav.submittedApplications': 'Eingereichte Anträge',
+    'nav.history': 'Historie',
+    'nav.drafts': 'Entwürfe',
+    
+    // Postfach
+    'inbox.title': 'Postfach',
+    'inbox.messages': 'Nachrichten',
+    'inbox.markAllRead': 'Alle als gelesen markieren',
+    'inbox.moreMessages': 'weitere Nachrichten',
+    'inbox.noMessages': 'Keine Nachrichten',
+    
+    // Anträge
+    'application.new': 'Neuer Antrag',
+    'application.id': 'Antrags-ID',
+    'application.applicant': 'Antragsteller',
+    'application.date': 'Datum',
+    'application.status': 'Status',
+    'application.concern': 'Anliegen',
+    'application.justification': 'Begründung',
+    'application.take': 'Antrag nehmen',
+    'application.details': 'Antragsdetails',
+    
+    // Antragstypen
+    'application.type.teilhabegeld': 'Teilhabegeld',
+    'application.type.eigentum': 'Eigentum aus der Kammer',
+    'application.type.sonstiges': 'Sonstiges Anliegen',
+    
+    // Status
+    'status.draft': 'Entwurf',
+    'status.submitted': 'Eingereicht',
+    'status.inProgress': 'In Bearbeitung',
+    'status.approved': 'Genehmigt',
+    'status.rejected': 'Abgelehnt',
+    'status.partiallyApproved': 'Teilweise genehmigt',
+    'status.completed': 'Abgeschlossen',
+    'status.open': 'Offen',
+    
+    // Aktionen
+    'action.decide': 'Entscheiden',
+    'action.createTask': 'Aufgabe erstellen',
+    'action.archive': 'Verakten',
+    'action.approve': 'Genehmigen',
+    'action.reject': 'Ablehnen',
+    'action.partiallyApprove': 'Teilweise genehmigen',
+    'action.technicalReview': 'Antrag sachlich/fachlich geprüft',
+    'action.executed': 'Antrag vollzogen',
+    'action.personalOpening': 'Persönliche Eröffnung',
+    
+    // Aufgaben
+    'task.title': 'Aufgabe',
+    'task.create': 'Aufgabe erstellen',
+    'task.edit': 'Aufgabe bearbeiten',
+    'task.complete': 'Aufgabe abschließen',
+    'task.assignTo': 'Aufgabe zuweisen an',
+    'task.assignToInmate': 'Insasse (Antragsteller)',
+    'task.assignToStaff': 'Mitarbeitende',
+    'task.shortDescription': 'Kurzbeschreibung',
+    'task.description': 'Ausführliche Beschreibung',
+    'task.deadline': 'Frist',
+    'task.deadlineHint': 'Bei Überschreitung der Frist werden tägliche Erinnerungen gesendet.',
+    'task.attachPdf': 'PDF erstellen und anhängen',
+    'task.send': 'Aufgabe senden',
+    'task.from': 'Aufgabe von',
+    'task.forApplication': 'Zum Antrag',
+    'task.searchStaff': 'Mitarbeiter suchen',
+    'task.selectStaff': 'Mitarbeiter auswählen',
+    'task.selected': 'Ausgewählt',
+    'task.noStaffFound': 'Keine Mitarbeiter gefunden',
+    'task.withAnswer': 'Mit Antwort',
+    'task.acknowledged': 'Zur Kenntnis genommen',
+    'task.answer': 'Antwort',
+    'task.enterAnswer': 'Geben Sie Ihre Antwort ein...',
+    'task.myTasks': 'Meine Aufgaben',
+    'task.applicationsInProgress': 'Anträge in Bearbeitung',
+    
+    // Entscheidung
+    'decision.title': 'Entscheidung',
+    'decision.reason': 'Begründung',
+    'decision.reasonRequired': 'Bitte geben Sie eine Begründung ein.',
+    'decision.personalOpeningCheck': 'Persönlich eröffnen',
+    'decision.executionBeforeNotification': 'Vollzug vor Bekanntgabe an den Insassen planen',
+    'decision.noAutoNotificationHint': 'Wenn aktiviert: Keine automatische Benachrichtigung. Das Ergebnis wird erst nach persönlicher Bestätigung übermittelt.',
+    
+    // Buttons/Schaltflächen
+    'button.cancel': 'Abbrechen',
+    'button.save': 'Speichern',
+    'button.close': 'Schließen',
+    'button.send': 'Senden',
+    'button.delete': 'Löschen',
+    'button.edit': 'Bearbeiten',
+    'button.open': 'Öffnen',
+    'button.back': 'Zurück',
+    'button.submit': 'Absenden',
+    'button.takeApplication': 'Antrag nehmen',
+    'button.openApplication': 'Antrag öffnen',
+    'button.saveDraft': 'Als Entwurf speichern',
+    'button.withdraw': 'Zurücknehmen',
+    'button.backToOverview': 'Zurück zur Übersicht',
+    'button.actions': 'Aktionen',
+    
+    // Formulare
+    'form.applicationType': 'Antragsart',
+    'form.details': 'Details',
+    'form.optional': 'optional',
+    'form.required': 'erforderlich',
+    'form.maxChars': 'max. {count} Zeichen',
+    'form.charsRemaining': 'Zeichen übrig',
+    
+    // Termine
+    'appointment.title': 'Titel',
+    'appointment.date': 'Datum',
+    'appointment.time': 'Uhrzeit',
+    'appointment.type': 'Terminart',
+    'appointment.private': 'Privat (nur für mich)',
+    'appointment.house': 'Für das ganze Haus',
+    'appointment.station': 'Für meine Station',
+    'appointment.createdBy': 'Erstellt von',
+    'appointment.forApplication': 'Zum Antrag',
+    'appointment.deleteConfirm': 'Termin wirklich löschen?',
+    
+    // Kalender
+    'calendar.title': 'Terminübersicht',
+    'calendar.day': 'Tag',
+    'calendar.week': 'Woche',
+    'calendar.month': 'Monat',
+    'calendar.today': 'Heute',
+    'calendar.newAppointment': 'Neuer Termin',
+    'calendar.noAppointments': 'Keine Termine',
+    
+    // Prozessschritte
+    'process.receipt': 'Eingang',
+    'process.review': 'Prüfung',
+    'process.decision': 'Entscheiden',
+    'process.notification': 'Bekanntgabe',
+    'process.execution': 'Vollzug',
+    'process.closure': 'Abschluss',
+    
+    // Stammdaten
+    'masterdata.name': 'Name',
+    'masterdata.birthdate': 'Geburtsdatum',
+    'masterdata.inmateId': 'Insassen-ID',
+    'masterdata.house': 'Haus',
+    'masterdata.station': 'Station',
+    
+    // Rollen
+    'role.inmate': 'Insasse',
+    'role.staff': 'Mitarbeiter',
+    'role.stationManagement': 'Stationsleitung',
+    'role.houseManagement': 'Hausleitung',
+    'role.admin': 'Administrator',
+    
+    // Verlauf
+    'history.title': 'Bearbeitungsverlauf',
+    'history.created': 'Antrag erstellt',
+    'history.taken': 'Antrag genommen',
+    'history.takenOver': 'Antrag übernommen von',
+    'history.reviewed': 'Sachlich/fachlich geprüft',
+    'history.decided': 'Entscheidung getroffen',
+    'history.decisionPlanned': 'Entscheidung vorbereitet (persönliche Eröffnung)',
+    'history.personalOpening': 'Persönliche Eröffnung',
+    'history.taskCreated': 'Aufgabe erstellt',
+    'history.taskCreatedFor': 'Aufgabe erstellt für',
+    'history.taskCompleted': 'Aufgabe erledigt',
+    'history.taskAnswered': 'Aufgabe beantwortet',
+    'history.taskAcknowledged': 'Aufgabe zur Kenntnis genommen',
+    'history.taskDeleted': 'Aufgabe gelöscht',
+    'history.executed': 'Vollzogen',
+    'history.archived': 'Veraktet',
+    'history.deadline': 'Frist',
+    'history.noActivities': 'Noch keine Aktivitäten.',
+    
+    // Hinweise
+    'hint.applicationNotTaken': 'Dieser Antrag wurde noch nicht zur Bearbeitung genommen.',
+    'hint.reviewRequired': 'Der Antrag muss zunächst sachlich/fachlich geprüft werden, bevor eine Entscheidung getroffen werden kann.',
+    'hint.openTask': 'Sie haben eine offene Aufgabe zu diesem Antrag.',
+    'hint.decisionMade': 'Entscheidung',
+    'hint.on': 'am',
+    
+    // Antragstypen (für Aktivitäten)
+    'apptype.teilhabegeld': 'Teilhabegeld',
+    'apptype.eigentum': 'Eigentum in der Kammer',
+    
+    // Prozesskette
+    'process.receipt': 'Eingang',
+    'process.review': 'Prüfung',
+    'process.decision': 'Entscheiden',
+    'process.notification': 'Bekanntgabe',
+    'process.execution': 'Vollzug',
+    'process.completion': 'Abschluss',
+    'process.reviewDone': 'Sachliche/fachliche Prüfung erfolgt am',
+    'process.by': 'durch',
+    
+    // Bescheid
+    'notice.title': 'Bescheid',
+    'notice.reference': 'Aktenzeichen',
+    'notice.date': 'Datum',
+    'notice.applicationDate': 'Antragsdatum',
+    'notice.greeting': 'Sehr geehrte/r Herr/Frau',
+    'notice.yourApplication': 'Ihr Antrag',
+    'notice.approved': 'wird hiermit genehmigt',
+    'notice.partiallyApproved': 'wird hiermit teilweise genehmigt',
+    'notice.rejected': 'wird hiermit abgelehnt',
+    'notice.reasonIntro': 'Die Entscheidung erfolgt aufgrund folgender Begründung:',
+    'notice.appeal': 'Gegen diese Entscheidung können Sie innerhalb von zwei Wochen auf Basis von §§ 109 ff. Strafvollzugesetz (StVollzG) beim Landgericht Hamburg Einspruch erheben.',
+    'notice.applicationFor': 'Beantragung von',
+    'notice.for': 'für',
+    
+    // Sortierung
+    'sort.label': 'Sortieren',
+    'sort.newest': 'Neueste zuerst',
+    'sort.oldest': 'Älteste zuerst',
+    'sort.applicantAZ': 'Antragsteller A-Z',
+    'sort.applicantZA': 'Antragsteller Z-A',
+    
+    // Monate
+    'month.january': 'Januar',
+    'month.february': 'Februar',
+    'month.march': 'März',
+    'month.april': 'April',
+    'month.may': 'Mai',
+    'month.june': 'Juni',
+    'month.july': 'Juli',
+    'month.august': 'August',
+    'month.september': 'September',
+    'month.october': 'Oktober',
+    'month.november': 'November',
+    'month.december': 'Dezember',
+    
+    // Wochentage
+    'weekday.monday': 'Montag',
+    'weekday.tuesday': 'Dienstag',
+    'weekday.wednesday': 'Mittwoch',
+    'weekday.thursday': 'Donnerstag',
+    'weekday.friday': 'Freitag',
+    'weekday.saturday': 'Samstag',
+    'weekday.sunday': 'Sonntag',
+    'weekday.mon': 'Mo',
+    'weekday.tue': 'Di',
+    'weekday.wed': 'Mi',
+    'weekday.thu': 'Do',
+    'weekday.fri': 'Fr',
+    'weekday.sat': 'Sa',
+    'weekday.sun': 'So',
+    
+    // Fehlermeldungen
+    'error.general': 'Ein Fehler ist aufgetreten',
+    'error.required': 'Dieses Feld ist erforderlich',
+    'error.selectOption': 'Bitte wählen Sie eine Option',
+    'error.duplicateTeilhabegeld': 'Für diesen Monat wurde bereits ein Teilhabegeld-Antrag eingereicht.',
+    'error.reviewRequired': 'Antrag muss erst geprüft werden',
+    'error.executionRequired': 'Antrag muss erst als vollzogen markiert werden',
+    
+    // Bestätigungen
+    'confirm.delete': 'Möchten Sie wirklich löschen?',
+    'confirm.submit': 'Antrag einreichen?',
+    
+    // Erfolg
+    'success.saved': 'Erfolgreich gespeichert',
+    'success.submitted': 'Erfolgreich eingereicht',
+    'success.taskCreated': 'Aufgabe wurde erfolgreich erstellt und zugewiesen.',
+  },
+  
+  en: {
+    // General
+    'app.title': 'Application System',
+    'app.logout': 'Logout',
+    'app.save': 'Save',
+    'app.cancel': 'Cancel',
+    'app.delete': 'Delete',
+    'app.edit': 'Edit',
+    'app.close': 'Close',
+    'app.back': 'Back',
+    'app.search': 'Search',
+    'app.yes': 'Yes',
+    'app.no': 'No',
+    'app.loading': 'Loading...',
+    'app.language': 'Language',
+    
+    // Login
+    'login.title': 'Login',
+    'login.username': 'Username',
+    'login.password': 'Password',
+    'login.submit': 'Login',
+    'login.error': 'Invalid credentials',
+    
+    // Navigation / Tabs
+    'nav.openApplications': 'Open Applications',
+    'nav.myApplicationsTasks': 'My Applications and Tasks',
+    'nav.personalOpening': 'Personal Opening',
+    'nav.completed': 'Completed',
+    'nav.submittedApplications': 'Submitted Applications',
+    'nav.history': 'History',
+    'nav.drafts': 'Drafts',
+    
+    // Inbox
+    'inbox.title': 'Inbox',
+    'inbox.messages': 'Messages',
+    'inbox.markAllRead': 'Mark all as read',
+    'inbox.moreMessages': 'more messages',
+    'inbox.noMessages': 'No messages',
+    
+    // Applications
+    'application.new': 'New Application',
+    'application.id': 'Application ID',
+    'application.applicant': 'Applicant',
+    'application.date': 'Date',
+    'application.status': 'Status',
+    'application.concern': 'Concern',
+    'application.justification': 'Justification',
+    'application.take': 'Take Application',
+    'application.details': 'Application Details',
+    
+    // Application types
+    'application.type.teilhabegeld': 'Participation Allowance',
+    'application.type.eigentum': 'Property from Storage',
+    'application.type.sonstiges': 'Other Concerns',
+    
+    // Status
+    'status.draft': 'Draft',
+    'status.submitted': 'Submitted',
+    'status.inProgress': 'In Progress',
+    'status.approved': 'Approved',
+    'status.rejected': 'Rejected',
+    'status.partiallyApproved': 'Partially Approved',
+    'status.completed': 'Completed',
+    'status.open': 'Open',
+    
+    // Actions
+    'action.decide': 'Decide',
+    'action.createTask': 'Create Task',
+    'action.archive': 'Archive',
+    'action.approve': 'Approve',
+    'action.reject': 'Reject',
+    'action.partiallyApprove': 'Partially Approve',
+    'action.technicalReview': 'Technical Review Completed',
+    'action.executed': 'Executed',
+    'action.personalOpening': 'Personal Opening',
+    
+    // Tasks
+    'task.title': 'Task',
+    'task.create': 'Create Task',
+    'task.edit': 'Edit Task',
+    'task.complete': 'Complete Task',
+    'task.assignTo': 'Assign task to',
+    'task.assignToInmate': 'Inmate (Applicant)',
+    'task.assignToStaff': 'Staff',
+    'task.shortDescription': 'Short Description',
+    'task.description': 'Detailed Description',
+    'task.deadline': 'Deadline',
+    'task.deadlineHint': 'Daily reminders will be sent when the deadline is exceeded.',
+    'task.attachPdf': 'Create and attach PDF',
+    'task.send': 'Send Task',
+    'task.from': 'Task from',
+    'task.forApplication': 'For application',
+    'task.searchStaff': 'Search staff',
+    'task.selectStaff': 'Select staff member',
+    'task.selected': 'Selected',
+    'task.noStaffFound': 'No staff found',
+    'task.withAnswer': 'With Answer',
+    'task.acknowledged': 'Acknowledged',
+    'task.answer': 'Answer',
+    'task.enterAnswer': 'Enter your answer...',
+    'task.myTasks': 'My Tasks',
+    'task.applicationsInProgress': 'Applications in Progress',
+    
+    // Decision
+    'decision.title': 'Decision',
+    'decision.reason': 'Reason',
+    'decision.reasonRequired': 'Please enter a reason.',
+    'decision.personalOpeningCheck': 'Personal opening',
+    'decision.executionBeforeNotification': 'Plan execution before notification to inmate',
+    'decision.noAutoNotificationHint': 'If activated: No automatic notification. The result will only be transmitted after personal confirmation.',
+    
+    // Buttons
+    'button.cancel': 'Cancel',
+    'button.save': 'Save',
+    'button.close': 'Close',
+    'button.send': 'Send',
+    'button.delete': 'Delete',
+    'button.edit': 'Edit',
+    'button.open': 'Open',
+    'button.back': 'Back',
+    'button.submit': 'Submit',
+    'button.takeApplication': 'Take application',
+    'button.openApplication': 'Open application',
+    'button.saveDraft': 'Save as draft',
+    'button.withdraw': 'Withdraw',
+    'button.backToOverview': 'Back to overview',
+    'button.actions': 'Actions',
+    
+    // Forms
+    'form.applicationType': 'Application type',
+    'form.details': 'Details',
+    'form.optional': 'optional',
+    'form.required': 'required',
+    'form.maxChars': 'max. {count} characters',
+    'form.charsRemaining': 'characters remaining',
+    
+    // Appointments
+    'appointment.title': 'Title',
+    'appointment.date': 'Date',
+    'appointment.time': 'Time',
+    'appointment.type': 'Appointment type',
+    'appointment.private': 'Private (only for me)',
+    'appointment.house': 'For the whole house',
+    'appointment.station': 'For my station',
+    'appointment.createdBy': 'Created by',
+    'appointment.forApplication': 'For application',
+    'appointment.deleteConfirm': 'Really delete appointment?',
+    
+    // Calendar
+    'calendar.title': 'Calendar Overview',
+    'calendar.day': 'Day',
+    'calendar.week': 'Week',
+    'calendar.month': 'Month',
+    'calendar.today': 'Today',
+    'calendar.newAppointment': 'New Appointment',
+    'calendar.noAppointments': 'No appointments',
+    
+    // Process steps
+    'process.receipt': 'Receipt',
+    'process.review': 'Review',
+    'process.decision': 'Decision',
+    'process.notification': 'Notification',
+    'process.execution': 'Execution',
+    'process.completion': 'Completion',
+    'process.reviewDone': 'Technical review completed on',
+    'process.by': 'by',
+    
+    // Notice
+    'notice.title': 'Notice',
+    'notice.reference': 'Reference',
+    'notice.date': 'Date',
+    'notice.applicationDate': 'Application Date',
+    'notice.greeting': 'Dear Mr./Ms.',
+    'notice.yourApplication': 'Your application',
+    'notice.approved': 'is hereby approved',
+    'notice.partiallyApproved': 'is hereby partially approved',
+    'notice.rejected': 'is hereby rejected',
+    'notice.reasonIntro': 'The decision is based on the following reason:',
+    'notice.appeal': 'You may appeal this decision within two weeks pursuant to §§ 109 ff. Prison Act (StVollzG) at the Hamburg Regional Court.',
+    'notice.applicationFor': 'Application for',
+    'notice.for': 'for',
+    
+    // Master data
+    'masterdata.name': 'Name',
+    'masterdata.birthdate': 'Date of Birth',
+    'masterdata.inmateId': 'Inmate ID',
+    'masterdata.house': 'House',
+    'masterdata.station': 'Station',
+    
+    // Roles
+    'role.inmate': 'Inmate',
+    'role.staff': 'Staff',
+    'role.stationManagement': 'Station Management',
+    'role.houseManagement': 'House Management',
+    'role.admin': 'Administrator',
+    
+    // History
+    'history.title': 'Processing History',
+    'history.created': 'Application created',
+    'history.taken': 'Application taken',
+    'history.takenOver': 'Application taken over from',
+    'history.reviewed': 'Technical review completed',
+    'history.decided': 'Decision made',
+    'history.decisionPlanned': 'Decision prepared (personal opening)',
+    'history.personalOpening': 'Personal opening',
+    'history.taskCreated': 'Task created',
+    'history.taskCreatedFor': 'Task created for',
+    'history.taskCompleted': 'Task completed',
+    'history.taskAnswered': 'Task answered',
+    'history.taskAcknowledged': 'Task acknowledged',
+    'history.taskDeleted': 'Task deleted',
+    'history.executed': 'Executed',
+    'history.archived': 'Archived',
+    'history.deadline': 'Deadline',
+    'history.noActivities': 'No activities yet.',
+    
+    // Hints
+    'hint.applicationNotTaken': 'This application has not yet been taken for processing.',
+    'hint.reviewRequired': 'The application must first be technically reviewed before a decision can be made.',
+    'hint.openTask': 'You have an open task for this application.',
+    'hint.decisionMade': 'Decision',
+    'hint.on': 'on',
+    
+    // Application types (for activities)
+    'apptype.teilhabegeld': 'Participation allowance',
+    'apptype.eigentum': 'Property from storage',
+    
+    // Sorting
+    'sort.label': 'Sort',
+    'sort.newest': 'Newest first',
+    'sort.oldest': 'Oldest first',
+    'sort.applicantAZ': 'Applicant A-Z',
+    'sort.applicantZA': 'Applicant Z-A',
+    
+    // Months
+    'month.january': 'January',
+    'month.february': 'February',
+    'month.march': 'March',
+    'month.april': 'April',
+    'month.may': 'May',
+    'month.june': 'June',
+    'month.july': 'July',
+    'month.august': 'August',
+    'month.september': 'September',
+    'month.october': 'October',
+    'month.november': 'November',
+    'month.december': 'December',
+    
+    // Weekdays
+    'weekday.monday': 'Monday',
+    'weekday.tuesday': 'Tuesday',
+    'weekday.wednesday': 'Wednesday',
+    'weekday.thursday': 'Thursday',
+    'weekday.friday': 'Friday',
+    'weekday.saturday': 'Saturday',
+    'weekday.sunday': 'Sunday',
+    'weekday.mon': 'Mon',
+    'weekday.tue': 'Tue',
+    'weekday.wed': 'Wed',
+    'weekday.thu': 'Thu',
+    'weekday.fri': 'Fri',
+    'weekday.sat': 'Sat',
+    'weekday.sun': 'Sun',
+    
+    // Errors
+    'error.general': 'An error occurred',
+    'error.required': 'This field is required',
+    'error.selectOption': 'Please select an option',
+    'error.duplicateTeilhabegeld': 'A participation allowance application has already been submitted for this month.',
+    'error.reviewRequired': 'Application must be reviewed first',
+    'error.executionRequired': 'Application must be marked as executed first',
+    
+    // Confirmations
+    'confirm.delete': 'Do you really want to delete?',
+    'confirm.submit': 'Submit application?',
+    
+    // Success
+    'success.saved': 'Successfully saved',
+    'success.submitted': 'Successfully submitted',
+    'success.taskCreated': 'Task has been created and assigned successfully.',
+  },
+  
+  fr: {
+    // Général
+    'app.title': 'Système de demandes',
+    'app.logout': 'Déconnexion',
+    'app.save': 'Enregistrer',
+    'app.cancel': 'Annuler',
+    'app.delete': 'Supprimer',
+    'app.edit': 'Modifier',
+    'app.close': 'Fermer',
+    'app.back': 'Retour',
+    'app.search': 'Rechercher',
+    'app.yes': 'Oui',
+    'app.no': 'Non',
+    'app.loading': 'Chargement...',
+    'app.language': 'Langue',
+    
+    // Connexion
+    'login.title': 'Connexion',
+    'login.username': 'Nom d\'utilisateur',
+    'login.password': 'Mot de passe',
+    'login.submit': 'Se connecter',
+    'login.error': 'Identifiants invalides',
+    
+    // Navigation / Onglets
+    'nav.openApplications': 'Demandes ouvertes',
+    'nav.myApplicationsTasks': 'Mes demandes et tâches',
+    'nav.personalOpening': 'Ouverture personnelle',
+    'nav.completed': 'Terminé',
+    'nav.submittedApplications': 'Demandes soumises',
+    'nav.history': 'Historique',
+    'nav.drafts': 'Brouillons',
+    
+    // Boîte de réception
+    'inbox.title': 'Boîte de réception',
+    'inbox.messages': 'Messages',
+    'inbox.markAllRead': 'Tout marquer comme lu',
+    'inbox.moreMessages': 'messages supplémentaires',
+    'inbox.noMessages': 'Aucun message',
+    
+    // Demandes
+    'application.new': 'Nouvelle demande',
+    'application.id': 'ID de demande',
+    'application.applicant': 'Demandeur',
+    'application.date': 'Date',
+    'application.status': 'Statut',
+    'application.concern': 'Objet',
+    'application.justification': 'Justification',
+    'application.take': 'Prendre la demande',
+    'application.details': 'Détails de la demande',
+    
+    // Types de demande
+    'application.type.teilhabegeld': 'Allocation de participation',
+    'application.type.eigentum': 'Propriété du dépôt',
+    'application.type.sonstiges': 'Autres préoccupations',
+    
+    // Statut
+    'status.draft': 'Brouillon',
+    'status.submitted': 'Soumis',
+    'status.inProgress': 'En cours',
+    'status.approved': 'Approuvé',
+    'status.rejected': 'Rejeté',
+    'status.partiallyApproved': 'Partiellement approuvé',
+    'status.completed': 'Terminé',
+    'status.open': 'Ouvert',
+    
+    // Actions
+    'action.decide': 'Décider',
+    'action.createTask': 'Créer une tâche',
+    'action.archive': 'Archiver',
+    'action.approve': 'Approuver',
+    'action.reject': 'Rejeter',
+    'action.partiallyApprove': 'Approuver partiellement',
+    'action.technicalReview': 'Examen technique terminé',
+    'action.executed': 'Exécuté',
+    'action.personalOpening': 'Ouverture personnelle',
+    
+    // Tâches
+    'task.title': 'Tâche',
+    'task.create': 'Créer une tâche',
+    'task.edit': 'Modifier la tâche',
+    'task.complete': 'Terminer la tâche',
+    'task.assignTo': 'Assigner la tâche à',
+    'task.assignToInmate': 'Détenu (Demandeur)',
+    'task.assignToStaff': 'Personnel',
+    'task.shortDescription': 'Description courte',
+    'task.description': 'Description détaillée',
+    'task.deadline': 'Date limite',
+    'task.deadlineHint': 'Des rappels quotidiens seront envoyés après la date limite.',
+    'task.attachPdf': 'Créer et joindre un PDF',
+    'task.send': 'Envoyer la tâche',
+    'task.from': 'Tâche de',
+    'task.forApplication': 'Pour la demande',
+    'task.searchStaff': 'Rechercher un employé',
+    'task.selectStaff': 'Sélectionner un employé',
+    'task.selected': 'Sélectionné',
+    'task.noStaffFound': 'Aucun employé trouvé',
+    'task.withAnswer': 'Avec réponse',
+    'task.acknowledged': 'Pris connaissance',
+    'task.answer': 'Réponse',
+    'task.enterAnswer': 'Entrez votre réponse...',
+    'task.myTasks': 'Mes tâches',
+    'task.applicationsInProgress': 'Demandes en cours',
+    
+    // Décision
+    'decision.title': 'Décision',
+    'decision.reason': 'Motif',
+    'decision.reasonRequired': 'Veuillez entrer un motif.',
+    'decision.personalOpeningCheck': 'Ouverture personnelle',
+    'decision.executionBeforeNotification': 'Planifier l\'exécution avant la notification au détenu',
+    'decision.noAutoNotificationHint': 'Si activé: Pas de notification automatique. Le résultat ne sera transmis qu\'après confirmation personnelle.',
+    
+    // Boutons
+    'button.cancel': 'Annuler',
+    'button.save': 'Enregistrer',
+    'button.close': 'Fermer',
+    'button.send': 'Envoyer',
+    'button.delete': 'Supprimer',
+    'button.edit': 'Modifier',
+    'button.open': 'Ouvrir',
+    'button.back': 'Retour',
+    'button.submit': 'Soumettre',
+    'button.takeApplication': 'Prendre la demande',
+    'button.openApplication': 'Ouvrir la demande',
+    'button.saveDraft': 'Enregistrer comme brouillon',
+    'button.withdraw': 'Retirer',
+    'button.backToOverview': 'Retour à l\'aperçu',
+    'button.actions': 'Actions',
+    
+    // Formulaires
+    'form.applicationType': 'Type de demande',
+    'form.details': 'Détails',
+    'form.optional': 'optionnel',
+    'form.required': 'obligatoire',
+    'form.maxChars': 'max. {count} caractères',
+    'form.charsRemaining': 'caractères restants',
+    
+    // Rendez-vous
+    'appointment.title': 'Titre',
+    'appointment.date': 'Date',
+    'appointment.time': 'Heure',
+    'appointment.type': 'Type de rendez-vous',
+    'appointment.private': 'Privé (seulement pour moi)',
+    'appointment.house': 'Pour toute la maison',
+    'appointment.station': 'Pour ma station',
+    'appointment.createdBy': 'Créé par',
+    'appointment.forApplication': 'Pour la demande',
+    'appointment.deleteConfirm': 'Vraiment supprimer le rendez-vous?',
+    
+    // Calendrier
+    'calendar.title': 'Aperçu du calendrier',
+    'calendar.day': 'Jour',
+    'calendar.week': 'Semaine',
+    'calendar.month': 'Mois',
+    'calendar.today': 'Aujourd\'hui',
+    'calendar.newAppointment': 'Nouveau rendez-vous',
+    'calendar.noAppointments': 'Aucun rendez-vous',
+    
+    // Étapes du processus
+    'process.receipt': 'Réception',
+    'process.review': 'Examen',
+    'process.decision': 'Décision',
+    'process.notification': 'Notification',
+    'process.execution': 'Exécution',
+    'process.completion': 'Clôture',
+    'process.reviewDone': 'Examen technique effectué le',
+    'process.by': 'par',
+    
+    // Notification
+    'notice.title': 'Notification',
+    'notice.reference': 'Référence',
+    'notice.date': 'Date',
+    'notice.applicationDate': 'Date de demande',
+    'notice.greeting': 'Cher(e) M./Mme.',
+    'notice.yourApplication': 'Votre demande',
+    'notice.approved': 'est approuvée par la présente',
+    'notice.partiallyApproved': 'est partiellement approuvée par la présente',
+    'notice.rejected': 'est rejetée par la présente',
+    'notice.reasonIntro': 'La décision est basée sur la raison suivante:',
+    'notice.appeal': 'Vous pouvez faire appel de cette décision dans un délai de deux semaines conformément aux §§ 109 ff. de la loi pénitentiaire (StVollzG) auprès du tribunal régional de Hambourg.',
+    'notice.applicationFor': 'Demande de',
+    'notice.for': 'pour',
+    
+    // Données de base
+    'masterdata.name': 'Nom',
+    'masterdata.birthdate': 'Date de naissance',
+    'masterdata.inmateId': 'ID détenu',
+    'masterdata.house': 'Maison',
+    'masterdata.station': 'Station',
+    
+    // Rôles
+    'role.inmate': 'Détenu',
+    'role.staff': 'Personnel',
+    'role.stationManagement': 'Direction de station',
+    'role.houseManagement': 'Direction de maison',
+    'role.admin': 'Administrateur',
+    
+    // Historique
+    'history.title': 'Historique de traitement',
+    'history.created': 'Demande créée',
+    'history.taken': 'Demande prise',
+    'history.takenOver': 'Demande reprise de',
+    'history.reviewed': 'Examen technique terminé',
+    'history.decided': 'Décision prise',
+    'history.decisionPlanned': 'Décision préparée (ouverture personnelle)',
+    'history.personalOpening': 'Ouverture personnelle',
+    'history.taskCreated': 'Tâche créée',
+    'history.taskCreatedFor': 'Tâche créée pour',
+    'history.taskCompleted': 'Tâche terminée',
+    'history.taskAnswered': 'Tâche répondue',
+    'history.taskAcknowledged': 'Tâche prise en compte',
+    'history.taskDeleted': 'Tâche supprimée',
+    'history.executed': 'Exécuté',
+    'history.archived': 'Archivé',
+    'history.deadline': 'Date limite',
+    'history.noActivities': 'Pas encore d\'activités.',
+    
+    // Indices
+    'hint.applicationNotTaken': 'Cette demande n\'a pas encore été prise en charge.',
+    'hint.reviewRequired': 'La demande doit d\'abord être examinée techniquement avant qu\'une décision puisse être prise.',
+    'hint.openTask': 'Vous avez une tâche ouverte pour cette demande.',
+    'hint.decisionMade': 'Décision',
+    'hint.on': 'le',
+    
+    // Types de demande (pour les activités)
+    'apptype.teilhabegeld': 'Allocation de participation',
+    'apptype.eigentum': 'Biens du dépôt',
+    
+    // Tri
+    'sort.label': 'Trier',
+    'sort.newest': 'Plus récent',
+    'sort.oldest': 'Plus ancien',
+    'sort.applicantAZ': 'Demandeur A-Z',
+    'sort.applicantZA': 'Demandeur Z-A',
+    
+    // Mois
+    'month.january': 'Janvier',
+    'month.february': 'Février',
+    'month.march': 'Mars',
+    'month.april': 'Avril',
+    'month.may': 'Mai',
+    'month.june': 'Juin',
+    'month.july': 'Juillet',
+    'month.august': 'Août',
+    'month.september': 'Septembre',
+    'month.october': 'Octobre',
+    'month.november': 'Novembre',
+    'month.december': 'Décembre',
+    
+    // Jours de la semaine
+    'weekday.monday': 'Lundi',
+    'weekday.tuesday': 'Mardi',
+    'weekday.wednesday': 'Mercredi',
+    'weekday.thursday': 'Jeudi',
+    'weekday.friday': 'Vendredi',
+    'weekday.saturday': 'Samedi',
+    'weekday.sunday': 'Dimanche',
+    'weekday.mon': 'Lun',
+    'weekday.tue': 'Mar',
+    'weekday.wed': 'Mer',
+    'weekday.thu': 'Jeu',
+    'weekday.fri': 'Ven',
+    'weekday.sat': 'Sam',
+    'weekday.sun': 'Dim',
+    
+    // Erreurs
+    'error.general': 'Une erreur s\'est produite',
+    'error.required': 'Ce champ est obligatoire',
+    'error.selectOption': 'Veuillez sélectionner une option',
+    'error.duplicateTeilhabegeld': 'Une demande d\'allocation a déjà été soumise pour ce mois.',
+    'error.reviewRequired': 'La demande doit d\'abord être examinée',
+    'error.executionRequired': 'La demande doit d\'abord être marquée comme exécutée',
+    
+    // Confirmations
+    'confirm.delete': 'Voulez-vous vraiment supprimer?',
+    'confirm.submit': 'Soumettre la demande?',
+    
+    // Succès
+    'success.saved': 'Enregistré avec succès',
+    'success.submitted': 'Soumis avec succès',
+    'success.taskCreated': 'La tâche a été créée et assignée avec succès.',
+  }
+};
+
+// Aktuelle Sprache (Standard: Deutsch) - wird beim Login individuell geladen
+let currentLanguage = 'de';
+
+// Übersetzungsfunktion
+function t(key, params = {}) {
+  const translation = TRANSLATIONS[currentLanguage]?.[key] || TRANSLATIONS['de'][key] || key;
+  
+  // Parameter ersetzen (z.B. {count} -> 5)
+  let result = translation;
+  Object.keys(params).forEach(param => {
+    result = result.replace(new RegExp(`{${param}}`, 'g'), params[param]);
+  });
+  
+  return result;
+}
+
+// Sprache setzen (individuell pro Benutzer)
+function setLanguage(lang, userId = null) {
+  if (TRANSLATIONS[lang]) {
+    currentLanguage = lang;
+    
+    // Benutzer-Spracheinstellung speichern wenn eingeloggt
+    const session = sessionManager?.getSession();
+    const activeUserId = userId || session?.userId;
+    
+    if (activeUserId) {
+      localStorage.setItem('app_language_' + activeUserId, lang);
+      const user = userSystem.getUser(activeUserId);
+      if (user) {
+        user.sprache = lang;
+        userSystem.saveUsers();
+      }
+    }
+    
+    return true;
+  }
+  return false;
+}
+
+// Sprache des Benutzers laden
+function loadUserLanguage(userId) {
+  const user = userSystem.getUser(userId);
+  if (user && user.sprache && TRANSLATIONS[user.sprache]) {
+    currentLanguage = user.sprache;
+    localStorage.setItem('app_language_' + userId, user.sprache);
+  } else {
+    // Standard-Sprache Deutsch wenn keine Einstellung vorhanden
+    currentLanguage = 'de';
+  }
+}
+
+// Sprache beim Logout zurücksetzen
+function resetLanguage() {
+  currentLanguage = 'de';
+}
+
+// Verfügbare Sprachen
+function getAvailableLanguages() {
+  return [
+    { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+    { code: 'en', name: 'English', flag: '🇬🇧' },
+    { code: 'fr', name: 'Français', flag: '🇫🇷' }
+  ];
+}
+
+// ============================================
+// FREITEXT-ÜBERSETZUNG (Wörterbuch-basiert)
+// ============================================
+
+const TEXT_DICTIONARY = {
+  // Deutsch -> Englisch
+  'de-en': {
+    // Häufige Wörter
+    'ich': 'I', 'möchte': 'would like', 'bitte': 'please', 'gerne': 'gladly',
+    'beantragen': 'apply for', 'Antrag': 'application', 'Geld': 'money',
+    'benötige': 'need', 'brauche': 'need', 'für': 'for', 'den': 'the', 'die': 'the', 'das': 'the',
+    'ein': 'a', 'eine': 'a', 'einen': 'a', 'mein': 'my', 'meine': 'my', 'meinen': 'my',
+    'und': 'and', 'oder': 'or', 'aber': 'but', 'weil': 'because', 'da': 'since',
+    'habe': 'have', 'hat': 'has', 'haben': 'have', 'bin': 'am', 'ist': 'is', 'sind': 'are',
+    'wird': 'will', 'werden': 'will', 'wurde': 'was', 'wurden': 'were',
+    'kann': 'can', 'können': 'can', 'muss': 'must', 'müssen': 'must',
+    'soll': 'should', 'sollen': 'should', 'darf': 'may', 'dürfen': 'may',
+    'nicht': 'not', 'kein': 'no', 'keine': 'no', 'keinen': 'no',
+    'mit': 'with', 'ohne': 'without', 'von': 'from', 'zu': 'to', 'bei': 'at',
+    'am': 'on', 'im': 'in', 'an': 'at', 'auf': 'on', 'in': 'in', 'aus': 'from',
+    'nach': 'after', 'vor': 'before', 'über': 'about', 'unter': 'under',
+    'heute': 'today', 'morgen': 'tomorrow', 'gestern': 'yesterday',
+    'Monat': 'month', 'Jahr': 'year', 'Tag': 'day', 'Woche': 'week',
+    'Januar': 'January', 'Februar': 'February', 'März': 'March', 'April': 'April',
+    'Mai': 'May', 'Juni': 'June', 'Juli': 'July', 'August': 'August',
+    'September': 'September', 'Oktober': 'October', 'November': 'November', 'Dezember': 'December',
+    // Antrags-spezifisch
+    'Teilhabegeld': 'participation allowance', 'Eigentum': 'property', 'Kammer': 'storage',
+    'genehmigt': 'approved', 'abgelehnt': 'rejected', 'Begründung': 'reason',
+    'Aufgabe': 'task', 'erledigt': 'completed', 'Antwort': 'answer',
+    'Kenntnis': 'knowledge', 'genommen': 'taken', 'geprüft': 'reviewed',
+    'Entscheidung': 'decision', 'Eröffnung': 'opening', 'persönlich': 'personal',
+    'Bescheid': 'notice', 'Einspruch': 'objection', 'Frist': 'deadline',
+    'hiermit': 'hereby', 'folgende': 'following', 'folgenden': 'following',
+    'sehr': 'very', 'geehrte': 'dear', 'geehrter': 'dear', 'Herr': 'Mr', 'Frau': 'Ms',
+    'Grund': 'reason', 'Gründe': 'reasons', 'Zweck': 'purpose',
+    'benötigt': 'needed', 'erforderlich': 'required', 'notwendig': 'necessary',
+    'dringend': 'urgent', 'wichtig': 'important', 'sofort': 'immediately',
+    'Familie': 'family', 'Angehörige': 'relatives', 'Besuch': 'visit',
+    'Medizin': 'medicine', 'Arzt': 'doctor', 'Gesundheit': 'health',
+    'Arbeit': 'work', 'Ausbildung': 'training', 'Bildung': 'education',
+    'Kleidung': 'clothing', 'Hygiene': 'hygiene', 'Körperpflege': 'personal care',
+    'Telefonat': 'phone call', 'Brief': 'letter', 'Kontakt': 'contact'
+  },
+  
+  // Deutsch -> Französisch
+  'de-fr': {
+    'ich': 'je', 'möchte': 'voudrais', 'bitte': 's\'il vous plaît', 'gerne': 'volontiers',
+    'beantragen': 'demander', 'Antrag': 'demande', 'Geld': 'argent',
+    'benötige': 'ai besoin de', 'brauche': 'ai besoin de', 'für': 'pour',
+    'den': 'le', 'die': 'la', 'das': 'le', 'ein': 'un', 'eine': 'une', 'einen': 'un',
+    'mein': 'mon', 'meine': 'ma', 'meinen': 'mon',
+    'und': 'et', 'oder': 'ou', 'aber': 'mais', 'weil': 'parce que', 'da': 'puisque',
+    'habe': 'ai', 'hat': 'a', 'haben': 'ont', 'bin': 'suis', 'ist': 'est', 'sind': 'sont',
+    'wird': 'sera', 'werden': 'seront', 'wurde': 'a été', 'wurden': 'ont été',
+    'kann': 'peux', 'können': 'peuvent', 'muss': 'dois', 'müssen': 'doivent',
+    'soll': 'devrait', 'sollen': 'devraient', 'darf': 'peut', 'dürfen': 'peuvent',
+    'nicht': 'pas', 'kein': 'aucun', 'keine': 'aucune', 'keinen': 'aucun',
+    'mit': 'avec', 'ohne': 'sans', 'von': 'de', 'zu': 'à', 'bei': 'chez',
+    'am': 'le', 'im': 'dans le', 'an': 'à', 'auf': 'sur', 'in': 'dans', 'aus': 'de',
+    'nach': 'après', 'vor': 'avant', 'über': 'sur', 'unter': 'sous',
+    'heute': 'aujourd\'hui', 'morgen': 'demain', 'gestern': 'hier',
+    'Monat': 'mois', 'Jahr': 'année', 'Tag': 'jour', 'Woche': 'semaine',
+    'Januar': 'janvier', 'Februar': 'février', 'März': 'mars', 'April': 'avril',
+    'Mai': 'mai', 'Juni': 'juin', 'Juli': 'juillet', 'August': 'août',
+    'September': 'septembre', 'Oktober': 'octobre', 'November': 'novembre', 'Dezember': 'décembre',
+    'Teilhabegeld': 'allocation de participation', 'Eigentum': 'propriété', 'Kammer': 'dépôt',
+    'genehmigt': 'approuvé', 'abgelehnt': 'rejeté', 'Begründung': 'motif',
+    'Aufgabe': 'tâche', 'erledigt': 'terminé', 'Antwort': 'réponse',
+    'Kenntnis': 'connaissance', 'genommen': 'pris', 'geprüft': 'vérifié',
+    'Entscheidung': 'décision', 'Eröffnung': 'ouverture', 'persönlich': 'personnel',
+    'Bescheid': 'avis', 'Einspruch': 'objection', 'Frist': 'délai',
+    'hiermit': 'par la présente', 'folgende': 'suivant', 'folgenden': 'suivants',
+    'sehr': 'très', 'geehrte': 'cher', 'geehrter': 'cher', 'Herr': 'Monsieur', 'Frau': 'Madame',
+    'Grund': 'raison', 'Gründe': 'raisons', 'Zweck': 'but',
+    'benötigt': 'nécessaire', 'erforderlich': 'requis', 'notwendig': 'nécessaire',
+    'dringend': 'urgent', 'wichtig': 'important', 'sofort': 'immédiatement',
+    'Familie': 'famille', 'Angehörige': 'proches', 'Besuch': 'visite',
+    'Medizin': 'médicament', 'Arzt': 'médecin', 'Gesundheit': 'santé',
+    'Arbeit': 'travail', 'Ausbildung': 'formation', 'Bildung': 'éducation',
+    'Kleidung': 'vêtements', 'Hygiene': 'hygiène', 'Körperpflege': 'soins personnels',
+    'Telefonat': 'appel téléphonique', 'Brief': 'lettre', 'Kontakt': 'contact'
+  },
+  
+  // Englisch -> Deutsch
+  'en-de': {
+    'I': 'ich', 'would like': 'möchte', 'please': 'bitte', 'gladly': 'gerne',
+    'apply for': 'beantragen', 'application': 'Antrag', 'money': 'Geld',
+    'need': 'benötige', 'for': 'für', 'the': 'der/die/das', 'a': 'ein/eine',
+    'my': 'mein', 'and': 'und', 'or': 'oder', 'but': 'aber', 'because': 'weil',
+    'have': 'habe', 'has': 'hat', 'am': 'bin', 'is': 'ist', 'are': 'sind',
+    'will': 'wird', 'was': 'wurde', 'were': 'wurden',
+    'can': 'kann', 'must': 'muss', 'should': 'soll', 'may': 'darf',
+    'not': 'nicht', 'no': 'kein', 'with': 'mit', 'without': 'ohne',
+    'from': 'von', 'to': 'zu', 'at': 'bei', 'on': 'am', 'in': 'in',
+    'after': 'nach', 'before': 'vor', 'about': 'über', 'under': 'unter',
+    'today': 'heute', 'tomorrow': 'morgen', 'yesterday': 'gestern',
+    'month': 'Monat', 'year': 'Jahr', 'day': 'Tag', 'week': 'Woche',
+    'participation allowance': 'Teilhabegeld', 'property': 'Eigentum', 'storage': 'Kammer',
+    'approved': 'genehmigt', 'rejected': 'abgelehnt', 'reason': 'Begründung',
+    'task': 'Aufgabe', 'completed': 'erledigt', 'answer': 'Antwort',
+    'knowledge': 'Kenntnis', 'taken': 'genommen', 'reviewed': 'geprüft',
+    'decision': 'Entscheidung', 'opening': 'Eröffnung', 'personal': 'persönlich',
+    'notice': 'Bescheid', 'objection': 'Einspruch', 'deadline': 'Frist',
+    'hereby': 'hiermit', 'following': 'folgend', 'very': 'sehr',
+    'dear': 'geehrte/r', 'Mr': 'Herr', 'Ms': 'Frau',
+    'urgent': 'dringend', 'important': 'wichtig', 'immediately': 'sofort',
+    'family': 'Familie', 'relatives': 'Angehörige', 'visit': 'Besuch',
+    'medicine': 'Medizin', 'doctor': 'Arzt', 'health': 'Gesundheit',
+    'work': 'Arbeit', 'training': 'Ausbildung', 'education': 'Bildung'
+  },
+  
+  // Englisch -> Französisch
+  'en-fr': {
+    'I': 'je', 'would like': 'voudrais', 'please': 's\'il vous plaît',
+    'apply for': 'demander', 'application': 'demande', 'money': 'argent',
+    'need': 'ai besoin de', 'for': 'pour', 'the': 'le/la', 'a': 'un/une',
+    'my': 'mon/ma', 'and': 'et', 'or': 'ou', 'but': 'mais', 'because': 'parce que',
+    'have': 'ai', 'has': 'a', 'am': 'suis', 'is': 'est', 'are': 'sont',
+    'will': 'sera', 'was': 'était', 'were': 'étaient',
+    'can': 'peux', 'must': 'dois', 'should': 'devrait', 'may': 'peut',
+    'not': 'pas', 'no': 'non', 'with': 'avec', 'without': 'sans',
+    'from': 'de', 'to': 'à', 'at': 'à', 'on': 'sur', 'in': 'dans',
+    'today': 'aujourd\'hui', 'tomorrow': 'demain', 'yesterday': 'hier',
+    'month': 'mois', 'year': 'année', 'day': 'jour', 'week': 'semaine',
+    'participation allowance': 'allocation de participation', 'property': 'propriété',
+    'approved': 'approuvé', 'rejected': 'rejeté', 'reason': 'raison',
+    'task': 'tâche', 'completed': 'terminé', 'answer': 'réponse',
+    'decision': 'décision', 'opening': 'ouverture', 'personal': 'personnel',
+    'urgent': 'urgent', 'important': 'important', 'immediately': 'immédiatement',
+    'family': 'famille', 'visit': 'visite', 'doctor': 'médecin', 'health': 'santé'
+  },
+  
+  // Französisch -> Deutsch
+  'fr-de': {
+    'je': 'ich', 'voudrais': 'möchte', 's\'il vous plaît': 'bitte',
+    'demander': 'beantragen', 'demande': 'Antrag', 'argent': 'Geld',
+    'ai besoin de': 'benötige', 'pour': 'für', 'le': 'der', 'la': 'die', 'un': 'ein', 'une': 'eine',
+    'mon': 'mein', 'ma': 'meine', 'et': 'und', 'ou': 'oder', 'mais': 'aber',
+    'ai': 'habe', 'a': 'hat', 'suis': 'bin', 'est': 'ist', 'sont': 'sind',
+    'sera': 'wird', 'était': 'war', 'étaient': 'waren',
+    'peux': 'kann', 'dois': 'muss', 'devrait': 'sollte', 'peut': 'darf',
+    'pas': 'nicht', 'non': 'nein', 'avec': 'mit', 'sans': 'ohne',
+    'de': 'von', 'à': 'zu', 'sur': 'auf', 'dans': 'in',
+    'aujourd\'hui': 'heute', 'demain': 'morgen', 'hier': 'gestern',
+    'mois': 'Monat', 'année': 'Jahr', 'jour': 'Tag', 'semaine': 'Woche',
+    'allocation de participation': 'Teilhabegeld', 'propriété': 'Eigentum',
+    'approuvé': 'genehmigt', 'rejeté': 'abgelehnt', 'raison': 'Begründung',
+    'tâche': 'Aufgabe', 'terminé': 'erledigt', 'réponse': 'Antwort',
+    'décision': 'Entscheidung', 'ouverture': 'Eröffnung', 'personnel': 'persönlich',
+    'urgent': 'dringend', 'important': 'wichtig', 'immédiatement': 'sofort',
+    'famille': 'Familie', 'visite': 'Besuch', 'médecin': 'Arzt', 'santé': 'Gesundheit'
+  },
+  
+  // Französisch -> Englisch
+  'fr-en': {
+    'je': 'I', 'voudrais': 'would like', 's\'il vous plaît': 'please',
+    'demander': 'apply for', 'demande': 'application', 'argent': 'money',
+    'ai besoin de': 'need', 'pour': 'for', 'le': 'the', 'la': 'the', 'un': 'a', 'une': 'a',
+    'mon': 'my', 'ma': 'my', 'et': 'and', 'ou': 'or', 'mais': 'but',
+    'ai': 'have', 'a': 'has', 'suis': 'am', 'est': 'is', 'sont': 'are',
+    'aujourd\'hui': 'today', 'demain': 'tomorrow', 'hier': 'yesterday',
+    'mois': 'month', 'année': 'year', 'jour': 'day', 'semaine': 'week',
+    'allocation de participation': 'participation allowance', 'propriété': 'property',
+    'approuvé': 'approved', 'rejeté': 'rejected', 'raison': 'reason',
+    'tâche': 'task', 'terminé': 'completed', 'réponse': 'answer',
+    'décision': 'decision', 'ouverture': 'opening', 'personnel': 'personal',
+    'urgent': 'urgent', 'important': 'important', 'immédiatement': 'immediately',
+    'famille': 'family', 'visite': 'visit', 'médecin': 'doctor', 'santé': 'health'
+  }
+};
+
+// Freitext übersetzen
+function translateText(text, fromLang, toLang) {
+  if (!text || fromLang === toLang) return text;
+  
+  const dictKey = `${fromLang}-${toLang}`;
+  const dict = TEXT_DICTIONARY[dictKey];
+  
+  if (!dict) return text;
+  
+  let result = text;
+  
+  // Sortiere nach Länge (längere Phrasen zuerst), um "would like" vor "would" zu ersetzen
+  const sortedKeys = Object.keys(dict).sort((a, b) => b.length - a.length);
+  
+  for (const word of sortedKeys) {
+    // Case-insensitive Ersetzung mit Wortgrenzen
+    const regex = new RegExp(`\\b${escapeRegex(word)}\\b`, 'gi');
+    result = result.replace(regex, (match) => {
+      // Groß-/Kleinschreibung beibehalten
+      const translated = dict[word.toLowerCase()] || dict[word];
+      if (!translated) return match;
+      
+      if (match[0] === match[0].toUpperCase()) {
+        return translated.charAt(0).toUpperCase() + translated.slice(1);
+      }
+      return translated;
+    });
+  }
+  
+  return result;
+}
+
+// Regex-Sonderzeichen escapen
+function escapeRegex(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Text mit Quellsprache speichern und für aktuelle Sprache übersetzen
+function getTranslatedUserText(textObj) {
+  if (!textObj) return '';
+  
+  // Wenn es ein einfacher String ist (Altdaten), als Deutsch behandeln
+  if (typeof textObj === 'string') {
+    return translateText(textObj, 'de', currentLanguage);
+  }
+  
+  // Neues Format: { text: "...", lang: "de" }
+  const originalText = textObj.text || textObj;
+  const originalLang = textObj.lang || 'de';
+  
+  return translateText(originalText, originalLang, currentLanguage);
+}
+
+// Text-Objekt erstellen (zum Speichern)
+function createTranslatableText(text) {
+  return {
+    text: text,
+    lang: currentLanguage
+  };
+}
+
 // Admin-Zugangsdaten (in echter Anwendung sicher speichern!)
 const ADMIN_CREDENTIALS = {
   username: 'admin',
@@ -39,11 +1197,67 @@ class UserSystem {
     this.storageKey = 'gefaengnis_users';
     this.users = this.loadUsers();
     this.migrateUsers(); // Bestehende Benutzer mit Credentials versehen
+    this.ensureDefaultUsers(); // Standardbenutzer erstellen wenn keine vorhanden
   }
 
   loadUsers() {
     const data = localStorage.getItem(this.storageKey);
     return data ? JSON.parse(data) : [];
+  }
+  
+  // Standardbenutzer erstellen wenn keine vorhanden
+  ensureDefaultUsers() {
+    if (this.users.length === 0) {
+      console.log('Keine Benutzer gefunden - erstelle Standardbenutzer...');
+      
+      // Standard-Insasse erstellen
+      this.createInsasse({
+        vorname: 'Max',
+        nachname: 'Mustermann',
+        geburtsdatum: '1990-05-15',
+        jva: 'haus1',
+        station: 'A'
+      });
+      
+      this.createInsasse({
+        vorname: 'Anna',
+        nachname: 'Schmidt',
+        geburtsdatum: '1985-08-22',
+        jva: 'haus1',
+        station: 'B'
+      });
+      
+      // Standard-Mitarbeiter erstellen (Stationsleitung)
+      this.createMitarbeiter({
+        vorname: 'Thomas',
+        nachname: 'Müller',
+        rolle: 'stationsleitung',
+        jvas: ['haus1'],
+        station: 'A'
+      });
+      
+      this.createMitarbeiter({
+        vorname: 'Sarah',
+        nachname: 'Weber',
+        rolle: 'stationsleitung',
+        jvas: ['haus1'],
+        station: 'B'
+      });
+      
+      // Hausleitung erstellen
+      this.createMitarbeiter({
+        vorname: 'Peter',
+        nachname: 'Schneider',
+        rolle: 'hausleitung',
+        jvas: ['haus1'],
+        station: null
+      });
+      
+      console.log('Standardbenutzer erstellt. Anmeldedaten in der Konsole:');
+      this.users.forEach(u => {
+        console.log(`${u.type}: ${u.vorname} ${u.nachname} - Username: ${u.username}, Passwort: ${u.password}`);
+      });
+    }
   }
 
   saveUsers() {
@@ -603,16 +1817,19 @@ class TerminSystem {
 
   // Termine für einen Mitarbeiter abrufen (basierend auf Sichtbarkeit)
   getTermineFuerMitarbeiter(mitarbeiter) {
+    const normalisiereHaus = (h) => h ? h.replace('jva', 'haus') : h;
+    const istHausleitung = mitarbeiter.rolle === 'hausleitung';
+    
     return this.termine.filter(t => {
       // Admin-Termine: Für alle sichtbar
       if (t.typ === 'admin') return true;
       
-      // Persönliche Termine: Nur für den Ersteller
+      // Persönliche Termine: Nur für den Ersteller (auch Hausleitung sieht fremde private nicht)
       if (t.typ === 'persoenlich') {
         return t.erstelltVonId === mitarbeiter.userId;
       }
       
-      // Aufgaben-Termine: Für die in sichtbarFuer eingetragenen User
+      // Aufgaben-Termine: Für die in sichtbarFuer eingetragenen User (Hausleitung sieht fremde Aufgaben-Termine nicht)
       if (t.typ === 'aufgabe') {
         return t.sichtbarFuer && t.sichtbarFuer.includes(mitarbeiter.userId);
       }
@@ -622,18 +1839,24 @@ class TerminSystem {
         // Ersteller sieht immer seinen eigenen Termin
         if (t.erstelltVonId === mitarbeiter.userId) return true;
         if (!mitarbeiter.jvas) return false;
-        // Normalisierung für Kompatibilität
-        const normalisiereHaus = (h) => h ? h.replace('jva', 'haus') : h;
         return mitarbeiter.jvas.some(j => normalisiereHaus(j) === normalisiereHaus(t.hausId));
       }
       
       // Stations-Termine: Für alle Mitarbeiter der Station (inkl. Ersteller)
+      // HAUSLEITUNG sieht alle Stationstermine ihres Hauses
       if (t.typ === 'station') {
         // Ersteller sieht immer seinen eigenen Termin
         if (t.erstelltVonId === mitarbeiter.userId) return true;
         if (!mitarbeiter.jvas) return false;
-        const normalisiereHaus = (h) => h ? h.replace('jva', 'haus') : h;
+        
         const imSelbenHaus = mitarbeiter.jvas.some(j => normalisiereHaus(j) === normalisiereHaus(t.hausId));
+        
+        // Hausleitung sieht alle Stationstermine ihres Hauses
+        if (istHausleitung && imSelbenHaus) {
+          return true;
+        }
+        
+        // Normale Mitarbeiter nur auf ihrer Station
         const aufSelberStation = mitarbeiter.station === t.stationId;
         return imSelbenHaus && aufSelberStation;
       }
@@ -731,12 +1954,15 @@ class AufgabenSystem {
       zugewiesenAnId: data.zugewiesenAnId,
       zugewiesenAnName: data.zugewiesenAnName,
       zugewiesenAnTyp: data.zugewiesenAnTyp, // 'insasse' oder 'mitarbeiter'
-      beschreibung: data.beschreibung,
-      anhangPdf: data.anhangPdf || null,
+      kurzbeschreibung: data.kurzbeschreibung || data.beschreibung, // max 40 Zeichen
+      beschreibung: data.beschreibung || '', // ausführliche Beschreibung (optional)
+      anhangPdfs: data.anhangPdfs || null, // Array von PDFs [{name, data}, ...]
       fristDatum: data.fristDatum || null,
       letzteErinnerung: null,
       status: 'offen', // 'offen', 'erledigt', 'geloescht'
-      loesung: null,
+      antwort: null,
+      antwortPdfs: null, // Array von PDFs in der Antwort
+      erledigungsTyp: null, // 'antwort' oder 'kenntnisnahme'
       erstelltAm: new Date().toISOString(),
       erledigtAm: null
     };
@@ -750,7 +1976,12 @@ class AufgabenSystem {
       antragId: data.antragId,
       typ: 'aufgabe-erstellt',
       beschreibung: `Aufgabe erstellt für ${zielTypText}: ${data.zugewiesenAnName}${fristText}`,
-      details: { beschreibung: data.beschreibung, zugewiesenAn: data.zugewiesenAnName, frist: data.fristDatum },
+      details: { 
+        kurzbeschreibung: data.kurzbeschreibung || data.beschreibung, 
+        beschreibung: data.beschreibung,
+        zugewiesenAn: data.zugewiesenAnName, 
+        frist: data.fristDatum 
+      },
       benutzerTyp: 'mitarbeiter',
       benutzerId: data.erstelltVonId,
       benutzerName: data.erstelltVonName
@@ -765,20 +1996,34 @@ class AufgabenSystem {
   }
 
   // Aufgabe erledigen
-  erledigeAufgabe(aufgabeId, loesung) {
+  // erledigungsTyp: 'antwort' oder 'kenntnisnahme'
+  // antwortPdfs: Array von PDFs [{name, data}, ...]
+  erledigeAufgabe(aufgabeId, antwort, erledigungsTyp = 'antwort', antwortPdfs = null) {
     const aufgabe = this.aufgaben.find(a => a.id === aufgabeId);
     if (aufgabe) {
       aufgabe.status = 'erledigt';
-      aufgabe.loesung = loesung;
+      aufgabe.antwort = antwort || '';
+      aufgabe.erledigungsTyp = erledigungsTyp;
       aufgabe.erledigtAm = new Date().toISOString();
+      if (antwortPdfs && antwortPdfs.length > 0) {
+        aufgabe.antwortPdfs = antwortPdfs;
+      }
       this.saveAufgaben();
       
       // Aktivität protokollieren
+      const beschreibungText = erledigungsTyp === 'kenntnisnahme' 
+        ? 'Aufgabe zur Kenntnis genommen' 
+        : 'Aufgabe beantwortet';
+      
       aktivitaetenSystem.logAktivitaet({
         antragId: aufgabe.antragId,
         typ: 'aufgabe-erledigt',
-        beschreibung: `Aufgabe erledigt`,
-        details: { loesung: loesung },
+        beschreibung: beschreibungText,
+        details: { 
+          antwort: antwort,
+          erledigungsTyp: erledigungsTyp,
+          anzahlPdfs: antwortPdfs ? antwortPdfs.length : 0
+        },
         benutzerTyp: aufgabe.zugewiesenAnTyp,
         benutzerId: aufgabe.zugewiesenAnId,
         benutzerName: aufgabe.zugewiesenAnName
@@ -1135,32 +2380,55 @@ class AntragSystem {
   }
 
   // Antrag abschließen (genehmigen, ablehnen, teilweise genehmigen)
-  abschliessenAntrag(id, status, begruendung = null, persoenlichEroeffnen = false, bescheidPdf = null) {
+  abschliessenAntrag(id, status, begruendung = null, persoenlichEroeffnen = false, bescheidPdf = null, vollzugVorBekanntgabe = false) {
     const antrag = this.antraege.find(a => a.id === id);
     if (antrag) {
       const bearbeiterId = antrag.bearbeiterId;
       const bearbeiterName = antrag.bearbeiterName;
+      
+      // Entscheidung speichern (kann nur von Hausleitung revidiert werden)
+      antrag.entscheidungGetroffen = true;
+      antrag.entscheidungVon = bearbeiterName;
+      antrag.entscheidungVonId = bearbeiterId;
+      antrag.entscheidungAm = new Date().toISOString();
       
       // Bescheid speichern wenn vorhanden
       if (bescheidPdf) {
         antrag.bescheidPdf = bescheidPdf;
       }
       
-      // Wenn "persönlich eröffnen" gewählt wurde
-      if (persoenlichEroeffnen) {
-        antrag.wartetAufEroeffnung = true;
+      // Wenn "persönlich eröffnen" und/oder "Vollzug vor Bekanntgabe" gewählt wurde
+      if (persoenlichEroeffnen || vollzugVorBekanntgabe) {
         antrag.geplantesErgebnis = status;
         antrag.geplanteBegruendung = begruendung;
+        
+        // Beide Flags können gleichzeitig gesetzt werden
+        if (persoenlichEroeffnen) {
+          antrag.wartetAufEroeffnung = true;
+        }
+        if (vollzugVorBekanntgabe) {
+          antrag.wartetAufVollzug = true;
+        }
+        
         // Status bleibt "in-bearbeitung" für den Insassen
         this.saveAntraege();
         
         // Aktivität protokollieren
         const statusText = status === 'genehmigt' ? 'Genehmigung' : 
                           status === 'abgelehnt' ? 'Ablehnung' : 'Teilweise Genehmigung';
+        let aktionBeschreibung = `${statusText} vorbereitet`;
+        if (persoenlichEroeffnen && vollzugVorBekanntgabe) {
+          aktionBeschreibung += ' (persönliche Eröffnung + Vollzug vor Bekanntgabe)';
+        } else if (persoenlichEroeffnen) {
+          aktionBeschreibung += ' (persönliche Eröffnung)';
+        } else {
+          aktionBeschreibung += ' (Vollzug vor Bekanntgabe)';
+        }
+        
         aktivitaetenSystem.logAktivitaet({
           antragId: id,
           typ: 'entscheidung-geplant',
-          beschreibung: `${statusText} vorbereitet (persönliche Eröffnung)`,
+          beschreibung: aktionBeschreibung,
           details: begruendung ? { begruendung: begruendung } : null,
           benutzerTyp: 'mitarbeiter',
           benutzerId: bearbeiterId,
@@ -1174,6 +2442,7 @@ class AntragSystem {
       antrag.bearbeitetAm = new Date().toISOString();
       antrag.erledigt = true;
       antrag.wartetAufEroeffnung = false;
+      antrag.wartetAufVollzug = false;
       if (begruendung) {
         antrag.begruendung = begruendung;
       }
@@ -1213,6 +2482,96 @@ class AntragSystem {
     }
     return antrag;
   }
+  
+  // Vollzug vor Bekanntgabe bestätigen
+  bestaetigeVollzugVorBekanntgabe(id, vollzugKommentar, mitarbeiterId, mitarbeiterName) {
+    const antrag = this.antraege.find(a => a.id === id && a.wartetAufVollzug);
+    if (antrag) {
+      const status = antrag.geplantesErgebnis;
+      const begruendung = antrag.geplanteBegruendung;
+      
+      antrag.status = status;
+      antrag.bearbeitetAm = new Date().toISOString();
+      antrag.erledigt = true;
+      antrag.wartetAufVollzug = false;
+      antrag.vollzugBestaetigt = true;
+      antrag.vollzugKommentar = vollzugKommentar; // Dieser Kommentar ist für den Insassen sichtbar
+      antrag.vollzugBestaetigtAm = new Date().toISOString();
+      antrag.vollzugBestaetigtVon = mitarbeiterName;
+      antrag.vollzugBestaetigtVonId = mitarbeiterId;
+      if (begruendung) {
+        antrag.begruendung = begruendung;
+      }
+      this.saveAntraege();
+
+      // Aktivität protokollieren
+      const statusText = status === 'genehmigt' ? 'Genehmigt' : 
+                        status === 'abgelehnt' ? 'Abgelehnt' : 'Teilweise genehmigt';
+      aktivitaetenSystem.logAktivitaet({
+        antragId: id,
+        typ: 'vollzug-bestaetigt',
+        beschreibung: `Vollzug bestätigt, Entscheidung bekannt gegeben: ${statusText}`,
+        details: { vollzugKommentar: vollzugKommentar },
+        benutzerTyp: 'mitarbeiter',
+        benutzerId: mitarbeiterId,
+        benutzerName: mitarbeiterName
+      });
+
+      // Benachrichtigung für den Insassen erstellen (mit Vollzugs-Kommentar)
+      const antragsTyp = antrag.type === 'teilhabegeld' ? 'Teilhabegeld' : 'Eigentum in der Kammer';
+      let title, message;
+      
+      if (status === 'genehmigt') {
+        title = '✓ Antrag genehmigt';
+        message = `Ihr Antrag "${antragsTyp}" wurde genehmigt.${vollzugKommentar ? ' Hinweis zum Vollzug: ' + getTranslatedUserText(vollzugKommentar) : ''}`;
+      } else if (status === 'abgelehnt') {
+        title = '✕ Antrag abgelehnt';
+        message = `Ihr Antrag "${antragsTyp}" wurde leider abgelehnt.${vollzugKommentar ? ' Hinweis: ' + getTranslatedUserText(vollzugKommentar) : ''}`;
+      } else if (status === 'teilweise-genehmigt') {
+        title = '⚡ Antrag teilweise genehmigt';
+        message = `Ihr Antrag "${antragsTyp}" wurde teilweise genehmigt.${vollzugKommentar ? ' Hinweis: ' + getTranslatedUserText(vollzugKommentar) : ''}`;
+      }
+      
+      if (title && antrag.insasseId) {
+        notificationSystem.createNotification(antrag.insasseId, status, title, message, antrag.id);
+      }
+      
+      return antrag;
+    }
+    return null;
+  }
+  
+  // Entscheidung revidieren (nur für Hausleitung)
+  revidiereEntscheidung(id, mitarbeiterId, mitarbeiterName) {
+    const antrag = this.antraege.find(a => a.id === id && a.entscheidungGetroffen);
+    if (antrag) {
+      // Zurücksetzen der Entscheidung
+      antrag.entscheidungGetroffen = false;
+      antrag.status = 'in-bearbeitung';
+      antrag.erledigt = false;
+      antrag.wartetAufEroeffnung = false;
+      antrag.wartetAufVollzug = false;
+      antrag.geplantesErgebnis = null;
+      antrag.geplanteBegruendung = null;
+      antrag.begruendung = null;
+      antrag.bescheidPdf = null;
+      
+      this.saveAntraege();
+      
+      // Aktivität protokollieren
+      aktivitaetenSystem.logAktivitaet({
+        antragId: id,
+        typ: 'entscheidung-revidiert',
+        beschreibung: 'Entscheidung durch Hausleitung revidiert',
+        benutzerTyp: 'mitarbeiter',
+        benutzerId: mitarbeiterId,
+        benutzerName: mitarbeiterName
+      });
+      
+      return antrag;
+    }
+    return null;
+  }
 
   // Persönliche Eröffnung bestätigen
   bestaetigePersoenlicheEroeffnung(id) {
@@ -1223,25 +2582,10 @@ class AntragSystem {
       const bearbeiterId = antrag.bearbeiterId;
       const bearbeiterName = antrag.bearbeiterName;
       
-      antrag.status = status;
-      antrag.bearbeitetAm = new Date().toISOString();
-      antrag.erledigt = (status !== 'teilweise-genehmigt');
+      // Persönliche Eröffnung als bestätigt markieren
       antrag.wartetAufEroeffnung = false;
       antrag.persoenlichEroeffnet = true;
-      if (begruendung) {
-        antrag.begruendung = begruendung;
-      }
-      // Bei Teilweise genehmigt: Antrag wieder offen für Bearbeitung durch Insassen
-      if (status === 'teilweise-genehmigt') {
-        antrag.bearbeiterId = null;
-        antrag.bearbeiterName = null;
-      }
-      
-      // Geplante Felder löschen
-      delete antrag.geplantesErgebnis;
-      delete antrag.geplanteBegruendung;
-      
-      this.saveAntraege();
+      antrag.persoenlichEroeffnetAm = new Date().toISOString();
       
       // Aktivität protokollieren
       const statusText = status === 'genehmigt' ? 'Genehmigt' : 
@@ -1255,6 +2599,46 @@ class AntragSystem {
         benutzerId: bearbeiterId,
         benutzerName: bearbeiterName
       });
+      
+      // Wenn auch Vollzug vor Bekanntgabe gesetzt ist, warten wir darauf
+      if (antrag.wartetAufVollzug) {
+        // Noch nicht abschließen - erst wenn beide bestätigt sind
+        this.saveAntraege();
+        return antrag;
+      }
+      
+      // Nur persönliche Eröffnung - jetzt abschließen
+      antrag.status = status;
+      antrag.bearbeitetAm = new Date().toISOString();
+      antrag.erledigt = true;
+      if (begruendung) {
+        antrag.begruendung = begruendung;
+      }
+      
+      // Geplante Felder löschen
+      delete antrag.geplantesErgebnis;
+      delete antrag.geplanteBegruendung;
+      
+      this.saveAntraege();
+      
+      // Benachrichtigung für den Insassen erstellen
+      const antragsTyp = antrag.type === 'teilhabegeld' ? 'Teilhabegeld' : 'Eigentum in der Kammer';
+      let title, message;
+      
+      if (status === 'genehmigt') {
+        title = '✓ Antrag genehmigt';
+        message = `Ihr Antrag "${antragsTyp}" wurde genehmigt.`;
+      } else if (status === 'abgelehnt') {
+        title = '✕ Antrag abgelehnt';
+        message = `Ihr Antrag "${antragsTyp}" wurde leider abgelehnt.${begruendung ? ' Begründung: ' + (typeof begruendung === 'object' ? getTranslatedUserText(begruendung) : begruendung) : ''}`;
+      } else if (status === 'teilweise-genehmigt') {
+        title = '⚡ Antrag teilweise genehmigt';
+        message = `Ihr Antrag "${antragsTyp}" wurde teilweise genehmigt.${begruendung ? ' Hinweis: ' + (typeof begruendung === 'object' ? getTranslatedUserText(begruendung) : begruendung) : ''}`;
+      }
+      
+      if (title && antrag.insasseId) {
+        notificationSystem.createNotification(antrag.insasseId, status, title, message, antrag.id);
+      }
     }
     return antrag;
   }

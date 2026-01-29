@@ -1,33 +1,51 @@
 /* ============================================
-   GEFÄNGNIS ANTRAGSWESEN - STYLES
+   HAMBURG.DE DESIGN - ANTRAGSWESEN
    ============================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Farben - Seriöses institutionelles Design */
-  --bg-primary: #0f1419;
-  --bg-secondary: #1a2332;
-  --bg-card: #212d3b;
-  --bg-card-hover: #2a3a4d;
+  /* Hamburg.de Farbpalette */
+  --hamburg-rot: #e2001a;
+  --hamburg-rot-dark: #b8001a;
+  --hamburg-rot-light: #ff1a33;
+  --hamburg-blau: #004b93;
+  --hamburg-blau-light: #0066cc;
+  --hamburg-tuerkis: #00a5b5;
   
-  --accent-primary: #3d8bfd;
-  --accent-success: #2eb872;
-  --accent-warning: #f0a500;
-  --accent-danger: #e5484d;
-  --accent-info: #7c8da6;
+  /* Hintergründe - Hell und freundlich */
+  --bg-primary: #f5f5f5;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #fafafa;
+  --bg-header: #ffffff;
   
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  /* Akzentfarben */
+  --accent-primary: #e2001a;
+  --accent-secondary: #004b93;
+  --accent-success: #00a651;
+  --accent-warning: #f5a623;
+  --accent-danger: #e2001a;
+  --accent-info: #004b93;
+  --accent-turquoise: #00a5b5;
   
-  --border-color: #2e3d50;
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  /* Textfarben */
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --text-light: #ffffff;
   
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-lg: 16px;
+  /* Rahmen und Schatten */
+  --border-color: #e0e0e0;
+  --border-subtle: #f0f0f0;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+  
+  /* Radien */
+  --radius: 8px;
+  --radius-sm: 4px;
+  --radius-lg: 12px;
 }
 
 * {
@@ -37,26 +55,16 @@
 }
 
 body {
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
   line-height: 1.6;
 }
 
-/* Hintergrund-Muster */
+/* Sauberer Hintergrund ohne Muster */
 body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: 
-    radial-gradient(circle at 20% 80%, rgba(61, 139, 253, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(46, 184, 114, 0.06) 0%, transparent 50%),
-    linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
-  z-index: -1;
+  display: none;
 }
 
 /* ============================================
@@ -67,8 +75,6 @@ body::before {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
-  /* Platz für die Postfach-Sidebar */
-  padding-right: 350px;
 }
 
 /* Wenn keine Sidebar vorhanden ist, normales Padding */
@@ -77,25 +83,71 @@ body::before {
 }
 
 /* ============================================
-   HEADER
+   HEADER - Hamburg.de Style
    ============================================ */
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 2rem;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 2rem;
+  padding: 0.75rem 2rem;
+  background: var(--hamburg-blau);
+  border-bottom: none;
+  margin-bottom: 0;
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.hamburg-logo {
+  display: flex;
+  align-items: center;
+}
+
+.hamburg-wappen-img {
+  height: 45px;
+  width: auto;
+  object-fit: contain;
+}
+
+.hamburg-wappen {
+  width: 50px;
+  height: 30px;
+}
+
+.header-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-title h1 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.header-subtitle {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
 }
 
 .header h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 1.4rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  color: var(--hamburg-rot);
 }
 
 .header h1 .icon {
@@ -109,14 +161,40 @@ body::before {
   font-size: 1.2rem;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Begrüßungs-Banner - Hamburg.de Style */
+.welcome-banner {
+  background: linear-gradient(135deg, #003d7a 0%, var(--hamburg-blau) 50%, var(--hamburg-tuerkis) 100%);
+  color: white;
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+  border-radius: 0;
+}
+
+.welcome-banner h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.welcome-banner p {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
 .user-badge {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 1rem;
-  background: var(--bg-card);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: var(--radius);
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .user-badge .role {
@@ -131,10 +209,192 @@ body::before {
 }
 
 /* ============================================
-   STARTSEITE
+   STARTSEITE - Hamburg.de Style
    ============================================ */
 
-.start-page {
+body.hamburg-start {
+  background: var(--bg-primary);
+}
+
+.start-page.hamburg-style {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+/* Start Header */
+.start-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  background: var(--hamburg-blau);
+  border-bottom: none;
+  box-shadow: var(--shadow);
+}
+
+.hamburg-logo-large {
+  display: flex;
+  align-items: center;
+}
+
+.hamburg-wappen-img-large {
+  height: 60px;
+  width: auto;
+  object-fit: contain;
+}
+
+.hamburg-wappen-large {
+  width: 70px;
+  height: 42px;
+}
+
+.start-header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.hamburg-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+}
+
+/* Hauptbereich */
+.start-main {
+  flex: 1;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+  width: 100%;
+}
+
+/* Hero-Bereich */
+.start-hero {
+  text-align: center;
+  padding: 3rem 2rem;
+  margin-bottom: 2rem;
+  background: linear-gradient(135deg, #003d7a 0%, var(--hamburg-blau) 50%, var(--hamburg-tuerkis) 100%);
+  border-radius: var(--radius-lg);
+  color: white;
+}
+
+.start-title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.start-subtitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 1rem;
+}
+
+.start-description {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.85);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Portal-Auswahl - Hamburg Cards */
+.role-selection.hamburg-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.role-card.hamburg-card {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.role-card.hamburg-card:hover {
+  border-color: var(--hamburg-blau);
+  box-shadow: var(--shadow);
+  transform: translateX(5px);
+}
+
+.role-card.hamburg-card .card-icon {
+  width: 60px;
+  height: 60px;
+  background: rgba(0, 75, 147, 0.08);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  flex-shrink: 0;
+}
+
+.role-card.hamburg-card:hover .card-icon {
+  background: rgba(0, 75, 147, 0.15);
+}
+
+.role-card.hamburg-card .card-content {
+  flex: 1;
+  text-align: left;
+}
+
+.role-card.hamburg-card .card-content h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.role-card.hamburg-card:hover .card-content h3 {
+  color: var(--hamburg-blau);
+}
+
+.role-card.hamburg-card .card-content p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.role-card.hamburg-card .card-arrow {
+  font-size: 1.5rem;
+  color: var(--hamburg-blau);
+  transition: all 0.2s ease;
+}
+
+.role-card.hamburg-card:hover .card-arrow {
+  color: var(--hamburg-tuerkis);
+  transform: translateX(5px);
+}
+
+/* Footer */
+.start-footer.hamburg-footer {
+  padding: 1.5rem 2rem;
+  background: var(--hamburg-blau);
+  color: white;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.start-footer.hamburg-footer p {
+  margin: 0;
+  opacity: 0.9;
+}
+
+/* Alte Styles für Kompatibilität */
+.start-page:not(.hamburg-style) {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -146,146 +406,9 @@ body::before {
   overflow: hidden;
 }
 
-/* Hintergrund-Dekoration */
+/* Hintergrund-Dekoration - ausgeblendet für Hamburg-Style */
 .bg-decoration {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.bg-circle {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.5;
-}
-
-.bg-circle-1 {
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(61, 139, 253, 0.15) 0%, transparent 70%);
-  top: -200px;
-  left: -100px;
-  animation: float 20s ease-in-out infinite;
-}
-
-.bg-circle-2 {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(46, 184, 114, 0.12) 0%, transparent 70%);
-  bottom: -150px;
-  right: -100px;
-  animation: float 25s ease-in-out infinite reverse;
-}
-
-.bg-grid {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 50px 50px;
-}
-
-@keyframes float {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  25% { transform: translate(30px, -30px) rotate(5deg); }
-  50% { transform: translate(0, -50px) rotate(0deg); }
-  75% { transform: translate(-30px, -30px) rotate(-5deg); }
-}
-
-/* Logo */
-.start-logo {
-  position: relative;
-  margin-bottom: 2rem;
-  animation: fadeInDown 0.8s ease;
-}
-
-.logo-icon {
-  width: 100px;
-  height: 100px;
-  background: linear-gradient(145deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
-  border: 2px solid var(--border-color);
-  border-radius: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3rem;
-  margin: 0 auto 1rem;
-  box-shadow: 
-    0 10px 40px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-  position: relative;
-  overflow: hidden;
-}
-
-.logo-icon::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-  0% { left: -100%; }
-  100% { left: 100%; }
-}
-
-.logo-badge {
-  display: inline-block;
-  background: var(--accent-primary);
-  color: white;
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 0.35rem 0.75rem;
-  border-radius: 20px;
-}
-
-/* Titel */
-.start-title {
-  font-size: 3.5rem;
-  font-weight: 700;
-  margin-bottom: 0.75rem;
-  background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-primary) 50%, var(--text-primary) 100%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: fadeInUp 0.8s ease 0.2s both, gradientShift 8s ease infinite;
-}
-
-.start-subtitle {
-  font-size: 1.25rem;
-  color: var(--text-secondary);
-  margin-bottom: 4rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  font-weight: 500;
-  animation: fadeInUp 0.8s ease 0.4s both;
-}
-
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  display: none;
 }
 
 @keyframes fadeInUp {
@@ -299,13 +422,8 @@ body::before {
   }
 }
 
-@keyframes gradientShift {
-  0%, 100% { background-position: 0% center; }
-  50% { background-position: 100% center; }
-}
-
-/* Portal-Auswahl */
-.role-selection {
+/* Portal-Auswahl - alte Styles */
+.role-selection:not(.hamburg-cards) {
   display: flex;
   gap: 2rem;
   flex-wrap: wrap;
@@ -313,9 +431,9 @@ body::before {
   animation: fadeInUp 0.8s ease 0.6s both;
 }
 
-.role-card {
+.role-card:not(.hamburg-card) {
   position: relative;
-  background: linear-gradient(145deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 2.5rem;
@@ -637,6 +755,7 @@ body::before {
 .user-name {
   font-weight: 600;
   font-size: 1.05rem;
+  color: var(--text-primary);
 }
 
 .user-username {
@@ -672,21 +791,24 @@ body::before {
   font-size: 0.75rem;
   font-weight: 500;
   margin: 0.25rem 0;
+  background: rgba(0, 75, 147, 0.1);
+  color: var(--hamburg-blau);
 }
 
 .user-role-badge.mitarbeiter {
-  background: rgba(124, 141, 166, 0.15);
-  color: var(--accent-info);
+  background: rgba(0, 75, 147, 0.1);
+  color: var(--hamburg-blau);
 }
 
-.user-role-badge.jva-leitung {
-  background: rgba(240, 165, 0, 0.15);
-  color: var(--accent-warning);
+.user-role-badge.jva-leitung,
+.user-role-badge.haus-leitung {
+  background: rgba(226, 0, 26, 0.1);
+  color: var(--hamburg-rot);
 }
 
 .user-role-badge.stationsleitung {
-  background: rgba(61, 139, 253, 0.15);
-  color: var(--accent-primary);
+  background: rgba(0, 166, 81, 0.1);
+  color: var(--accent-success);
 }
 
 .field-warning {
@@ -949,7 +1071,7 @@ body::before {
 }
 
 /* ============================================
-   BUTTONS
+   BUTTONS - Hamburg.de Style
    ============================================ */
 
 .btn {
@@ -959,24 +1081,24 @@ body::before {
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
   font-size: 0.95rem;
-  font-weight: 500;
+  font-weight: 600;
   font-family: inherit;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   text-decoration: none;
 }
 
 .btn-primary {
-  background: var(--accent-primary);
+  background: var(--hamburg-blau);
   color: white;
 }
 
 .btn-primary:hover {
-  background: #2d7aec;
+  background: var(--hamburg-blau-light);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(61, 139, 253, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 75, 147, 0.3);
 }
 
 .btn-success {
@@ -1007,19 +1129,20 @@ body::before {
 }
 
 .btn-secondary {
-  background: var(--bg-secondary);
+  background: #f5f5f5;
   color: var(--text-primary);
   border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover {
-  background: var(--bg-card-hover);
+  background: #ebebeb;
+  border-color: #ccc;
 }
 
 .btn-outline {
   background: transparent;
-  color: #a187d1;
-  border: 1px solid #a187d1;
+  color: var(--hamburg-rot);
+  border: 2px solid var(--hamburg-rot);
 }
 
 .btn-outline:hover {
@@ -1033,7 +1156,7 @@ body::before {
 }
 
 /* ============================================
-   ANTRAGS-KARTEN
+   ANTRAGS-KARTEN - Hamburg.de Style
    ============================================ */
 
 .antraege-list {
@@ -1043,21 +1166,23 @@ body::before {
 }
 
 .antrag-card {
-  background: var(--bg-secondary);
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   padding: 1.25rem;
   transition: all 0.2s ease;
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
 }
 
 .antrag-card:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--accent-primary);
+  box-shadow: var(--shadow);
+  border-color: var(--hamburg-blau);
+  transform: translateY(-2px);
 }
 
 .antrag-card.entwurf {
-  border-color: #a187d1;
+  border-left: 4px solid var(--accent-info);
   border-style: dashed;
 }
 
@@ -1124,9 +1249,9 @@ body::before {
 }
 
 .status-badge.offen {
-  background: rgba(124, 141, 166, 0.15);
-  color: var(--accent-info);
-  border: 1px solid rgba(124, 141, 166, 0.3);
+  background: rgba(0, 75, 147, 0.1);
+  color: var(--hamburg-blau);
+  border: 1px solid rgba(0, 75, 147, 0.25);
 }
 
 .status-badge.teilweise-genehmigt {
@@ -1136,9 +1261,9 @@ body::before {
 }
 
 .status-badge.in-bearbeitung {
-  background: rgba(61, 139, 253, 0.15);
-  color: var(--accent-primary);
-  border: 1px solid rgba(61, 139, 253, 0.3);
+  background: rgba(0, 75, 147, 0.12);
+  color: var(--hamburg-blau);
+  border: 1px solid rgba(0, 75, 147, 0.3);
 }
 
 .status-badge.genehmigt {
@@ -1160,7 +1285,7 @@ body::before {
 }
 
 /* ============================================
-   MODAL / DIALOG
+   MODAL / DIALOG - Hamburg.de Style
    ============================================ */
 
 .modal-overlay {
@@ -1169,7 +1294,7 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1187,18 +1312,19 @@ body::before {
 
 .modal {
   background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  border: none;
+  border-radius: var(--radius);
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
-  transform: scale(0.9);
+  transform: scale(0.95) translateY(20px);
   transition: transform 0.3s ease;
+  box-shadow: var(--shadow-lg);
 }
 
 .modal-overlay.active .modal {
-  transform: scale(1);
+  transform: scale(1) translateY(0);
 }
 
 .modal-header {
@@ -1206,18 +1332,20 @@ body::before {
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: none;
+  background: var(--hamburg-blau);
 }
 
 .modal-header h3 {
   font-size: 1.25rem;
-  font-weight: 600;
+  font-weight: 700;
+  color: white;
 }
 
 .modal-close {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.8);
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0.25rem;
@@ -1504,46 +1632,122 @@ body::before {
   gap: 1rem;
 }
 
-/* Benachrichtigungs-Bereich als Sidebar */
+/* Sprachauswahl */
+.language-selector {
+  position: relative;
+}
+
+.language-selector select {
+  padding: 0.4rem 0.75rem;
+  padding-right: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+}
+
+.language-selector select:hover {
+  border-color: var(--accent-primary);
+}
+
+.language-selector select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(61, 139, 253, 0.2);
+}
+
+/* Benachrichtigungs-Bereich als erste Zeile im Dashboard */
 .notification-section {
-  position: fixed;
-  right: 1rem;
-  top: 100px;
-  width: 300px;
-  max-height: calc(100vh - 120px);
+  position: relative;
+  width: 100%;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   padding: 0.75rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  z-index: 100;
+  margin-bottom: 1.5rem;
   display: flex;
   flex-direction: column;
+  transition: all 0.3s ease;
 }
 
-.notification-section .section-header {
+.notification-section.collapsed .notification-dashboard-list {
+  display: none !important;
+}
+
+.notification-section.collapsed .notification-preview {
+  display: block;
+}
+
+.notification-section.expanded .notification-dashboard-list {
+  display: flex !important;
+}
+
+.notification-section.expanded .notification-preview {
+  display: none;
+}
+
+.notification-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
+  cursor: pointer;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
-.notification-section .section-header h2 {
+.notification-header:hover {
+  opacity: 0.9;
+}
+
+.notification-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.postfach-toggle-icon {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+
+.notification-header h2 {
   margin: 0;
   font-size: 1rem;
 }
 
-.notification-section .section-header .count {
+.notification-header .count {
   font-size: 0.8rem;
   padding: 0.15rem 0.4rem;
 }
 
-.notification-section .section-header .btn-sm {
+.notification-header .btn-sm {
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
+}
+
+/* Vorschau (nur neueste Nachricht) */
+.notification-preview {
+  margin-top: 0.5rem;
+}
+
+.notification-more-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+.notification-more-hint:hover {
+  color: var(--accent-primary);
 }
 
 .notification-dashboard-list {
@@ -1551,8 +1755,9 @@ body::before {
   flex-direction: column;
   gap: 0.5rem;
   overflow-y: auto;
-  max-height: calc(100vh - 200px);
+  max-height: 300px;
   padding-right: 0.25rem;
+  margin-top: 0.5rem;
 }
 
 /* Scrollbar Styling für Postfach */
@@ -1795,37 +2000,58 @@ body::before {
 }
 
 /* ============================================
-   TABS
+   TABS - Hamburg.de Style
    ============================================ */
 
 .tabs {
   display: flex;
-  gap: 0.5rem;
+  gap: 0;
   margin-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+  background: var(--bg-card);
 }
 
 .tab {
-  padding: 0.6rem 1.2rem;
+  padding: 0.85rem 1.5rem;
   background: none;
   border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
   color: var(--text-secondary);
   font-size: 0.95rem;
-  font-weight: 500;
+  font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  border-radius: var(--radius-sm);
   transition: all 0.2s;
 }
 
 .tab:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+  background: rgba(0, 75, 147, 0.05);
+  color: var(--hamburg-blau);
 }
 
 .tab.active {
-  background: var(--accent-primary);
+  background: transparent;
+  color: var(--hamburg-blau);
+  border-bottom-color: var(--hamburg-blau);
+}
+
+/* Tab-Zähler */
+.tab-count {
+  display: inline-block;
+  background: var(--hamburg-blau);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  margin-left: 0.4rem;
+  min-width: 1.2rem;
+  text-align: center;
+}
+
+.tab.active .tab-count {
+  background: var(--hamburg-blau);
   color: white;
 }
 
@@ -2148,8 +2374,8 @@ body::before {
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  background: rgba(124, 141, 166, 0.1);
-  border: 1px solid var(--accent-info);
+  background: rgba(0, 75, 147, 0.08);
+  border: 1px solid var(--hamburg-blau);
   border-radius: var(--radius-sm);
   margin-bottom: 1rem;
   color: var(--text-primary);
@@ -2164,16 +2390,72 @@ body::before {
   align-items: center;
   gap: 0.75rem;
   padding: 1rem;
-  background: rgba(138, 180, 248, 0.1);
-  border: 1px solid var(--accent-primary);
+  background: rgba(0, 75, 147, 0.08);
+  border: 1px solid var(--hamburg-blau);
   border-radius: var(--radius-sm);
   margin-bottom: 1rem;
-  color: var(--accent-primary);
+  color: var(--hamburg-blau);
   font-weight: 500;
 }
 
 .aufgabe-hinweis .hinweis-icon {
   font-size: 1.2rem;
+}
+
+/* Warten-Hinweise (Persönliche Eröffnung / Vollzug vor Bekanntgabe) */
+.warten-hinweis {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(155, 89, 182, 0.1);
+  border: 1px solid #9b59b6;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.warten-hinweis.persoenlich-warten {
+  background: rgba(52, 152, 219, 0.1);
+  border-color: #3498db;
+}
+
+.warten-hinweis.vollzug-warten {
+  background: rgba(230, 126, 34, 0.1);
+  border-color: #e67e22;
+}
+
+.warten-hinweis .hinweis-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+/* Bestätigungs-Checkbox Bereich */
+.bestaetigung-checkbox {
+  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+}
+
+/* Revisions-Bereich (nur Hausleitung) */
+.revision-bereich {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border-subtle);
+}
+
+/* Vollzugs-Kommentar im Insassen-Portal */
+.vollzug-kommentar {
+  background: rgba(230, 126, 34, 0.1);
+  border-left: 3px solid #e67e22;
+  padding-left: 1rem;
+}
+
+/* Vollzug-Info im Vollzug-Modal */
+.vollzug-info {
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
 }
 
 .btn-success {
@@ -2210,6 +2492,71 @@ body::before {
   font-size: 0.85rem;
   color: var(--text-muted);
   font-style: italic;
+}
+
+/* PDF-Upload-Preview und Liste */
+.pdf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.pdf-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 75, 147, 0.08);
+  border: 1px solid var(--hamburg-blau);
+  border-radius: var(--radius-sm);
+}
+
+.pdf-preview .pdf-icon {
+  font-size: 1.2rem;
+}
+
+.pdf-preview .pdf-name {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdf-preview .btn-clear {
+  background: none;
+  border: none;
+  color: var(--accent-danger);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  line-height: 1;
+}
+
+.pdf-preview .btn-clear:hover {
+  opacity: 0.7;
+}
+
+/* PDF-Download in Aufgaben-Ansicht */
+.pdf-preview.pdf-download {
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.pdf-preview.pdf-download:hover {
+  background: rgba(0, 75, 147, 0.15);
+  transform: translateY(-1px);
+}
+
+.pdf-preview .download-hint {
+  color: var(--hamburg-blau);
+  font-size: 1rem;
+}
+
+.aufgabe-pdfs {
+  margin-top: 0.25rem;
 }
 
 /* Sortier-Kontrollen */
@@ -2373,6 +2720,90 @@ body::before {
   margin-bottom: 1.5rem;
 }
 
+/* Mitarbeiter-Auswahl Liste */
+.mitarbeiter-liste {
+  max-height: 250px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+}
+
+.mitarbeiter-item {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  transition: all 0.15s;
+}
+
+.mitarbeiter-item:last-child {
+  border-bottom: none;
+}
+
+.mitarbeiter-item:hover {
+  background: var(--bg-card-hover);
+}
+
+.mitarbeiter-item.selected {
+  background: rgba(61, 139, 253, 0.15);
+  border-left: 3px solid var(--accent-primary);
+}
+
+.mitarbeiter-item-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.2rem;
+}
+
+.mitarbeiter-item-info {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.keine-ergebnisse {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Ausgewählte Person Anzeige */
+.selected-person {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(61, 139, 253, 0.1);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius);
+}
+
+.selected-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.selected-name {
+  font-weight: 600;
+  color: var(--accent-primary);
+  flex: 1;
+}
+
+.btn-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 0.5rem;
+  line-height: 1;
+}
+
+.btn-clear:hover {
+  color: var(--accent-danger);
+}
+
 /* Radio-Group für Aufgabe-Modal */
 .radio-group {
   display: flex;
@@ -2468,22 +2899,22 @@ body::before {
     width: 100%;
   }
   
-  /* Postfach-Sidebar auf mobilen Geräten */
+  /* Postfach auf mobilen Geräten */
   .container {
-    padding-right: 1rem;
-  }
-  
-  .notification-section {
-    position: relative;
-    right: auto;
-    top: auto;
-    width: 100%;
-    max-height: 250px;
-    margin-bottom: 1rem;
+    padding: 1rem;
   }
   
   .notification-dashboard-list {
-    max-height: 180px;
+    max-height: 250px;
+  }
+  
+  .tabs {
+    flex-wrap: wrap;
+  }
+  
+  .tab-count {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.4rem;
   }
   
   /* Detailansicht auf mobilen Geräten */
@@ -2543,9 +2974,9 @@ body::before {
 }
 
 .prozess-schritt.aktiv {
-  background: rgba(61, 139, 253, 0.2);
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 15px rgba(61, 139, 253, 0.3);
+  background: rgba(0, 75, 147, 0.15);
+  border-color: var(--hamburg-blau);
+  box-shadow: 0 0 15px rgba(0, 75, 147, 0.25);
 }
 
 .prozess-schritt.erledigt {
@@ -2578,7 +3009,7 @@ body::before {
 }
 
 .prozess-schritt.aktiv .prozess-label {
-  color: var(--accent-primary);
+  color: var(--hamburg-blau);
 }
 
 .prozess-schritt.erledigt .prozess-label {
@@ -2675,7 +3106,7 @@ body::before {
 }
 
 .view-btn.active {
-  background: var(--accent-primary);
+  background: var(--hamburg-blau);
   color: white;
 }
 

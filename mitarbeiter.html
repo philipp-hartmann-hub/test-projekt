@@ -46,32 +46,58 @@
   <!-- Portal-Bereich (nach Login sichtbar) -->
   <div id="portalSection" style="display: none;">
     <header class="header">
-      <h1>
-        <span class="icon">🛡️</span>
-        Mitarbeiter-Portal
-      </h1>
+      <div class="header-left">
+        <div class="hamburg-logo">
+          <img src="https://pem-center.de/wp-content/uploads/Logo-Stadt-Hamburg.jpg" alt="Stadt Hamburg" class="hamburg-wappen-img">
+        </div>
+        <div class="header-title">
+          <h1>Mitarbeiter-Portal</h1>
+          <span class="header-subtitle">Freie und Hansestadt Hamburg</span>
+        </div>
+      </div>
       <div class="header-right">
+        <div class="language-selector">
+          <select id="languageSelect" onchange="changeLanguage(this.value)">
+            <option value="de">🇩🇪 Deutsch</option>
+            <option value="en">🇬🇧 English</option>
+            <option value="fr">🇫🇷 Français</option>
+          </select>
+        </div>
         <div class="user-badge">
           <div>
             <div class="role" id="userRole">Mitarbeiter</div>
             <div class="name" id="userName">-</div>
           </div>
         </div>
-        <button class="btn btn-secondary btn-sm" onclick="logout()">Abmelden</button>
+        <button class="btn btn-secondary btn-sm" onclick="logout()" data-i18n="app.logout">Abmelden</button>
       </div>
     </header>
 
     <main class="container">
+      <!-- Begrüßung -->
+      <div class="welcome-banner" id="welcomeBanner">
+        <h2 id="welcomeGreeting">Moin!</h2>
+        <p id="welcomeMessage">Willkommen im Mitarbeiter-Portal.</p>
+      </div>
+      
       <!-- Übersicht (Dashboard) -->
       <div class="dashboard" id="dashboardView">
-        <!-- Postfach / Benachrichtigungen -->
-        <section class="section notification-section" id="notificationSection" style="display: none;">
-          <div class="section-header">
-            <h2>📬 Postfach <span class="count" id="notificationCount">0</span></h2>
-            <button class="btn btn-sm" onclick="markAllNotificationsRead()" id="markAllReadBtn" style="display: none;">
+        <!-- Postfach / Benachrichtigungen (aufklappbar) -->
+        <section class="section notification-section collapsed" id="notificationSection" style="display: none;">
+          <div class="notification-header" onclick="togglePostfach()">
+            <div class="notification-header-left">
+              <span class="postfach-toggle-icon" id="postfachToggleIcon">▶</span>
+              <h2>📬 Postfach <span class="count" id="notificationCount">0</span></h2>
+            </div>
+            <button class="btn btn-sm" onclick="markAllNotificationsRead(); event.stopPropagation();" id="markAllReadBtn" style="display: none;">
               Alle als gelesen markieren
             </button>
           </div>
+          <!-- Vorschau: Nur neueste Nachricht (wenn eingeklappt) -->
+          <div class="notification-preview" id="notificationPreview">
+            <!-- Dynamisch gefüllt -->
+          </div>
+          <!-- Vollständige Liste (wenn aufgeklappt) -->
           <div class="notification-dashboard-list" id="notificationList">
             <!-- Dynamisch gefüllt -->
           </div>
@@ -117,8 +143,7 @@
         <!-- Tabs -->
         <div class="tabs">
           <button class="tab active" onclick="switchTab('offen')">Offene Anträge</button>
-          <button class="tab" onclick="switchTab('bearbeitung')">Meine Anträge und Aufgaben</button>
-          <button class="tab" onclick="switchTab('eroeffnung')">📋 Pers. Eröffnung</button>
+          <button class="tab" onclick="switchTab('bearbeitung')">Meine Anträge und Aufgaben <span class="tab-count" id="bearbeitungTabCount">0</span></button>
           <button class="tab" onclick="switchTab('historie')">Erledigt</button>
         </div>
 
@@ -160,25 +185,6 @@
           </div>
         </section>
 
-        <!-- Persönliche Eröffnung -->
-        <section class="section" id="eroeffnungSection" style="display: none;">
-          <div class="section-header">
-            <h2>Warten auf persönliche Eröffnung <span class="count" id="eroeffnungCount">0</span></h2>
-            <div class="sort-controls">
-              <label for="sortierungEroeffnung">Sortieren:</label>
-              <select id="sortierungEroeffnung" onchange="renderAntraege()">
-                <option value="datum-neu">Neueste zuerst</option>
-                <option value="datum-alt">Älteste zuerst</option>
-                <option value="antragsteller-az">Antragsteller A-Z</option>
-                <option value="antragsteller-za">Antragsteller Z-A</option>
-              </select>
-            </div>
-          </div>
-          <p class="section-hint">Diese Anträge wurden bearbeitet, aber für persönliche Eröffnung markiert. Bestätigen Sie nach dem Gespräch mit dem Insassen.</p>
-          <div class="antrag-list" id="eroeffnungList">
-            <!-- Dynamisch gefüllt -->
-          </div>
-        </section>
 
         <!-- Erledigt / Historie -->
         <section class="section" id="historieSection" style="display: none;">
@@ -203,7 +209,7 @@
       <!-- Antrags-Detailansicht -->
       <div class="dashboard" id="antragDetailView" style="display: none;">
         <div class="back-navigation">
-          <button class="btn btn-secondary btn-sm" onclick="closeAntragDetail()">← Zurück zur Übersicht</button>
+          <button class="btn btn-secondary btn-sm" onclick="closeAntragDetail()" data-i18n-back>← Zurück zur Übersicht</button>
         </div>
         
         <div class="detail-view-container" id="antragDetailContent">
@@ -234,6 +240,14 @@
           <p class="field-hint">Wenn aktiviert: Keine automatische Benachrichtigung. Das Ergebnis wird erst nach persönlicher Bestätigung übermittelt.</p>
         </div>
         
+        <div class="form-group">
+          <label class="checkbox-option vollzug-vor-bekanntgabe">
+            <input type="checkbox" id="entscheidungVollzugVorBekanntgabe">
+            <span class="checkbox-label">📦 Vollzug vor Bekanntgabe an den Insassen planen</span>
+          </label>
+          <p class="field-hint">Wenn aktiviert: Keine automatische Benachrichtigung. Das Ergebnis wird erst nach persönlicher Bestätigung übermittelt.</p>
+        </div>
+        
         <input type="hidden" id="entscheidenAntragId">
       </div>
       <div class="modal-footer bearbeiten-actions">
@@ -246,6 +260,33 @@
         <button class="btn btn-warning" onclick="handleEntscheidung('teilweise-genehmigt')">
           ⚡ Teilweise genehmigen
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Vollzug bestätigen -->
+  <div class="modal-overlay" id="vollzugBestaetigenModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Vollzug bestätigen</h3>
+        <button class="modal-close" onclick="closeModal('vollzugBestaetigenModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="vollzug-info">
+          <p><strong>Geplante Entscheidung:</strong> <span id="vollzugGeplantEntscheidung"></span></p>
+        </div>
+        
+        <div class="form-group">
+          <label for="vollzugKommentar">Kommentar zum Vollzug <span class="required">*</span></label>
+          <textarea id="vollzugKommentar" placeholder="Dieser Kommentar wird dem Insassen bei der Bekanntgabe angezeigt..." rows="4" required></textarea>
+          <p class="field-hint">Dieser Kommentar ist für den Insassen sichtbar und wird mit der Bekanntgabe der Entscheidung übermittelt.</p>
+        </div>
+        
+        <input type="hidden" id="vollzugBestaetigenAntragId">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('vollzugBestaetigenModal')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="confirmVollzugBestaetigung()">✓ Vollzug bestätigen & Bekanntgabe</button>
       </div>
     </div>
   </div>
@@ -272,33 +313,35 @@
           </div>
         </div>
         
-        <!-- Mitarbeiter-Auswahl (hierarchisch) -->
+        <!-- Mitarbeiter-Auswahl (direkt mit Suche) -->
         <div id="mitarbeiterAuswahl" style="display: none;">
           <div class="form-group">
-            <label for="aufgabeJva">Haus auswählen</label>
-            <select id="aufgabeJva" onchange="loadAufgabeStationen()">
-              <option value="">-- Haus wählen --</option>
-            </select>
+            <label for="aufgabeMitarbeiterSuche">Mitarbeiter suchen</label>
+            <input type="text" id="aufgabeMitarbeiterSuche" placeholder="Name eingeben..." oninput="filterMitarbeiterListe()">
           </div>
-          
           <div class="form-group">
-            <label for="aufgabeBereich">Bereich auswählen</label>
-            <select id="aufgabeBereich" onchange="loadAufgabeMitarbeiter()">
-              <option value="">-- Bereich wählen --</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label for="aufgabePerson">Person auswählen</label>
-            <select id="aufgabePerson">
-              <option value="">-- Person wählen --</option>
-            </select>
+            <label>Mitarbeiter auswählen:</label>
+            <div class="mitarbeiter-liste" id="aufgabeMitarbeiterListe">
+              <!-- Wird dynamisch gefüllt -->
+            </div>
+            <input type="hidden" id="aufgabePersonId">
+            <div class="selected-person" id="selectedPersonDisplay" style="display: none;">
+              <span class="selected-label">Ausgewählt:</span>
+              <span class="selected-name" id="selectedPersonName"></span>
+              <button type="button" class="btn-clear" onclick="clearSelectedPerson()">&times;</button>
+            </div>
           </div>
         </div>
         
         <div class="form-group">
-          <label for="aufgabeBeschreibung">Aufgabenbeschreibung</label>
-          <textarea id="aufgabeBeschreibung" placeholder="Beschreiben Sie die Aufgabe..." rows="4"></textarea>
+          <label for="aufgabeKurzbeschreibung">Kurzbeschreibung (max. 40 Zeichen) *</label>
+          <input type="text" id="aufgabeKurzbeschreibung" maxlength="40" placeholder="Kurze Zusammenfassung der Aufgabe..." required>
+          <p class="field-hint"><span id="aufgabeKurzCounter">0</span>/40 Zeichen</p>
+        </div>
+        
+        <div class="form-group">
+          <label for="aufgabeBeschreibung">Ausführliche Beschreibung (optional)</label>
+          <textarea id="aufgabeBeschreibung" placeholder="Detaillierte Beschreibung der Aufgabe..." rows="4"></textarea>
         </div>
         
         <div class="form-group">
@@ -308,10 +351,10 @@
         </div>
         
         <div class="form-group">
-          <label class="checkbox-option">
-            <input type="checkbox" id="aufgabePdfAnhaengen">
-            <span class="checkbox-label">📄 PDF erstellen und anhängen</span>
-          </label>
+          <label for="aufgabePdfUpload">📄 PDF-Dokumente anhängen (optional)</label>
+          <input type="file" id="aufgabePdfUpload" accept=".pdf" multiple onchange="handleAufgabePdfUpload(this)">
+          <p class="field-hint">Wählen Sie eine oder mehrere PDF-Dateien zum Anhängen aus.</p>
+          <div id="aufgabePdfList" class="pdf-list"></div>
         </div>
         
         <input type="hidden" id="aufgabeAntragId">
@@ -323,7 +366,7 @@
     </div>
   </div>
 
-  <!-- Modal: Aufgabe lösen -->
+  <!-- Modal: Aufgabe bearbeiten -->
   <div class="modal-overlay" id="aufgabeLoesungModal">
     <div class="modal modal-large">
       <div class="modal-header">
@@ -336,15 +379,36 @@
         </div>
         
         <div class="form-group">
-          <label for="aufgabeLoesungText">Lösung / Antwort</label>
-          <textarea id="aufgabeLoesungText" placeholder="Beschreiben Sie die Lösung der Aufgabe..." rows="4"></textarea>
+          <label>Wie möchten Sie die Aufgabe abschließen?</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="aufgabeErledigungsTyp" value="antwort" checked onchange="toggleAntwortFeld()">
+              <span class="radio-label">💬 Mit Antwort</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="aufgabeErledigungsTyp" value="kenntnisnahme" onchange="toggleAntwortFeld()">
+              <span class="radio-label">✓ Zur Kenntnis genommen</span>
+            </label>
+          </div>
+        </div>
+        
+        <div class="form-group" id="aufgabeAntwortGruppe">
+          <label for="aufgabeAntwortText">Antwort</label>
+          <textarea id="aufgabeAntwortText" placeholder="Geben Sie Ihre Antwort ein..." rows="4"></textarea>
+        </div>
+        
+        <div class="form-group" id="aufgabeAntwortPdfGruppe">
+          <label for="aufgabeAntwortPdfUpload">📄 PDF-Dokumente anhängen (optional)</label>
+          <input type="file" id="aufgabeAntwortPdfUpload" accept=".pdf" multiple onchange="handleAntwortPdfUpload(this)">
+          <p class="field-hint">Wählen Sie eine oder mehrere PDF-Dateien zum Anhängen aus.</p>
+          <div id="aufgabeAntwortPdfList" class="pdf-list"></div>
         </div>
         
         <input type="hidden" id="aufgabeLoesungId">
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('aufgabeLoesungModal')">Abbrechen</button>
-        <button class="btn btn-success" onclick="erledigeAufgabe()">Aufgabe erledigen</button>
+        <button class="btn btn-success" onclick="erledigeAufgabe()">Aufgabe abschließen</button>
       </div>
     </div>
   </div>
@@ -427,6 +491,326 @@
     let currentAntragId = null;
 
     // ============================================
+    // SPRACHSTEUERUNG
+    // ============================================
+    
+    function changeLanguage(lang) {
+      setLanguage(lang);
+      updateUITranslations();
+      // Listen neu rendern mit neuer Sprache
+      if (currentSession) {
+        renderAntraege();
+        renderNotifications();
+        renderKalender();
+      }
+    }
+    
+    function updateUITranslations() {
+      // Statische Elemente mit data-i18n Attribut übersetzen
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.textContent = t(key);
+      });
+      
+      // Placeholder übersetzen
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        el.placeholder = t(key);
+      });
+      
+      // Tabs aktualisieren
+      const tabs = document.querySelectorAll('.tabs .tab');
+      if (tabs.length >= 4) {
+        tabs[0].innerHTML = t('nav.openApplications');
+        tabs[1].innerHTML = t('nav.myApplicationsTasks') + ' <span class="tab-count" id="bearbeitungTabCount">0</span>';
+        tabs[2].innerHTML = '📋 ' + t('nav.personalOpening');
+        tabs[3].innerHTML = t('nav.completed');
+      }
+      
+      // Postfach-Titel
+      const postfachTitle = document.querySelector('#notificationSection h2');
+      if (postfachTitle) {
+        const count = document.getElementById('notificationCount')?.textContent || '0';
+        postfachTitle.innerHTML = `📬 ${t('inbox.title')} <span class="count" id="notificationCount">${count}</span>`;
+      }
+      
+      // Kalender-Titel
+      const kalenderTitle = document.querySelector('.kalender-header-bar h2');
+      if (kalenderTitle) {
+        kalenderTitle.textContent = '📅 ' + t('calendar.title');
+      }
+      
+      // View-Buttons
+      if (document.getElementById('viewTagBtn')) document.getElementById('viewTagBtn').textContent = t('calendar.day');
+      if (document.getElementById('viewWocheBtn')) document.getElementById('viewWocheBtn').textContent = t('calendar.week');
+      if (document.getElementById('viewMonatBtn')) document.getElementById('viewMonatBtn').textContent = t('calendar.month');
+      
+      // Heute-Button
+      const heuteBtn = document.querySelector('.heute-btn');
+      if (heuteBtn) heuteBtn.textContent = t('calendar.today');
+      
+      // Sortier-Labels
+      document.querySelectorAll('.sort-controls label').forEach(label => {
+        label.textContent = t('sort.label') + ':';
+      });
+      
+      // Sortier-Optionen
+      document.querySelectorAll('.sort-controls select').forEach(select => {
+        const options = select.querySelectorAll('option');
+        if (options.length >= 4) {
+          options[0].textContent = t('sort.newest');
+          options[1].textContent = t('sort.oldest');
+          options[2].textContent = t('sort.applicantAZ');
+          options[3].textContent = t('sort.applicantZA');
+        }
+      });
+      
+      // ============================================
+      // MODAL-ÜBERSETZUNGEN
+      // ============================================
+      
+      // Aufgabe-Modal
+      const aufgabeModalTitle = document.querySelector('#aufgabeModal .modal-header h3');
+      if (aufgabeModalTitle) aufgabeModalTitle.textContent = t('task.create');
+      
+      const aufgabeZuweisen = document.querySelector('#aufgabeModal .modal-body > .form-group > label');
+      if (aufgabeZuweisen) aufgabeZuweisen.textContent = t('task.assignTo') + ':';
+      
+      // Radio-Labels im Aufgabe-Modal
+      const aufgabeRadios = document.querySelectorAll('#aufgabeModal .radio-label');
+      if (aufgabeRadios.length >= 2) {
+        aufgabeRadios[0].textContent = '👤 ' + t('task.assignToInmate');
+        aufgabeRadios[1].textContent = '👷 ' + t('task.assignToStaff');
+      }
+      
+      // Mitarbeiter-Suche
+      const mitarbeiterSucheLabel = document.querySelector('label[for="aufgabeMitarbeiterSuche"]');
+      if (mitarbeiterSucheLabel) mitarbeiterSucheLabel.textContent = t('task.searchStaff');
+      const mitarbeiterSucheInput = document.getElementById('aufgabeMitarbeiterSuche');
+      if (mitarbeiterSucheInput) mitarbeiterSucheInput.placeholder = t('masterdata.name') + '...';
+      
+      const mitarbeiterAuswahlLabel = document.querySelector('#mitarbeiterAuswahl .form-group:nth-child(2) > label');
+      if (mitarbeiterAuswahlLabel) mitarbeiterAuswahlLabel.textContent = t('task.selectStaff') + ':';
+      
+      const selectedLabel = document.querySelector('.selected-label');
+      if (selectedLabel) selectedLabel.textContent = t('task.selected') + ':';
+      
+      // Kurzbeschreibung
+      const kurzLabel = document.querySelector('label[for="aufgabeKurzbeschreibung"]');
+      if (kurzLabel) kurzLabel.textContent = t('task.shortDescription') + ' (' + t('form.maxChars', {count: 40}) + ') *';
+      const kurzInput = document.getElementById('aufgabeKurzbeschreibung');
+      if (kurzInput) kurzInput.placeholder = t('task.shortDescription') + '...';
+      
+      // Ausführliche Beschreibung
+      const beschrLabel = document.querySelector('label[for="aufgabeBeschreibung"]');
+      if (beschrLabel) beschrLabel.textContent = t('task.description') + ' (' + t('form.optional') + ')';
+      const beschrInput = document.getElementById('aufgabeBeschreibung');
+      if (beschrInput) beschrInput.placeholder = t('task.description') + '...';
+      
+      // Frist
+      const fristLabel = document.querySelector('label[for="aufgabeFrist"]');
+      if (fristLabel) fristLabel.textContent = t('task.deadline') + ' (' + t('form.optional') + ')';
+      const fristHint = document.querySelector('#aufgabeModal .form-group:nth-child(5) .field-hint');
+      if (fristHint) fristHint.textContent = t('task.deadlineHint');
+      
+      // PDF anhängen
+      const pdfCheckbox = document.querySelector('#aufgabePdfAnhaengen + .checkbox-label');
+      if (pdfCheckbox) pdfCheckbox.textContent = '📄 ' + t('task.attachPdf');
+      
+      // Aufgabe-Modal Buttons
+      const aufgabeModalBtns = document.querySelectorAll('#aufgabeModal .modal-footer .btn');
+      if (aufgabeModalBtns.length >= 2) {
+        aufgabeModalBtns[0].textContent = t('button.cancel');
+        aufgabeModalBtns[1].textContent = t('task.send');
+      }
+      
+      // Aufgabe-Lösung-Modal
+      const loesungModalTitle = document.querySelector('#aufgabeLoesungModal .modal-header h3');
+      if (loesungModalTitle) loesungModalTitle.textContent = t('task.edit');
+      
+      const loesungModalBtns = document.querySelectorAll('#aufgabeLoesungModal .modal-footer .btn');
+      if (loesungModalBtns.length >= 2) {
+        loesungModalBtns[0].textContent = t('button.cancel');
+        loesungModalBtns[1].textContent = t('task.complete');
+      }
+      
+      // Termin-Modal
+      const terminModalTitle = document.querySelector('#terminModal .modal-header h3');
+      if (terminModalTitle) terminModalTitle.textContent = t('calendar.newAppointment');
+      
+      const terminTitelLabel = document.querySelector('label[for="terminTitel"]');
+      if (terminTitelLabel) terminTitelLabel.textContent = t('appointment.title');
+      
+      const terminDatumLabel = document.querySelector('label[for="terminDatum"]');
+      if (terminDatumLabel) terminDatumLabel.textContent = t('appointment.date');
+      
+      const terminUhrzeitLabel = document.querySelector('label[for="terminUhrzeit"]');
+      if (terminUhrzeitLabel) terminUhrzeitLabel.textContent = t('appointment.time') + ' (' + t('form.optional') + ')';
+      
+      const terminTypLabel = document.querySelector('label[for="terminTyp"]');
+      if (terminTypLabel) terminTypLabel.textContent = t('appointment.type');
+      
+      // Termin-Typ Optionen
+      const terminTypSelect = document.getElementById('terminTyp');
+      if (terminTypSelect) {
+        const opts = terminTypSelect.querySelectorAll('option');
+        if (opts.length >= 1) opts[0].textContent = '🔒 ' + t('appointment.private');
+        if (opts.length >= 2) opts[1].textContent = '🏠 ' + t('appointment.house');
+        if (opts.length >= 3) opts[2].textContent = '📍 ' + t('appointment.station');
+      }
+      
+      const terminModalBtns = document.querySelectorAll('#terminModal .modal-footer .btn');
+      if (terminModalBtns.length >= 2) {
+        terminModalBtns[0].textContent = t('button.cancel');
+        terminModalBtns[1].textContent = t('button.save');
+      }
+      
+      // Termin-Detail-Modal
+      const terminDetailBtns = document.querySelectorAll('#terminDetailModal .modal-footer .btn-secondary');
+      terminDetailBtns.forEach(btn => {
+        if (btn.textContent.includes('Schließen') || btn.textContent.includes('Close') || btn.textContent.includes('Fermer')) {
+          btn.textContent = t('button.close');
+        }
+      });
+      
+      // Entscheiden-Modal
+      const entscheidenModalTitle = document.querySelector('#entscheidenModal .modal-header h3');
+      if (entscheidenModalTitle) entscheidenModalTitle.textContent = t('decision.title');
+      
+      // Genehmigen/Ablehnen Buttons im Entscheiden-Modal
+      const entscheidenBtns = document.querySelectorAll('#entscheidenModal .decision-buttons .btn');
+      entscheidenBtns.forEach(btn => {
+        if (btn.classList.contains('btn-success')) btn.innerHTML = '✅ ' + t('action.approve');
+        if (btn.classList.contains('btn-warning')) btn.innerHTML = '⚠️ ' + t('action.partiallyApprove');
+        if (btn.classList.contains('btn-danger')) btn.innerHTML = '❌ ' + t('action.reject');
+      });
+      
+      const begruendungLabel = document.querySelector('label[for="entscheidungBegruendung"]');
+      if (begruendungLabel) begruendungLabel.textContent = t('decision.reason') + ' *';
+      
+      const persEroeffnungLabel = document.querySelector('#entscheidungPersoenlichEroeffnen + .checkbox-label');
+      if (persEroeffnungLabel) persEroeffnungLabel.textContent = '📋 ' + t('decision.personalOpeningCheck');
+      
+      const vollzugVorBekanntgabeLabel = document.querySelector('#entscheidungVollzugVorBekanntgabe + .checkbox-label');
+      if (vollzugVorBekanntgabeLabel) vollzugVorBekanntgabeLabel.textContent = '📦 ' + t('decision.executionBeforeNotification');
+      
+      // Hinweistexte für beide Checkboxen
+      const checkboxHints = document.querySelectorAll('#entscheidenModal .field-hint');
+      checkboxHints.forEach(hint => {
+        hint.textContent = t('decision.noAutoNotificationHint');
+      });
+      
+      // Zurück-Button
+      const backBtn = document.querySelector('[data-i18n-back]');
+      if (backBtn) backBtn.textContent = '← ' + t('button.backToOverview');
+      
+      // Termin-Detail-Modal Titel
+      const terminDetailTitle = document.querySelector('#terminDetailModal .modal-header h3');
+      if (terminDetailTitle) terminDetailTitle.textContent = currentLanguage === 'en' ? 'Appointment Details' : currentLanguage === 'fr' ? 'Détails du rendez-vous' : 'Termin-Details';
+    }
+    
+    // Übersetzte Statusanzeige
+    function getStatusText(status) {
+      const statusMap = {
+        'entwurf': t('status.draft'),
+        'eingereicht': t('status.submitted'),
+        'in-bearbeitung': t('status.inProgress'),
+        'genehmigt': t('status.approved'),
+        'abgelehnt': t('status.rejected'),
+        'teilweise-genehmigt': t('status.partiallyApproved'),
+        'erledigt': t('status.completed'),
+        'offen': t('status.open')
+      };
+      return statusMap[status] || status;
+    }
+    
+    // Übersetzte Antragstypen
+    function getAntragsTypText(type) {
+      const typeMap = {
+        'teilhabegeld': t('application.type.teilhabegeld'),
+        'eigentum': t('application.type.eigentum'),
+        'sonstiges': t('application.type.sonstiges')
+      };
+      return typeMap[type] || type;
+    }
+    
+    // Übersetzte Aktivitätsbeschreibung
+    function getAktivitaetBeschreibung(aktivitaet) {
+      const typ = aktivitaet.typ;
+      const details = aktivitaet.details || {};
+      const dateLocale = currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE';
+      
+      switch (typ) {
+        case 'erstellt':
+          const appType = aktivitaet.beschreibung.includes('Teilhabegeld') ? t('apptype.teilhabegeld') : t('apptype.eigentum');
+          const fromDraft = aktivitaet.beschreibung.includes('Entwurf') 
+            ? (currentLanguage === 'en' ? ' (from draft)' : currentLanguage === 'fr' ? ' (depuis brouillon)' : ' (aus Entwurf)')
+            : '';
+          return `${t('application.title')} "${appType}" ${currentLanguage === 'en' ? 'submitted' : currentLanguage === 'fr' ? 'soumise' : 'eingereicht'}${fromDraft}`;
+          
+        case 'genommen':
+          return t('history.taken');
+          
+        case 'uebernommen':
+          const von = aktivitaet.beschreibung.replace('Antrag übernommen von ', '');
+          return `${t('history.takenOver')} ${von}`;
+          
+        case 'sachlich-geprueft':
+          return t('history.reviewed');
+          
+        case 'entscheidung':
+          const status = aktivitaet.beschreibung.replace('Entscheidung: ', '');
+          let statusTranslated = status;
+          if (status === 'Genehmigt') statusTranslated = t('status.approved');
+          else if (status === 'Abgelehnt') statusTranslated = t('status.rejected');
+          else if (status === 'Teilweise genehmigt') statusTranslated = t('status.partiallyApproved');
+          return `${t('history.decided')}: ${statusTranslated}`;
+          
+        case 'entscheidung-geplant':
+          const statusGeplant = aktivitaet.beschreibung.replace(' vorbereitet (persönliche Eröffnung)', '');
+          let statusGeplantTranslated = statusGeplant;
+          if (statusGeplant === 'Genehmigung') statusGeplantTranslated = t('status.approved');
+          else if (statusGeplant === 'Ablehnung') statusGeplantTranslated = t('status.rejected');
+          else if (statusGeplant === 'Teilweise Genehmigung') statusGeplantTranslated = t('status.partiallyApproved');
+          return `${statusGeplantTranslated} ${t('history.decisionPlanned').replace(/^.*\(/, '(').replace('Entscheidung vorbereitet ', '')}`;
+          
+        case 'persoenlich-eroeffnet':
+          const statusEroeffnet = aktivitaet.beschreibung.replace('Persönliche Eröffnung: ', '');
+          let statusEroeffnetTranslated = statusEroeffnet;
+          if (statusEroeffnet === 'Genehmigt') statusEroeffnetTranslated = t('status.approved');
+          else if (statusEroeffnet === 'Abgelehnt') statusEroeffnetTranslated = t('status.rejected');
+          else if (statusEroeffnet === 'Teilweise genehmigt') statusEroeffnetTranslated = t('status.partiallyApproved');
+          return `${t('history.personalOpening')}: ${statusEroeffnetTranslated}`;
+          
+        case 'aufgabe-erstellt':
+          const zielTyp = details.zugewiesenAn ? details.zugewiesenAn : '';
+          const fristText = details.frist 
+            ? ` (${t('history.deadline')}: ${new Date(details.frist).toLocaleDateString(dateLocale)})` 
+            : '';
+          return `${t('history.taskCreatedFor')} ${zielTyp}${fristText}`;
+          
+        case 'aufgabe-erledigt':
+          if (details.erledigungsTyp === 'kenntnisnahme') {
+            return t('history.taskAcknowledged');
+          }
+          return t('history.taskAnswered');
+          
+        case 'aufgabe-geloescht':
+          return t('history.taskDeleted');
+          
+        case 'vollzogen':
+          return t('history.executed');
+          
+        case 'veraktet':
+          return t('history.archived');
+          
+        default:
+          // Fallback: versuche Freitext zu übersetzen
+          return getTranslatedUserText(aktivitaet.beschreibung) || aktivitaet.beschreibung;
+      }
+    }
+
+    // ============================================
     // LOGIN
     // ============================================
     
@@ -448,6 +832,7 @@
     function logout() {
       sessionManager.logout();
       currentSession = null;
+      resetLanguage(); // Sprache zurücksetzen für nächsten Benutzer
       location.reload();
     }
     
@@ -456,6 +841,18 @@
       document.getElementById('portalSection').style.display = 'block';
       document.getElementById('userName').textContent = currentSession.name;
       document.getElementById('userRole').textContent = getRolleText(currentSession.rolle);
+      
+      // Moin-Begrüßung setzen
+      document.getElementById('welcomeGreeting').textContent = 'Moin, ' + currentSession.name + '!';
+      const welcomeMsg = currentLanguage === 'en' ? 'Welcome to the Staff Portal.' 
+                       : currentLanguage === 'fr' ? 'Bienvenue dans le portail des employés.' 
+                       : 'Willkommen im Mitarbeiter-Portal.';
+      document.getElementById('welcomeMessage').textContent = welcomeMsg;
+      
+      // Benutzersprache laden
+      loadUserLanguage(currentSession.userId);
+      document.getElementById('languageSelect').value = currentLanguage;
+      updateUITranslations();
       
       // Zuständigkeitsbereich anzeigen
       updateZustaendigkeitInfo();
@@ -479,10 +876,31 @@
     // BENACHRICHTIGUNGEN (POSTFACH)
     // ============================================
     
+    // Postfach auf-/zuklappen
+    let postfachExpanded = false;
+    
+    function togglePostfach() {
+      const section = document.getElementById('notificationSection');
+      const icon = document.getElementById('postfachToggleIcon');
+      
+      postfachExpanded = !postfachExpanded;
+      
+      if (postfachExpanded) {
+        section.classList.remove('collapsed');
+        section.classList.add('expanded');
+        icon.textContent = '▼';
+      } else {
+        section.classList.remove('expanded');
+        section.classList.add('collapsed');
+        icon.textContent = '▶';
+      }
+    }
+    
     function renderNotifications() {
       if (!currentSession) return;
       
       const list = document.getElementById('notificationList');
+      const preview = document.getElementById('notificationPreview');
       const notifications = notificationSystem.getAllNotifications(currentSession.userId);
       const section = document.getElementById('notificationSection');
       const unreadCount = notificationSystem.getUnreadCount(currentSession.userId);
@@ -498,17 +916,35 @@
         return;
       }
       
-      section.style.display = 'block';
+      section.style.display = 'flex';
       
-      // Alle Benachrichtigungen anzeigen (mit Scroll)
-      const displayNotifications = notifications;
+      // Vorschau: Nur neueste Nachricht
+      if (notifications.length > 0) {
+        const newest = notifications[0];
+        const typeClass = newest.type || 'info';
+        const unreadClass = newest.gelesen ? 'read' : 'unread';
+        
+        preview.innerHTML = `
+          <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${newest.id}', '${newest.antragId || ''}'); event.stopPropagation();">
+            <div class="notification-card-icon">${getNotificationIcon(newest.type)}</div>
+            <div class="notification-card-content">
+              <div class="notification-card-title">${newest.title}</div>
+              <div class="notification-card-message">${newest.message}</div>
+              <div class="notification-card-time">${formatDate(newest.erstelltAm)}</div>
+            </div>
+            ${!newest.gelesen ? '<div class="notification-card-dot"></div>' : ''}
+          </div>
+          ${notifications.length > 1 ? `<div class="notification-more-hint">+ ${notifications.length - 1} weitere Nachrichten</div>` : ''}
+        `;
+      }
       
-      list.innerHTML = displayNotifications.map(n => {
+      // Vollständige Liste
+      list.innerHTML = notifications.map(n => {
         const typeClass = n.type || 'info';
         const unreadClass = n.gelesen ? 'read' : 'unread';
         
         return `
-          <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${n.id}', '${n.antragId || ''}')">
+          <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${n.id}', '${n.antragId || ''}'); event.stopPropagation();">
             <div class="notification-card-icon">${getNotificationIcon(n.type)}</div>
             <div class="notification-card-content">
               <div class="notification-card-title">${n.title}</div>
@@ -616,7 +1052,6 @@
       
       document.getElementById('offenSection').style.display = 'none';
       document.getElementById('bearbeitungSection').style.display = 'none';
-      document.getElementById('eroeffnungSection').style.display = 'none';
       document.getElementById('historieSection').style.display = 'none';
       
       if (tab === 'offen') {
@@ -625,11 +1060,8 @@
       } else if (tab === 'bearbeitung') {
         tabs[1].classList.add('active');
         document.getElementById('bearbeitungSection').style.display = 'block';
-      } else if (tab === 'eroeffnung') {
-        tabs[2].classList.add('active');
-        document.getElementById('eroeffnungSection').style.display = 'block';
       } else {
-        tabs[3].classList.add('active');
+        tabs[2].classList.add('active');
         document.getElementById('historieSection').style.display = 'block';
       }
     }
@@ -676,10 +1108,10 @@
         actionsHtml = `
           <div class="antrag-actions">
             <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${antrag.id}', false, true)">
-              📂 Öffnen
+              📂 ${t('button.open')}
             </button>
             <button class="btn btn-primary btn-sm" onclick="nehmeAntrag('${antrag.id}')">
-              📥 Antrag nehmen
+              📥 ${t('button.takeApplication')}
             </button>
           </div>
         `;
@@ -699,7 +1131,7 @@
           actionsHtml = `
             <div class="antrag-actions">
               <button class="btn btn-primary btn-sm" onclick="openAntragDetail('${antrag.id}')">
-                Öffnen
+                ${t('button.open')}
               </button>
             </div>
           `;
@@ -743,7 +1175,7 @@
         actionsHtml = `
           <div class="antrag-actions">
             <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${antrag.id}', true)">
-              📂 Öffnen
+              📂 ${t('button.open')}
             </button>
           </div>
         `;
@@ -774,6 +1206,10 @@
       const antrag = antragSystem.getAntrag(aufgabe.antragId);
       const antragsNummer = antrag ? antrag.antragsNummer : aufgabe.antragsNummer;
       const istErsteller = aufgabe.erstelltVonId === currentSession.userId;
+      const dateLocale = currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE';
+      const overdueText = currentLanguage === 'en' ? 'Overdue!' : currentLanguage === 'fr' ? 'En retard!' : 'Überfällig!';
+      const completedText = currentLanguage === 'en' ? 'Completed' : currentLanguage === 'fr' ? 'Terminé' : 'Erledigt';
+      const deleteAndTakeText = currentLanguage === 'en' ? 'Delete & take over' : currentLanguage === 'fr' ? 'Supprimer et reprendre' : 'Löschen & übernehmen';
       
       // Frist-Anzeige
       let fristHtml = '';
@@ -783,43 +1219,46 @@
         heute.setHours(0, 0, 0, 0);
         frist.setHours(0, 0, 0, 0);
         const istUeberfaellig = heute > frist && aufgabe.status === 'offen';
-        fristHtml = `<p class="${istUeberfaellig ? 'frist-ueberfaellig' : 'frist-info'}"><strong>Frist:</strong> ${frist.toLocaleDateString('de-DE')}${istUeberfaellig ? ' ⚠️ Überfällig!' : ''}</p>`;
+        fristHtml = `<p class="${istUeberfaellig ? 'frist-ueberfaellig' : 'frist-info'}"><strong>${t('task.deadline')}:</strong> ${frist.toLocaleDateString(dateLocale)}${istUeberfaellig ? ' ⚠️ ' + overdueText : ''}</p>`;
       }
       
       return `
         <div class="antrag-card aufgabe-card ${aufgabe.fristDatum && new Date() > new Date(aufgabe.fristDatum) && aufgabe.status === 'offen' ? 'ueberfaellig' : ''}">
           <div class="aufgabe-header">
             <span class="aufgabe-icon">📋</span>
-            <span class="aufgabe-label">Aufgabe</span>
+            <span class="aufgabe-label">${t('task.title')}</span>
             <span class="status-badge ${aufgabe.status === 'offen' ? 'in-bearbeitung' : 'genehmigt'}">
-              ${aufgabe.status === 'offen' ? '⏳ Offen' : '✓ Erledigt'}
+              ${aufgabe.status === 'offen' ? '⏳ ' + t('status.open') : '✓ ' + t('status.completed')}
             </span>
           </div>
           <div class="antrag-body">
-            <p><strong>Zum Antrag:</strong> ${antragsNummer || aufgabe.antragId}</p>
-            <p><strong>Von:</strong> ${aufgabe.erstelltVonName}</p>
-            <p><strong>Beschreibung:</strong> ${aufgabe.beschreibung}</p>
+            <p><strong>${t('task.forApplication')}:</strong> ${antragsNummer || aufgabe.antragId}</p>
+            <p><strong>${t('task.from')}:</strong> ${aufgabe.erstelltVonName}</p>
+            <p><strong>${t('task.shortDescription')}:</strong> ${getTranslatedUserText(aufgabe.kurzbeschreibung || aufgabe.beschreibung)}</p>
             ${fristHtml}
-            <p class="antrag-date">Erstellt: ${formatDate(aufgabe.erstelltAm)}</p>
+            <p class="antrag-date">${formatDate(aufgabe.erstelltAm)}</p>
           </div>
           ${aufgabe.status === 'offen' ? `
             <div class="antrag-actions">
               <button class="btn btn-primary btn-sm" onclick="openAufgabeLoesungModal('${aufgabe.id}')">
-                Aufgabe bearbeiten
+                ${t('task.edit')}
               </button>
               <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${aufgabe.antragId}')">
-                Antrag öffnen
+                ${t('button.openApplication')}
               </button>
               ${istErsteller ? `
                 <button class="btn btn-danger btn-sm" onclick="loescheAufgabeUndUebernehme('${aufgabe.id}')">
-                  🗑️ Löschen & übernehmen
+                  🗑️ ${deleteAndTakeText}
                 </button>
               ` : ''}
             </div>
           ` : `
-            <div class="aufgabe-loesung">
-              <p><strong>Lösung:</strong> ${aufgabe.loesung || '-'}</p>
-              <p class="antrag-date">Erledigt: ${formatDate(aufgabe.erledigtAm)}</p>
+            <div class="aufgabe-antwort">
+              ${aufgabe.erledigungsTyp === 'kenntnisnahme' 
+                ? `<p><strong>${t('application.status')}:</strong> ${t('task.acknowledged')}</p>`
+                : `<p><strong>${t('task.answer')}:</strong> ${getTranslatedUserText(aufgabe.antwort) || '-'}</p>`
+              }
+              <p class="antrag-date">${completedText}: ${formatDate(aufgabe.erledigtAm)}</p>
             </div>
           `}
         </div>
@@ -840,7 +1279,10 @@
       
       // Prüfen ob aktueller Benutzer der Ersteller ist
       if (aufgabe.erstelltVonId !== currentSession.userId) {
-        alert('Sie können nur Aufgaben zurücknehmen, die Sie selbst erstellt haben.');
+        const msg = currentLanguage === 'en' ? 'You can only withdraw tasks that you created yourself.' 
+                  : currentLanguage === 'fr' ? 'Vous ne pouvez retirer que les tâches que vous avez créées.' 
+                  : 'Sie können nur Aufgaben zurücknehmen, die Sie selbst erstellt haben.';
+        alert(msg);
         return;
       }
       
@@ -889,16 +1331,53 @@
       const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(antragId);
       const meineOffeneAufgabe = aufgabenZuAntrag.find(a => a.zugewiesenAnId === currentSession.userId && a.status === 'offen');
       const hatOffeneAufgabe = !!meineOffeneAufgabe;
-      // Aufgabenkette: Jeder der eine Aufgabe erstellt oder erhalten hat, hat vollen Zugriff
-      const hatAufgabeErhalten = aufgabenZuAntrag.some(a => a.zugewiesenAnId === currentSession.userId);
-      const hatAufgabeErstellt = aufgabenZuAntrag.some(a => a.erstelltVonId === currentSession.userId);
-      const hatErledigteAufgabe = aufgabenZuAntrag.some(a => a.zugewiesenAnId === currentSession.userId && a.status === 'erledigt');
-      // Aktivitätsbezug: Jeder der bereits eine Aktion am Antrag durchgeführt hat (z.B. Entscheidung getroffen)
-      const hatAmAntragGearbeitet = aktivitaetenSystem.istMitarbeiterBeteiligt(antragId, currentSession.userId);
+      
+      // Der ursprüngliche Bearbeiter hat IMMER Zugriff (bis zur Veraktung)
       const istBearbeiter = antrag.bearbeiterId === currentSession.userId;
-      // Alle Beteiligten (Aufgaben oder Aktivitäten) haben vollen Zugriff
-      const istAufgabenBeteiligter = hatAufgabeErhalten || hatAufgabeErstellt || hatAmAntragGearbeitet;
-      const kannVollziehenVerakten = istBearbeiter || istAufgabenBeteiligter;
+      
+      // Aktivitätsbezug: Jeder der bereits eine wichtige Aktion am Antrag durchgeführt hat (z.B. entschieden)
+      const hatAmAntragGearbeitet = aktivitaetenSystem.istMitarbeiterBeteiligt(antragId, currentSession.userId);
+      
+      // Für Aufgabenempfänger (nicht ursprünglicher Bearbeiter):
+      // Hat Zugriff, wenn er eine erledigte Aufgabe hat ODER am Antrag gearbeitet hat
+      // UND danach KEINE neue Aufgabe erstellt hat
+      const meineErledigtenAufgaben = aufgabenZuAntrag.filter(a => a.zugewiesenAnId === currentSession.userId && a.status === 'erledigt');
+      const meineErstelltenAufgaben = aufgabenZuAntrag.filter(a => a.erstelltVonId === currentSession.userId && a.erstelltVonId !== antrag.bearbeiterId);
+      
+      let hatAktuellenZugriff = false;
+      if (istBearbeiter) {
+        // Ursprünglicher Bearbeiter hat immer Zugriff
+        hatAktuellenZugriff = true;
+      } else if (hatOffeneAufgabe) {
+        // Hat eine offene Aufgabe - kann sie bearbeiten
+        hatAktuellenZugriff = true;
+      } else if (meineErledigtenAufgaben.length > 0 || hatAmAntragGearbeitet) {
+        // Aufgabenempfänger oder jemand der am Antrag gearbeitet hat (z.B. entschieden):
+        // Hat Zugriff, solange KEINE neue Aufgabe erstellt wurde
+        
+        // Finde Zeitpunkt der letzten eigenen Aktivität
+        let letzteAktivitaetZeit = null;
+        
+        if (meineErledigtenAufgaben.length > 0) {
+          const letzteErledigteAufgabe = meineErledigtenAufgaben
+            .sort((a, b) => new Date(b.erledigtAm) - new Date(a.erledigtAm))[0];
+          letzteAktivitaetZeit = new Date(letzteErledigteAufgabe.erledigtAm);
+        }
+        
+        // Prüfe ob danach eine Aufgabe erstellt wurde (an jemand anderen)
+        const aufgabeNachAktivitaet = meineErstelltenAufgaben
+          .filter(a => !letzteAktivitaetZeit || new Date(a.erstelltAm) > letzteAktivitaetZeit)
+          .length > 0;
+        
+        // Hat Zugriff, wenn keine neue Aufgabe nach der letzten Aktivität erstellt wurde
+        hatAktuellenZugriff = !aufgabeNachAktivitaet;
+      }
+      
+      // Berechtigungen:
+      // - istBearbeiter: Ursprünglicher Bearbeiter (hat immer vollen Zugriff)
+      // - hatAktuellenZugriff: Aufgabenempfänger mit aktivem Zugriff (bis zur nächsten Aufgabenerstellung)
+      const istAufgabenBeteiligter = hatAktuellenZugriff;
+      const kannVollziehenVerakten = istBearbeiter || hatAktuellenZugriff;
       
       // Prozess-Status berechnen
       const prozessStatus = berechneProzessStatus(antrag);
@@ -910,35 +1389,37 @@
         geburtsdatumFormatiert = d.toLocaleDateString('de-DE');
       }
       
-      // Antragstyp-spezifische Details
+      // Antragstyp-spezifische Details (übersetzt in die Sprache des Mitarbeiters)
       let anliegenHtml = '';
       if (antrag.type === 'teilhabegeld') {
         anliegenHtml = `
           <div class="detail-box">
-            <h4>💰 Teilhabegeld</h4>
+            <h4>💰 ${t('application.type.teilhabegeld')}</h4>
             <div class="detail-row">
-              <span class="detail-label">Monat:</span>
+              <span class="detail-label">${t('month.january').split(' ')[0] ? t('calendar.month') : 'Monat'}:</span>
               <span class="detail-value">${formatMonat(antrag.monat)}</span>
             </div>
           </div>
         `;
       } else if (antrag.type === 'eigentum') {
-        const aktionText = antrag.aktion === 'aufstocken' ? 'Kleidung aufstocken' : 'Kleidung tauschen';
+        const aktionText = antrag.aktion === 'aufstocken' 
+          ? (currentLanguage === 'en' ? 'Add clothing' : currentLanguage === 'fr' ? 'Ajouter des vêtements' : 'Kleidung aufstocken')
+          : (currentLanguage === 'en' ? 'Exchange clothing' : currentLanguage === 'fr' ? 'Échanger des vêtements' : 'Kleidung tauschen');
         anliegenHtml = `
           <div class="detail-box">
-            <h4>👕 Eigentum in der Kammer</h4>
+            <h4>👕 ${t('application.type.eigentum')}</h4>
             <div class="detail-row">
-              <span class="detail-label">Aktion:</span>
+              <span class="detail-label">${currentLanguage === 'en' ? 'Action' : currentLanguage === 'fr' ? 'Action' : 'Aktion'}:</span>
               <span class="detail-value">${aktionText}</span>
             </div>
             <div class="detail-row">
-              <span class="detail-label">Kleidungsstücke:</span>
+              <span class="detail-label">${currentLanguage === 'en' ? 'Clothing items' : currentLanguage === 'fr' ? 'Vêtements' : 'Kleidungsstücke'}:</span>
               <span class="detail-value">${antrag.kleidung.join(', ')}</span>
             </div>
             ${antrag.antragBegruendung ? `
               <div class="detail-row">
-                <span class="detail-label">Begründung des Antragstellers:</span>
-                <span class="detail-value">${antrag.antragBegruendung}</span>
+                <span class="detail-label">${t('application.justification')}:</span>
+                <span class="detail-value">${getTranslatedUserText(antrag.antragBegruendung)}</span>
               </div>
             ` : ''}
           </div>
@@ -951,10 +1432,13 @@
       if (aufgaben.length > 0) {
         aufgabenHtml = `
           <div class="detail-section">
-            <h3>📋 Zugehörige Aufgaben</h3>
+            <h3>📋 ${currentLanguage === 'en' ? 'Related Tasks' : currentLanguage === 'fr' ? 'Tâches associées' : 'Zugehörige Aufgaben'}</h3>
             <div class="aufgaben-liste">
               ${aufgaben.map(a => {
                 const istErsteller = a.erstelltVonId === currentSession.userId;
+                const dateLocale = currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE';
+                const overdueText = currentLanguage === 'en' ? 'Overdue!' : currentLanguage === 'fr' ? 'En retard!' : 'Überfällig!';
+                const withdrawText = currentLanguage === 'en' ? 'Withdraw task' : currentLanguage === 'fr' ? 'Retirer la tâche' : 'Aufgabe zurücknehmen';
                 let fristHtml = '';
                 if (a.fristDatum) {
                   const frist = new Date(a.fristDatum);
@@ -962,25 +1446,27 @@
                   heute.setHours(0, 0, 0, 0);
                   frist.setHours(0, 0, 0, 0);
                   const istUeberfaellig = heute > frist && a.status === 'offen';
-                  fristHtml = `<p class="${istUeberfaellig ? 'frist-ueberfaellig' : 'frist-info'}"><strong>Frist:</strong> ${frist.toLocaleDateString('de-DE')}${istUeberfaellig ? ' ⚠️ Überfällig!' : ''}</p>`;
+                  fristHtml = `<p class="${istUeberfaellig ? 'frist-ueberfaellig' : 'frist-info'}"><strong>${t('task.deadline')}:</strong> ${frist.toLocaleDateString(dateLocale)}${istUeberfaellig ? ' ⚠️ ' + overdueText : ''}</p>`;
                 }
                 return `
                   <div class="aufgabe-item ${a.status} ${a.fristDatum && new Date() > new Date(a.fristDatum) && a.status === 'offen' ? 'ueberfaellig' : ''}">
                     <div class="aufgabe-item-header">
                       <span class="status-badge ${a.status === 'offen' ? 'in-bearbeitung' : 'genehmigt'}">
-                        ${a.status === 'offen' ? '⏳ Offen' : '✓ Erledigt'}
+                        ${a.status === 'offen' ? '⏳ ' + t('status.open') : '✓ ' + t('status.completed')}
                       </span>
                       <span class="aufgabe-datum">${formatDate(a.erstelltAm)}</span>
                     </div>
-                    <p><strong>An:</strong> ${a.zugewiesenAnName}</p>
-                    <p><strong>Von:</strong> ${a.erstelltVonName}</p>
-                    <p><strong>Beschreibung:</strong> ${a.beschreibung}</p>
+                    <p><strong>${currentLanguage === 'en' ? 'To' : currentLanguage === 'fr' ? 'À' : 'An'}:</strong> ${a.zugewiesenAnName}</p>
+                    <p><strong>${t('task.from')}:</strong> ${a.erstelltVonName}</p>
+                    <p><strong>${t('task.shortDescription')}:</strong> ${getTranslatedUserText(a.kurzbeschreibung || a.beschreibung)}</p>
+                    ${a.beschreibung && a.kurzbeschreibung ? `<p><strong>${t('task.description')}:</strong> ${getTranslatedUserText(a.beschreibung)}</p>` : ''}
                     ${fristHtml}
-                    ${a.loesung ? `<p><strong>Lösung:</strong> ${a.loesung}</p>` : ''}
+                    ${a.antwort ? `<p><strong>${t('task.answer')}:</strong> ${getTranslatedUserText(a.antwort)}</p>` : ''}
+                    ${a.erledigungsTyp === 'kenntnisnahme' ? `<p><strong>${t('application.status')}:</strong> ${t('task.acknowledged')}</p>` : ''}
                     ${istErsteller && a.status === 'offen' ? `
                       <div class="aufgabe-item-actions">
                         <button class="btn btn-danger btn-sm" onclick="zuruecknehmenAufgabe('${a.id}')">
-                          🔙 Aufgabe zurücknehmen
+                          🔙 ${withdrawText}
                         </button>
                       </div>
                     ` : ''}
@@ -998,7 +1484,7 @@
       if (aktivitaeten.length > 0) {
         verlaufHtml = `
           <div class="detail-section">
-            <h3>📜 Bearbeitungsverlauf</h3>
+            <h3>📜 ${t('history.title')}</h3>
             <div class="verlauf-liste">
               ${aktivitaeten.map(a => `
                 <div class="verlauf-item">
@@ -1008,7 +1494,7 @@
                   </div>
                   <div class="verlauf-item-content">
                     <div class="verlauf-item-header">
-                      <span class="verlauf-beschreibung">${a.beschreibung}</span>
+                      <span class="verlauf-beschreibung">${getAktivitaetBeschreibung(a)}</span>
                       <span class="verlauf-datum">${formatDate(a.erstelltAm)}</span>
                     </div>
                     <div class="verlauf-item-meta">
@@ -1018,17 +1504,22 @@
                     </div>
                     ${a.details && a.details.begruendung ? `
                       <div class="verlauf-details">
-                        <em>Begründung: ${a.details.begruendung}</em>
+                        <em>${t('decision.reason')}: ${getTranslatedUserText(a.details.begruendung)}</em>
                       </div>
                     ` : ''}
-                    ${a.details && a.details.loesung ? `
+                    ${a.details && a.details.antwort ? `
                       <div class="verlauf-details">
-                        <em>Lösung: ${a.details.loesung}</em>
+                        <em>${t('task.answer')}: ${getTranslatedUserText(a.details.antwort)}</em>
                       </div>
                     ` : ''}
-                    ${a.details && a.details.beschreibung && a.typ === 'aufgabe-erstellt' ? `
+                    ${a.details && a.details.erledigungsTyp === 'kenntnisnahme' && a.typ !== 'aufgabe-erledigt' ? `
                       <div class="verlauf-details">
-                        <em>Aufgabe: ${a.details.beschreibung}</em>
+                        <em>${t('task.acknowledged')}</em>
+                      </div>
+                    ` : ''}
+                    ${a.details && a.details.kurzbeschreibung && a.typ === 'aufgabe-erstellt' ? `
+                      <div class="verlauf-details">
+                        <em>${t('task.shortDescription')}: ${getTranslatedUserText(a.details.kurzbeschreibung)}</em>
                       </div>
                     ` : ''}
                   </div>
@@ -1039,37 +1530,37 @@
         `;
       }
       
-      // Prozess-Grafik HTML generieren
+      // Prozess-Grafik HTML generieren (übersetzt)
       const prozessGrafikHtml = `
         <div class="prozess-grafik">
           <div class="prozess-schritt ${prozessStatus.eingang}">
             <div class="prozess-icon">📥</div>
-            <div class="prozess-label">Eingang</div>
+            <div class="prozess-label">${t('process.receipt')}</div>
           </div>
           <div class="prozess-pfeil ${prozessStatus.eingang === 'erledigt' ? 'aktiv' : ''}">→</div>
           <div class="prozess-schritt ${prozessStatus.pruefung}">
             <div class="prozess-icon">🔍</div>
-            <div class="prozess-label">Prüfung</div>
+            <div class="prozess-label">${t('process.review')}</div>
           </div>
           <div class="prozess-pfeil ${prozessStatus.pruefung === 'erledigt' ? 'aktiv' : ''}">→</div>
           <div class="prozess-schritt ${prozessStatus.entscheiden}">
             <div class="prozess-icon">⚖️</div>
-            <div class="prozess-label">Entscheiden</div>
+            <div class="prozess-label">${t('process.decision')}</div>
           </div>
           <div class="prozess-pfeil ${prozessStatus.entscheiden === 'erledigt' ? 'aktiv' : ''}">→</div>
           <div class="prozess-schritt ${prozessStatus.bekanntgabe}">
             <div class="prozess-icon">📢</div>
-            <div class="prozess-label">Bekanntgabe</div>
+            <div class="prozess-label">${t('process.notification')}</div>
           </div>
           <div class="prozess-pfeil ${prozessStatus.bekanntgabe === 'erledigt' ? 'aktiv' : ''}">→</div>
           <div class="prozess-schritt ${prozessStatus.vollzug}">
             <div class="prozess-icon">✅</div>
-            <div class="prozess-label">Vollzug</div>
+            <div class="prozess-label">${t('process.execution')}</div>
           </div>
           <div class="prozess-pfeil ${prozessStatus.vollzug === 'erledigt' ? 'aktiv' : ''}">→</div>
           <div class="prozess-schritt ${prozessStatus.abschluss}">
             <div class="prozess-icon">🗂️</div>
-            <div class="prozess-label">Abschluss</div>
+            <div class="prozess-label">${t('process.completion')}</div>
           </div>
         </div>
       `;
@@ -1088,44 +1579,44 @@
           <!-- Linke Spalte: Daten und Aktionen -->
           <div class="detail-main">
             <div class="detail-section">
-              <h3>📋 Grunddaten</h3>
+              <h3>📋 ${currentLanguage === 'en' ? 'Basic Data' : currentLanguage === 'fr' ? 'Données de base' : 'Grunddaten'}</h3>
               <div class="detail-grid">
                 <div class="detail-box">
-                  <h4>Antragsdaten</h4>
+                  <h4>${currentLanguage === 'en' ? 'Application Data' : currentLanguage === 'fr' ? 'Données de la demande' : 'Antragsdaten'}</h4>
                   <div class="detail-row">
-                    <span class="detail-label">Antrags-ID:</span>
+                    <span class="detail-label">${t('application.id')}:</span>
                     <span class="detail-value">${antrag.antragsNummer || antrag.id}</span>
                   </div>
                   <div class="detail-row">
-                    <span class="detail-label">Eingereicht am:</span>
+                    <span class="detail-label">${currentLanguage === 'en' ? 'Submitted on' : currentLanguage === 'fr' ? 'Soumis le' : 'Eingereicht am'}:</span>
                     <span class="detail-value">${formatDate(antrag.erstelltAm)}</span>
                   </div>
                   <div class="detail-row">
-                    <span class="detail-label">Status:</span>
+                    <span class="detail-label">${t('application.status')}:</span>
                     <span class="detail-value">${getStatusText(antrag.status)}</span>
                   </div>
                 </div>
                 
                 <div class="detail-box">
-                  <h4>Stammdaten des Gefangenen</h4>
+                  <h4>${currentLanguage === 'en' ? 'Inmate Master Data' : currentLanguage === 'fr' ? 'Données du détenu' : 'Stammdaten des Gefangenen'}</h4>
                   <div class="detail-row">
-                    <span class="detail-label">Name:</span>
+                    <span class="detail-label">${t('masterdata.name')}:</span>
                     <span class="detail-value">${antrag.insasseName}</span>
                   </div>
                   <div class="detail-row">
-                    <span class="detail-label">Geburtsdatum:</span>
+                    <span class="detail-label">${t('masterdata.birthdate')}:</span>
                     <span class="detail-value">${geburtsdatumFormatiert}</span>
                   </div>
                   <div class="detail-row">
-                    <span class="detail-label">Insassen-ID:</span>
+                    <span class="detail-label">${t('masterdata.inmateId')}:</span>
                     <span class="detail-value">${antrag.insassenNummer || '-'}</span>
                   </div>
                   <div class="detail-row">
-                    <span class="detail-label">Haus:</span>
+                    <span class="detail-label">${t('masterdata.house')}:</span>
                     <span class="detail-value">${getHausName(antrag.insasseJva)}</span>
                   </div>
                   <div class="detail-row">
-                    <span class="detail-label">Station:</span>
+                    <span class="detail-label">${t('masterdata.station')}:</span>
                     <span class="detail-value">${antrag.insasseStation}</span>
                   </div>
                 </div>
@@ -1133,7 +1624,7 @@
             </div>
             
             <div class="detail-section">
-              <h3>📝 Anliegen</h3>
+              <h3>📝 ${t('application.concern')}</h3>
               ${anliegenHtml}
             </div>
             
@@ -1141,40 +1632,72 @@
             
             ${antrag.bescheidPdf ? `
               <div class="detail-section">
-                <h3>📄 Bescheid</h3>
+                <h3>📄 ${t('notice.title')}</h3>
                 <div class="bescheid-download">
-                  <p>Ein Bescheid wurde für diesen Antrag erstellt.</p>
+                  <p>${currentLanguage === 'en' ? 'A notice has been created for this application.' : currentLanguage === 'fr' ? 'Un avis a été créé pour cette demande.' : 'Ein Bescheid wurde für diesen Antrag erstellt.'}</p>
                   <button class="btn btn-secondary" onclick="downloadBescheidPdf('${antrag.id}')">
-                    📥 Bescheid herunterladen
+                    📥 ${currentLanguage === 'en' ? 'Download notice' : currentLanguage === 'fr' ? 'Télécharger l\'avis' : 'Bescheid herunterladen'}
                   </button>
                 </div>
               </div>
             ` : ''}
             
             <div class="detail-section">
-              <h3>⚙️ Aktionen</h3>
+              <h3>⚙️ ${t('button.actions')}</h3>
               ${istOffen ? `
                 <div class="offen-hinweis">
                   <span class="hinweis-icon">📥</span>
-                  <span>Dieser Antrag wurde noch nicht zur Bearbeitung genommen.</span>
+                  <span>${t('hint.applicationNotTaken')}</span>
                 </div>
               ` : ''}
               ${!istOffen && !istErledigt && !antrag.sachlichGeprueft ? `
                 <div class="pruefung-hinweis">
                   <span class="hinweis-icon">ℹ️</span>
-                  <span>Der Antrag muss zunächst sachlich/fachlich geprüft werden, bevor eine Entscheidung getroffen werden kann.</span>
+                  <span>${t('hint.reviewRequired')}</span>
                 </div>
               ` : ''}
               ${!istOffen && !istErledigt && antrag.sachlichGeprueft ? `
                 <div class="pruefung-erfolgt">
                   <span class="erfolgt-icon">✓</span>
-                  <span>Sachliche/fachliche Prüfung erfolgt am ${new Date(antrag.sachlichGeprueftAm).toLocaleDateString('de-DE')} durch ${antrag.sachlichGeprueftVon}</span>
+                  <span>${t('process.reviewDone')} ${new Date(antrag.sachlichGeprueftAm).toLocaleDateString(currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE')} ${t('process.by')} ${antrag.sachlichGeprueftVon}</span>
                 </div>
               ` : ''}
               ${istErledigt && !antrag.veraktet ? `
                 <div class="entscheidung-erfolgt">
                   <span class="erfolgt-icon">⚖️</span>
-                  <span>Entscheidung: ${getStatusText(antrag.status)} am ${new Date(antrag.bearbeitetAm).toLocaleDateString('de-DE')}</span>
+                  <span>${t('hint.decisionMade')}: ${getStatusText(antrag.status)} ${t('hint.on')} ${new Date(antrag.bearbeitetAm).toLocaleDateString(currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE')}</span>
+                </div>
+              ` : ''}
+              
+              ${antrag.wartetAufEroeffnung ? `
+                <div class="warten-hinweis persoenlich-warten">
+                  <span class="hinweis-icon">📋</span>
+                  <span>${currentLanguage === 'en' ? 'Waiting for personal opening' : currentLanguage === 'fr' ? 'En attente d\'ouverture personnelle' : 'Wartet auf persönliche Eröffnung'} - ${currentLanguage === 'en' ? 'Planned decision' : currentLanguage === 'fr' ? 'Décision prévue' : 'Geplante Entscheidung'}: ${getStatusText(antrag.geplantesErgebnis)}</span>
+                </div>
+                <div class="bestaetigung-checkbox">
+                  <button class="btn btn-success btn-large" onclick="bestaetigeEroeffnung('${antrag.id}')">
+                    ✓ ${currentLanguage === 'en' ? 'Confirm personal opening' : currentLanguage === 'fr' ? 'Confirmer l\'ouverture personnelle' : 'Persönliche Eröffnung bestätigen'}
+                  </button>
+                </div>
+              ` : ''}
+              
+              ${antrag.wartetAufVollzug ? `
+                <div class="warten-hinweis vollzug-warten">
+                  <span class="hinweis-icon">📦</span>
+                  <span>${currentLanguage === 'en' ? 'Execution before notification planned' : currentLanguage === 'fr' ? 'Exécution avant notification prévue' : 'Vollzug vor Bekanntgabe geplant'} - ${currentLanguage === 'en' ? 'Planned decision' : currentLanguage === 'fr' ? 'Décision prévue' : 'Geplante Entscheidung'}: ${getStatusText(antrag.geplantesErgebnis)}</span>
+                </div>
+                <div class="bestaetigung-checkbox">
+                  <button class="btn btn-success btn-large" onclick="openVollzugBestaetigenModal('${antrag.id}')">
+                    ✓ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 'fr' ? 'Confirmer l\'exécution et notifier' : 'Vollzug bestätigen & Bekanntgabe'}
+                  </button>
+                </div>
+              ` : ''}
+              
+              ${antrag.entscheidungGetroffen && currentSession.rolle === 'hausleitung' && !antrag.veraktet ? `
+                <div class="revision-bereich">
+                  <button class="btn btn-danger btn-sm" onclick="revidiereEntscheidung('${antrag.id}')">
+                    🔄 ${currentLanguage === 'en' ? 'Revise decision (House management)' : currentLanguage === 'fr' ? 'Réviser la décision (Direction)' : 'Entscheidung revidieren (Hausleitung)'}
+                  </button>
                 </div>
               ` : ''}
               
@@ -1182,10 +1705,10 @@
                 <div class="vollzug-checkbox">
                   <label class="checkbox-option vollzug-option">
                     <input type="checkbox" id="vollzogenCheckbox" ${antrag.vollzogen ? 'checked disabled' : ''} onchange="toggleVollzogen('${antrag.id}', this.checked)">
-                    <span class="checkbox-label">✓ Antrag vollzogen</span>
+                    <span class="checkbox-label">✓ ${t('action.executed')}</span>
                   </label>
                   ${antrag.vollzogen ? `
-                    <span class="vollzug-info">am ${new Date(antrag.vollzogenAm).toLocaleDateString('de-DE')} durch ${antrag.vollzogenVon}</span>
+                    <span class="vollzug-info">${t('hint.on')} ${new Date(antrag.vollzogenAm).toLocaleDateString(currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE')} ${t('process.by')} ${antrag.vollzogenVon}</span>
                   ` : ''}
                 </div>
               ` : ''}
@@ -1193,51 +1716,56 @@
               ${hatOffeneAufgabe ? `
                 <div class="aufgabe-hinweis">
                   <span class="hinweis-icon">📋</span>
-                  <span>Sie haben eine offene Aufgabe zu diesem Antrag.</span>
+                  <span>${t('hint.openTask')}</span>
                 </div>
               ` : ''}
               
               <div class="action-buttons">
                 ${istOffen ? `
                   <button class="btn btn-primary btn-large" onclick="nehmeAntragUndBleibeInDetail('${antrag.id}')">
-                    📥 Antrag nehmen
+                    📥 ${t('button.takeApplication')}
                   </button>
                 ` : ''}
                 ${hatOffeneAufgabe ? `
                   <button class="btn btn-primary btn-large" onclick="openAufgabeLoesungModal('${meineOffeneAufgabe.id}')">
-                    📝 Aufgabe bearbeiten
+                    📝 ${t('task.edit')}
                   </button>
                 ` : ''}
-                ${!istOffen && !istErledigt && (istBearbeiter || istAufgabenBeteiligter) ? `
+                ${!istOffen && !istErledigt && (istBearbeiter || istAufgabenBeteiligter) && !antrag.entscheidungGetroffen ? `
                   ${!antrag.sachlichGeprueft ? `
                     <button class="btn btn-warning btn-large" onclick="markiereAlsGeprueft('${antrag.id}')">
-                      🔍 Sachlich/fachlich geprüft
+                      🔍 ${t('action.technicalReview')}
                     </button>
                   ` : ''}
                   <button class="btn btn-primary btn-large ${!antrag.sachlichGeprueft ? 'disabled' : ''}" 
-                          onclick="${antrag.sachlichGeprueft ? `openEntscheidenModal('${antrag.id}')` : 'alert(\"Bitte prüfen Sie den Antrag zunächst sachlich/fachlich.\")'}"
-                          ${!antrag.sachlichGeprueft ? 'title="Antrag muss erst geprüft werden"' : ''}>
-                    ⚖️ Entscheiden
+                          onclick="${antrag.sachlichGeprueft ? `openEntscheidenModal('${antrag.id}')` : `showReviewRequiredAlert()`}"
+                          ${!antrag.sachlichGeprueft ? `title="${t('error.reviewRequired')}"` : ''}>
+                    ⚖️ ${t('decision.title')}
                   </button>
                   <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
-                    📋 Aufgabe erstellen
+                    📋 ${t('task.create')}
+                  </button>
+                ` : ''}
+                ${antrag.entscheidungGetroffen && !antrag.erledigt && (istBearbeiter || istAufgabenBeteiligter) ? `
+                  <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
+                    📋 ${t('task.create')}
                   </button>
                 ` : ''}
                 ${istErledigt && !antrag.veraktet && kannVollziehenVerakten ? `
                   <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
-                    📋 Aufgabe erstellen
+                    📋 ${t('task.create')}
                   </button>
                 ` : ''}
                 ${!antrag.veraktet && kannVollziehenVerakten ? `
                   ${istErledigt && (antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') ? `
                     <button class="btn btn-secondary btn-large ${!antrag.vollzogen ? 'disabled' : ''}" 
-                            onclick="${antrag.vollzogen ? `veraktenAntrag('${antrag.id}')` : 'alert(\"Bitte markieren Sie zunächst den Antrag als vollzogen.\")'}"
-                            ${!antrag.vollzogen ? 'title="Antrag muss erst als vollzogen markiert werden"' : ''}>
-                      📄 Verakten
+                            onclick="${antrag.vollzogen ? `veraktenAntrag('${antrag.id}')` : `showExecutionRequiredAlert()`}"
+                            ${!antrag.vollzogen ? `title="${t('error.executionRequired')}"` : ''}>
+                      📄 ${t('action.archive')}
                     </button>
                   ` : `
                     <button class="btn btn-secondary btn-large" onclick="veraktenAntrag('${antrag.id}')">
-                      📄 Verakten
+                      📄 ${t('action.archive')}
                     </button>
                   `}
                 ` : ''}
@@ -1247,7 +1775,7 @@
           
           <!-- Rechte Spalte: Verlauf -->
           <div class="detail-sidebar">
-            ${verlaufHtml || '<div class="detail-section"><h3>📜 Bearbeitungsverlauf</h3><p class="empty-hint">Noch keine Aktivitäten.</p></div>'}
+            ${verlaufHtml || `<div class="detail-section"><h3>📜 ${t('history.title')}</h3><p class="empty-hint">${currentLanguage === 'en' ? 'No activities yet.' : currentLanguage === 'fr' ? 'Pas encore d\'activités.' : 'Noch keine Aktivitäten.'}</p></div>`}
           </div>
         </div>
       `;
@@ -1262,6 +1790,24 @@
       document.getElementById('dashboardView').style.display = 'block';
       currentAntragId = null;
       renderAntraege();
+    }
+
+    // ============================================
+    // HILFSFUNKTIONEN FÜR ALERTS
+    // ============================================
+    
+    function showReviewRequiredAlert() {
+      const msg = currentLanguage === 'en' ? 'Please complete the technical review first.' 
+                : currentLanguage === 'fr' ? 'Veuillez d\'abord effectuer l\'examen technique.' 
+                : 'Bitte prüfen Sie den Antrag zunächst sachlich/fachlich.';
+      alert(msg);
+    }
+    
+    function showExecutionRequiredAlert() {
+      const msg = currentLanguage === 'en' ? 'Please mark the application as executed first.' 
+                : currentLanguage === 'fr' ? 'Veuillez d\'abord marquer la demande comme exécutée.' 
+                : 'Bitte markieren Sie zunächst den Antrag als vollzogen.';
+      alert(msg);
     }
 
     // ============================================
@@ -1285,43 +1831,105 @@
     function openEntscheidenModal(antragId) {
       const antrag = antragSystem.getAntrag(antragId);
       if (!antrag.sachlichGeprueft) {
-        alert('Bitte prüfen Sie den Antrag zunächst sachlich/fachlich.');
+        showReviewRequiredAlert();
         return;
       }
       document.getElementById('entscheidenAntragId').value = antragId;
       document.getElementById('entscheidungBegruendung').value = '';
       document.getElementById('entscheidungPersoenlichEroeffnen').checked = false;
+      document.getElementById('entscheidungVollzugVorBekanntgabe').checked = false;
       openModal('entscheidenModal');
     }
     
     function handleEntscheidung(status) {
       const antragId = document.getElementById('entscheidenAntragId').value;
-      const begruendung = document.getElementById('entscheidungBegruendung').value.trim();
+      const begruendungText = document.getElementById('entscheidungBegruendung').value.trim();
       const persoenlichEroeffnen = document.getElementById('entscheidungPersoenlichEroeffnen').checked;
+      const vollzugVorBekanntgabe = document.getElementById('entscheidungVollzugVorBekanntgabe').checked;
       
       // Begründung ist für alle Entscheidungen Pflicht
-      if (!begruendung) {
-        alert('Bitte geben Sie eine Begründung für Ihre Entscheidung an.');
+      if (!begruendungText) {
+        alert(t('decision.reasonRequired'));
         return;
       }
       
-      // Bescheid-PDF erstellen und im Antrag speichern
-      const bescheidPdf = generateBescheidPdf(antragId, status, begruendung);
+      // Begründung mit Sprachinfo für Übersetzung speichern
+      const begruendung = createTranslatableText(begruendungText);
       
-      // Antrag abschließen mit Bescheid
-      antragSystem.abschliessenAntrag(antragId, status, begruendung || null, persoenlichEroeffnen, bescheidPdf);
+      // Bescheid-PDF erstellen (mit Original-Text für PDF)
+      const bescheidPdf = generateBescheidPdf(antragId, status, begruendungText);
+      
+      // Antrag abschließen - die beiden Optionen werden jetzt separat behandelt
+      antragSystem.abschliessenAntrag(antragId, status, begruendung, persoenlichEroeffnen, bescheidPdf, vollzugVorBekanntgabe);
       closeModal('entscheidenModal');
       
       // Zurück zur Übersicht
       closeAntragDetail();
       
-      // Wenn persönlich eröffnen, zum entsprechenden Tab wechseln
-      if (persoenlichEroeffnen) {
-        switchTab('eroeffnung');
+      // Zur entsprechenden Ansicht wechseln
+      if (persoenlichEroeffnen || vollzugVorBekanntgabe) {
+        // Bei beiden Optionen bleibt der Antrag in "Meine Anträge und Aufgaben"
+        switchTab('bearbeitung');
       }
     }
     
-    // Bescheid-PDF generieren
+    // Modal für Vollzugs-Bestätigung öffnen
+    function openVollzugBestaetigenModal(antragId) {
+      const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag || !antrag.wartetAufVollzug) return;
+      
+      const statusText = antrag.geplantesErgebnis === 'genehmigt' 
+        ? (currentLanguage === 'en' ? 'Approved' : currentLanguage === 'fr' ? 'Approuvé' : 'Genehmigt')
+        : antrag.geplantesErgebnis === 'abgelehnt'
+        ? (currentLanguage === 'en' ? 'Rejected' : currentLanguage === 'fr' ? 'Rejeté' : 'Abgelehnt')
+        : (currentLanguage === 'en' ? 'Partially approved' : currentLanguage === 'fr' ? 'Partiellement approuvé' : 'Teilweise genehmigt');
+      
+      document.getElementById('vollzugGeplantEntscheidung').textContent = statusText;
+      document.getElementById('vollzugKommentar').value = '';
+      document.getElementById('vollzugBestaetigenAntragId').value = antragId;
+      openModal('vollzugBestaetigenModal');
+    }
+    
+    // Vollzug bestätigen
+    function confirmVollzugBestaetigung() {
+      const antragId = document.getElementById('vollzugBestaetigenAntragId').value;
+      const kommentar = document.getElementById('vollzugKommentar').value.trim();
+      
+      if (!kommentar) {
+        const msg = currentLanguage === 'en' ? 'Please enter a comment for the execution.' 
+                  : currentLanguage === 'fr' ? 'Veuillez entrer un commentaire pour l\'exécution.' 
+                  : 'Bitte geben Sie einen Kommentar zum Vollzug ein.';
+        alert(msg);
+        return;
+      }
+      
+      // Kommentar mit Sprachinfo speichern
+      const vollzugKommentar = createTranslatableText(kommentar);
+      
+      antragSystem.bestaetigeVollzugVorBekanntgabe(antragId, vollzugKommentar, currentSession.userId, currentSession.name);
+      closeModal('vollzugBestaetigenModal');
+      
+      // Detailansicht aktualisieren
+      openAntragDetail(antragId);
+    }
+    
+    // Entscheidung revidieren (nur für Hausleitung)
+    function revidiereEntscheidung(antragId) {
+      const confirmMsg = currentLanguage === 'en' 
+        ? 'Are you sure you want to revise this decision? This action can only be performed by house management.'
+        : currentLanguage === 'fr'
+        ? 'Êtes-vous sûr de vouloir réviser cette décision ? Cette action ne peut être effectuée que par la direction de la maison.'
+        : 'Sind Sie sicher, dass Sie diese Entscheidung revidieren möchten? Diese Aktion kann nur von der Hausleitung durchgeführt werden.';
+      
+      if (!confirm(confirmMsg)) return;
+      
+      const result = antragSystem.revidiereEntscheidung(antragId, currentSession.userId, currentSession.name);
+      if (result) {
+        openAntragDetail(antragId);
+      }
+    }
+    
+    // Bescheid-PDF generieren (in der Sprache des aktuellen Benutzers)
     function generateBescheidPdf(antragId, status, begruendung) {
       const antrag = antragSystem.getAntrag(antragId);
       if (!antrag) return null;
@@ -1329,74 +1937,82 @@
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       
-      // Header
+      // Datumsformat je nach Sprache
+      const dateLocale = currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE';
+      
+      // Header (übersetzt)
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
-      doc.text('Bescheid', 105, 20, { align: 'center' });
+      doc.text(t('notice.title'), 105, 20, { align: 'center' });
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Aktenzeichen: ${antrag.antragsNummer || antrag.id}`, 20, 35);
-      doc.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`, 20, 42);
+      doc.text(`${t('notice.reference')}: ${antrag.antragsNummer || antrag.id}`, 20, 35);
+      doc.text(`${t('notice.date')}: ${new Date().toLocaleDateString(dateLocale)}`, 20, 42);
       
-      // Anrede
+      // Anrede (übersetzt)
       doc.setFontSize(11);
-      const vorname = antrag.insasseName.split(' ')[0] || '';
-      const nachname = antrag.insasseName.split(' ').slice(1).join(' ') || antrag.insasseName;
-      doc.text(`Sehr geehrte/r Herr/Frau ${antrag.insasseName},`, 20, 60);
+      doc.text(`${t('notice.greeting')} ${antrag.insasseName},`, 20, 60);
       
-      // Beschreibung des Anliegens
+      // Beschreibung des Anliegens (übersetzt)
       let anliegenText = '';
       if (antrag.type === 'teilhabegeld') {
-        anliegenText = `Beantragung von Teilhabegeld für ${formatMonat(antrag.monat)}`;
+        anliegenText = `${t('notice.applicationFor')} ${t('application.type.teilhabegeld')} ${t('notice.for')} ${formatMonat(antrag.monat)}`;
       } else if (antrag.type === 'eigentum') {
-        const aktionText = antrag.aktion === 'aufstocken' ? 'Aufstockung' : 'Tausch';
-        anliegenText = `${aktionText} von Eigentum in der Kammer (${antrag.kleidung.join(', ')})`;
+        const aktionText = antrag.aktion === 'aufstocken' 
+          ? (currentLanguage === 'en' ? 'Addition' : currentLanguage === 'fr' ? 'Ajout' : 'Aufstockung')
+          : (currentLanguage === 'en' ? 'Exchange' : currentLanguage === 'fr' ? 'Échange' : 'Tausch');
+        const eigentumsText = currentLanguage === 'en' ? 'of property in storage' : currentLanguage === 'fr' ? 'd\'articles personnels' : 'von Eigentum in der Kammer';
+        anliegenText = `${aktionText} ${eigentumsText} (${antrag.kleidung.join(', ')})`;
       }
       
-      // Entscheidungstext
+      // Entscheidungstext (übersetzt)
       let entscheidungText = '';
       if (status === 'genehmigt') {
-        entscheidungText = 'genehmigt';
+        entscheidungText = t('notice.approved');
       } else if (status === 'teilweise-genehmigt') {
-        entscheidungText = 'teilweise genehmigt';
+        entscheidungText = t('notice.partiallyApproved');
       } else if (status === 'abgelehnt') {
-        entscheidungText = 'abgelehnt';
+        entscheidungText = t('notice.rejected');
       }
       
       // Antragsdatum formatieren
-      const antragsDatum = new Date(antrag.erstelltAm).toLocaleDateString('de-DE');
+      const antragsDatum = new Date(antrag.erstelltAm).toLocaleDateString(dateLocale);
       
-      // Haupttext
-      const hauptText = `Ihr Antrag ${antrag.antragsNummer || antrag.id} vom ${antragsDatum} (${anliegenText}) wird hiermit ${entscheidungText}.`;
+      // Haupttext (übersetzt)
+      const hauptText = `${t('notice.yourApplication')} ${antrag.antragsNummer || antrag.id} (${t('notice.applicationDate')}: ${antragsDatum}) - ${anliegenText} - ${entscheidungText}.`;
       const hauptTextLines = doc.splitTextToSize(hauptText, 170);
       doc.text(hauptTextLines, 20, 75);
       
       let yPos = 75 + (hauptTextLines.length * 6) + 10;
       
-      // Begründung
+      // Begründung (übersetzt)
       if (begruendung) {
-        doc.text('Die Entscheidung erfolgt aufgrund folgender Begründung:', 20, yPos);
+        doc.text(t('notice.reasonIntro'), 20, yPos);
         yPos += 8;
-        const begruendungLines = doc.splitTextToSize(begruendung, 170);
+        // Begründung in die Sprache des Benutzers übersetzen wenn es ein Objekt ist
+        const translatedBegruendung = typeof begruendung === 'object' ? getTranslatedUserText(begruendung) : begruendung;
+        const begruendungLines = doc.splitTextToSize(translatedBegruendung, 170);
         doc.text(begruendungLines, 20, yPos);
         yPos += begruendungLines.length * 6 + 10;
       }
       
-      // Rechtsmittelbelehrung
+      // Rechtsmittelbelehrung (übersetzt)
       yPos += 10;
       doc.setFont('helvetica', 'bold');
-      doc.text('Rechtsmittelbelehrung:', 20, yPos);
+      const rechtsmittelTitel = currentLanguage === 'en' ? 'Legal Remedies:' : currentLanguage === 'fr' ? 'Voies de recours:' : 'Rechtsmittelbelehrung:';
+      doc.text(rechtsmittelTitel, 20, yPos);
       doc.setFont('helvetica', 'normal');
       yPos += 8;
-      const rechtsmittelText = 'Gegen diese Entscheidung können Sie innerhalb von zwei Wochen auf Basis von §§ 109 ff. Strafvollzugsgesetz (StVollzG) beim Landgericht Hamburg Einspruch erheben.';
+      const rechtsmittelText = t('notice.appeal');
       const rechtsmittelLines = doc.splitTextToSize(rechtsmittelText, 170);
       doc.text(rechtsmittelLines, 20, yPos);
       
       // Footer
       yPos = 250;
       doc.text(`${getJvaName(antrag.insasseJva)}`, 20, yPos);
-      doc.text(`Bearbeiter: ${currentSession.name}`, 20, yPos + 7);
+      const bearbeiterText = currentLanguage === 'en' ? 'Processed by' : currentLanguage === 'fr' ? 'Traité par' : 'Bearbeiter';
+      doc.text(`${bearbeiterText}: ${currentSession.name}`, 20, yPos + 7);
       
       // Als Base64 zurückgeben
       return doc.output('datauristring');
@@ -1406,7 +2022,10 @@
     function downloadBescheidPdf(antragId) {
       const antrag = antragSystem.getAntrag(antragId);
       if (!antrag || !antrag.bescheidPdf) {
-        alert('Kein Bescheid vorhanden.');
+        const msg = currentLanguage === 'en' ? 'No notice available.' 
+                  : currentLanguage === 'fr' ? 'Aucun avis disponible.' 
+                  : 'Kein Bescheid vorhanden.';
+        alert(msg);
         return;
       }
       
@@ -1425,16 +2044,27 @@
     
     function openAufgabeModal(antragId) {
       document.getElementById('aufgabeAntragId').value = antragId;
+      document.getElementById('aufgabeKurzbeschreibung').value = '';
       document.getElementById('aufgabeBeschreibung').value = '';
       document.getElementById('aufgabeFrist').value = '';
-      document.getElementById('aufgabePdfAnhaengen').checked = false;
+      document.getElementById('aufgabeKurzCounter').textContent = '0';
+      
+      // PDF-Upload zurücksetzen
+      clearAufgabePdfs();
       
       // Radio-Buttons zurücksetzen
       document.querySelectorAll('input[name="aufgabeZiel"]').forEach(r => r.checked = false);
       document.getElementById('mitarbeiterAuswahl').style.display = 'none';
       
-      // JVAs laden
-      loadAufgabeJvas();
+      // Mitarbeiter-Auswahl zurücksetzen
+      document.getElementById('aufgabeMitarbeiterSuche').value = '';
+      document.getElementById('aufgabePersonId').value = '';
+      document.getElementById('selectedPersonDisplay').style.display = 'none';
+      
+      // Zeichenzähler für Kurzbeschreibung
+      document.getElementById('aufgabeKurzbeschreibung').oninput = function() {
+        document.getElementById('aufgabeKurzCounter').textContent = this.value.length;
+      };
       
       openModal('aufgabeModal');
     }
@@ -1442,94 +2072,208 @@
     function toggleAufgabeZiel(ziel) {
       if (ziel === 'mitarbeiter') {
         document.getElementById('mitarbeiterAuswahl').style.display = 'block';
+        loadAlleMitarbeiter();
       } else {
         document.getElementById('mitarbeiterAuswahl').style.display = 'none';
       }
     }
     
-    function loadAufgabeJvas() {
-      const select = document.getElementById('aufgabeJva');
-      select.innerHTML = '<option value="">-- Haus wählen --</option>';
-      
-      // HAUS_CONFIG aus app.js verwenden
-      Object.entries(HAUS_CONFIG).forEach(([id, config]) => {
-        select.innerHTML += `<option value="${id}">${config.name}</option>`;
-      });
-    }
-    
-    function loadAufgabeStationen() {
-      const hausId = document.getElementById('aufgabeJva').value;
-      const bereichSelect = document.getElementById('aufgabeBereich');
-      bereichSelect.innerHTML = '<option value="">-- Bereich wählen --</option>';
-      document.getElementById('aufgabePerson').innerHTML = '<option value="">-- Person wählen --</option>';
-      
-      if (!hausId) return;
-      
-      // Hausleitung als Option
-      bereichSelect.innerHTML += `<option value="haus-leitung">Hausleitung</option>`;
-      
-      // Stationen aus HAUS_CONFIG holen
-      const hausConfig = HAUS_CONFIG[hausId];
-      if (hausConfig && hausConfig.stationen) {
-        hausConfig.stationen.forEach(station => {
-          bereichSelect.innerHTML += `<option value="station-${station}">Station ${station}</option>`;
-        });
-      }
-    }
-    
-    function loadAufgabeMitarbeiter() {
-      const hausId = document.getElementById('aufgabeJva').value;
-      const bereich = document.getElementById('aufgabeBereich').value;
-      const personSelect = document.getElementById('aufgabePerson');
-      personSelect.innerHTML = '<option value="">-- Person wählen --</option>';
-      
-      if (!hausId || !bereich) return;
-      
-      // Alle Mitarbeiter aus dem System holen
+    // Alle Mitarbeiter laden und anzeigen
+    function loadAlleMitarbeiter() {
+      const liste = document.getElementById('aufgabeMitarbeiterListe');
       const alleMitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter');
-      let gefiltert = [];
       
-      if (bereich === 'haus-leitung' || bereich === 'jva-leitung') {
-        // Hausleitung dieses Hauses
-        gefiltert = alleMitarbeiter.filter(u => 
-          (u.rolle === 'jva-leitung' || u.rolle === 'haus-leitung') &&
-          u.jvas && u.jvas.includes(hausId)
-        );
-      } else if (bereich.startsWith('station-')) {
-        const station = bereich.replace('station-', '');
-        // Alle Mitarbeiter dieser Station (unabhängig von Rolle)
-        gefiltert = alleMitarbeiter.filter(u => 
-          u.station === station &&
-          u.jvas && u.jvas.includes(hausId)
-        );
-      }
+      // Sortieren nach Name
+      alleMitarbeiter.sort((a, b) => {
+        const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
+        const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
+        return nameA.localeCompare(nameB, 'de');
+      });
       
-      if (gefiltert.length === 0) {
-        personSelect.innerHTML = '<option value="">-- Keine Mitarbeiter gefunden --</option>';
+      renderMitarbeiterListe(alleMitarbeiter);
+    }
+    
+    // Mitarbeiterliste rendern
+    function renderMitarbeiterListe(mitarbeiter) {
+      const liste = document.getElementById('aufgabeMitarbeiterListe');
+      const selectedId = document.getElementById('aufgabePersonId').value;
+      
+      if (mitarbeiter.length === 0) {
+        liste.innerHTML = '<div class="keine-ergebnisse">Keine Mitarbeiter gefunden</div>';
         return;
       }
       
-      gefiltert.forEach(m => {
+      liste.innerHTML = mitarbeiter.map(m => {
         const rolleText = getRolleText(m.rolle);
-        personSelect.innerHTML += `<option value="${m.id}">${m.vorname} ${m.nachname} (${rolleText})</option>`;
+        const hausText = m.jvas && m.jvas.length > 0 ? HAUS_CONFIG[m.jvas[0]]?.name || m.jvas[0] : '';
+        const stationText = m.station ? `Station ${m.station}` : '';
+        const zusatzInfo = [hausText, stationText].filter(Boolean).join(', ');
+        const isSelected = m.id === selectedId;
+        
+        return `
+          <div class="mitarbeiter-item ${isSelected ? 'selected' : ''}" onclick="selectMitarbeiter('${m.id}', '${m.vorname} ${m.nachname}')">
+            <div class="mitarbeiter-item-name">${m.vorname} ${m.nachname}</div>
+            <div class="mitarbeiter-item-info">${rolleText}${zusatzInfo ? ' • ' + zusatzInfo : ''}</div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Mitarbeiterliste filtern
+    function filterMitarbeiterListe() {
+      const suchbegriff = document.getElementById('aufgabeMitarbeiterSuche').value.toLowerCase().trim();
+      const alleMitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter');
+      
+      let gefiltert = alleMitarbeiter;
+      
+      if (suchbegriff) {
+        gefiltert = alleMitarbeiter.filter(m => {
+          const vollName = `${m.vorname} ${m.nachname}`.toLowerCase();
+          const rolleText = getRolleText(m.rolle).toLowerCase();
+          return vollName.includes(suchbegriff) || rolleText.includes(suchbegriff);
+        });
+      }
+      
+      // Sortieren nach Name
+      gefiltert.sort((a, b) => {
+        const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
+        const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
+        return nameA.localeCompare(nameB, 'de');
       });
+      
+      renderMitarbeiterListe(gefiltert);
+    }
+    
+    // Mitarbeiter auswählen
+    function selectMitarbeiter(id, name) {
+      document.getElementById('aufgabePersonId').value = id;
+      document.getElementById('selectedPersonName').textContent = name;
+      document.getElementById('selectedPersonDisplay').style.display = 'flex';
+      
+      // Liste neu rendern um Auswahl anzuzeigen
+      filterMitarbeiterListe();
+    }
+    
+    // Auswahl aufheben
+    function clearSelectedPerson() {
+      document.getElementById('aufgabePersonId').value = '';
+      document.getElementById('selectedPersonDisplay').style.display = 'none';
+      filterMitarbeiterListe();
+    }
+    
+    // PDF-Upload-Funktionen für Aufgaben (multiple PDFs)
+    let aufgabePdfs = [];
+    let antwortPdfs = [];
+    
+    function handleAufgabePdfUpload(input) {
+      const files = input.files;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file && file.type === 'application/pdf') {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            aufgabePdfs.push({
+              name: file.name,
+              data: e.target.result
+            });
+            renderAufgabePdfList();
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+      input.value = ''; // Reset für weitere Uploads
+    }
+    
+    function renderAufgabePdfList() {
+      const container = document.getElementById('aufgabePdfList');
+      if (aufgabePdfs.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+      container.innerHTML = aufgabePdfs.map((pdf, index) => `
+        <div class="pdf-preview">
+          <span class="pdf-icon">📄</span>
+          <span class="pdf-name">${pdf.name}</span>
+          <button type="button" class="btn-clear" onclick="removeAufgabePdf(${index})">&times;</button>
+        </div>
+      `).join('');
+    }
+    
+    function removeAufgabePdf(index) {
+      aufgabePdfs.splice(index, 1);
+      renderAufgabePdfList();
+    }
+    
+    function clearAufgabePdfs() {
+      aufgabePdfs = [];
+      document.getElementById('aufgabePdfUpload').value = '';
+      renderAufgabePdfList();
+    }
+    
+    function handleAntwortPdfUpload(input) {
+      const files = input.files;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file && file.type === 'application/pdf') {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            antwortPdfs.push({
+              name: file.name,
+              data: e.target.result
+            });
+            renderAntwortPdfList();
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+      input.value = ''; // Reset für weitere Uploads
+    }
+    
+    function renderAntwortPdfList() {
+      const container = document.getElementById('aufgabeAntwortPdfList');
+      if (antwortPdfs.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+      container.innerHTML = antwortPdfs.map((pdf, index) => `
+        <div class="pdf-preview">
+          <span class="pdf-icon">📄</span>
+          <span class="pdf-name">${pdf.name}</span>
+          <button type="button" class="btn-clear" onclick="removeAntwortPdf(${index})">&times;</button>
+        </div>
+      `).join('');
+    }
+    
+    function removeAntwortPdf(index) {
+      antwortPdfs.splice(index, 1);
+      renderAntwortPdfList();
+    }
+    
+    function clearAntwortPdfs() {
+      antwortPdfs = [];
+      document.getElementById('aufgabeAntwortPdfUpload').value = '';
+      renderAntwortPdfList();
     }
     
     function sendeAufgabe() {
       const antragId = document.getElementById('aufgabeAntragId').value;
       const antrag = antragSystem.getAntrag(antragId);
-      const beschreibung = document.getElementById('aufgabeBeschreibung').value.trim();
+      const kurzbeschreibungText = document.getElementById('aufgabeKurzbeschreibung').value.trim();
+      const beschreibungText = document.getElementById('aufgabeBeschreibung').value.trim();
       const fristDatum = document.getElementById('aufgabeFrist').value;
-      const pdfAnhaengen = document.getElementById('aufgabePdfAnhaengen').checked;
+      
+      // Texte mit Sprachinfo für Übersetzung speichern
+      const kurzbeschreibung = createTranslatableText(kurzbeschreibungText);
+      const beschreibung = beschreibungText ? createTranslatableText(beschreibungText) : '';
       
       const zielRadio = document.querySelector('input[name="aufgabeZiel"]:checked');
       if (!zielRadio) {
-        alert('Bitte wählen Sie aus, wem die Aufgabe zugewiesen werden soll.');
+        alert(t('error.selectOption'));
         return;
       }
       
-      if (!beschreibung) {
-        alert('Bitte geben Sie eine Aufgabenbeschreibung ein.');
+      if (!kurzbeschreibungText) {
+        alert(t('error.required'));
         return;
       }
       
@@ -1542,9 +2286,12 @@
         zugewiesenAnTyp = 'insasse';
       } else {
         // Aufgabe an Mitarbeiter
-        const personId = document.getElementById('aufgabePerson').value;
+        const personId = document.getElementById('aufgabePersonId').value;
         if (!personId) {
-          alert('Bitte wählen Sie eine Person aus.');
+          const msg = currentLanguage === 'en' ? 'Please select a staff member.' 
+                    : currentLanguage === 'fr' ? 'Veuillez sélectionner un employé.' 
+                    : 'Bitte wählen Sie einen Mitarbeiter aus.';
+          alert(msg);
           return;
         }
         const person = userSystem.getUser(personId);
@@ -1553,13 +2300,7 @@
         zugewiesenAnTyp = 'mitarbeiter';
       }
       
-      // PDF erstellen wenn gewünscht
-      let anhangPdf = null;
-      if (pdfAnhaengen) {
-        anhangPdf = generateAufgabePdf(antrag, beschreibung);
-      }
-      
-      // Aufgabe erstellen
+      // Aufgabe erstellen (mit Array von PDFs)
       aufgabenSystem.createAufgabe({
         antragId: antragId,
         antragsNummer: antrag.antragsNummer,
@@ -1568,29 +2309,30 @@
         zugewiesenAnId: zugewiesenAnId,
         zugewiesenAnName: zugewiesenAnName,
         zugewiesenAnTyp: zugewiesenAnTyp,
+        kurzbeschreibung: kurzbeschreibung,
         beschreibung: beschreibung,
         fristDatum: fristDatum || null,
-        anhangPdf: anhangPdf
+        anhangPdfs: aufgabePdfs.length > 0 ? [...aufgabePdfs] : null
       });
       
       // Benachrichtigung erstellen
       notificationSystem.createNotification(
         zugewiesenAnId,
         'aufgabe',
-        '📋 Neue Aufgabe',
-        `Sie haben eine neue Aufgabe zum Antrag ${antrag.antragsNummer || antragId} erhalten.`,
+        '📋 ' + t('task.title'),
+        `${kurzbeschreibungText} (${t('application.id')}: ${antrag.antragsNummer || antragId})`,
         antragId
       );
       
       closeModal('aufgabeModal');
-      alert('Aufgabe wurde erfolgreich erstellt und zugewiesen.');
+      alert(t('success.taskCreated'));
       
       // Detailansicht aktualisieren
       openAntragDetail(antragId);
     }
 
     // ============================================
-    // AUFGABE LÖSEN (für Mitarbeiter)
+    // AUFGABE BEARBEITEN (für Mitarbeiter)
     // ============================================
     
     function openAufgabeLoesungModal(aufgabeId) {
@@ -1598,45 +2340,151 @@
       if (!aufgabe) return;
       
       document.getElementById('aufgabeLoesungId').value = aufgabeId;
-      document.getElementById('aufgabeLoesungText').value = '';
+      document.getElementById('aufgabeAntwortText').value = '';
+      
+      // PDF-Upload zurücksetzen
+      clearAntwortPdfs();
+      
+      // Radio-Button auf "Antwort" setzen und Felder anzeigen
+      document.querySelector('input[name="aufgabeErledigungsTyp"][value="antwort"]').checked = true;
+      document.getElementById('aufgabeAntwortGruppe').style.display = 'block';
+      document.getElementById('aufgabeAntwortPdfGruppe').style.display = 'block';
+      
+      // Angehängte PDFs der Aufgabe anzeigen
+      let anhangPdfsHtml = '';
+      if (aufgabe.anhangPdfs && aufgabe.anhangPdfs.length > 0) {
+        anhangPdfsHtml = `
+          <div class="detail-row">
+            <span class="detail-label">${currentLanguage === 'en' ? 'Attached documents' : currentLanguage === 'fr' ? 'Documents joints' : 'Angehängte Dokumente'}:</span>
+            <div class="pdf-list aufgabe-pdfs">
+              ${aufgabe.anhangPdfs.map((pdf, index) => `
+                <div class="pdf-preview pdf-download" onclick="downloadAufgabePdf('${aufgabeId}', ${index})">
+                  <span class="pdf-icon">📄</span>
+                  <span class="pdf-name">${pdf.name}</span>
+                  <span class="download-hint">⬇</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      // Rückwärtskompatibilität: Einzelnes PDF (altes Format)
+      else if (aufgabe.anhangPdf) {
+        anhangPdfsHtml = `
+          <div class="detail-row">
+            <span class="detail-label">${currentLanguage === 'en' ? 'Attached document' : currentLanguage === 'fr' ? 'Document joint' : 'Angehängtes Dokument'}:</span>
+            <div class="pdf-list aufgabe-pdfs">
+              <div class="pdf-preview pdf-download" onclick="downloadAufgabePdfLegacy('${aufgabeId}')">
+                <span class="pdf-icon">📄</span>
+                <span class="pdf-name">Dokument.pdf</span>
+                <span class="download-hint">⬇</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
       
       document.getElementById('aufgabeLoesungInfo').innerHTML = `
         <div class="detail-box">
           <div class="detail-row">
-            <span class="detail-label">Aufgabe von:</span>
+            <span class="detail-label">${t('task.from')}:</span>
             <span class="detail-value">${aufgabe.erstelltVonName}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">Zum Antrag:</span>
+            <span class="detail-label">${t('task.forApplication')}:</span>
             <span class="detail-value">${aufgabe.antragsNummer || aufgabe.antragId}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">Beschreibung:</span>
-            <span class="detail-value">${aufgabe.beschreibung}</span>
+            <span class="detail-label">${t('task.shortDescription')}:</span>
+            <span class="detail-value">${getTranslatedUserText(aufgabe.kurzbeschreibung || aufgabe.beschreibung)}</span>
           </div>
+          ${aufgabe.beschreibung && aufgabe.kurzbeschreibung ? `
+          <div class="detail-row">
+            <span class="detail-label">${t('task.description')}:</span>
+            <span class="detail-value">${getTranslatedUserText(aufgabe.beschreibung)}</span>
+          </div>
+          ` : ''}
+          ${aufgabe.fristDatum ? `
+          <div class="detail-row">
+            <span class="detail-label">Frist:</span>
+            <span class="detail-value">${new Date(aufgabe.fristDatum).toLocaleDateString('de-DE')}</span>
+          </div>
+          ` : ''}
+          ${anhangPdfsHtml}
         </div>
       `;
       
       openModal('aufgabeLoesungModal');
     }
     
+    // PDF aus Aufgabe herunterladen
+    function downloadAufgabePdf(aufgabeId, index) {
+      const aufgabe = aufgabenSystem.getAufgabe(aufgabeId);
+      if (!aufgabe || !aufgabe.anhangPdfs || !aufgabe.anhangPdfs[index]) return;
+      
+      const pdf = aufgabe.anhangPdfs[index];
+      const link = document.createElement('a');
+      link.href = pdf.data;
+      link.download = pdf.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    // Legacy: Einzelnes PDF (altes Format)
+    function downloadAufgabePdfLegacy(aufgabeId) {
+      const aufgabe = aufgabenSystem.getAufgabe(aufgabeId);
+      if (!aufgabe || !aufgabe.anhangPdf) return;
+      
+      const link = document.createElement('a');
+      link.href = aufgabe.anhangPdf;
+      link.download = `Aufgabe_${aufgabe.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    function toggleAntwortFeld() {
+      const erledigungsTyp = document.querySelector('input[name="aufgabeErledigungsTyp"]:checked').value;
+      const antwortGruppe = document.getElementById('aufgabeAntwortGruppe');
+      const pdfGruppe = document.getElementById('aufgabeAntwortPdfGruppe');
+      
+      if (erledigungsTyp === 'kenntnisnahme') {
+        antwortGruppe.style.display = 'none';
+        pdfGruppe.style.display = 'none';
+      } else {
+        antwortGruppe.style.display = 'block';
+        pdfGruppe.style.display = 'block';
+      }
+    }
+    
     function erledigeAufgabe() {
       const aufgabeId = document.getElementById('aufgabeLoesungId').value;
-      const loesung = document.getElementById('aufgabeLoesungText').value.trim();
+      const erledigungsTyp = document.querySelector('input[name="aufgabeErledigungsTyp"]:checked').value;
+      const antwortText = document.getElementById('aufgabeAntwortText').value.trim();
       
-      if (!loesung) {
-        alert('Bitte beschreiben Sie die Lösung der Aufgabe.');
+      // Bei "Antwort" ist eine Eingabe erforderlich, bei "Kenntnisnahme" nicht
+      if (erledigungsTyp === 'antwort' && !antwortText) {
+        alert(t('error.required'));
         return;
       }
       
-      const aufgabe = aufgabenSystem.erledigeAufgabe(aufgabeId, loesung);
+      // Antwort mit Sprachinfo für Übersetzung speichern
+      const antwort = antwortText ? createTranslatableText(antwortText) : '';
+      
+      // PDFs als Array übergeben
+      const aufgabe = aufgabenSystem.erledigeAufgabe(aufgabeId, antwort, erledigungsTyp, antwortPdfs.length > 0 ? [...antwortPdfs] : null);
       
       // Benachrichtigung an den Ersteller
+      const nachrichtText = erledigungsTyp === 'kenntnisnahme'
+        ? `${t('task.acknowledged')} (${t('application.id')}: ${aufgabe.antragsNummer || aufgabe.antragId})`
+        : `${t('task.answer')}: ${aufgabe.antragsNummer || aufgabe.antragId}`;
+      
       notificationSystem.createNotification(
         aufgabe.erstelltVonId,
         'aufgabe-erledigt',
-        '✓ Aufgabe erledigt',
-        `Ihre Aufgabe zum Antrag ${aufgabe.antragsNummer || aufgabe.antragId} wurde erledigt.`,
+        '✓ ' + t('task.complete'),
+        nachrichtText,
         aufgabe.antragId
       );
       
@@ -1875,34 +2723,11 @@
 
     function bestaetigeEroeffnung(antragId) {
       if (confirm('Haben Sie das Ergebnis dem Insassen persönlich mitgeteilt?')) {
-        // Antrag vor der Bestätigung holen, um Daten für Benachrichtigung zu haben
-        const antrag = antragSystem.getAntrag(antragId);
-        const geplantesErgebnis = antrag.geplantesErgebnis;
-        const geplanteBegruendung = antrag.geplanteBegruendung;
-        
-        // Persönliche Eröffnung bestätigen
+        // Persönliche Eröffnung bestätigen (Benachrichtigung wird in app.js gesendet)
         antragSystem.bestaetigePersoenlicheEroeffnung(antragId);
-        
-        // Benachrichtigung an den Insassen senden
-        const antragsTyp = antrag.type === 'teilhabegeld' ? 'Teilhabegeld' : 'Eigentum in der Kammer';
-        let title, message;
-        
-        if (geplantesErgebnis === 'genehmigt') {
-          title = '✓ Antrag genehmigt (persönlich eröffnet)';
-          message = `Ihr Antrag "${antragsTyp}" (${antrag.antragsNummer}) wurde genehmigt. Das Ergebnis wurde Ihnen persönlich mitgeteilt.`;
-        } else if (geplantesErgebnis === 'abgelehnt') {
-          title = '✕ Antrag abgelehnt (persönlich eröffnet)';
-          message = `Ihr Antrag "${antragsTyp}" (${antrag.antragsNummer}) wurde leider abgelehnt. Das Ergebnis wurde Ihnen persönlich mitgeteilt.${geplanteBegruendung ? ' Begründung: ' + geplanteBegruendung : ''}`;
-        } else if (geplantesErgebnis === 'teilweise-genehmigt') {
-          title = '⚡ Antrag teilweise genehmigt (persönlich eröffnet)';
-          message = `Ihr Antrag "${antragsTyp}" (${antrag.antragsNummer}) wurde teilweise genehmigt. Das Ergebnis wurde Ihnen persönlich mitgeteilt.${geplanteBegruendung ? ' Hinweis: ' + geplanteBegruendung : ''}`;
-        }
-        
-        if (title && antrag.insasseId) {
-          notificationSystem.createNotification(antrag.insasseId, geplantesErgebnis, title, message, antragId);
-        }
-        
         renderAntraege();
+        // Detailansicht aktualisieren
+        openAntragDetail(antragId);
       }
     }
 
@@ -1911,12 +2736,10 @@
       
       const offenList = document.getElementById('offenList');
       const bearbeitungList = document.getElementById('bearbeitungList');
-      const eroeffnungList = document.getElementById('eroeffnungList');
       const historieList = document.getElementById('historieList');
       
       let offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(currentSession);
       let inBearbeitungAntraege = antragSystem.getInBearbeitungAntraege(currentSession);
-      let wartendeEroeffnungen = antragSystem.getWartendeEroeffnungen(currentSession.userId);
       let historieAntraege = antragSystem.getHistorieMitarbeiter(currentSession);
       
       // Aufgaben für den aktuellen Benutzer laden
@@ -1947,19 +2770,24 @@
       // Sortierung für jede Liste anwenden
       const sortierungOffen = document.getElementById('sortierungOffen')?.value || 'datum-neu';
       const sortierungBearbeitung = document.getElementById('sortierung')?.value || 'datum-neu';
-      const sortierungEroeffnung = document.getElementById('sortierungEroeffnung')?.value || 'datum-neu';
       const sortierungHistorie = document.getElementById('sortierungHistorie')?.value || 'datum-neu';
       
       offeneAntraege = [...offeneAntraege].sort(erstelleSortierFunktion(sortierungOffen));
       inBearbeitungAntraege = [...inBearbeitungAntraege].sort(erstelleSortierFunktion(sortierungBearbeitung));
       meineAufgaben = [...meineAufgaben].sort(erstelleSortierFunktion(sortierungBearbeitung));
-      wartendeEroeffnungen = [...wartendeEroeffnungen].sort(erstelleSortierFunktion(sortierungEroeffnung));
       historieAntraege = [...historieAntraege].sort(erstelleSortierFunktion(sortierungHistorie));
       
+      const bearbeitungTotal = inBearbeitungAntraege.length + meineAufgaben.length;
       document.getElementById('offenCount').textContent = offeneAntraege.length;
-      document.getElementById('bearbeitungCount').textContent = inBearbeitungAntraege.length + meineAufgaben.length;
-      document.getElementById('eroeffnungCount').textContent = wartendeEroeffnungen.length;
+      document.getElementById('bearbeitungCount').textContent = bearbeitungTotal;
       document.getElementById('historieCount').textContent = historieAntraege.length;
+      
+      // Tab-Zähler für "Meine Anträge und Aufgaben" aktualisieren
+      const tabCount = document.getElementById('bearbeitungTabCount');
+      if (tabCount) {
+        tabCount.textContent = bearbeitungTotal;
+        tabCount.style.display = bearbeitungTotal > 0 ? 'inline-block' : 'none';
+      }
       
       // Offene Anträge
       if (offeneAntraege.length === 0) {
@@ -1987,13 +2815,6 @@
         bearbeitungList.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>Keine Anträge oder Aufgaben vorhanden.</p></div>';
       } else {
         bearbeitungList.innerHTML = bearbeitungHtml;
-      }
-      
-      // Wartende Eröffnungen
-      if (wartendeEroeffnungen.length === 0) {
-        eroeffnungList.innerHTML = '<div class="empty-state"><div class="icon">✓</div><p>Keine Anträge warten auf persönliche Eröffnung.</p></div>';
-      } else {
-        eroeffnungList.innerHTML = wartendeEroeffnungen.map(a => renderAntragCard(a, 'eroeffnung')).join('');
       }
       
       // Historie
@@ -2264,7 +3085,7 @@
           </div>
           <div class="termin-block-titel">${termin.titel}</div>
           ${termin.beschreibung ? `<div class="termin-block-beschreibung">${termin.beschreibung}</div>` : ''}
-          <div class="termin-block-meta">Von: ${termin.erstelltVonName}</div>
+          <div class="termin-block-meta">${currentLanguage === 'en' ? 'From' : currentLanguage === 'fr' ? 'De' : 'Von'}: ${termin.erstelltVonName}</div>
         </div>
       `;
     }
@@ -2296,7 +3117,16 @@
       if (!termin) return;
       
       const datum = new Date(termin.datum);
-      const formatDatum = datum.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      const dateLocale = currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE';
+      const formatDatum = datum.toLocaleDateString(dateLocale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      
+      const dateLabel = currentLanguage === 'en' ? 'Date' : currentLanguage === 'fr' ? 'Date' : 'Datum';
+      const timeLabel = currentLanguage === 'en' ? 'Time' : currentLanguage === 'fr' ? 'Heure' : 'Uhrzeit';
+      const allDayText = currentLanguage === 'en' ? 'All day' : currentLanguage === 'fr' ? 'Toute la journée' : 'Ganztägig';
+      const descLabel = currentLanguage === 'en' ? 'Description' : currentLanguage === 'fr' ? 'Description' : 'Beschreibung';
+      const createdByLabel = currentLanguage === 'en' ? 'Created by' : currentLanguage === 'fr' ? 'Créé par' : 'Erstellt von';
+      const forAppLabel = currentLanguage === 'en' ? 'For application' : currentLanguage === 'fr' ? 'Pour la demande' : 'Zum Antrag';
+      const openAppText = currentLanguage === 'en' ? 'Open application' : currentLanguage === 'fr' ? 'Ouvrir la demande' : 'Antrag öffnen';
       
       let html = `
         <div class="termin-detail-header" style="border-left: 4px solid ${getTerminFarbe(termin.typ)}; padding-left: 1rem;">
@@ -2304,19 +3134,19 @@
           <h4 style="margin: 0.5rem 0;">${termin.titel}</h4>
         </div>
         <div class="termin-detail-body">
-          <p><strong>📅 Datum:</strong> ${formatDatum}</p>
-          ${termin.uhrzeit ? `<p><strong>🕐 Uhrzeit:</strong> ${termin.uhrzeit} Uhr</p>` : '<p><strong>🕐 Zeit:</strong> Ganztägig</p>'}
-          ${termin.beschreibung ? `<p><strong>📝 Beschreibung:</strong> ${termin.beschreibung}</p>` : ''}
-          <p><strong>👤 Erstellt von:</strong> ${termin.erstelltVonName}</p>
-          ${termin.antragId ? `<p><strong>📋 Zum Antrag:</strong> <a href="#" onclick="closeModal('terminDetailModal'); openAntragDetail('${termin.antragId}'); return false;">Antrag öffnen</a></p>` : ''}
+          <p><strong>📅 ${dateLabel}:</strong> ${formatDatum}</p>
+          ${termin.uhrzeit ? `<p><strong>🕐 ${timeLabel}:</strong> ${termin.uhrzeit}</p>` : `<p><strong>🕐 ${timeLabel}:</strong> ${allDayText}</p>`}
+          ${termin.beschreibung ? `<p><strong>📝 ${descLabel}:</strong> ${termin.beschreibung}</p>` : ''}
+          <p><strong>👤 ${createdByLabel}:</strong> ${termin.erstelltVonName}</p>
+          ${termin.antragId ? `<p><strong>📋 ${forAppLabel}:</strong> <a href="#" onclick="closeModal('terminDetailModal'); openAntragDetail('${termin.antragId}'); return false;">${openAppText}</a></p>` : ''}
         </div>
       `;
       
       document.getElementById('terminDetailContent').innerHTML = html;
       
-      let footerHtml = '<button class="btn btn-secondary" onclick="closeModal(\'terminDetailModal\')">Schließen</button>';
+      let footerHtml = `<button class="btn btn-secondary" onclick="closeModal('terminDetailModal')">${t('button.close')}</button>`;
       if (termin.erstelltVonId === currentSession.userId && termin.typ !== 'aufgabe') {
-        footerHtml += `<button class="btn btn-danger" onclick="loescheTermin('${termin.id}')">🗑️ Löschen</button>`;
+        footerHtml += `<button class="btn btn-danger" onclick="loescheTermin('${termin.id}')">🗑️ ${t('button.delete')}</button>`;
       }
       document.getElementById('terminDetailFooter').innerHTML = footerHtml;
       
@@ -2366,11 +3196,17 @@
       const sichtbarkeit = document.querySelector('input[name="terminSichtbarkeit"]:checked').value;
       
       if (!titel) {
-        alert('Bitte geben Sie einen Titel ein.');
+        const msg = currentLanguage === 'en' ? 'Please enter a title.' 
+                  : currentLanguage === 'fr' ? 'Veuillez entrer un titre.' 
+                  : 'Bitte geben Sie einen Titel ein.';
+        alert(msg);
         return;
       }
       if (!datum) {
-        alert('Bitte wählen Sie ein Datum.');
+        const msg = currentLanguage === 'en' ? 'Please select a date.' 
+                  : currentLanguage === 'fr' ? 'Veuillez sélectionner une date.' 
+                  : 'Bitte wählen Sie ein Datum.';
+        alert(msg);
         return;
       }
       
@@ -2397,7 +3233,10 @@
     }
     
     function loescheTermin(terminId) {
-      if (!confirm('Möchten Sie diesen Termin wirklich löschen?')) return;
+      const confirmMsg = currentLanguage === 'en' ? 'Do you really want to delete this appointment?' 
+                       : currentLanguage === 'fr' ? 'Voulez-vous vraiment supprimer ce rendez-vous?' 
+                       : 'Möchten Sie diesen Termin wirklich löschen?';
+      if (!confirm(confirmMsg)) return;
       
       terminSystem.deleteTermin(terminId);
       closeModal('terminDetailModal');

@@ -3,84 +3,70 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Antragswesen</title>
+  <title>Antragswesen - Freie und Hansestadt Hamburg</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <div class="start-page">
-    <!-- Hintergrund-Elemente -->
-    <div class="bg-decoration">
-      <div class="bg-circle bg-circle-1"></div>
-      <div class="bg-circle bg-circle-2"></div>
-      <div class="bg-grid"></div>
-    </div>
-
-    <!-- Logo / Branding -->
-    <div class="start-logo">
-      <div class="logo-icon">
-        <span>📋</span>
+<body class="hamburg-start">
+  <div class="start-page hamburg-style">
+    <!-- Header -->
+    <header class="start-header">
+      <div class="hamburg-logo-large">
+        <img src="https://pem-center.de/wp-content/uploads/Logo-Stadt-Hamburg.jpg" alt="Stadt Hamburg" class="hamburg-wappen-img-large">
       </div>
-      <div class="logo-badge">Digitales Portal</div>
-    </div>
+      <div class="start-header-text">
+        <span class="hamburg-label">Freie und Hansestadt Hamburg</span>
+      </div>
+    </header>
 
-    <!-- Haupttitel -->
-    <h1 class="start-title">Antragswesen</h1>
-    <p class="start-subtitle">Einfach. Sicher. Digital.</p>
+    <!-- Hauptinhalt -->
+    <main class="start-main">
+      <!-- Begrüßung -->
+      <div class="start-hero">
+        <h1 class="start-title">Moin!</h1>
+        <h2 class="start-subtitle">Digitales Antragswesen</h2>
+        <p class="start-description">Willkommen beim digitalen Antragsportal der Justizvollzugsanstalt Hamburg. Bitte wählen Sie Ihren Zugang.</p>
+      </div>
 
-    <!-- Portal-Auswahl -->
-    <div class="role-selection">
-      <a href="insassen.html" class="role-card insasse">
-        <div class="role-card-glow"></div>
-        <div class="role-icon">
-          <span>👤</span>
-        </div>
-        <div class="role-content">
-          <h2>Insassen-Portal</h2>
-          <p>Mit Ihren Zugangsdaten anmelden und persönliche Anträge verwalten</p>
-        </div>
-        <div class="role-arrow">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </div>
-      </a>
-      
-      <a href="mitarbeiter.html" class="role-card mitarbeiter">
-        <div class="role-card-glow"></div>
-        <div class="role-icon">
-          <span>🛡️</span>
-        </div>
-        <div class="role-content">
-          <h2>Mitarbeiter-Portal</h2>
-          <p>Mit Ihren Zugangsdaten anmelden und Anträge Ihrer Station bearbeiten</p>
-        </div>
-        <div class="role-arrow">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </div>
-      </a>
-      
-      <a href="admin.html" class="role-card admin">
-        <div class="role-card-glow"></div>
-        <div class="role-icon">
-          <span>⚙️</span>
-        </div>
-        <div class="role-content">
-          <h2>Admin-Portal</h2>
-          <p>Benutzer verwalten und Systemeinstellungen</p>
-        </div>
-        <div class="role-arrow">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </div>
-      </a>
-    </div>
+      <!-- Portal-Auswahl -->
+      <div class="role-selection hamburg-cards">
+        <a href="insassen.html" class="role-card hamburg-card">
+          <div class="card-icon">
+            <span>👤</span>
+          </div>
+          <div class="card-content">
+            <h3>Insassen-Portal</h3>
+            <p>Mit Ihren Zugangsdaten anmelden und persönliche Anträge verwalten</p>
+          </div>
+          <div class="card-arrow">→</div>
+        </a>
+        
+        <a href="mitarbeiter.html" class="role-card hamburg-card">
+          <div class="card-icon">
+            <span>🛡️</span>
+          </div>
+          <div class="card-content">
+            <h3>Mitarbeiter-Portal</h3>
+            <p>Mit Ihren Zugangsdaten anmelden und Anträge Ihrer Station bearbeiten</p>
+          </div>
+          <div class="card-arrow">→</div>
+        </a>
+        
+        <a href="admin.html" class="role-card hamburg-card">
+          <div class="card-icon">
+            <span>⚙️</span>
+          </div>
+          <div class="card-content">
+            <h3>Admin-Portal</h3>
+            <p>Benutzer verwalten und Systemeinstellungen</p>
+          </div>
+          <div class="card-arrow">→</div>
+        </a>
+      </div>
+    </main>
 
     <!-- Footer -->
-    <footer class="start-footer">
-      <p>Sicheres digitales Antragssystem für Justizvollzugsanstalten</p>
+    <footer class="start-footer hamburg-footer">
+      <p>© Freie und Hansestadt Hamburg | Digitales Antragssystem für Justizvollzugsanstalten</p>
     </footer>
   </div>
 

@@ -45,31 +45,57 @@
   <!-- Portal-Bereich (nach Login sichtbar) -->
   <div id="portalSection" style="display: none;">
     <header class="header">
-      <h1>
-        <span class="icon">👤</span>
-        Insassen-Portal
-      </h1>
+      <div class="header-left">
+        <div class="hamburg-logo">
+          <img src="https://pem-center.de/wp-content/uploads/Logo-Stadt-Hamburg.jpg" alt="Stadt Hamburg" class="hamburg-wappen-img">
+        </div>
+        <div class="header-title">
+          <h1>Insassen-Portal</h1>
+          <span class="header-subtitle">Freie und Hansestadt Hamburg</span>
+        </div>
+      </div>
       <div class="header-right">
+        <div class="language-selector">
+          <select id="languageSelect" onchange="changeLanguage(this.value)">
+            <option value="de">🇩🇪 Deutsch</option>
+            <option value="en">🇬🇧 English</option>
+            <option value="fr">🇫🇷 Français</option>
+          </select>
+        </div>
         <div class="user-badge">
           <div>
-            <div class="role">Insasse</div>
+            <div class="role" data-i18n="role.inmate">Insasse</div>
             <div class="name" id="userName">-</div>
           </div>
         </div>
-        <button class="btn btn-secondary btn-sm" onclick="logout()">Abmelden</button>
+        <button class="btn btn-secondary btn-sm" onclick="logout()" data-i18n="app.logout">Abmelden</button>
       </div>
     </header>
 
     <main class="container">
+      <!-- Begrüßung -->
+      <div class="welcome-banner" id="welcomeBanner">
+        <h2 id="welcomeGreeting">Moin!</h2>
+        <p id="welcomeMessage">Willkommen im Insassen-Portal.</p>
+      </div>
+      
       <div class="dashboard">
-        <!-- Benachrichtigungs-Bereich (zentral im Dashboard) -->
-        <section class="section notification-section" id="notificationSection">
-          <div class="section-header">
-            <h2>🔔 Nachrichten <span class="count" id="notificationCount">0</span></h2>
-            <button class="btn btn-sm" onclick="markAllNotificationsRead()" id="markAllReadBtn" style="display: none;">
+        <!-- Benachrichtigungs-Bereich (aufklappbar) -->
+        <section class="section notification-section collapsed" id="notificationSection">
+          <div class="notification-header" onclick="togglePostfach()">
+            <div class="notification-header-left">
+              <span class="postfach-toggle-icon" id="postfachToggleIcon">▶</span>
+              <h2>🔔 Nachrichten <span class="count" id="notificationCount">0</span></h2>
+            </div>
+            <button class="btn btn-sm" onclick="markAllNotificationsRead(); event.stopPropagation();" id="markAllReadBtn" style="display: none;">
               Alle als gelesen markieren
             </button>
           </div>
+          <!-- Vorschau: Nur neueste Nachricht (wenn eingeklappt) -->
+          <div class="notification-preview" id="notificationPreview">
+            <!-- Dynamisch gefüllt -->
+          </div>
+          <!-- Vollständige Liste (wenn aufgeklappt) -->
           <div class="notification-dashboard-list" id="notificationList">
             <!-- Dynamisch gefüllt -->
           </div>
@@ -397,15 +423,29 @@
         </div>
         
         <div class="form-group">
-          <label for="aufgabeInsasseLoesung">Ihre Antwort / Lösung</label>
-          <textarea id="aufgabeInsasseLoesung" placeholder="Beschreiben Sie Ihre Antwort oder Lösung..." rows="4"></textarea>
+          <label>Wie möchten Sie die Aufgabe abschließen?</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="aufgabeInsasseTyp" value="antwort" checked onchange="toggleInsasseAntwortFeld()">
+              <span class="radio-label">💬 Mit Antwort</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="aufgabeInsasseTyp" value="kenntnisnahme" onchange="toggleInsasseAntwortFeld()">
+              <span class="radio-label">✓ Zur Kenntnis genommen</span>
+            </label>
+          </div>
+        </div>
+        
+        <div class="form-group" id="aufgabeInsasseAntwortGruppe">
+          <label for="aufgabeInsasseAntwort">Ihre Antwort</label>
+          <textarea id="aufgabeInsasseAntwort" placeholder="Geben Sie Ihre Antwort ein..." rows="4"></textarea>
         </div>
         
         <input type="hidden" id="aufgabeInsasseId">
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('aufgabeInsasseModal')">Abbrechen</button>
-        <button class="btn btn-success" onclick="erledigeInsassenAufgabe()">Aufgabe erledigen</button>
+        <button class="btn btn-success" onclick="erledigeInsassenAufgabe()">Aufgabe abschließen</button>
       </div>
     </div>
   </div>
@@ -413,6 +453,145 @@
   <script src="app.js"></script>
   <script>
     let currentSession = null;
+
+    // ============================================
+    // SPRACHSTEUERUNG
+    // ============================================
+    
+    function changeLanguage(lang) {
+      setLanguage(lang);
+      updateUITranslations();
+      // Listen neu rendern mit neuer Sprache
+      if (currentSession) {
+        renderAntraege();
+        renderNotifications();
+      }
+    }
+    
+    function updateUITranslations() {
+      // Statische Elemente mit data-i18n Attribut übersetzen
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.textContent = t(key);
+      });
+      
+      // Placeholder übersetzen
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        el.placeholder = t(key);
+      });
+      
+      // Tabs aktualisieren
+      const tabs = document.querySelectorAll('.tabs .tab');
+      if (tabs.length >= 2) {
+        tabs[0].textContent = t('nav.submittedApplications');
+        tabs[1].textContent = t('nav.history');
+      }
+      
+      // Postfach-Titel
+      const postfachTitle = document.querySelector('#notificationSection h2');
+      if (postfachTitle) {
+        const count = document.getElementById('notificationCount')?.textContent || '0';
+        postfachTitle.innerHTML = `🔔 ${t('inbox.messages')} <span class="count" id="notificationCount">${count}</span>`;
+      }
+      
+      // "Neuer Antrag" Button
+      const newAntragBtn = document.querySelector('.action-bar .btn-primary');
+      if (newAntragBtn) {
+        newAntragBtn.textContent = '+ ' + t('application.new');
+      }
+      
+      // Entwürfe-Titel
+      const entwuerfeTitle = document.querySelector('.entwuerfe-section h2');
+      if (entwuerfeTitle) {
+        const count = document.getElementById('entwuerfeCount')?.textContent || '0';
+        entwuerfeTitle.innerHTML = `📝 ${t('nav.drafts')} <span class="count" id="entwuerfeCount">${count}</span>`;
+      }
+      
+      // ============================================
+      // MODAL-ÜBERSETZUNGEN (Insassen-Portal)
+      // ============================================
+      
+      // Neuer Antrag Modal
+      const newAntragModalTitle = document.querySelector('#newAntragModal .modal-header h3');
+      if (newAntragModalTitle) newAntragModalTitle.textContent = t('application.new');
+      
+      const antragsartLabel = document.querySelector('#newAntragModal label');
+      if (antragsartLabel && antragsartLabel.textContent.includes('Antragsart')) {
+        antragsartLabel.textContent = t('form.applicationType');
+      }
+      
+      // Modal-Buttons (Neuer Antrag)
+      const newAntragBtns = document.querySelectorAll('#newAntragModal .modal-footer .btn');
+      newAntragBtns.forEach(btn => {
+        if (btn.classList.contains('btn-secondary')) btn.textContent = t('button.cancel');
+        if (btn.classList.contains('btn-outline')) btn.textContent = '📝 ' + t('button.saveDraft');
+        if (btn.classList.contains('btn-primary') && !btn.classList.contains('btn-outline')) btn.textContent = t('button.submit');
+      });
+      
+      // Antrag bearbeiten Modal
+      const editAntragModalTitle = document.querySelector('#editAntragModal .modal-header h3');
+      if (editAntragModalTitle) editAntragModalTitle.textContent = t('application.title') + ' ' + t('button.edit').toLowerCase();
+      
+      // Aufgabe bearbeiten Modal
+      const aufgabeInsasseModalTitle = document.querySelector('#aufgabeInsasseModal .modal-header h3');
+      if (aufgabeInsasseModalTitle) aufgabeInsasseModalTitle.textContent = t('task.edit');
+      
+      // Aufgabe abschließen Labels
+      const aufgabeAbschlussLabel = document.querySelector('#aufgabeInsasseModal .form-group > label');
+      if (aufgabeAbschlussLabel && aufgabeAbschlussLabel.textContent.includes('Wie möchten Sie')) {
+        aufgabeAbschlussLabel.textContent = currentLanguage === 'en' ? 'How would you like to complete the task?' 
+          : currentLanguage === 'fr' ? 'Comment souhaitez-vous terminer la tâche?' 
+          : 'Wie möchten Sie die Aufgabe abschließen?';
+      }
+      
+      // Radio-Labels für Aufgabe
+      const aufgabeInsasseRadios = document.querySelectorAll('#aufgabeInsasseModal .radio-label');
+      if (aufgabeInsasseRadios.length >= 2) {
+        aufgabeInsasseRadios[0].textContent = '💬 ' + t('task.withAnswer');
+        aufgabeInsasseRadios[1].textContent = '✓ ' + t('task.acknowledged');
+      }
+      
+      const antwortLabel = document.querySelector('label[for="aufgabeInsasseAntwort"]');
+      if (antwortLabel) antwortLabel.textContent = currentLanguage === 'en' ? 'Your answer' 
+        : currentLanguage === 'fr' ? 'Votre réponse' 
+        : 'Ihre Antwort';
+      
+      const antwortInput = document.getElementById('aufgabeInsasseAntwort');
+      if (antwortInput) antwortInput.placeholder = t('task.enterAnswer');
+      
+      // Aufgabe Modal Buttons
+      const aufgabeInsasseBtns = document.querySelectorAll('#aufgabeInsasseModal .modal-footer .btn');
+      if (aufgabeInsasseBtns.length >= 2) {
+        aufgabeInsasseBtns[0].textContent = t('button.cancel');
+        aufgabeInsasseBtns[1].textContent = t('task.complete');
+      }
+    }
+    
+    // Übersetzte Statusanzeige
+    function getStatusText(status) {
+      const statusMap = {
+        'entwurf': t('status.draft'),
+        'eingereicht': t('status.submitted'),
+        'in-bearbeitung': t('status.inProgress'),
+        'genehmigt': t('status.approved'),
+        'abgelehnt': t('status.rejected'),
+        'teilweise-genehmigt': t('status.partiallyApproved'),
+        'erledigt': t('status.completed'),
+        'offen': t('status.open')
+      };
+      return statusMap[status] || status;
+    }
+    
+    // Übersetzte Antragstypen
+    function getAntragsTypText(type) {
+      const typeMap = {
+        'teilhabegeld': t('application.type.teilhabegeld'),
+        'eigentum': t('application.type.eigentum'),
+        'sonstiges': t('application.type.sonstiges')
+      };
+      return typeMap[type] || type;
+    }
 
     // ============================================
     // LOGIN
@@ -436,6 +615,7 @@
     function logout() {
       sessionManager.logout();
       currentSession = null;
+      resetLanguage(); // Sprache zurücksetzen für nächsten Benutzer
       location.reload();
     }
     
@@ -443,6 +623,19 @@
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('portalSection').style.display = 'block';
       document.getElementById('userName').textContent = currentSession.name;
+      
+      // Moin-Begrüßung setzen
+      document.getElementById('welcomeGreeting').textContent = 'Moin, ' + currentSession.name + '!';
+      const welcomeMsg = currentLanguage === 'en' ? 'Welcome to the Inmate Portal.' 
+                       : currentLanguage === 'fr' ? 'Bienvenue dans le portail des détenus.' 
+                       : 'Willkommen im Insassen-Portal.';
+      document.getElementById('welcomeMessage').textContent = welcomeMsg;
+      
+      // Benutzersprache laden
+      loadUserLanguage(currentSession.userId);
+      document.getElementById('languageSelect').value = currentLanguage;
+      updateUITranslations();
+      
       renderAntraege();
       renderNotifications();
       updateNotificationBadge();
@@ -477,10 +670,31 @@
       markAllBtn.style.display = count > 0 ? 'inline-block' : 'none';
     }
     
+    // Postfach auf-/zuklappen
+    let postfachExpanded = false;
+    
+    function togglePostfach() {
+      const section = document.getElementById('notificationSection');
+      const icon = document.getElementById('postfachToggleIcon');
+      
+      postfachExpanded = !postfachExpanded;
+      
+      if (postfachExpanded) {
+        section.classList.remove('collapsed');
+        section.classList.add('expanded');
+        icon.textContent = '▼';
+      } else {
+        section.classList.remove('expanded');
+        section.classList.add('collapsed');
+        icon.textContent = '▶';
+      }
+    }
+    
     function renderNotifications() {
       if (!currentSession) return;
       
       const list = document.getElementById('notificationList');
+      const preview = document.getElementById('notificationPreview');
       const notifications = notificationSystem.getAllNotifications(currentSession.userId);
       const section = document.getElementById('notificationSection');
       
@@ -489,17 +703,35 @@
         return;
       }
       
-      section.style.display = 'block';
+      section.style.display = 'flex';
       
-      // Alle Benachrichtigungen anzeigen (mit Scroll)
-      const displayNotifications = notifications;
+      // Vorschau: Nur neueste Nachricht
+      if (notifications.length > 0) {
+        const newest = notifications[0];
+        const typeClass = newest.type || 'info';
+        const unreadClass = newest.gelesen ? 'read' : 'unread';
+        
+        preview.innerHTML = `
+          <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${newest.id}', '${newest.antragId || ''}'); event.stopPropagation();">
+            <div class="notification-card-icon">${getNotificationIcon(newest.type)}</div>
+            <div class="notification-card-content">
+              <div class="notification-card-title">${newest.title}</div>
+              <div class="notification-card-message">${newest.message}</div>
+              <div class="notification-card-time">${formatDate(newest.erstelltAm)}</div>
+            </div>
+            ${!newest.gelesen ? '<div class="notification-card-dot"></div>' : ''}
+          </div>
+          ${notifications.length > 1 ? `<div class="notification-more-hint">+ ${notifications.length - 1} weitere Nachrichten</div>` : ''}
+        `;
+      }
       
-      list.innerHTML = displayNotifications.map(n => {
+      // Vollständige Liste
+      list.innerHTML = notifications.map(n => {
         const typeClass = n.type || 'info';
         const unreadClass = n.gelesen ? 'read' : 'unread';
         
         return `
-          <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${n.id}', '${n.antragId || ''}')">
+          <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${n.id}', '${n.antragId || ''}'); event.stopPropagation();">
             <div class="notification-card-icon">${getNotificationIcon(n.type)}</div>
             <div class="notification-card-content">
               <div class="notification-card-title">${n.title}</div>
@@ -600,13 +832,15 @@
         const aktion = document.querySelector('input[name="eigentumAktion"]:checked').value;
         const kleidungCheckboxes = document.querySelectorAll('input[name="kleidung"]:checked');
         const kleidung = Array.from(kleidungCheckboxes).map(cb => cb.value);
-        const antragBegruendung = document.getElementById('eigentumBegruendung').value.trim();
+        const antragBegruendungText = document.getElementById('eigentumBegruendung').value.trim();
+        // Begründung mit Sprachinfo speichern für spätere Übersetzung
+        const antragBegruendung = createTranslatableText(antragBegruendungText);
         
         if (kleidung.length === 0) {
-          return { type, data: { aktion, kleidung, antragBegruendung }, valid: false, error: 'Bitte wählen Sie mindestens ein Kleidungsstück aus.' };
+          return { type, data: { aktion, kleidung, antragBegruendung }, valid: false, error: t('error.selectOption') };
         }
-        if (!antragBegruendung) {
-          return { type, data: { aktion, kleidung, antragBegruendung }, valid: false, error: 'Bitte geben Sie eine Begründung für Ihren Antrag an.' };
+        if (!antragBegruendungText) {
+          return { type, data: { aktion, kleidung, antragBegruendung }, valid: false, error: t('error.required') };
         }
         return { type, data: { aktion, kleidung, antragBegruendung }, valid: true, error: null };
       }
@@ -642,7 +876,10 @@
       resetNewAntragForm();
       
       // Hinweis anzeigen
-      alert('Entwurf wurde gespeichert! Sie finden ihn in der rechten Spalte.');
+      const msg = currentLanguage === 'en' ? 'Draft has been saved! You can find it in the right column.' 
+                : currentLanguage === 'fr' ? 'Le brouillon a été enregistré! Vous le trouverez dans la colonne de droite.' 
+                : 'Entwurf wurde gespeichert! Sie finden ihn in der rechten Spalte.';
+      alert(msg);
     }
 
     function resetNewAntragForm() {
@@ -784,9 +1021,9 @@
         const aktionText = antrag.aktion === 'aufstocken' ? 'Kleidung aufstocken' : 'Kleidung tauschen';
         if (antrag.kleidung && antrag.kleidung.length > 0) {
           detailsHtml = `
-            <p><strong>Aktion:</strong> ${aktionText}</p>
+            <p><strong>${t('application.concern')}:</strong> ${aktionText}</p>
             <p><strong>Kleidung:</strong> ${antrag.kleidung.join(', ')}</p>
-            ${antrag.antragBegruendung ? `<p><strong>Begründung:</strong> ${antrag.antragBegruendung}</p>` : ''}
+            ${antrag.antragBegruendung ? `<p><strong>${t('application.justification')}:</strong> ${getTranslatedUserText(antrag.antragBegruendung)}</p>` : ''}
           `;
         } else {
           detailsHtml = `
@@ -811,7 +1048,15 @@
         if (antrag.begruendung) {
           actionsHtml = `
             <div class="antrag-feedback">
-              <strong>Begründung:</strong> ${antrag.begruendung}
+              <strong>${currentLanguage === 'en' ? 'Reason' : currentLanguage === 'fr' ? 'Motif' : 'Begründung'}:</strong> ${getTranslatedUserText(antrag.begruendung)}
+            </div>
+          `;
+        }
+        // Vollzugs-Kommentar anzeigen (für den Insassen sichtbar)
+        if (antrag.vollzugKommentar) {
+          actionsHtml += `
+            <div class="antrag-feedback vollzug-kommentar">
+              <strong>${currentLanguage === 'en' ? 'Note on execution' : currentLanguage === 'fr' ? 'Note sur l\'exécution' : 'Hinweis zum Vollzug'}:</strong> ${getTranslatedUserText(antrag.vollzugKommentar)}
             </div>
           `;
         }
@@ -819,7 +1064,7 @@
           actionsHtml += `
             <div class="antrag-actions">
               <button class="btn btn-secondary btn-sm" onclick="downloadBescheidPdf('${antrag.id}')">
-                📄 Bescheid herunterladen
+                📄 ${currentLanguage === 'en' ? 'Download notice' : currentLanguage === 'fr' ? 'Télécharger l\'avis' : 'Bescheid herunterladen'}
               </button>
             </div>
           `;
@@ -848,7 +1093,10 @@
     function downloadBescheidPdf(antragId) {
       const antrag = antragSystem.getAntrag(antragId);
       if (!antrag || !antrag.bescheidPdf) {
-        alert('Kein Bescheid vorhanden.');
+        const msg = currentLanguage === 'en' ? 'No notice available.' 
+                  : currentLanguage === 'fr' ? 'Aucun avis disponible.' 
+                  : 'Kein Bescheid vorhanden.';
+        alert(msg);
         return;
       }
       
@@ -892,7 +1140,10 @@
       if (antrag.type === 'teilhabegeld') {
         const monat = document.getElementById('editMonatSelect').value;
         if (!monat) {
-          alert('Bitte wählen Sie einen Monat aus.');
+          const msg = currentLanguage === 'en' ? 'Please select a month.' 
+                    : currentLanguage === 'fr' ? 'Veuillez sélectionner un mois.' 
+                    : 'Bitte wählen Sie einen Monat aus.';
+          alert(msg);
           return;
         }
         antragSystem.updateAntragMonat(antragId, monat);
@@ -902,7 +1153,10 @@
         const kleidung = Array.from(kleidungCheckboxes).map(cb => cb.value);
         
         if (kleidung.length === 0) {
-          alert('Bitte wählen Sie mindestens ein Kleidungsstück aus.');
+          const msg = currentLanguage === 'en' ? 'Please select at least one item of clothing.' 
+                    : currentLanguage === 'fr' ? 'Veuillez sélectionner au moins un vêtement.' 
+                    : 'Bitte wählen Sie mindestens ein Kleidungsstück aus.';
+          alert(msg);
           return;
         }
         
@@ -980,23 +1234,25 @@
     function renderAufgabeCard(aufgabe) {
       const antrag = antragSystem.getAntrag(aufgabe.antragId);
       const antragsNummer = antrag ? antrag.antragsNummer : aufgabe.antragsNummer;
+      const receivedText = currentLanguage === 'en' ? 'Received' : currentLanguage === 'fr' ? 'Reçu' : 'Erhalten';
       
       return `
         <div class="antrag-card aufgabe-card">
           <div class="aufgabe-header">
             <span class="aufgabe-icon">📋</span>
-            <span class="aufgabe-label">Aufgabe</span>
-            <span class="status-badge in-bearbeitung">⏳ Offen</span>
+            <span class="aufgabe-label">${t('task.title')}</span>
+            <span class="status-badge in-bearbeitung">⏳ ${t('status.open')}</span>
           </div>
           <div class="antrag-body">
-            <p><strong>Zum Antrag:</strong> ${antragsNummer || aufgabe.antragId}</p>
-            <p><strong>Von:</strong> ${aufgabe.erstelltVonName}</p>
-            <p><strong>Beschreibung:</strong> ${aufgabe.beschreibung}</p>
-            <p class="antrag-date">Erhalten: ${formatDate(aufgabe.erstelltAm)}</p>
+            <p><strong>${t('task.forApplication')}:</strong> ${antragsNummer || aufgabe.antragId}</p>
+            <p><strong>${currentLanguage === 'en' ? 'From' : currentLanguage === 'fr' ? 'De' : 'Von'}:</strong> ${aufgabe.erstelltVonName}</p>
+            <p><strong>${t('task.title')}:</strong> ${getTranslatedUserText(aufgabe.kurzbeschreibung || aufgabe.beschreibung)}</p>
+            ${aufgabe.beschreibung && aufgabe.kurzbeschreibung ? `<p><strong>${t('form.details')}:</strong> ${getTranslatedUserText(aufgabe.beschreibung)}</p>` : ''}
+            <p class="antrag-date">${receivedText}: ${formatDate(aufgabe.erstelltAm)}</p>
           </div>
           <div class="antrag-actions">
             <button class="btn btn-primary btn-sm" onclick="openAufgabeInsasseModal('${aufgabe.id}')">
-              Aufgabe bearbeiten
+              ${t('task.edit')}
             </button>
           </div>
         </div>
@@ -1008,50 +1264,80 @@
       if (!aufgabe) return;
       
       document.getElementById('aufgabeInsasseId').value = aufgabeId;
-      document.getElementById('aufgabeInsasseLoesung').value = '';
+      document.getElementById('aufgabeInsasseAntwort').value = '';
+      
+      // Radio-Button auf "Antwort" setzen und Feld anzeigen
+      document.querySelector('input[name="aufgabeInsasseTyp"][value="antwort"]').checked = true;
+      document.getElementById('aufgabeInsasseAntwortGruppe').style.display = 'block';
       
       document.getElementById('aufgabeInsasseInfo').innerHTML = `
         <div class="detail-box">
           <div class="detail-row">
-            <span class="detail-label">Aufgabe von:</span>
+            <span class="detail-label">${t('task.from')}:</span>
             <span class="detail-value">${aufgabe.erstelltVonName}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">Zum Antrag:</span>
+            <span class="detail-label">${t('task.forApplication')}:</span>
             <span class="detail-value">${aufgabe.antragsNummer || aufgabe.antragId}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">Beschreibung:</span>
-            <span class="detail-value">${aufgabe.beschreibung}</span>
+            <span class="detail-label">${t('task.title')}:</span>
+            <span class="detail-value">${getTranslatedUserText(aufgabe.kurzbeschreibung || aufgabe.beschreibung)}</span>
           </div>
+          ${aufgabe.beschreibung && aufgabe.kurzbeschreibung ? `
+          <div class="detail-row">
+            <span class="detail-label">${t('task.description')}:</span>
+            <span class="detail-value">${getTranslatedUserText(aufgabe.beschreibung)}</span>
+          </div>
+          ` : ''}
         </div>
       `;
       
       openModal('aufgabeInsasseModal');
     }
     
+    function toggleInsasseAntwortFeld() {
+      const erledigungsTyp = document.querySelector('input[name="aufgabeInsasseTyp"]:checked').value;
+      const antwortGruppe = document.getElementById('aufgabeInsasseAntwortGruppe');
+      
+      if (erledigungsTyp === 'kenntnisnahme') {
+        antwortGruppe.style.display = 'none';
+      } else {
+        antwortGruppe.style.display = 'block';
+      }
+    }
+    
     function erledigeInsassenAufgabe() {
       const aufgabeId = document.getElementById('aufgabeInsasseId').value;
-      const loesung = document.getElementById('aufgabeInsasseLoesung').value.trim();
+      const erledigungsTyp = document.querySelector('input[name="aufgabeInsasseTyp"]:checked').value;
+      const antwortText = document.getElementById('aufgabeInsasseAntwort').value.trim();
       
-      if (!loesung) {
-        alert('Bitte geben Sie Ihre Antwort oder Lösung ein.');
+      // Bei "Antwort" ist eine Eingabe erforderlich, bei "Kenntnisnahme" nicht
+      if (erledigungsTyp === 'antwort' && !antwortText) {
+        alert(t('error.required'));
         return;
       }
       
-      const aufgabe = aufgabenSystem.erledigeAufgabe(aufgabeId, loesung);
+      // Antwort mit Sprachinfo für Übersetzung speichern
+      const antwort = antwortText ? createTranslatableText(antwortText) : '';
+      
+      const aufgabe = aufgabenSystem.erledigeAufgabe(aufgabeId, antwort, erledigungsTyp);
       
       // Benachrichtigung an den Ersteller
+      const nachrichtText = erledigungsTyp === 'kenntnisnahme'
+        ? `${t('task.acknowledged')} (${t('application.id')}: ${aufgabe.antragsNummer || aufgabe.antragId})`
+        : `${t('task.answer')} (${t('application.id')}: ${aufgabe.antragsNummer || aufgabe.antragId})`;
+      
       notificationSystem.createNotification(
         aufgabe.erstelltVonId,
         'aufgabe-erledigt',
-        '✓ Aufgabe erledigt',
-        `Die Aufgabe zum Antrag ${aufgabe.antragsNummer || aufgabe.antragId} wurde vom Insassen erledigt.`,
+        '✓ ' + t('task.complete'),
+        nachrichtText,
         aufgabe.antragId
       );
       
       closeModal('aufgabeInsasseModal');
-      alert('Ihre Antwort wurde gesendet.');
+      alert(erledigungsTyp === 'kenntnisnahme' ? t('task.acknowledged') : t('success.submitted'));
       renderAntraege();
     }
   </script>
