@@ -2863,6 +2863,71 @@ class AntragSystem {
     }
     return null;
   }
+
+  // Markiert, dass ein Benutzer den Antrag nach Aufgabenerledigung abgegeben hat
+  // Der Antrag geht zurück an den Aufgabensteller
+  markiereAufgabeAbgegeben(antragId, benutzerId) {
+    const antrag = this.antraege.find(a => a.id === antragId);
+    if (antrag) {
+      // Liste der Benutzer, die den Antrag abgegeben haben
+      if (!antrag.abgegebenVon) {
+        antrag.abgegebenVon = [];
+      }
+      if (!antrag.abgegebenVon.includes(benutzerId)) {
+        antrag.abgegebenVon.push(benutzerId);
+      }
+      this.saveAntraege();
+      return antrag;
+    }
+    return null;
+  }
+
+  // Bearbeitung übernehmen - Benutzer wird neuer Hauptbearbeiter
+  uebernehmBearbeitung(antragId, neuBearbeiterId, neuBearbeiterName, altBearbeiterId) {
+    const antrag = this.antraege.find(a => a.id === antragId);
+    if (antrag) {
+      // Alten Bearbeiter als "abgegeben" markieren
+      if (!antrag.abgegebenVon) {
+        antrag.abgegebenVon = [];
+      }
+      if (altBearbeiterId && !antrag.abgegebenVon.includes(altBearbeiterId)) {
+        antrag.abgegebenVon.push(altBearbeiterId);
+      }
+      
+      // Neuen Bearbeiter setzen
+      antrag.bearbeiterId = neuBearbeiterId;
+      antrag.bearbeiterName = neuBearbeiterName;
+      
+      // Falls noch nicht in Bearbeitung, jetzt setzen
+      if (antrag.status === 'offen') {
+        antrag.status = 'in-bearbeitung';
+      }
+      
+      this.saveAntraege();
+      
+      // Aktivität protokollieren
+      aktivitaetenSystem.logAktivitaet({
+        antragId: antragId,
+        typ: 'bearbeitung-uebernommen',
+        beschreibung: `Bearbeitung übernommen von ${neuBearbeiterName}`,
+        benutzerTyp: 'mitarbeiter',
+        benutzerId: neuBearbeiterId,
+        benutzerName: neuBearbeiterName
+      });
+      
+      return antrag;
+    }
+    return null;
+  }
+
+  // Prüft, ob ein Benutzer den Antrag abgegeben hat
+  hatAntragAbgegeben(antragId, benutzerId) {
+    const antrag = this.antraege.find(a => a.id === antragId);
+    if (antrag && antrag.abgegebenVon) {
+      return antrag.abgegebenVon.includes(benutzerId);
+    }
+    return false;
+  }
 }
 
 // Globale Instanz

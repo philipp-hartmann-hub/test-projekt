@@ -384,10 +384,28 @@
             <label class="radio-option">
               <input type="radio" name="aufgabeErledigungsTyp" value="antwort" checked onchange="toggleAntwortFeld()">
               <span class="radio-label">💬 Mit Antwort</span>
+              <p class="option-hint">Antrag geht zurück an den Aufgabensteller</p>
             </label>
             <label class="radio-option">
               <input type="radio" name="aufgabeErledigungsTyp" value="kenntnisnahme" onchange="toggleAntwortFeld()">
               <span class="radio-label">✓ Zur Kenntnis genommen</span>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Optionen bei "Zur Kenntnis" -->
+        <div class="form-group" id="aufgabeKenntnisnahmeOptionen" style="display: none;">
+          <label>Was soll mit dem Antrag passieren?</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="kenntnisnahmeAktion" value="zurueck" checked>
+              <span class="radio-label">↩️ Zurück an Aufgabensteller</span>
+              <p class="option-hint">Der Antrag geht zurück und wird in Ihre "Erledigt"-Liste verschoben</p>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="kenntnisnahmeAktion" value="uebernehmen">
+              <span class="radio-label">📥 Bearbeitung übernehmen</span>
+              <p class="option-hint">Sie werden zum Hauptbearbeiter des Antrags</p>
             </label>
           </div>
         </div>
@@ -1335,42 +1353,19 @@
       // Der ursprüngliche Bearbeiter hat IMMER Zugriff (bis zur Veraktung)
       const istBearbeiter = antrag.bearbeiterId === currentSession.userId;
       
-      // Aktivitätsbezug: Jeder der bereits eine wichtige Aktion am Antrag durchgeführt hat (z.B. entschieden)
-      const hatAmAntragGearbeitet = aktivitaetenSystem.istMitarbeiterBeteiligt(antragId, currentSession.userId);
-      
-      // Für Aufgabenempfänger (nicht ursprünglicher Bearbeiter):
-      // Hat Zugriff, wenn er eine erledigte Aufgabe hat ODER am Antrag gearbeitet hat
-      // UND danach KEINE neue Aufgabe erstellt hat
-      const meineErledigtenAufgaben = aufgabenZuAntrag.filter(a => a.zugewiesenAnId === currentSession.userId && a.status === 'erledigt');
-      const meineErstelltenAufgaben = aufgabenZuAntrag.filter(a => a.erstelltVonId === currentSession.userId && a.erstelltVonId !== antrag.bearbeiterId);
+      // Prüfen ob der Benutzer den Antrag "abgegeben" hat (durch Aufgabenerledigung mit Antwort/Zurück)
+      const hatAntragAbgegeben = antragSystem.hatAntragAbgegeben(antragId, currentSession.userId);
       
       let hatAktuellenZugriff = false;
       if (istBearbeiter) {
         // Ursprünglicher Bearbeiter hat immer Zugriff
         hatAktuellenZugriff = true;
       } else if (hatOffeneAufgabe) {
-        // Hat eine offene Aufgabe - kann sie bearbeiten
+        // Hat eine offene Aufgabe - kann sie bearbeiten (auch wenn vorher abgegeben)
         hatAktuellenZugriff = true;
-      } else if (meineErledigtenAufgaben.length > 0 || hatAmAntragGearbeitet) {
-        // Aufgabenempfänger oder jemand der am Antrag gearbeitet hat (z.B. entschieden):
-        // Hat Zugriff, solange KEINE neue Aufgabe erstellt wurde
-        
-        // Finde Zeitpunkt der letzten eigenen Aktivität
-        let letzteAktivitaetZeit = null;
-        
-        if (meineErledigtenAufgaben.length > 0) {
-          const letzteErledigteAufgabe = meineErledigtenAufgaben
-            .sort((a, b) => new Date(b.erledigtAm) - new Date(a.erledigtAm))[0];
-          letzteAktivitaetZeit = new Date(letzteErledigteAufgabe.erledigtAm);
-        }
-        
-        // Prüfe ob danach eine Aufgabe erstellt wurde (an jemand anderen)
-        const aufgabeNachAktivitaet = meineErstelltenAufgaben
-          .filter(a => !letzteAktivitaetZeit || new Date(a.erstelltAm) > letzteAktivitaetZeit)
-          .length > 0;
-        
-        // Hat Zugriff, wenn keine neue Aufgabe nach der letzten Aktivität erstellt wurde
-        hatAktuellenZugriff = !aufgabeNachAktivitaet;
+      } else if (hatAntragAbgegeben) {
+        // Hat den Antrag abgegeben - kein Zugriff mehr
+        hatAktuellenZugriff = false;
       }
       
       // Berechtigungen:
@@ -2350,6 +2345,10 @@
       document.getElementById('aufgabeAntwortGruppe').style.display = 'block';
       document.getElementById('aufgabeAntwortPdfGruppe').style.display = 'block';
       
+      // Kenntnisnahme-Optionen zurücksetzen und verstecken
+      document.getElementById('aufgabeKenntnisnahmeOptionen').style.display = 'none';
+      document.querySelector('input[name="kenntnisnahmeAktion"][value="zurueck"]').checked = true;
+      
       // Angehängte PDFs der Aufgabe anzeigen
       let anhangPdfsHtml = '';
       if (aufgabe.anhangPdfs && aufgabe.anhangPdfs.length > 0) {
@@ -2448,13 +2447,18 @@
       const erledigungsTyp = document.querySelector('input[name="aufgabeErledigungsTyp"]:checked').value;
       const antwortGruppe = document.getElementById('aufgabeAntwortGruppe');
       const pdfGruppe = document.getElementById('aufgabeAntwortPdfGruppe');
+      const kenntnisnahmeOptionen = document.getElementById('aufgabeKenntnisnahmeOptionen');
       
       if (erledigungsTyp === 'kenntnisnahme') {
         antwortGruppe.style.display = 'none';
         pdfGruppe.style.display = 'none';
+        kenntnisnahmeOptionen.style.display = 'block';
+        // Standard: zurück an Aufgabensteller
+        document.querySelector('input[name="kenntnisnahmeAktion"][value="zurueck"]').checked = true;
       } else {
         antwortGruppe.style.display = 'block';
         pdfGruppe.style.display = 'block';
+        kenntnisnahmeOptionen.style.display = 'none';
       }
     }
     
@@ -2469,29 +2473,79 @@
         return;
       }
       
+      // Bei "Zur Kenntnis" die gewählte Aktion ermitteln
+      let kenntnisnahmeAktion = 'zurueck'; // Standard
+      if (erledigungsTyp === 'kenntnisnahme') {
+        const aktionRadio = document.querySelector('input[name="kenntnisnahmeAktion"]:checked');
+        if (aktionRadio) {
+          kenntnisnahmeAktion = aktionRadio.value;
+        }
+      }
+      
       // Antwort mit Sprachinfo für Übersetzung speichern
       const antwort = antwortText ? createTranslatableText(antwortText) : '';
       
       // PDFs als Array übergeben
       const aufgabe = aufgabenSystem.erledigeAufgabe(aufgabeId, antwort, erledigungsTyp, antwortPdfs.length > 0 ? [...antwortPdfs] : null);
+      const antrag = antragSystem.getAntrag(aufgabe.antragId);
       
-      // Benachrichtigung an den Ersteller
-      const nachrichtText = erledigungsTyp === 'kenntnisnahme'
-        ? `${t('task.acknowledged')} (${t('application.id')}: ${aufgabe.antragsNummer || aufgabe.antragId})`
-        : `${t('task.answer')}: ${aufgabe.antragsNummer || aufgabe.antragId}`;
-      
-      notificationSystem.createNotification(
-        aufgabe.erstelltVonId,
-        'aufgabe-erledigt',
-        '✓ ' + t('task.complete'),
-        nachrichtText,
-        aufgabe.antragId
-      );
-      
-      closeModal('aufgabeLoesungModal');
-      
-      // Antrag direkt öffnen, um weiter zu bearbeiten (Entscheiden, Aufgabe erstellen, Verakten)
-      openAntragDetail(aufgabe.antragId);
+      // Logik basierend auf Erledigungstyp und Aktion
+      if (erledigungsTyp === 'antwort' || (erledigungsTyp === 'kenntnisnahme' && kenntnisnahmeAktion === 'zurueck')) {
+        // Antrag geht zurück an den Aufgabensteller
+        // Der Empfänger verliert den Zugriff (wird als "abgegeben" markiert)
+        antragSystem.markiereAufgabeAbgegeben(aufgabe.antragId, currentSession.userId);
+        
+        // Benachrichtigung an den Ersteller
+        const nachrichtText = erledigungsTyp === 'kenntnisnahme'
+          ? `${t('task.acknowledged')} (${t('application.id')}: ${aufgabe.antragsNummer || aufgabe.antragId})`
+          : `${t('task.answer')}: ${aufgabe.antragsNummer || aufgabe.antragId}`;
+        
+        notificationSystem.createNotification(
+          aufgabe.erstelltVonId,
+          'aufgabe-erledigt',
+          '✓ ' + t('task.complete'),
+          nachrichtText,
+          aufgabe.antragId
+        );
+        
+        closeModal('aufgabeLoesungModal');
+        
+        // Zurück zur Übersicht (da kein Zugriff mehr)
+        closeAntragDetail();
+        renderAntraege();
+        
+        const msgZurueck = currentLanguage === 'en' ? 'Task completed. The application has been returned to the task creator.'
+                        : currentLanguage === 'fr' ? 'Tâche terminée. La demande a été renvoyée au créateur de la tâche.'
+                        : 'Aufgabe erledigt. Der Antrag wurde an den Aufgabensteller zurückgegeben.';
+        alert(msgZurueck);
+        
+      } else if (erledigungsTyp === 'kenntnisnahme' && kenntnisnahmeAktion === 'uebernehmen') {
+        // Bearbeitung übernehmen - Empfänger wird neuer Hauptbearbeiter
+        antragSystem.uebernehmBearbeitung(aufgabe.antragId, currentSession.userId, currentSession.name, aufgabe.erstelltVonId);
+        
+        // Benachrichtigung an den ehemaligen Bearbeiter (Aufgabensteller)
+        const nachrichtUebernahme = currentLanguage === 'en' ? `Application processing taken over (ID: ${aufgabe.antragsNummer || aufgabe.antragId})`
+                                  : currentLanguage === 'fr' ? `Traitement de la demande repris (ID: ${aufgabe.antragsNummer || aufgabe.antragId})`
+                                  : `Antragsbearbeitung übernommen (ID: ${aufgabe.antragsNummer || aufgabe.antragId})`;
+        
+        notificationSystem.createNotification(
+          aufgabe.erstelltVonId,
+          'bearbeitung-uebernommen',
+          '📥 ' + (currentLanguage === 'en' ? 'Processing taken over' : currentLanguage === 'fr' ? 'Traitement repris' : 'Bearbeitung übernommen'),
+          nachrichtUebernahme,
+          aufgabe.antragId
+        );
+        
+        closeModal('aufgabeLoesungModal');
+        
+        // Antrag direkt öffnen mit vollen Bearbeitungsrechten
+        openAntragDetail(aufgabe.antragId);
+        
+        const msgUebernommen = currentLanguage === 'en' ? 'You are now the main processor of this application.'
+                             : currentLanguage === 'fr' ? 'Vous êtes maintenant le responsable principal de cette demande.'
+                             : 'Sie sind jetzt der Hauptbearbeiter dieses Antrags.';
+        alert(msgUebernommen);
+      }
     }
 
     // ============================================

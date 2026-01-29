@@ -2838,6 +2838,17 @@ body.hamburg-start {
   font-size: 0.95rem;
 }
 
+.option-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0.25rem 0 0 0;
+  font-style: italic;
+}
+
+.radio-option:has(input:checked) .option-hint {
+  color: var(--hamburg-blau);
+}
+
 /* Insassen-Aufgaben-Bereich */
 .aufgaben-section {
   margin-top: 1.5rem;
