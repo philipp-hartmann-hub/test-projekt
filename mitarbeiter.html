@@ -106,7 +106,7 @@
         <!-- Kalender / Terminübersicht -->
         <section class="section kalender-section" id="kalenderSection">
           <div class="kalender-header-bar">
-            <h2>📅 Terminübersicht</h2>
+            <h2>Terminuebersicht</h2>
             <div class="kalender-toolbar">
               <div class="kalender-view-buttons">
                 <button type="button" class="view-btn" id="viewTagBtn" onclick="setKalenderAnsicht('tag')">Tag</button>
@@ -219,6 +219,28 @@
     </main>
   </div>
 
+  <!-- Modal: Sachliche/Fachliche Prüfung -->
+  <div class="modal-overlay" id="pruefungModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Sachliche/Fachliche Prüfung</h3>
+        <button class="modal-close" onclick="closeModal('pruefungModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-info">Bitte dokumentieren Sie das Ergebnis Ihrer sachlichen und fachlichen Prüfung.</p>
+        <div class="form-group">
+          <label for="pruefungKommentar">Prüfungsergebnis / Anmerkungen <span class="required">*</span></label>
+          <textarea id="pruefungKommentar" rows="4" placeholder="Ergebnis der sachlichen und fachlichen Prüfung..." required></textarea>
+        </div>
+        <input type="hidden" id="pruefungAntragId">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('pruefungModal')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="confirmPruefung()">Prüfung abschließen</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Entscheiden -->
   <div class="modal-overlay" id="entscheidenModal">
     <div class="modal modal-large">
@@ -235,7 +257,7 @@
         <div class="form-group">
           <label class="checkbox-option persoenlich-eroeffnen">
             <input type="checkbox" id="entscheidungPersoenlichEroeffnen">
-            <span class="checkbox-label">📋 Persönlich eröffnen</span>
+            <span class="checkbox-label">Persoenlich eroeffnen</span>
           </label>
           <p class="field-hint">Wenn aktiviert: Keine automatische Benachrichtigung. Das Ergebnis wird erst nach persönlicher Bestätigung übermittelt.</p>
         </div>
@@ -252,13 +274,13 @@
       </div>
       <div class="modal-footer bearbeiten-actions">
         <button class="btn btn-success" onclick="handleEntscheidung('genehmigt')">
-          ✓ Genehmigen
+          Genehmigen
         </button>
         <button class="btn btn-danger" onclick="handleEntscheidung('abgelehnt')">
-          ✕ Ablehnen
+          Ablehnen
         </button>
         <button class="btn btn-warning" onclick="handleEntscheidung('teilweise-genehmigt')">
-          ⚡ Teilweise genehmigen
+          Teilweise genehmigen
         </button>
       </div>
     </div>
@@ -286,7 +308,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('vollzugBestaetigenModal')">Abbrechen</button>
-        <button class="btn btn-primary" onclick="confirmVollzugBestaetigung()">✓ Vollzug bestätigen & Bekanntgabe</button>
+        <button class="btn btn-primary" onclick="confirmVollzugBestaetigung()">Vollzug bestaetigen & Bekanntgabe</button>
       </div>
     </div>
   </div>
@@ -304,11 +326,11 @@
           <div class="radio-group">
             <label class="radio-option">
               <input type="radio" name="aufgabeZiel" value="insasse" onchange="toggleAufgabeZiel('insasse')">
-              <span class="radio-label">👤 Insasse (Antragsteller)</span>
+              <span class="radio-label">Insasse (Antragsteller)</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="aufgabeZiel" value="mitarbeiter" onchange="toggleAufgabeZiel('mitarbeiter')">
-              <span class="radio-label">👷 Mitarbeitende</span>
+              <span class="radio-label">Mitarbeitende</span>
             </label>
           </div>
         </div>
@@ -351,7 +373,7 @@
         </div>
         
         <div class="form-group">
-          <label for="aufgabePdfUpload">📄 PDF-Dokumente anhängen (optional)</label>
+          <label for="aufgabePdfUpload">PDF-Dokumente anhaengen (optional)</label>
           <input type="file" id="aufgabePdfUpload" accept=".pdf" multiple onchange="handleAufgabePdfUpload(this)">
           <p class="field-hint">Wählen Sie eine oder mehrere PDF-Dateien zum Anhängen aus.</p>
           <div id="aufgabePdfList" class="pdf-list"></div>
@@ -383,12 +405,12 @@
           <div class="radio-group">
             <label class="radio-option">
               <input type="radio" name="aufgabeErledigungsTyp" value="antwort" checked onchange="toggleAntwortFeld()">
-              <span class="radio-label">💬 Mit Antwort</span>
+              <span class="radio-label">Mit Antwort</span>
               <p class="option-hint">Antrag geht zurück an den Aufgabensteller</p>
             </label>
             <label class="radio-option">
               <input type="radio" name="aufgabeErledigungsTyp" value="kenntnisnahme" onchange="toggleAntwortFeld()">
-              <span class="radio-label">✓ Zur Kenntnis genommen</span>
+              <span class="radio-label">Zur Kenntnis genommen</span>
             </label>
           </div>
         </div>
@@ -399,12 +421,12 @@
           <div class="radio-group">
             <label class="radio-option">
               <input type="radio" name="kenntnisnahmeAktion" value="zurueck" checked>
-              <span class="radio-label">↩️ Zurück an Aufgabensteller</span>
+              <span class="radio-label">Zurueck an Aufgabensteller</span>
               <p class="option-hint">Der Antrag geht zurück und wird in Ihre "Erledigt"-Liste verschoben</p>
             </label>
             <label class="radio-option">
               <input type="radio" name="kenntnisnahmeAktion" value="uebernehmen">
-              <span class="radio-label">📥 Bearbeitung übernehmen</span>
+              <span class="radio-label">Bearbeitung uebernehmen</span>
               <p class="option-hint">Sie werden zum Hauptbearbeiter des Antrags</p>
             </label>
           </div>
@@ -416,7 +438,7 @@
         </div>
         
         <div class="form-group" id="aufgabeAntwortPdfGruppe">
-          <label for="aufgabeAntwortPdfUpload">📄 PDF-Dokumente anhängen (optional)</label>
+          <label for="aufgabeAntwortPdfUpload">PDF-Dokumente anhaengen (optional)</label>
           <input type="file" id="aufgabeAntwortPdfUpload" accept=".pdf" multiple onchange="handleAntwortPdfUpload(this)">
           <p class="field-hint">Wählen Sie eine oder mehrere PDF-Dateien zum Anhängen aus.</p>
           <div id="aufgabeAntwortPdfList" class="pdf-list"></div>
@@ -435,7 +457,7 @@
   <div class="modal-overlay" id="weiterleitenModal">
     <div class="modal modal-large">
       <div class="modal-header">
-        <h3>📤 Antrag weiterleiten?</h3>
+        <h3>Antrag weiterleiten?</h3>
         <button class="modal-close" onclick="closeWeiterleitenModal(false)">&times;</button>
       </div>
       <div class="modal-body">
@@ -448,11 +470,11 @@
           <div class="radio-group">
             <label class="radio-option">
               <input type="radio" name="weiterleitenEntscheidung" value="nein" checked onchange="toggleWeiterleitenFelder()">
-              <span class="radio-label">❌ Nein, ich bearbeite weiter</span>
+              <span class="radio-label">Nein, ich bearbeite weiter</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="weiterleitenEntscheidung" value="ja" onchange="toggleWeiterleitenFelder()">
-              <span class="radio-label">✓ Ja, an anderen Mitarbeiter weiterleiten</span>
+              <span class="radio-label">Ja, an anderen Mitarbeiter weiterleiten</span>
             </label>
           </div>
         </div>
@@ -470,7 +492,7 @@
           </div>
           <div class="form-group" id="weiterleitenSelectedContainer" style="display: none;">
             <div class="selected-person-box">
-              <span class="selected-label">✓ Ausgewählt:</span>
+              <span class="selected-label">Ausgewaehlt:</span>
               <span class="selected-name" id="weiterleitenSelectedPersonName"></span>
               <button type="button" class="btn-clear-small" onclick="clearWeiterleitenSelection()">×</button>
             </div>
@@ -526,11 +548,11 @@
           <div class="radio-group">
             <label class="radio-option">
               <input type="radio" name="terminSichtbarkeit" value="persoenlich" checked onchange="updateTerminSichtbarkeit()">
-              <span class="radio-label">🔒 Nur für mich</span>
+              <span class="radio-label">Nur fuer mich</span>
             </label>
             <label class="radio-option" id="terminHausOption" style="display: none;">
               <input type="radio" name="terminSichtbarkeit" value="haus" onchange="updateTerminSichtbarkeit()">
-              <span class="radio-label">🏠 Mein Haus</span>
+              <span class="radio-label">Mein Haus</span>
             </label>
             <label class="radio-option" id="terminStationOption" style="display: none;">
               <input type="radio" name="terminSichtbarkeit" value="station" onchange="updateTerminSichtbarkeit()">
@@ -602,7 +624,7 @@
       if (tabs.length >= 4) {
         tabs[0].innerHTML = t('nav.openApplications');
         tabs[1].innerHTML = t('nav.myApplicationsTasks') + ' <span class="tab-count" id="bearbeitungTabCount">0</span>';
-        tabs[2].innerHTML = '📋 ' + t('nav.personalOpening');
+        tabs[2].innerHTML = t('nav.personalOpening');
         tabs[3].innerHTML = t('nav.completed');
       }
       
@@ -616,7 +638,7 @@
       // Kalender-Titel
       const kalenderTitle = document.querySelector('.kalender-header-bar h2');
       if (kalenderTitle) {
-        kalenderTitle.textContent = '📅 ' + t('calendar.title');
+        kalenderTitle.textContent = '' + t('calendar.title');
       }
       
       // View-Buttons
@@ -658,8 +680,8 @@
       // Radio-Labels im Aufgabe-Modal
       const aufgabeRadios = document.querySelectorAll('#aufgabeModal .radio-label');
       if (aufgabeRadios.length >= 2) {
-        aufgabeRadios[0].textContent = '👤 ' + t('task.assignToInmate');
-        aufgabeRadios[1].textContent = '👷 ' + t('task.assignToStaff');
+        aufgabeRadios[0].textContent = '' + t('task.assignToInmate');
+        aufgabeRadios[1].textContent = '' + t('task.assignToStaff');
       }
       
       // Mitarbeiter-Suche
@@ -694,7 +716,7 @@
       
       // PDF anhängen
       const pdfCheckbox = document.querySelector('#aufgabePdfAnhaengen + .checkbox-label');
-      if (pdfCheckbox) pdfCheckbox.textContent = '📄 ' + t('task.attachPdf');
+      if (pdfCheckbox) pdfCheckbox.textContent = '' + t('task.attachPdf');
       
       // Aufgabe-Modal Buttons
       const aufgabeModalBtns = document.querySelectorAll('#aufgabeModal .modal-footer .btn');
@@ -733,8 +755,8 @@
       const terminTypSelect = document.getElementById('terminTyp');
       if (terminTypSelect) {
         const opts = terminTypSelect.querySelectorAll('option');
-        if (opts.length >= 1) opts[0].textContent = '🔒 ' + t('appointment.private');
-        if (opts.length >= 2) opts[1].textContent = '🏠 ' + t('appointment.house');
+        if (opts.length >= 1) opts[0].textContent = t('appointment.private');
+        if (opts.length >= 2) opts[1].textContent = '' + t('appointment.house');
         if (opts.length >= 3) opts[2].textContent = '📍 ' + t('appointment.station');
       }
       
@@ -759,16 +781,16 @@
       // Genehmigen/Ablehnen Buttons im Entscheiden-Modal
       const entscheidenBtns = document.querySelectorAll('#entscheidenModal .decision-buttons .btn');
       entscheidenBtns.forEach(btn => {
-        if (btn.classList.contains('btn-success')) btn.innerHTML = '✅ ' + t('action.approve');
-        if (btn.classList.contains('btn-warning')) btn.innerHTML = '⚠️ ' + t('action.partiallyApprove');
-        if (btn.classList.contains('btn-danger')) btn.innerHTML = '❌ ' + t('action.reject');
+        if (btn.classList.contains('btn-success')) btn.innerHTML = '' + t('action.approve');
+        if (btn.classList.contains('btn-warning')) btn.innerHTML = '' + t('action.partiallyApprove');
+        if (btn.classList.contains('btn-danger')) btn.innerHTML = t('action.reject');
       });
       
       const begruendungLabel = document.querySelector('label[for="entscheidungBegruendung"]');
       if (begruendungLabel) begruendungLabel.textContent = t('decision.reason') + ' *';
       
       const persEroeffnungLabel = document.querySelector('#entscheidungPersoenlichEroeffnen + .checkbox-label');
-      if (persEroeffnungLabel) persEroeffnungLabel.textContent = '📋 ' + t('decision.personalOpeningCheck');
+      if (persEroeffnungLabel) persEroeffnungLabel.textContent = t('decision.personalOpeningCheck');
       
       const vollzugVorBekanntgabeLabel = document.querySelector('#entscheidungVollzugVorBekanntgabe + .checkbox-label');
       if (vollzugVorBekanntgabeLabel) vollzugVorBekanntgabeLabel.textContent = '📦 ' + t('decision.executionBeforeNotification');
@@ -835,7 +857,11 @@
           return `${t('history.takenOver')} ${von}`;
           
         case 'sachlich-geprueft':
-          return t('history.reviewed');
+          const pruefText = t('history.reviewed');
+          if (details.kommentar) {
+            return `${pruefText}: "${details.kommentar}"`;
+          }
+          return pruefText;
           
         case 'entscheidung':
           const status = aktivitaet.beschreibung.replace('Entscheidung: ', '');
@@ -1037,34 +1063,62 @@
     }
     
     function getNotificationIcon(type) {
-      switch(type) {
-        case 'aufgabe': return '📋';
-        case 'aufgabe-erledigt': return '✓';
-        case 'aufgabe-ueberfaellig': return '⚠️';
-        case 'aufgabe-geloescht': return '🗑️';
-        case 'genehmigt': return '✓';
-        case 'abgelehnt': return '✕';
-        case 'teilweise-genehmigt': return '⚡';
-        default: return 'ℹ';
-      }
+      return ''; // Icons entfernt
     }
     
     function getVerlaufIcon(typ) {
-      switch(typ) {
-        case 'erstellt': return '📄';
-        case 'genommen': return '📥';
-        case 'uebernommen': return '🔄';
-        case 'sachlich-geprueft': return '🔍';
-        case 'entscheidung': return '⚖️';
-        case 'entscheidung-geplant': return '📋';
-        case 'persoenlich-eroeffnet': return '🗣️';
-        case 'aufgabe-erstellt': return '📋';
-        case 'aufgabe-erledigt': return '✓';
-        case 'aufgabe-geloescht': return '🗑️';
-        case 'vollzogen': return '✅';
-        case 'veraktet': return '🗂️';
-        default: return '•';
+      return ''; // Icons entfernt
+    }
+    
+    // ============================================
+    // KOMMENTAR-FUNKTIONEN
+    // ============================================
+    
+    function renderKommentare(kommentare) {
+      if (!kommentare || kommentare.length === 0) {
+        const emptyText = currentLanguage === 'en' ? 'No notes yet.' 
+                        : currentLanguage === 'fr' ? 'Pas encore de notes.' 
+                        : 'Noch keine Notizen.';
+        return `<p class="empty-hint">${emptyText}</p>`;
       }
+      
+      // Sortieren: neueste zuerst
+      const sortiert = [...kommentare].sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
+      
+      return sortiert.map(k => {
+        const datum = new Date(k.erstelltAm);
+        const datumStr = datum.toLocaleDateString('de-DE') + ' ' + datum.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+        
+        return `
+          <div class="kommentar-item">
+            <div class="kommentar-header">
+              <span class="kommentar-autor">${k.benutzerName}</span>
+              <span class="kommentar-datum">${datumStr}</span>
+            </div>
+            <div class="kommentar-text">${k.text.replace(/\n/g, '<br>')}</div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function addKommentar(antragId) {
+      const textarea = document.getElementById('neuerKommentar');
+      const text = textarea.value.trim();
+      
+      if (!text) {
+        const msg = currentLanguage === 'en' ? 'Please enter a note.' 
+                  : currentLanguage === 'fr' ? 'Veuillez entrer une note.' 
+                  : 'Bitte geben Sie eine Notiz ein.';
+        showAlert(msg);
+        return;
+      }
+      
+      // Kommentar speichern
+      antragSystem.addKommentar(antragId, text, currentSession.userId, currentSession.name);
+      
+      // Eingabefeld leeren und Ansicht aktualisieren
+      textarea.value = '';
+      openAntragDetail(antragId);
     }
     
     function handleNotificationClick(notificationId, antragId) {
@@ -1093,21 +1147,21 @@
       if (currentSession.rolle === 'jva-leitung' || currentSession.rolle === 'haus-leitung') {
         info.innerHTML = `
           <div class="info-content">
-            <span class="info-icon">🏛️</span>
+            <span class="info-icon"></span>
             <span>Als <strong>Hausleitung</strong> sehen Sie alle Anträge des <strong>${hausNames}</strong> (alle Stationen)</span>
           </div>
         `;
       } else if (currentSession.rolle === 'stationsleitung') {
         info.innerHTML = `
           <div class="info-content">
-            <span class="info-icon">📋</span>
+            <span class="info-icon"></span>
             <span>Als <strong>Stationsleitung</strong> sehen Sie alle Anträge des <strong>${hausNames} - Station ${currentSession.station}</strong></span>
           </div>
         `;
       } else {
         info.innerHTML = `
           <div class="info-content">
-            <span class="info-icon">👷</span>
+            <span class="info-icon"></span>
             <span>Als <strong>Mitarbeiter</strong> sehen Sie offene Anträge des <strong>${hausNames} - Station ${currentSession.station}</strong> und Ihre persönlich bearbeiteten Anträge</span>
           </div>
         `;
@@ -1175,7 +1229,7 @@
       const insassenNummer = antrag.insassenNummer ? `<span class="insassen-nummer">${antrag.insassenNummer}</span>` : '';
       const insassenInfo = `
         <div class="antrag-insasse">
-          <span class="insasse-icon">👤</span>
+          <span class="insasse-icon"></span>
           <span>${insassenNummer} <strong>${antrag.insasseName}</strong> (${getHausName(antrag.insasseJva)} - Station ${antrag.insasseStation})</span>
         </div>
       `;
@@ -1190,7 +1244,7 @@
               📂 ${t('button.open')}
             </button>
             <button class="btn btn-primary btn-sm" onclick="nehmeAntrag('${antrag.id}')">
-              📥 ${t('button.takeApplication')}
+${t('button.takeApplication')}
             </button>
           </div>
         `;
@@ -1199,7 +1253,7 @@
         if (antrag.bearbeiterName) {
           bearbeiterInfo = `
             <div class="bearbeiter-info ${isOwnAntrag ? 'own' : ''}">
-              <span class="bearbeiter-icon">${isOwnAntrag ? '👤' : '👷'}</span>
+              <span class="bearbeiter-icon"></span>
               <span>Bearbeitet von: <strong>${antrag.bearbeiterName}</strong>${isOwnAntrag ? ' (Sie)' : ''}</span>
             </div>
           `;
@@ -1217,8 +1271,8 @@
         }
       } else if (mode === 'eroeffnung') {
         // Anträge die auf persönliche Eröffnung warten
-        const ergebnisText = antrag.geplantesErgebnis === 'genehmigt' ? '✓ Genehmigt' : 
-                            antrag.geplantesErgebnis === 'abgelehnt' ? '✕ Abgelehnt' : '⚡ Teilweise genehmigt';
+        const ergebnisText = antrag.geplantesErgebnis === 'genehmigt' ? 'Genehmigt' : 
+                            antrag.geplantesErgebnis === 'abgelehnt' ? 'Abgelehnt' : 'Teilweise genehmigt';
         const ergebnisClass = antrag.geplantesErgebnis;
         
         bearbeiterInfo = `
@@ -1226,27 +1280,27 @@
             <div class="eroeffnung-ergebnis ${ergebnisClass}">
               <strong>Geplantes Ergebnis:</strong> ${ergebnisText}
             </div>
-            ${antrag.geplanteBegruendung ? `<div class="eroeffnung-begruendung"><strong>Begründung:</strong> ${antrag.geplanteBegruendung}</div>` : ''}
+            ${antrag.geplanteBegruendung ? `<div class="eroeffnung-begruendung"><strong>Begründung:</strong> ${getTranslatedUserText(antrag.geplanteBegruendung)}</div>` : ''}
           </div>
         `;
         
         actionsHtml = `
           <div class="antrag-actions">
             <button class="btn btn-success btn-sm" onclick="bestaetigeEroeffnung('${antrag.id}')">
-              ✓ Persönlich eröffnet
+Persönlich eröffnet
             </button>
           </div>
         `;
       } else if (mode === 'historie') {
         // Erledigte Anträge können geöffnet werden (Verlauf ansehen, verakten)
         if (antrag.begruendung) {
-          detailsHtml += `<p class="antrag-feedback"><strong>Begründung:</strong> ${antrag.begruendung}</p>`;
+          detailsHtml += `<p class="antrag-feedback"><strong>Begründung:</strong> ${getTranslatedUserText(antrag.begruendung)}</p>`;
         }
         if (antrag.bearbeiterName) {
           bearbeiterInfo = `
             <div class="bearbeiter-info ${antrag.bearbeiterId === currentSession.userId ? 'own' : ''}">
-              <span class="bearbeiter-icon">👷</span>
-              <span>Bearbeitet von: <strong>${antrag.bearbeiterName}</strong>${antrag.bearbeiterId === currentSession.userId ? ' (Sie)' : ''}${antrag.persoenlichEroeffnet ? ' 📋' : ''}</span>
+              <span class="bearbeiter-icon"></span>
+              <span>Bearbeitet von: <strong>${antrag.bearbeiterName}</strong>${antrag.bearbeiterId === currentSession.userId ? ' (Sie)' : ''}${antrag.persoenlichEroeffnet ? '' : ''}</span>
             </div>
           `;
         }
@@ -1298,16 +1352,16 @@
         heute.setHours(0, 0, 0, 0);
         frist.setHours(0, 0, 0, 0);
         const istUeberfaellig = heute > frist && aufgabe.status === 'offen';
-        fristHtml = `<p class="${istUeberfaellig ? 'frist-ueberfaellig' : 'frist-info'}"><strong>${t('task.deadline')}:</strong> ${frist.toLocaleDateString(dateLocale)}${istUeberfaellig ? ' ⚠️ ' + overdueText : ''}</p>`;
+        fristHtml = `<p class="${istUeberfaellig ? 'frist-ueberfaellig' : 'frist-info'}"><strong>${t('task.deadline')}:</strong> ${frist.toLocaleDateString(dateLocale)}${istUeberfaellig ? ' ' + overdueText : ''}</p>`;
       }
       
       return `
         <div class="antrag-card aufgabe-card ${aufgabe.fristDatum && new Date() > new Date(aufgabe.fristDatum) && aufgabe.status === 'offen' ? 'ueberfaellig' : ''}">
           <div class="aufgabe-header">
-            <span class="aufgabe-icon">📋</span>
+            <span class="aufgabe-icon"></span>
             <span class="aufgabe-label">${t('task.title')}</span>
             <span class="status-badge ${aufgabe.status === 'offen' ? 'in-bearbeitung' : 'genehmigt'}">
-              ${aufgabe.status === 'offen' ? '⏳ ' + t('status.open') : '✓ ' + t('status.completed')}
+              ${aufgabe.status === 'offen' ? '' + t('status.open') : '' + t('status.completed')}
             </span>
           </div>
           <div class="antrag-body">
@@ -1327,7 +1381,7 @@
               </button>
               ${istErsteller ? `
                 <button class="btn btn-danger btn-sm" onclick="loescheAufgabeUndUebernehme('${aufgabe.id}')">
-                  🗑️ ${deleteAndTakeText}
+                  ${deleteAndTakeText}
                 </button>
               ` : ''}
             </div>
@@ -1345,14 +1399,17 @@
     }
     
     // Aufgabe löschen und Antrag übernehmen (aus Aufgaben-Übersicht)
-    function loescheAufgabeUndUebernehme(aufgabeId) {
-      if (!confirm('Möchten Sie diese Aufgabe wirklich löschen und den Antrag übernehmen?')) return;
+    async function loescheAufgabeUndUebernehme(aufgabeId) {
+      const msg = currentLanguage === 'en' ? 'Do you really want to delete this task and take over the application?'
+                : currentLanguage === 'fr' ? 'Voulez-vous vraiment supprimer cette tâche et reprendre la demande?'
+                : 'Möchten Sie diese Aufgabe wirklich löschen und den Antrag übernehmen?';
+      if (!await showConfirm(msg)) return;
       
-      zuruecknehmenAufgabe(aufgabeId);
+      zuruecknehmenAufgabeAusfuehren(aufgabeId);
     }
     
-    // Aufgabe zurücknehmen (separater Button)
-    function zuruecknehmenAufgabe(aufgabeId) {
+    // Aufgabe zurücknehmen mit Bestätigung (für direkten Aufruf)
+    async function zuruecknehmenAufgabe(aufgabeId) {
       const aufgabe = aufgabenSystem.getAufgabe(aufgabeId);
       if (!aufgabe) return;
       
@@ -1361,11 +1418,22 @@
         const msg = currentLanguage === 'en' ? 'You can only withdraw tasks that you created yourself.' 
                   : currentLanguage === 'fr' ? 'Vous ne pouvez retirer que les tâches que vous avez créées.' 
                   : 'Sie können nur Aufgaben zurücknehmen, die Sie selbst erstellt haben.';
-        alert(msg);
+        await showAlert(msg);
         return;
       }
       
-      if (!confirm('Möchten Sie diese Aufgabe wirklich zurücknehmen? Die Aufgabe wird aus der Liste des Bearbeiters entfernt und der Antrag an Sie übergeben.')) return;
+      const confirmMsg = currentLanguage === 'en' ? 'Do you really want to withdraw this task? The task will be removed from the processor\'s list and the application will be transferred to you.'
+                       : currentLanguage === 'fr' ? 'Voulez-vous vraiment retirer cette tâche? La tâche sera supprimée de la liste du processeur et la demande vous sera transférée.'
+                       : 'Möchten Sie diese Aufgabe wirklich zurücknehmen? Die Aufgabe wird aus der Liste des Bearbeiters entfernt und der Antrag an Sie übergeben.';
+      if (!await showConfirm(confirmMsg)) return;
+      
+      zuruecknehmenAufgabeAusfuehren(aufgabeId);
+    }
+    
+    // Aufgabe zurücknehmen (separater Button) - führt die eigentliche Aktion aus
+    function zuruecknehmenAufgabeAusfuehren(aufgabeId) {
+      const aufgabe = aufgabenSystem.getAufgabe(aufgabeId);
+      if (!aufgabe) return;
       
       // Aufgabe löschen
       aufgabenSystem.loescheAufgabe(aufgabeId, currentSession.userId, currentSession.name);
@@ -1377,11 +1445,15 @@
       }
       
       // Benachrichtigung an die Person, die die Aufgabe hatte
+      const titleText = currentLanguage === 'en' ? 'Task withdrawn' : currentLanguage === 'fr' ? 'Tâche retirée' : 'Aufgabe zurückgenommen';
+      const msgText = currentLanguage === 'en' ? `The task for application ${aufgabe.antragsNummer} was withdrawn by ${currentSession.name}.`
+                    : currentLanguage === 'fr' ? `La tâche pour la demande ${aufgabe.antragsNummer} a été retirée par ${currentSession.name}.`
+                    : `Die Aufgabe zum Antrag ${aufgabe.antragsNummer} wurde von ${currentSession.name} zurückgenommen.`;
       notificationSystem.createNotification(
         aufgabe.zugewiesenAnId,
         'aufgabe-geloescht',
-        '🔙 Aufgabe zurückgenommen',
-        `Die Aufgabe zum Antrag ${aufgabe.antragsNummer} wurde von ${currentSession.name} zurückgenommen.`,
+        titleText,
+        msgText,
         aufgabe.antragId
       );
       
@@ -1490,7 +1562,7 @@
       if (aufgaben.length > 0) {
         aufgabenHtml = `
           <div class="detail-section">
-            <h3>📋 ${currentLanguage === 'en' ? 'Related Tasks' : currentLanguage === 'fr' ? 'Tâches associées' : 'Zugehörige Aufgaben'}</h3>
+            <h3>${currentLanguage === 'en' ? 'Related Tasks' : currentLanguage === 'fr' ? 'Tâches associées' : 'Zugehörige Aufgaben'}</h3>
             <div class="aufgaben-liste">
               ${aufgaben.map(a => {
                 const istErsteller = a.erstelltVonId === currentSession.userId;
@@ -1504,13 +1576,13 @@
                   heute.setHours(0, 0, 0, 0);
                   frist.setHours(0, 0, 0, 0);
                   const istUeberfaellig = heute > frist && a.status === 'offen';
-                  fristHtml = `<p class="${istUeberfaellig ? 'frist-ueberfaellig' : 'frist-info'}"><strong>${t('task.deadline')}:</strong> ${frist.toLocaleDateString(dateLocale)}${istUeberfaellig ? ' ⚠️ ' + overdueText : ''}</p>`;
+                  fristHtml = `<p class="${istUeberfaellig ? 'frist-ueberfaellig' : 'frist-info'}"><strong>${t('task.deadline')}:</strong> ${frist.toLocaleDateString(dateLocale)}${istUeberfaellig ? ' ' + overdueText : ''}</p>`;
                 }
                 return `
                   <div class="aufgabe-item ${a.status} ${a.fristDatum && new Date() > new Date(a.fristDatum) && a.status === 'offen' ? 'ueberfaellig' : ''}">
                     <div class="aufgabe-item-header">
                       <span class="status-badge ${a.status === 'offen' ? 'in-bearbeitung' : 'genehmigt'}">
-                        ${a.status === 'offen' ? '⏳ ' + t('status.open') : '✓ ' + t('status.completed')}
+                        ${a.status === 'offen' ? '' + t('status.open') : '' + t('status.completed')}
                       </span>
                       <span class="aufgabe-datum">${formatDate(a.erstelltAm)}</span>
                     </div>
@@ -1524,7 +1596,7 @@
                     ${istErsteller && a.status === 'offen' ? `
                       <div class="aufgabe-item-actions">
                         <button class="btn btn-danger btn-sm" onclick="zuruecknehmenAufgabe('${a.id}')">
-                          🔙 ${withdrawText}
+${withdrawText}
                         </button>
                       </div>
                     ` : ''}
@@ -1542,7 +1614,7 @@
       if (aktivitaeten.length > 0) {
         verlaufHtml = `
           <div class="detail-section">
-            <h3>📜 ${t('history.title')}</h3>
+            <h3>${t('history.title')}</h3>
             <div class="verlauf-liste">
               ${aktivitaeten.map(a => `
                 <div class="verlauf-item">
@@ -1557,7 +1629,7 @@
                     </div>
                     <div class="verlauf-item-meta">
                       <span class="verlauf-benutzer">
-                        ${a.benutzerTyp === 'insasse' ? '👤' : '👷'} ${a.benutzerName}
+                        ${a.benutzerName}
                       </span>
                     </div>
                     ${a.details && a.details.begruendung ? `
@@ -1592,17 +1664,17 @@
       const prozessGrafikHtml = `
         <div class="prozess-grafik">
           <div class="prozess-schritt ${prozessStatus.eingang}">
-            <div class="prozess-icon">📥</div>
+            <div class="prozess-icon"></div>
             <div class="prozess-label">${t('process.receipt')}</div>
           </div>
           <div class="prozess-pfeil ${prozessStatus.eingang === 'erledigt' ? 'aktiv' : ''}">→</div>
           <div class="prozess-schritt ${prozessStatus.pruefung}">
-            <div class="prozess-icon">🔍</div>
+            <div class="prozess-icon"></div>
             <div class="prozess-label">${t('process.review')}</div>
           </div>
           <div class="prozess-pfeil ${prozessStatus.pruefung === 'erledigt' ? 'aktiv' : ''}">→</div>
           <div class="prozess-schritt ${prozessStatus.entscheiden}">
-            <div class="prozess-icon">⚖️</div>
+            <div class="prozess-icon"></div>
             <div class="prozess-label">${t('process.decision')}</div>
           </div>
           <div class="prozess-pfeil ${prozessStatus.entscheiden === 'erledigt' ? 'aktiv' : ''}">→</div>
@@ -1612,12 +1684,12 @@
           </div>
           <div class="prozess-pfeil ${prozessStatus.bekanntgabe === 'erledigt' ? 'aktiv' : ''}">→</div>
           <div class="prozess-schritt ${prozessStatus.vollzug}">
-            <div class="prozess-icon">✅</div>
+            <div class="prozess-icon"></div>
             <div class="prozess-label">${t('process.execution')}</div>
           </div>
           <div class="prozess-pfeil ${prozessStatus.vollzug === 'erledigt' ? 'aktiv' : ''}">→</div>
           <div class="prozess-schritt ${prozessStatus.abschluss}">
-            <div class="prozess-icon">🗂️</div>
+            <div class="prozess-icon"></div>
             <div class="prozess-label">${t('process.completion')}</div>
           </div>
         </div>
@@ -1637,7 +1709,7 @@
           <!-- Linke Spalte: Daten und Aktionen -->
           <div class="detail-main">
             <div class="detail-section">
-              <h3>📋 ${currentLanguage === 'en' ? 'Basic Data' : currentLanguage === 'fr' ? 'Données de base' : 'Grunddaten'}</h3>
+              <h3>${currentLanguage === 'en' ? 'Basic Data' : currentLanguage === 'fr' ? 'Données de base' : 'Grunddaten'}</h3>
               <div class="detail-grid">
                 <div class="detail-box">
                   <h4>${currentLanguage === 'en' ? 'Application Data' : currentLanguage === 'fr' ? 'Données de la demande' : 'Antragsdaten'}</h4>
@@ -1682,7 +1754,7 @@
             </div>
             
             <div class="detail-section">
-              <h3>📝 ${t('application.concern')}</h3>
+              <h3>${t('application.concern')}</h3>
               ${anliegenHtml}
             </div>
             
@@ -1690,11 +1762,11 @@
             
             ${antrag.bescheidPdf ? `
               <div class="detail-section">
-                <h3>📄 ${t('notice.title')}</h3>
+                <h3>${t('notice.title')}</h3>
                 <div class="bescheid-download">
                   <p>${currentLanguage === 'en' ? 'A notice has been created for this application.' : currentLanguage === 'fr' ? 'Un avis a été créé pour cette demande.' : 'Ein Bescheid wurde für diesen Antrag erstellt.'}</p>
                   <button class="btn btn-secondary" onclick="downloadBescheidPdf('${antrag.id}')">
-                    📥 ${currentLanguage === 'en' ? 'Download notice' : currentLanguage === 'fr' ? 'Télécharger l\'avis' : 'Bescheid herunterladen'}
+${currentLanguage === 'en' ? 'Download notice' : currentLanguage === 'fr' ? 'Télécharger l\'avis' : 'Bescheid herunterladen'}
                   </button>
                 </div>
               </div>
@@ -1704,7 +1776,7 @@
               <h3>⚙️ ${t('button.actions')}</h3>
               ${istOffen ? `
                 <div class="offen-hinweis">
-                  <span class="hinweis-icon">📥</span>
+                  <span class="hinweis-icon"></span>
                   <span>${t('hint.applicationNotTaken')}</span>
                 </div>
               ` : ''}
@@ -1716,25 +1788,25 @@
               ` : ''}
               ${!istOffen && !istErledigt && antrag.sachlichGeprueft ? `
                 <div class="pruefung-erfolgt">
-                  <span class="erfolgt-icon">✓</span>
+                  <span class="erfolgt-icon"></span>
                   <span>${t('process.reviewDone')} ${new Date(antrag.sachlichGeprueftAm).toLocaleDateString(currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE')} ${t('process.by')} ${antrag.sachlichGeprueftVon}</span>
                 </div>
               ` : ''}
               ${istErledigt && !antrag.veraktet ? `
                 <div class="entscheidung-erfolgt">
-                  <span class="erfolgt-icon">⚖️</span>
+                  <span class="erfolgt-icon"></span>
                   <span>${t('hint.decisionMade')}: ${getStatusText(antrag.status)} ${t('hint.on')} ${new Date(antrag.bearbeitetAm).toLocaleDateString(currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE')}</span>
                 </div>
               ` : ''}
               
               ${antrag.wartetAufEroeffnung ? `
                 <div class="warten-hinweis persoenlich-warten">
-                  <span class="hinweis-icon">📋</span>
+                  <span class="hinweis-icon"></span>
                   <span>${currentLanguage === 'en' ? 'Waiting for personal opening' : currentLanguage === 'fr' ? 'En attente d\'ouverture personnelle' : 'Wartet auf persönliche Eröffnung'} - ${currentLanguage === 'en' ? 'Planned decision' : currentLanguage === 'fr' ? 'Décision prévue' : 'Geplante Entscheidung'}: ${getStatusText(antrag.geplantesErgebnis)}</span>
                 </div>
                 <div class="bestaetigung-checkbox">
                   <button class="btn btn-success btn-large" onclick="bestaetigeEroeffnung('${antrag.id}')">
-                    ✓ ${currentLanguage === 'en' ? 'Confirm personal opening' : currentLanguage === 'fr' ? 'Confirmer l\'ouverture personnelle' : 'Persönliche Eröffnung bestätigen'}
+${currentLanguage === 'en' ? 'Confirm personal opening' : currentLanguage === 'fr' ? 'Confirmer l\'ouverture personnelle' : 'Persönliche Eröffnung bestätigen'}
                   </button>
                 </div>
               ` : ''}
@@ -1746,7 +1818,7 @@
                 </div>
                 <div class="bestaetigung-checkbox">
                   <button class="btn btn-success btn-large" onclick="openVollzugBestaetigenModal('${antrag.id}')">
-                    ✓ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 'fr' ? 'Confirmer l\'exécution et notifier' : 'Vollzug bestätigen & Bekanntgabe'}
+${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 'fr' ? 'Confirmer l\'exécution et notifier' : 'Vollzug bestätigen & Bekanntgabe'}
                   </button>
                 </div>
               ` : ''}
@@ -1754,7 +1826,7 @@
               ${antrag.entscheidungGetroffen && currentSession.rolle === 'hausleitung' && !antrag.veraktet ? `
                 <div class="revision-bereich">
                   <button class="btn btn-danger btn-sm" onclick="revidiereEntscheidung('${antrag.id}')">
-                    🔄 ${currentLanguage === 'en' ? 'Revise decision (House management)' : currentLanguage === 'fr' ? 'Réviser la décision (Direction)' : 'Entscheidung revidieren (Hausleitung)'}
+                    ${currentLanguage === 'en' ? 'Revise decision (House management)' : currentLanguage === 'fr' ? 'Réviser la décision (Direction)' : 'Entscheidung revidieren (Hausleitung)'}
                   </button>
                 </div>
               ` : ''}
@@ -1763,7 +1835,7 @@
                 <div class="vollzug-checkbox">
                   <label class="checkbox-option vollzug-option">
                     <input type="checkbox" id="vollzogenCheckbox" ${antrag.vollzogen ? 'checked disabled' : ''} onchange="toggleVollzogen('${antrag.id}', this.checked)">
-                    <span class="checkbox-label">✓ ${t('action.executed')}</span>
+                    <span class="checkbox-label">${t('action.executed')}</span>
                   </label>
                   ${antrag.vollzogen ? `
                     <span class="vollzug-info">${t('hint.on')} ${new Date(antrag.vollzogenAm).toLocaleDateString(currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE')} ${t('process.by')} ${antrag.vollzogenVon}</span>
@@ -1773,7 +1845,7 @@
               
               ${hatOffeneAufgabe ? `
                 <div class="aufgabe-hinweis">
-                  <span class="hinweis-icon">📋</span>
+                  <span class="hinweis-icon"></span>
                   <span>${t('hint.openTask')}</span>
                 </div>
               ` : ''}
@@ -1781,59 +1853,67 @@
               <div class="action-buttons">
                 ${istOffen ? `
                   <button class="btn btn-primary btn-large" onclick="nehmeAntragUndBleibeInDetail('${antrag.id}')">
-                    📥 ${t('button.takeApplication')}
+${t('button.takeApplication')}
                   </button>
                 ` : ''}
                 ${hatOffeneAufgabe ? `
                   <button class="btn btn-primary btn-large" onclick="openAufgabeLoesungModal('${meineOffeneAufgabe.id}')">
-                    📝 ${t('task.edit')}
+                    ${t('task.edit')}
                   </button>
                 ` : ''}
                 ${!istOffen && !istErledigt && (istBearbeiter || istAufgabenBeteiligter) && !antrag.entscheidungGetroffen ? `
                   ${!antrag.sachlichGeprueft ? `
                     <button class="btn btn-warning btn-large" onclick="markiereAlsGeprueft('${antrag.id}')">
-                      🔍 ${t('action.technicalReview')}
+                      ${t('action.technicalReview')}
                     </button>
                   ` : ''}
                   <button class="btn btn-primary btn-large ${!antrag.sachlichGeprueft ? 'disabled' : ''}" 
                           onclick="${antrag.sachlichGeprueft ? `openEntscheidenModal('${antrag.id}')` : `showReviewRequiredAlert()`}"
                           ${!antrag.sachlichGeprueft ? `title="${t('error.reviewRequired')}"` : ''}>
-                    ⚖️ ${t('decision.title')}
+                    ${t('decision.title')}
                   </button>
                   <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
-                    📋 ${t('task.create')}
+${t('task.create')}
                   </button>
                 ` : ''}
                 ${antrag.entscheidungGetroffen && !antrag.erledigt && (istBearbeiter || istAufgabenBeteiligter) ? `
                   <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
-                    📋 ${t('task.create')}
+${t('task.create')}
                   </button>
                 ` : ''}
                 ${istErledigt && !antrag.veraktet && kannVollziehenVerakten ? `
                   <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
-                    📋 ${t('task.create')}
+${t('task.create')}
                   </button>
                 ` : ''}
-                ${!antrag.veraktet && kannVollziehenVerakten ? `
-                  ${istErledigt && (antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') ? `
-                    <button class="btn btn-secondary btn-large ${!antrag.vollzogen ? 'disabled' : ''}" 
-                            onclick="${antrag.vollzogen ? `veraktenAntrag('${antrag.id}')` : `showExecutionRequiredAlert()`}"
-                            ${!antrag.vollzogen ? `title="${t('error.executionRequired')}"` : ''}>
-                      📄 ${t('action.archive')}
-                    </button>
-                  ` : `
-                    <button class="btn btn-secondary btn-large" onclick="veraktenAntrag('${antrag.id}')">
-                      📄 ${t('action.archive')}
-                    </button>
-                  `}
+                ${!antrag.veraktet && kannVollziehenVerakten && prozessStatus.abschluss === 'aktiv' ? `
+                  <button class="btn btn-secondary btn-large" onclick="veraktenAntrag('${antrag.id}')">
+${t('action.archive')}
+                  </button>
                 ` : ''}
               </div>
             </div>
           </div>
           
-          <!-- Rechte Spalte: Verlauf -->
+          <!-- Rechte Spalte: Verlauf und Kommentare -->
           <div class="detail-sidebar">
-            ${verlaufHtml || `<div class="detail-section"><h3>📜 ${t('history.title')}</h3><p class="empty-hint">${currentLanguage === 'en' ? 'No activities yet.' : currentLanguage === 'fr' ? 'Pas encore d\'activités.' : 'Noch keine Aktivitäten.'}</p></div>`}
+            <!-- Kommentar-Bereich -->
+            <div class="detail-section kommentar-section">
+              <h3>${currentLanguage === 'en' ? 'Notes' : currentLanguage === 'fr' ? 'Notes' : 'Notizen'}</h3>
+              ${!antrag.veraktet && hatAktuellenZugriff ? `
+                <div class="kommentar-eingabe">
+                  <textarea id="neuerKommentar" placeholder="${currentLanguage === 'en' ? 'Add a note...' : currentLanguage === 'fr' ? 'Ajouter une note...' : 'Notiz hinzufuegen...'}" rows="3"></textarea>
+                  <button class="btn btn-primary btn-sm" onclick="addKommentar('${antrag.id}')">
+                    ${currentLanguage === 'en' ? 'Add' : currentLanguage === 'fr' ? 'Ajouter' : 'Hinzufuegen'}
+                  </button>
+                </div>
+              ` : ''}
+              <div class="kommentar-liste">
+                ${renderKommentare(antrag.kommentare || [])}
+              </div>
+            </div>
+            
+            ${verlaufHtml || `<div class="detail-section"><h3>${t('history.title')}</h3><p class="empty-hint">${currentLanguage === 'en' ? 'No activities yet.' : currentLanguage === 'fr' ? 'Pas encore d\'activités.' : 'Noch keine Aktivitäten.'}</p></div>`}
           </div>
         </div>
       `;
@@ -1858,14 +1938,14 @@
       const msg = currentLanguage === 'en' ? 'Please complete the technical review first.' 
                 : currentLanguage === 'fr' ? 'Veuillez d\'abord effectuer l\'examen technique.' 
                 : 'Bitte prüfen Sie den Antrag zunächst sachlich/fachlich.';
-      alert(msg);
+      showAlert(msg);
     }
     
     function showExecutionRequiredAlert() {
       const msg = currentLanguage === 'en' ? 'Please mark the application as executed first.' 
                 : currentLanguage === 'fr' ? 'Veuillez d\'abord marquer la demande comme exécutée.' 
                 : 'Bitte markieren Sie zunächst den Antrag als vollzogen.';
-      alert(msg);
+      showAlert(msg);
     }
 
     // ============================================
@@ -1873,19 +1953,31 @@
     // ============================================
     
     function markiereAlsGeprueft(antragId) {
-      try {
-        if (!confirm('Bestätigen Sie, dass Sie den Antrag sachlich und fachlich geprüft haben?')) return;
-        
-        // Antrag als geprüft markieren
-        antragSystem.markiereAlsGeprueft(antragId, currentSession.userId, currentSession.name);
-        
-        // Nach Prüfung: Weiterleitung anbieten
-        openWeiterleitenModal(antragId, 'geprueft');
-      } catch (error) {
-        console.error('Fehler bei markiereAlsGeprueft:', error);
-        alert('Ein Fehler ist aufgetreten: ' + error.message);
-        openAntragDetail(antragId);
+      // Modal für Prüfungskommentar öffnen
+      document.getElementById('pruefungAntragId').value = antragId;
+      document.getElementById('pruefungKommentar').value = '';
+      openModal('pruefungModal');
+    }
+    
+    function confirmPruefung() {
+      const antragId = document.getElementById('pruefungAntragId').value;
+      const kommentar = document.getElementById('pruefungKommentar').value.trim();
+      
+      if (!kommentar) {
+        const msg = currentLanguage === 'en' ? 'Please enter a review comment.'
+                  : currentLanguage === 'fr' ? 'Veuillez entrer un commentaire d\'examen.'
+                  : 'Bitte geben Sie einen Prüfungskommentar ein.';
+        showAlert(msg);
+        return;
       }
+      
+      // Antrag als geprüft markieren mit Kommentar
+      antragSystem.markiereAlsGeprueft(antragId, currentSession.userId, currentSession.name, kommentar);
+      
+      closeModal('pruefungModal');
+      
+      // Nach Prüfung: Weiterleitung anbieten
+      openWeiterleitenModal(antragId, 'geprueft');
     }
 
     // ============================================
@@ -1913,7 +2005,7 @@
       
       // Begründung ist für alle Entscheidungen Pflicht
       if (!begruendungText) {
-        alert(t('decision.reasonRequired'));
+        showAlert(t('decision.reasonRequired'));
         return;
       }
       
@@ -1963,7 +2055,7 @@
         const msg = currentLanguage === 'en' ? 'Please enter a comment for the execution.' 
                   : currentLanguage === 'fr' ? 'Veuillez entrer un commentaire pour l\'exécution.' 
                   : 'Bitte geben Sie einen Kommentar zum Vollzug ein.';
-        alert(msg);
+        showAlert(msg);
         return;
       }
       
@@ -1978,14 +2070,14 @@
     }
     
     // Entscheidung revidieren (nur für Hausleitung)
-    function revidiereEntscheidung(antragId) {
+    async function revidiereEntscheidung(antragId) {
       const confirmMsg = currentLanguage === 'en' 
         ? 'Are you sure you want to revise this decision? This action can only be performed by house management.'
         : currentLanguage === 'fr'
         ? 'Êtes-vous sûr de vouloir réviser cette décision ? Cette action ne peut être effectuée que par la direction de la maison.'
         : 'Sind Sie sicher, dass Sie diese Entscheidung revidieren möchten? Diese Aktion kann nur von der Hausleitung durchgeführt werden.';
       
-      if (!confirm(confirmMsg)) return;
+      if (!await showConfirm(confirmMsg)) return;
       
       const result = antragSystem.revidiereEntscheidung(antragId, currentSession.userId, currentSession.name);
       if (result) {
@@ -2089,7 +2181,7 @@
         const msg = currentLanguage === 'en' ? 'No notice available.' 
                   : currentLanguage === 'fr' ? 'Aucun avis disponible.' 
                   : 'Kein Bescheid vorhanden.';
-        alert(msg);
+        showAlert(msg);
         return;
       }
       
@@ -2256,7 +2348,7 @@
       }
       container.innerHTML = aufgabePdfs.map((pdf, index) => `
         <div class="pdf-preview">
-          <span class="pdf-icon">📄</span>
+          <span class="pdf-icon"></span>
           <span class="pdf-name">${pdf.name}</span>
           <button type="button" class="btn-clear" onclick="removeAufgabePdf(${index})">&times;</button>
         </div>
@@ -2301,7 +2393,7 @@
       }
       container.innerHTML = antwortPdfs.map((pdf, index) => `
         <div class="pdf-preview">
-          <span class="pdf-icon">📄</span>
+          <span class="pdf-icon"></span>
           <span class="pdf-name">${pdf.name}</span>
           <button type="button" class="btn-clear" onclick="removeAntwortPdf(${index})">&times;</button>
         </div>
@@ -2332,12 +2424,12 @@
       
       const zielRadio = document.querySelector('input[name="aufgabeZiel"]:checked');
       if (!zielRadio) {
-        alert(t('error.selectOption'));
+        showAlert(t('error.selectOption'));
         return;
       }
       
       if (!kurzbeschreibungText) {
-        alert(t('error.required'));
+        showAlert(t('error.required'));
         return;
       }
       
@@ -2355,7 +2447,7 @@
           const msg = currentLanguage === 'en' ? 'Please select a staff member.' 
                     : currentLanguage === 'fr' ? 'Veuillez sélectionner un employé.' 
                     : 'Bitte wählen Sie einen Mitarbeiter aus.';
-          alert(msg);
+          showAlert(msg);
           return;
         }
         const person = userSystem.getUser(personId);
@@ -2383,13 +2475,13 @@
       notificationSystem.createNotification(
         zugewiesenAnId,
         'aufgabe',
-        '📋 ' + t('task.title'),
+        '' + t('task.title'),
         `${kurzbeschreibungText} (${t('application.id')}: ${antrag.antragsNummer || antragId})`,
         antragId
       );
       
       closeModal('aufgabeModal');
-      alert(t('success.taskCreated'));
+      showAlert(t('success.taskCreated'));
       
       // Detailansicht aktualisieren
       openAntragDetail(antragId);
@@ -2427,7 +2519,7 @@
             <div class="pdf-list aufgabe-pdfs">
               ${aufgabe.anhangPdfs.map((pdf, index) => `
                 <div class="pdf-preview pdf-download" onclick="downloadAufgabePdf('${aufgabeId}', ${index})">
-                  <span class="pdf-icon">📄</span>
+                  <span class="pdf-icon"></span>
                   <span class="pdf-name">${pdf.name}</span>
                   <span class="download-hint">⬇</span>
                 </div>
@@ -2443,7 +2535,7 @@
             <span class="detail-label">${currentLanguage === 'en' ? 'Attached document' : currentLanguage === 'fr' ? 'Document joint' : 'Angehängtes Dokument'}:</span>
             <div class="pdf-list aufgabe-pdfs">
               <div class="pdf-preview pdf-download" onclick="downloadAufgabePdfLegacy('${aufgabeId}')">
-                <span class="pdf-icon">📄</span>
+                <span class="pdf-icon"></span>
                 <span class="pdf-name">Dokument.pdf</span>
                 <span class="download-hint">⬇</span>
               </div>
@@ -2538,7 +2630,7 @@
       
       // Bei "Antwort" ist eine Eingabe erforderlich, bei "Kenntnisnahme" nicht
       if (erledigungsTyp === 'antwort' && !antwortText) {
-        alert(t('error.required'));
+        showAlert(t('error.required'));
         return;
       }
       
@@ -2572,7 +2664,7 @@
         notificationSystem.createNotification(
           aufgabe.erstelltVonId,
           'aufgabe-erledigt',
-          '✓ ' + t('task.complete'),
+          '' + t('task.complete'),
           nachrichtText,
           aufgabe.antragId
         );
@@ -2586,7 +2678,7 @@
         const msgZurueck = currentLanguage === 'en' ? 'Task completed. The application has been returned to the task creator.'
                         : currentLanguage === 'fr' ? 'Tâche terminée. La demande a été renvoyée au créateur de la tâche.'
                         : 'Aufgabe erledigt. Der Antrag wurde an den Aufgabensteller zurückgegeben.';
-        alert(msgZurueck);
+        showAlert(msgZurueck);
         
       } else if (erledigungsTyp === 'kenntnisnahme' && kenntnisnahmeAktion === 'uebernehmen') {
         // Bearbeitung übernehmen - Empfänger wird neuer Hauptbearbeiter
@@ -2600,7 +2692,7 @@
         notificationSystem.createNotification(
           aufgabe.erstelltVonId,
           'bearbeitung-uebernommen',
-          '📥 ' + (currentLanguage === 'en' ? 'Processing taken over' : currentLanguage === 'fr' ? 'Traitement repris' : 'Bearbeitung übernommen'),
+          '' + (currentLanguage === 'en' ? 'Processing taken over' : currentLanguage === 'fr' ? 'Traitement repris' : 'Bearbeitung übernommen'),
           nachrichtUebernahme,
           aufgabe.antragId
         );
@@ -2613,7 +2705,7 @@
         const msgUebernommen = currentLanguage === 'en' ? 'You are now the main processor of this application.'
                              : currentLanguage === 'fr' ? 'Vous êtes maintenant le responsable principal de cette demande.'
                              : 'Sie sind jetzt der Hauptbearbeiter dieses Antrags.';
-        alert(msgUebernommen);
+        showAlert(msgUebernommen);
       }
     }
 
@@ -2796,7 +2888,7 @@
           const msg = currentLanguage === 'en' ? 'Please select a staff member.'
                     : currentLanguage === 'fr' ? 'Veuillez sélectionner un employé.'
                     : 'Bitte wählen Sie einen Mitarbeiter aus.';
-          alert(msg);
+          showAlert(msg);
           return;
         }
         
@@ -2824,7 +2916,7 @@
         notificationSystem.createNotification(
           personId,
           'weiterleitung',
-          '📤 ' + (currentLanguage === 'en' ? 'Application forwarded' : currentLanguage === 'fr' ? 'Demande transmise' : 'Antrag weitergeleitet'),
+          '' + (currentLanguage === 'en' ? 'Application forwarded' : currentLanguage === 'fr' ? 'Demande transmise' : 'Antrag weitergeleitet'),
           `${nachrichtText} (${antrag.antragsNummer || antragId})`,
           antragId
         );
@@ -2838,7 +2930,7 @@
         const msgErfolg = currentLanguage === 'en' ? `Application forwarded to ${person.vorname} ${person.nachname}.`
                         : currentLanguage === 'fr' ? `Demande transmise à ${person.vorname} ${person.nachname}.`
                         : `Antrag an ${person.vorname} ${person.nachname} weitergeleitet.`;
-        alert(msgErfolg);
+        showAlert(msgErfolg);
       } else {
         // Keine Weiterleitung - einfach schließen
         closeModal('weiterleitenModal');
@@ -2921,8 +3013,19 @@
         doc.setFontSize(11);
         doc.text(`Geprüft von: ${antrag.sachlichGeprueftVon || '-'}`, 25, yPos);
         doc.text(`Am: ${antrag.sachlichGeprueftAm ? formatDate(antrag.sachlichGeprueftAm) : '-'}`, 25, yPos + 7);
-        doc.text('Ergebnis: Antrag sachlich und fachlich geprüft', 25, yPos + 14);
-        yPos += 27;
+        yPos += 14;
+        
+        // Prüfungskommentar (Pflichtfeld)
+        if (antrag.pruefungsKommentar) {
+          doc.text('Prüfungsergebnis:', 25, yPos);
+          yPos += 6;
+          const pruefText = doc.splitTextToSize(antrag.pruefungsKommentar, 160);
+          doc.text(pruefText, 25, yPos);
+          yPos += pruefText.length * 5 + 8;
+        } else {
+          doc.text('Ergebnis: Antrag sachlich und fachlich geprüft', 25, yPos);
+          yPos += 13;
+        }
       }
       
       // Entscheidung (wenn vorhanden)
@@ -2938,7 +3041,8 @@
         doc.text(`Ergebnis: ${getStatusText(antrag.status)}`, 25, yPos + 14);
         yPos += 21;
         if (antrag.begruendung) {
-          const splitText = doc.splitTextToSize(`Begründung: ${antrag.begruendung}`, 160);
+          const begruendungText = getTranslatedUserText(antrag.begruendung);
+          const splitText = doc.splitTextToSize(`Begründung: ${begruendungText}`, 160);
           doc.text(splitText, 25, yPos);
           yPos += splitText.length * 6 + 5;
         }
@@ -2955,6 +3059,45 @@
         doc.text(`Vollzogen von: ${antrag.vollzogenVon || '-'}`, 25, yPos);
         doc.text(`Am: ${antrag.vollzogenAm ? formatDate(antrag.vollzogenAm) : '-'}`, 25, yPos + 7);
         yPos += 20;
+      }
+      
+      // Kommentare/Notizen (wenn vorhanden)
+      if (antrag.kommentare && antrag.kommentare.length > 0) {
+        // Neue Seite wenn nötig
+        if (yPos > 220) {
+          doc.addPage();
+          yPos = 20;
+        }
+        
+        doc.line(20, yPos, 190, yPos);
+        yPos += 10;
+        doc.setFontSize(14);
+        doc.text('Notizen', 20, yPos);
+        yPos += 10;
+        doc.setFontSize(10);
+        
+        // Sortieren: älteste zuerst für chronologische Darstellung
+        const sortierteKommentare = [...antrag.kommentare].sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
+        
+        sortierteKommentare.forEach(k => {
+          // Neue Seite wenn nötig
+          if (yPos > 260) {
+            doc.addPage();
+            yPos = 20;
+          }
+          
+          const datum = new Date(k.erstelltAm);
+          const datumStr = datum.toLocaleDateString('de-DE') + ' ' + datum.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+          
+          doc.setFont(undefined, 'bold');
+          doc.text(`${k.benutzerName} (${datumStr}):`, 25, yPos);
+          doc.setFont(undefined, 'normal');
+          yPos += 6;
+          
+          const splitText = doc.splitTextToSize(k.text, 160);
+          doc.text(splitText, 25, yPos);
+          yPos += splitText.length * 5 + 5;
+        });
       }
       
       // Fußzeile
@@ -3056,13 +3199,18 @@
       const result = antragSystem.nehmeAntrag(antragId, currentSession);
       if (result) {
         renderAntraege();
-        // Nach Antrag nehmen: Weiterleitung anbieten
-        openWeiterleitenModal(antragId, 'genommen');
+        // Direkt in der Detailansicht weiterarbeiten (keine Weiterleitungs-Abfrage)
+        openAntragDetail(antragId);
       }
     }
 
-    function bestaetigeEroeffnung(antragId) {
-      if (confirm('Haben Sie das Ergebnis dem Insassen persönlich mitgeteilt?')) {
+    async function bestaetigeEroeffnung(antragId) {
+      const msg = currentLanguage === 'en' ? 'Have you personally communicated the result to the inmate?'
+                : currentLanguage === 'fr' ? 'Avez-vous personnellement communiqué le résultat au détenu?'
+                : 'Haben Sie das Ergebnis dem Insassen persönlich mitgeteilt?';
+      
+      const confirmed = await showConfirm(msg);
+      if (confirmed) {
         // Persönliche Eröffnung bestätigen (Benachrichtigung wird in app.js gesendet)
         const antrag = antragSystem.bestaetigePersoenlicheEroeffnung(antragId);
         renderAntraege();
@@ -3137,7 +3285,7 @@
       
       // Offene Anträge
       if (offeneAntraege.length === 0) {
-        offenList.innerHTML = '<div class="empty-state"><div class="icon">✓</div><p>Keine offenen Anträge vorhanden.</p></div>';
+        offenList.innerHTML = '<div class="empty-state"><p>Keine offenen Anträge vorhanden.</p></div>';
       } else {
         offenList.innerHTML = offeneAntraege.map(a => renderAntragCard(a, 'offen')).join('');
       }
@@ -3147,25 +3295,25 @@
       
       // Erst Aufgaben
       if (meineAufgaben.length > 0) {
-        bearbeitungHtml += '<h3 class="subsection-title">📋 Meine Aufgaben</h3>';
+        bearbeitungHtml += '<h3 class="subsection-title">Meine Aufgaben</h3>';
         bearbeitungHtml += meineAufgaben.map(a => renderAufgabeCard(a)).join('');
       }
       
       // Dann Anträge in Bearbeitung
       if (inBearbeitungAntraege.length > 0) {
-        bearbeitungHtml += '<h3 class="subsection-title">📄 Anträge in Bearbeitung</h3>';
+        bearbeitungHtml += '<h3 class="subsection-title">Anträge in Bearbeitung</h3>';
         bearbeitungHtml += inBearbeitungAntraege.map(a => renderAntragCard(a, 'bearbeitung')).join('');
       }
       
       if (bearbeitungHtml === '') {
-        bearbeitungList.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>Keine Anträge oder Aufgaben vorhanden.</p></div>';
+        bearbeitungList.innerHTML = '<div class="empty-state"><p>Keine Anträge oder Aufgaben vorhanden.</p></div>';
       } else {
         bearbeitungList.innerHTML = bearbeitungHtml;
       }
       
       // Historie
       if (historieAntraege.length === 0) {
-        historieList.innerHTML = '<div class="empty-state"><div class="icon">📜</div><p>Noch keine erledigten Anträge.</p></div>';
+        historieList.innerHTML = '<div class="empty-state"><p>Noch keine erledigten Anträge.</p></div>';
       } else {
         historieList.innerHTML = historieAntraege.map(a => renderAntragCard(a, 'historie')).join('');
       }
@@ -3399,7 +3547,7 @@
       const termine = terminSystem.getTermineFuerTag(currentSession, ausgewaehltesDatum);
       
       const formatDatum = ausgewaehltesDatum.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
-      titel.textContent = `📅 ${formatDatum}`;
+      titel.textContent = `${formatDatum}`;
       
       if (termine.length === 0) {
         liste.innerHTML = `
@@ -3480,11 +3628,11 @@
           <h4 style="margin: 0.5rem 0;">${termin.titel}</h4>
         </div>
         <div class="termin-detail-body">
-          <p><strong>📅 ${dateLabel}:</strong> ${formatDatum}</p>
+          <p><strong>${dateLabel}:</strong> ${formatDatum}</p>
           ${termin.uhrzeit ? `<p><strong>🕐 ${timeLabel}:</strong> ${termin.uhrzeit}</p>` : `<p><strong>🕐 ${timeLabel}:</strong> ${allDayText}</p>`}
-          ${termin.beschreibung ? `<p><strong>📝 ${descLabel}:</strong> ${termin.beschreibung}</p>` : ''}
-          <p><strong>👤 ${createdByLabel}:</strong> ${termin.erstelltVonName}</p>
-          ${termin.antragId ? `<p><strong>📋 ${forAppLabel}:</strong> <a href="#" onclick="closeModal('terminDetailModal'); openAntragDetail('${termin.antragId}'); return false;">${openAppText}</a></p>` : ''}
+          ${termin.beschreibung ? `<p><strong>${descLabel}:</strong> ${termin.beschreibung}</p>` : ''}
+          <p><strong>${createdByLabel}:</strong> ${termin.erstelltVonName}</p>
+          ${termin.antragId ? `<p><strong>${forAppLabel}:</strong> <a href="#" onclick="closeModal('terminDetailModal'); openAntragDetail('${termin.antragId}'); return false;">${openAppText}</a></p>` : ''}
         </div>
       `;
       
@@ -3492,7 +3640,7 @@
       
       let footerHtml = `<button class="btn btn-secondary" onclick="closeModal('terminDetailModal')">${t('button.close')}</button>`;
       if (termin.erstelltVonId === currentSession.userId && termin.typ !== 'aufgabe') {
-        footerHtml += `<button class="btn btn-danger" onclick="loescheTermin('${termin.id}')">🗑️ ${t('button.delete')}</button>`;
+        footerHtml += `<button class="btn btn-danger" onclick="loescheTermin('${termin.id}')">${t('button.delete')}</button>`;
       }
       document.getElementById('terminDetailFooter').innerHTML = footerHtml;
       
@@ -3545,14 +3693,14 @@
         const msg = currentLanguage === 'en' ? 'Please enter a title.' 
                   : currentLanguage === 'fr' ? 'Veuillez entrer un titre.' 
                   : 'Bitte geben Sie einen Titel ein.';
-        alert(msg);
+        showAlert(msg);
         return;
       }
       if (!datum) {
         const msg = currentLanguage === 'en' ? 'Please select a date.' 
                   : currentLanguage === 'fr' ? 'Veuillez sélectionner une date.' 
                   : 'Bitte wählen Sie ein Datum.';
-        alert(msg);
+        showAlert(msg);
         return;
       }
       
@@ -3578,11 +3726,11 @@
       renderKalender();
     }
     
-    function loescheTermin(terminId) {
+    async function loescheTermin(terminId) {
       const confirmMsg = currentLanguage === 'en' ? 'Do you really want to delete this appointment?' 
                        : currentLanguage === 'fr' ? 'Voulez-vous vraiment supprimer ce rendez-vous?' 
                        : 'Möchten Sie diesen Termin wirklich löschen?';
-      if (!confirm(confirmMsg)) return;
+      if (!await showConfirm(confirmMsg)) return;
       
       terminSystem.deleteTermin(terminId);
       closeModal('terminDetailModal');

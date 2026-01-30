@@ -70,6 +70,7 @@ const TRANSLATIONS = {
     
     // Anträge
     'application.new': 'Neuer Antrag',
+    'application.title': 'Antrag',
     'application.id': 'Antrags-ID',
     'application.applicant': 'Antragsteller',
     'application.date': 'Datum',
@@ -360,6 +361,7 @@ const TRANSLATIONS = {
     
     // Applications
     'application.new': 'New Application',
+    'application.title': 'Application',
     'application.id': 'Application ID',
     'application.applicant': 'Applicant',
     'application.date': 'Date',
@@ -642,6 +644,7 @@ const TRANSLATIONS = {
     
     // Demandes
     'application.new': 'Nouvelle demande',
+    'application.title': 'Demande',
     'application.id': 'ID de demande',
     'application.applicant': 'Demandeur',
     'application.date': 'Date',
@@ -2361,13 +2364,14 @@ class AntragSystem {
   }
 
   // Antrag als sachlich/fachlich geprüft markieren
-  markiereAlsGeprueft(antragId, mitarbeiterId, mitarbeiterName) {
+  markiereAlsGeprueft(antragId, mitarbeiterId, mitarbeiterName, pruefungsKommentar = '') {
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag && antrag.status === 'in-bearbeitung') {
       antrag.sachlichGeprueft = true;
       antrag.sachlichGeprueftAm = new Date().toISOString();
       antrag.sachlichGeprueftVon = mitarbeiterName;
       antrag.sachlichGeprueftVonId = mitarbeiterId;
+      antrag.pruefungsKommentar = pruefungsKommentar; // Pflichtkommentar zur Prüfung
       this.saveAntraege();
       
       // Aktivität protokollieren
@@ -2375,6 +2379,7 @@ class AntragSystem {
         antragId: antragId,
         typ: 'sachlich-geprueft',
         beschreibung: 'Antrag sachlich/fachlich geprüft',
+        details: { kommentar: pruefungsKommentar },
         benutzerTyp: 'mitarbeiter',
         benutzerId: mitarbeiterId,
         benutzerName: mitarbeiterName
@@ -2952,6 +2957,50 @@ class AntragSystem {
     return false;
   }
 
+  // Kommentar zu einem Antrag hinzufügen
+  addKommentar(antragId, kommentarText, benutzerId, benutzerName) {
+    const antrag = this.antraege.find(a => a.id === antragId);
+    if (antrag) {
+      if (!antrag.kommentare) {
+        antrag.kommentare = [];
+      }
+      
+      const kommentar = {
+        id: 'KOM-' + Date.now().toString(36).toUpperCase(),
+        text: kommentarText,
+        benutzerId: benutzerId,
+        benutzerName: benutzerName,
+        erstelltAm: new Date().toISOString()
+      };
+      
+      antrag.kommentare.push(kommentar);
+      this.saveAntraege();
+      
+      // Aktivität protokollieren
+      aktivitaetenSystem.logAktivitaet({
+        antragId: antragId,
+        typ: 'kommentar',
+        beschreibung: 'Kommentar hinzugefuegt',
+        details: { kommentarId: kommentar.id },
+        benutzerTyp: 'mitarbeiter',
+        benutzerId: benutzerId,
+        benutzerName: benutzerName
+      });
+      
+      return kommentar;
+    }
+    return null;
+  }
+
+  // Alle Kommentare eines Antrags abrufen
+  getKommentare(antragId) {
+    const antrag = this.antraege.find(a => a.id === antragId);
+    if (antrag && antrag.kommentare) {
+      return antrag.kommentare.sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
+    }
+    return [];
+  }
+
   // Antrag an anderen Mitarbeiter weiterleiten
   weiterleitenAntrag(antragId, neuBearbeiterId, neuBearbeiterName, altBearbeiterId, altBearbeiterName, notiz = '') {
     const antrag = this.antraege.find(a => a.id === antragId);
@@ -3107,10 +3156,89 @@ function closeModal(modalId) {
   document.getElementById(modalId).classList.remove('active');
 }
 
+// ============================================
+// CUSTOM DIALOG SYSTEM (ersetzt Browser-Popups)
+// ============================================
+
+let dialogResolve = null;
+
+function createDialogHtml() {
+  if (document.getElementById('customDialogOverlay')) return;
+  
+  const dialogHtml = `
+    <div class="modal-overlay" id="customDialogOverlay">
+      <div class="modal custom-dialog">
+        <div class="modal-header">
+          <h3 id="customDialogTitle">Hinweis</h3>
+        </div>
+        <div class="modal-body">
+          <p id="customDialogMessage"></p>
+        </div>
+        <div class="modal-footer" id="customDialogFooter">
+          <!-- Buttons werden dynamisch eingefügt -->
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', dialogHtml);
+}
+
+// Ersetzt alert() - zeigt Hinweis-Dialog
+function showAlert(message, title = null) {
+  return new Promise((resolve) => {
+    createDialogHtml();
+    
+    const titleText = title || (currentLanguage === 'en' ? 'Notice' : currentLanguage === 'fr' ? 'Avis' : 'Hinweis');
+    document.getElementById('customDialogTitle').textContent = titleText;
+    document.getElementById('customDialogMessage').textContent = message;
+    
+    const okText = currentLanguage === 'en' ? 'OK' : currentLanguage === 'fr' ? 'OK' : 'OK';
+    document.getElementById('customDialogFooter').innerHTML = `
+      <button class="btn btn-primary" onclick="closeDialog(true)">${okText}</button>
+    `;
+    
+    dialogResolve = resolve;
+    openModal('customDialogOverlay');
+  });
+}
+
+// Ersetzt confirm() - zeigt Bestätigungs-Dialog
+function showConfirm(message, title = null) {
+  return new Promise((resolve) => {
+    createDialogHtml();
+    
+    const titleText = title || (currentLanguage === 'en' ? 'Confirmation' : currentLanguage === 'fr' ? 'Confirmation' : 'Bestätigung');
+    document.getElementById('customDialogTitle').textContent = titleText;
+    document.getElementById('customDialogMessage').textContent = message;
+    
+    const cancelText = currentLanguage === 'en' ? 'Cancel' : currentLanguage === 'fr' ? 'Annuler' : 'Abbrechen';
+    const confirmText = currentLanguage === 'en' ? 'Confirm' : currentLanguage === 'fr' ? 'Confirmer' : 'Bestätigen';
+    
+    document.getElementById('customDialogFooter').innerHTML = `
+      <button class="btn btn-secondary" onclick="closeDialog(false)">${cancelText}</button>
+      <button class="btn btn-primary" onclick="closeDialog(true)">${confirmText}</button>
+    `;
+    
+    dialogResolve = resolve;
+    openModal('customDialogOverlay');
+  });
+}
+
+function closeDialog(result) {
+  closeModal('customDialogOverlay');
+  if (dialogResolve) {
+    dialogResolve(result);
+    dialogResolve = null;
+  }
+}
+
 // Klick außerhalb Modal schließt es
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('modal-overlay')) {
-    e.target.classList.remove('active');
+    // Nicht schließen bei Custom-Dialog (muss explizit bestätigt werden)
+    if (e.target.id !== 'customDialogOverlay') {
+      e.target.classList.remove('active');
+    }
   }
 });
 

@@ -59,7 +59,7 @@
       <div class="dashboard">
         <!-- Tabs -->
         <div class="tabs">
-          <button class="tab active" onclick="switchTab('insassen')">👤 Insassen</button>
+          <button class="tab active" onclick="switchTab('insassen')">Insassen</button>
           <button class="tab" onclick="switchTab('mitarbeiter')">🛡️ Mitarbeiter</button>
           <button class="tab" onclick="switchTab('termine')">📅 Termine</button>
         </div>
@@ -67,7 +67,7 @@
         <!-- Insassen-Verwaltung -->
         <section class="section" id="insassenSection">
           <div class="section-header">
-            <h2>👤 Insassen-Verwaltung <span class="count" id="insassenCount">0</span></h2>
+            <h2>Insassen-Verwaltung <span class="count" id="insassenCount">0</span></h2>
             <button class="btn btn-primary" onclick="openNewInsasseModal()">+ Neuer Insasse</button>
           </div>
           <div class="user-list" id="insassenList">
@@ -89,7 +89,7 @@
         <!-- Termin-Verwaltung -->
         <section class="section" id="termineSection" style="display: none;">
           <div class="section-header">
-            <h2>📅 Allgemeine Termine <span class="count" id="termineCount">0</span></h2>
+            <h2>Allgemeine Termine <span class="count" id="termineCount">0</span></h2>
             <button class="btn btn-primary" onclick="openNewAdminTerminModal()">+ Neuer Termin</button>
           </div>
           <p class="section-hint">Diese Termine sind für alle Mitarbeiter sichtbar.</p>
@@ -223,7 +223,7 @@
           <div class="radio-group">
             <label class="radio-option">
               <input type="radio" name="mitRolle" value="mitarbeiter" checked onchange="updateMitarbeiterFields()">
-              <span class="radio-label">👷 Mitarbeiter</span>
+              <span class="radio-label">Mitarbeiter</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="mitRolle" value="stationsleitung" onchange="updateMitarbeiterFields()">
@@ -296,7 +296,7 @@
           <div class="radio-group">
             <label class="radio-option">
               <input type="radio" name="editMitRolle" value="mitarbeiter" onchange="updateEditMitarbeiterFields()">
-              <span class="radio-label">👷 Mitarbeiter</span>
+              <span class="radio-label">Mitarbeiter</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="editMitRolle" value="stationsleitung" onchange="updateEditMitarbeiterFields()">
@@ -477,15 +477,15 @@
       const station = document.getElementById('insStation').value;
       
       if (!vorname || !nachname) {
-        alert('Bitte Vor- und Nachname eingeben.');
+        showAlert('Bitte Vor- und Nachname eingeben.');
         return;
       }
       if (!geburtsdatum) {
-        alert('Bitte Geburtsdatum eingeben.');
+        showAlert('Bitte Geburtsdatum eingeben.');
         return;
       }
       if (!jva || !station) {
-        alert('Bitte Haus und Station auswählen.');
+        showAlert('Bitte Haus und Station auswählen.');
         return;
       }
       
@@ -525,8 +525,9 @@
       stationSelect.disabled = false;
     }
     
-    function saveInsasse() {
-      if (!confirm('Sind Sie sicher, dass Sie die Änderungen speichern möchten?')) return;
+    async function saveInsasse() {
+      const confirmed = await showConfirm('Sind Sie sicher, dass Sie die Änderungen speichern möchten?');
+      if (!confirmed) return;
       
       const id = document.getElementById('editInsId').value;
       const vorname = document.getElementById('editInsVorname').value.trim();
@@ -536,15 +537,15 @@
       const station = document.getElementById('editInsStation').value;
       
       if (!vorname || !nachname) {
-        alert('Bitte Vor- und Nachname eingeben.');
+        showAlert('Bitte Vor- und Nachname eingeben.');
         return;
       }
       if (!geburtsdatum) {
-        alert('Bitte Geburtsdatum eingeben.');
+        showAlert('Bitte Geburtsdatum eingeben.');
         return;
       }
       if (!jva || !station) {
-        alert('Bitte Haus und Station auswählen.');
+        showAlert('Bitte Haus und Station auswählen.');
         return;
       }
       
@@ -553,8 +554,9 @@
       renderUsers();
     }
     
-    function deleteInsasse(id, name) {
-      if (!confirm(`Sind Sie sicher, dass Sie den Insassen "${name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
+    async function deleteInsasse(id, name) {
+      const confirmed = await showConfirm(`Sind Sie sicher, dass Sie den Insassen "${name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`);
+      if (!confirmed) return;
       
       userSystem.deleteUser(id);
       renderUsers();
@@ -612,7 +614,7 @@
       if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
         for (const haus of selectedHaeuser) {
           if (userSystem.hasJvaLeitung(haus)) {
-            hausWarning.textContent = `⚠️ Für ${getHausName(haus)} existiert bereits eine Hausleitung.`;
+            hausWarning.textContent = `Für ${getHausName(haus)} existiert bereits eine Hausleitung.`;
             hausWarning.style.display = 'block';
             break;
           }
@@ -657,45 +659,45 @@
       const stationValue = document.getElementById('mitStation').value;
       
       if (!vorname || !nachname) {
-        alert('Bitte Vor- und Nachname eingeben.');
+        showAlert('Bitte Vor- und Nachname eingeben.');
         return;
       }
       if (!geburtsdatum) {
-        alert('Bitte Geburtsdatum eingeben.');
+        showAlert('Bitte Geburtsdatum eingeben.');
         return;
       }
       if (selectedHaeuser.length === 0) {
-        alert('Bitte mindestens ein Haus auswählen.');
+        showAlert('Bitte mindestens ein Haus auswählen.');
         return;
       }
       
       // Validierungen für Hausleitung
       if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
         if (selectedHaeuser.length > 1) {
-          alert('Eine Hausleitung kann nur einem Haus zugeordnet werden.');
+          showAlert('Eine Hausleitung kann nur einem Haus zugeordnet werden.');
           return;
         }
         if (userSystem.hasJvaLeitung(selectedHaeuser[0])) {
-          alert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine Hausleitung.`);
+          showAlert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine Hausleitung.`);
           return;
         }
         userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
       } else if (rolle === 'stationsleitung') {
         // Stationsleitung - Einschränkungen prüfen
         if (!stationValue) {
-          alert('Bitte eine Station auswählen.');
+          showAlert('Bitte eine Station auswählen.');
           return;
         }
         const [haus, station] = stationValue.split('-');
         if (userSystem.hasStationsleitung(haus, station)) {
-          alert(`Für ${getHausName(haus)} Station ${station} existiert bereits eine Stationsleitung.`);
+          showAlert(`Für ${getHausName(haus)} Station ${station} existiert bereits eine Stationsleitung.`);
           return;
         }
         userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
       } else {
         // Normaler Mitarbeiter - keine Einschränkungen
         if (!stationValue) {
-          alert('Bitte eine Station auswählen.');
+          showAlert('Bitte eine Station auswählen.');
           return;
         }
         const [haus, station] = stationValue.split('-');
@@ -769,7 +771,7 @@
         for (const haus of selectedHaeuser) {
           const existing = userSystem.getJvaLeitung(haus, userId);
           if (existing) {
-            hausWarning.textContent = `⚠️ Für ${getHausName(haus)} existiert bereits eine Hausleitung (${existing.vorname} ${existing.nachname}).`;
+            hausWarning.textContent = `Für ${getHausName(haus)} existiert bereits eine Hausleitung (${existing.vorname} ${existing.nachname}).`;
             hausWarning.style.display = 'block';
             break;
           }
@@ -804,8 +806,9 @@
       stationSelect.disabled = false;
     }
     
-    function saveMitarbeiter() {
-      if (!confirm('Sind Sie sicher, dass Sie die Änderungen speichern möchten?')) return;
+    async function saveMitarbeiter() {
+      const confirmed = await showConfirm('Sind Sie sicher, dass Sie die Änderungen speichern möchten?');
+      if (!confirmed) return;
       
       const id = document.getElementById('editMitId').value;
       const vorname = document.getElementById('editMitVorname').value.trim();
@@ -816,46 +819,46 @@
       const stationValue = document.getElementById('editMitStation').value;
       
       if (!vorname || !nachname) {
-        alert('Bitte Vor- und Nachname eingeben.');
+        showAlert('Bitte Vor- und Nachname eingeben.');
         return;
       }
       if (!geburtsdatum) {
-        alert('Bitte Geburtsdatum eingeben.');
+        showAlert('Bitte Geburtsdatum eingeben.');
         return;
       }
       if (selectedHaeuser.length === 0) {
-        alert('Bitte mindestens ein Haus auswählen.');
+        showAlert('Bitte mindestens ein Haus auswählen.');
         return;
       }
       
       if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
         if (selectedHaeuser.length > 1) {
-          alert('Eine Hausleitung kann nur einem Haus zugeordnet werden.');
+          showAlert('Eine Hausleitung kann nur einem Haus zugeordnet werden.');
           return;
         }
         const existing = userSystem.getJvaLeitung(selectedHaeuser[0], id);
         if (existing) {
-          alert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine Hausleitung.`);
+          showAlert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine Hausleitung.`);
           return;
         }
         userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
       } else if (rolle === 'stationsleitung') {
         // Stationsleitung - Einschränkungen prüfen
         if (!stationValue) {
-          alert('Bitte eine Station auswählen.');
+          showAlert('Bitte eine Station auswählen.');
           return;
         }
         const [haus, station] = stationValue.split('-');
         const existing = userSystem.getStationsleitung(haus, station, id);
         if (existing) {
-          alert(`Für ${getHausName(haus)} Station ${station} existiert bereits eine Stationsleitung.`);
+          showAlert(`Für ${getHausName(haus)} Station ${station} existiert bereits eine Stationsleitung.`);
           return;
         }
         userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
       } else {
         // Normaler Mitarbeiter - keine Einschränkungen
         if (!stationValue) {
-          alert('Bitte eine Station auswählen.');
+          showAlert('Bitte eine Station auswählen.');
           return;
         }
         const [haus, station] = stationValue.split('-');
@@ -866,8 +869,9 @@
       renderUsers();
     }
     
-    function deleteMitarbeiter(id, name) {
-      if (!confirm(`Sind Sie sicher, dass Sie den Mitarbeiter "${name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
+    async function deleteMitarbeiter(id, name) {
+      const confirmed = await showConfirm(`Sind Sie sicher, dass Sie den Mitarbeiter "${name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`);
+      if (!confirmed) return;
       
       userSystem.deleteUser(id);
       renderUsers();
@@ -877,12 +881,13 @@
     // PASSWORT & KOPIEREN
     // ============================================
     
-    function resetUserPassword(id) {
-      if (!confirm('Sind Sie sicher, dass Sie das Passwort zurücksetzen möchten?')) return;
+    async function resetUserPassword(id) {
+      const confirmed = await showConfirm('Sind Sie sicher, dass Sie das Passwort zurücksetzen möchten?');
+      if (!confirmed) return;
       
       const newPassword = userSystem.resetPassword(id);
       if (newPassword) {
-        alert(`Neues Passwort: ${newPassword}`);
+        showAlert(`Neues Passwort: ${newPassword}`);
         renderUsers();
       }
     }
@@ -892,10 +897,10 @@
         // Visuelles Feedback
         const btn = event.target;
         const originalText = btn.textContent;
-        btn.textContent = '✓';
+        btn.textContent = 'OK';
         setTimeout(() => btn.textContent = originalText, 1000);
       }).catch(err => {
-        alert('Kopieren fehlgeschlagen. Bitte manuell kopieren.');
+        showAlert('Kopieren fehlgeschlagen. Bitte manuell kopieren.');
       });
     }
 
@@ -925,14 +930,14 @@
         insassenList.innerHTML = insassen.map(user => `
           <div class="user-card">
             <div class="user-card-main">
-              <div class="user-avatar">👤</div>
+              <div class="user-avatar"></div>
               <div class="user-info">
                 <div class="user-name">
                   ${user.insassenNummer ? `<span class="insassen-nummer">${user.insassenNummer}</span>` : ''}
                   ${escapeHtml(user.vorname)} ${escapeHtml(user.nachname)}
                 </div>
                 <div class="user-meta">
-                  <span>📅 ${formatDateOnly(user.geburtsdatum)}</span>
+                  <span>${formatDateOnly(user.geburtsdatum)}</span>
                   <span>🏢 ${getHausName(user.jva)} - Station ${user.station}</span>
                 </div>
                 <div class="user-credentials">
@@ -987,7 +992,7 @@
                   <div class="user-name">${escapeHtml(user.vorname)} ${escapeHtml(user.nachname)}</div>
                   <div class="user-role-badge ${user.rolle}">${getRolleText(user.rolle)}</div>
                   <div class="user-meta">
-                    <span>📅 ${formatDateOnly(user.geburtsdatum)}</span>
+                    <span>${formatDateOnly(user.geburtsdatum)}</span>
                     <span>🏢 ${hausNames}${stationInfo}</span>
                   </div>
                   <div class="user-credentials">
@@ -1085,11 +1090,11 @@
       const uhrzeit = document.getElementById('adminTerminUhrzeit').value;
       
       if (!titel) {
-        alert('Bitte geben Sie einen Titel ein.');
+        showAlert('Bitte geben Sie einen Titel ein.');
         return;
       }
       if (!datum) {
-        alert('Bitte wählen Sie ein Datum.');
+        showAlert('Bitte wählen Sie ein Datum.');
         return;
       }
       
@@ -1107,8 +1112,9 @@
       renderAdminTermine();
     }
     
-    function deleteAdminTermin(terminId) {
-      if (!confirm('Möchten Sie diesen Termin wirklich löschen?')) return;
+    async function deleteAdminTermin(terminId) {
+      const confirmed = await showConfirm('Möchten Sie diesen Termin wirklich löschen?');
+      if (!confirmed) return;
       
       terminSystem.deleteTermin(terminId);
       renderAdminTermine();

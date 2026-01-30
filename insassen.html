@@ -17,7 +17,7 @@
 
     <div class="login-card">
       <div class="login-header">
-        <div class="login-icon">👤</div>
+        <div class="login-icon"></div>
         <h2>Insassen-Portal</h2>
       </div>
       <form id="loginForm" onsubmit="handleLogin(event)">
@@ -85,7 +85,7 @@
           <div class="notification-header" onclick="togglePostfach()">
             <div class="notification-header-left">
               <span class="postfach-toggle-icon" id="postfachToggleIcon">▶</span>
-              <h2>🔔 Nachrichten <span class="count" id="notificationCount">0</span></h2>
+              <h2>Nachrichten <span class="count" id="notificationCount">0</span></h2>
             </div>
             <button class="btn btn-sm" onclick="markAllNotificationsRead(); event.stopPropagation();" id="markAllReadBtn" style="display: none;">
               Alle als gelesen markieren
@@ -111,7 +111,7 @@
         <!-- Aufgaben-Bereich für Insassen -->
         <section class="section aufgaben-section" id="aufgabenSection" style="display: none;">
           <div class="section-header">
-            <h2>📋 Meine Aufgaben <span class="count" id="aufgabenCount">0</span></h2>
+            <h2>Meine Aufgaben <span class="count" id="aufgabenCount">0</span></h2>
           </div>
           <p class="section-hint">Diese Aufgaben wurden Ihnen zugewiesen und benötigen Ihre Mitwirkung.</p>
           <div class="antrag-list" id="aufgabenList">
@@ -154,7 +154,7 @@
           <div class="column-sidebar">
             <section class="section entwuerfe-section">
               <div class="section-header">
-                <h2>📝 Entwürfe <span class="count" id="entwuerfeCount">0</span></h2>
+                <h2>Entwürfe <span class="count" id="entwuerfeCount">0</span></h2>
               </div>
               <div class="antrag-list" id="entwuerfeList">
                 <!-- Dynamisch gefüllt -->
@@ -207,7 +207,7 @@
               </label>
               <label class="radio-option">
                 <input type="radio" name="eigentumAktion" value="tauschen">
-                <span class="radio-label">🔄 Kleidung tauschen</span>
+                <span class="radio-label">Kleidung tauschen</span>
               </label>
             </div>
           </div>
@@ -245,7 +245,7 @@
       </div>
       <div class="modal-footer modal-footer-triple">
         <button class="btn btn-secondary" onclick="closeModal('newAntragModal')">Abbrechen</button>
-        <button class="btn btn-outline" onclick="saveAsEntwurf()">📝 Als Entwurf speichern</button>
+        <button class="btn btn-outline" onclick="saveAsEntwurf()">Als Entwurf speichern</button>
         <button class="btn btn-primary" onclick="submitNewAntrag()">Einreichen</button>
       </div>
     </div>
@@ -292,7 +292,7 @@
               </label>
               <label class="radio-option">
                 <input type="radio" name="entwurfEigentumAktion" value="tauschen">
-                <span class="radio-label">🔄 Kleidung tauschen</span>
+                <span class="radio-label">Kleidung tauschen</span>
               </label>
             </div>
           </div>
@@ -332,7 +332,7 @@
       </div>
       <div class="modal-footer modal-footer-triple">
         <button class="btn btn-danger" onclick="deleteEntwurf()">Löschen</button>
-        <button class="btn btn-outline" onclick="updateEntwurf()">📝 Speichern</button>
+        <button class="btn btn-outline" onclick="updateEntwurf()">Speichern</button>
         <button class="btn btn-primary" onclick="submitEntwurf()">Einreichen</button>
       </div>
     </div>
@@ -347,7 +347,7 @@
       </div>
       <div class="modal-body">
         <div class="info-box warning">
-          <strong>⚡ Teilweise genehmigt</strong>
+          <strong>Teilweise genehmigt</strong>
           <p id="editBegruendung">-</p>
         </div>
         
@@ -370,7 +370,7 @@
               </label>
               <label class="radio-option">
                 <input type="radio" name="editEigentumAktion" value="tauschen">
-                <span class="radio-label">🔄 Kleidung tauschen</span>
+                <span class="radio-label">Kleidung tauschen</span>
               </label>
             </div>
           </div>
@@ -427,11 +427,11 @@
           <div class="radio-group">
             <label class="radio-option">
               <input type="radio" name="aufgabeInsasseTyp" value="antwort" checked onchange="toggleInsasseAntwortFeld()">
-              <span class="radio-label">💬 Mit Antwort</span>
+              <span class="radio-label">Mit Antwort</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="aufgabeInsasseTyp" value="kenntnisnahme" onchange="toggleInsasseAntwortFeld()">
-              <span class="radio-label">✓ Zur Kenntnis genommen</span>
+              <span class="radio-label">Zur Kenntnis genommen</span>
             </label>
           </div>
         </div>
@@ -492,7 +492,7 @@
       const postfachTitle = document.querySelector('#notificationSection h2');
       if (postfachTitle) {
         const count = document.getElementById('notificationCount')?.textContent || '0';
-        postfachTitle.innerHTML = `🔔 ${t('inbox.messages')} <span class="count" id="notificationCount">${count}</span>`;
+        postfachTitle.innerHTML = `${t('inbox.messages')} <span class="count" id="notificationCount">${count}</span>`;
       }
       
       // "Neuer Antrag" Button
@@ -505,7 +505,7 @@
       const entwuerfeTitle = document.querySelector('.entwuerfe-section h2');
       if (entwuerfeTitle) {
         const count = document.getElementById('entwuerfeCount')?.textContent || '0';
-        entwuerfeTitle.innerHTML = `📝 ${t('nav.drafts')} <span class="count" id="entwuerfeCount">${count}</span>`;
+        entwuerfeTitle.innerHTML = `${t('nav.drafts')} <span class="count" id="entwuerfeCount">${count}</span>`;
       }
       
       // ============================================
@@ -525,7 +525,7 @@
       const newAntragBtns = document.querySelectorAll('#newAntragModal .modal-footer .btn');
       newAntragBtns.forEach(btn => {
         if (btn.classList.contains('btn-secondary')) btn.textContent = t('button.cancel');
-        if (btn.classList.contains('btn-outline')) btn.textContent = '📝 ' + t('button.saveDraft');
+        if (btn.classList.contains('btn-outline')) btn.textContent = t('button.saveDraft');
         if (btn.classList.contains('btn-primary') && !btn.classList.contains('btn-outline')) btn.textContent = t('button.submit');
       });
       
@@ -548,8 +548,8 @@
       // Radio-Labels für Aufgabe
       const aufgabeInsasseRadios = document.querySelectorAll('#aufgabeInsasseModal .radio-label');
       if (aufgabeInsasseRadios.length >= 2) {
-        aufgabeInsasseRadios[0].textContent = '💬 ' + t('task.withAnswer');
-        aufgabeInsasseRadios[1].textContent = '✓ ' + t('task.acknowledged');
+        aufgabeInsasseRadios[0].textContent = t('task.withAnswer');
+        aufgabeInsasseRadios[1].textContent = t('task.acknowledged');
       }
       
       const antwortLabel = document.querySelector('label[for="aufgabeInsasseAntwort"]');
@@ -745,16 +745,7 @@
     }
     
     function getNotificationIcon(type) {
-      switch(type) {
-        case 'genehmigt': return '✓';
-        case 'abgelehnt': return '✕';
-        case 'teilweise-genehmigt': return '⚡';
-        case 'aufgabe': return '📋';
-        case 'aufgabe-erledigt': return '✓';
-        case 'aufgabe-ueberfaellig': return '⚠️';
-        case 'aufgabe-geloescht': return '🗑️';
-        default: return 'ℹ';
-      }
+      return '';
     }
     
     function handleNotificationClick(notificationId, antragId) {
@@ -852,7 +843,7 @@
       const { type, data, valid, error } = getNewAntragData();
       
       if (!valid) {
-        alert(error);
+        showAlert(error);
         return;
       }
       
@@ -879,7 +870,7 @@
       const msg = currentLanguage === 'en' ? 'Draft has been saved! You can find it in the right column.' 
                 : currentLanguage === 'fr' ? 'Le brouillon a été enregistré! Vous le trouverez dans la colonne de droite.' 
                 : 'Entwurf wurde gespeichert! Sie finden ihn in der rechten Spalte.';
-      alert(msg);
+      showAlert(msg);
     }
 
     function resetNewAntragForm() {
@@ -974,7 +965,7 @@
       const data = getEntwurfData();
       
       if (!data.valid) {
-        alert(data.error);
+        showAlert(data.error);
         return;
       }
       
@@ -989,9 +980,13 @@
       switchTab('aktiv');
     }
 
-    function deleteEntwurf() {
+    async function deleteEntwurf() {
       const entwurfId = document.getElementById('entwurfId').value;
-      if (confirm('Möchten Sie diesen Entwurf wirklich löschen?')) {
+      const msg = currentLanguage === 'en' ? 'Do you really want to delete this draft?'
+                : currentLanguage === 'fr' ? 'Voulez-vous vraiment supprimer ce brouillon?'
+                : 'Möchten Sie diesen Entwurf wirklich löschen?';
+      const confirmed = await showConfirm(msg);
+      if (confirmed) {
         antragSystem.deleteAntrag(entwurfId);
         closeModal('entwurfModal');
         renderAntraege();
@@ -1039,7 +1034,7 @@
         actionsHtml = `
           <div class="antrag-actions">
             <button class="btn btn-primary btn-sm" onclick="openEntwurfModal('${antrag.id}')">
-              📝 Bearbeiten
+              Bearbeiten
             </button>
           </div>
         `;
@@ -1064,7 +1059,7 @@
           actionsHtml += `
             <div class="antrag-actions">
               <button class="btn btn-secondary btn-sm" onclick="downloadBescheidPdf('${antrag.id}')">
-                📄 ${currentLanguage === 'en' ? 'Download notice' : currentLanguage === 'fr' ? 'Télécharger l\'avis' : 'Bescheid herunterladen'}
+                ${currentLanguage === 'en' ? 'Download notice' : currentLanguage === 'fr' ? 'Télécharger l\'avis' : 'Bescheid herunterladen'}
               </button>
             </div>
           `;
@@ -1096,7 +1091,7 @@
         const msg = currentLanguage === 'en' ? 'No notice available.' 
                   : currentLanguage === 'fr' ? 'Aucun avis disponible.' 
                   : 'Kein Bescheid vorhanden.';
-        alert(msg);
+        showAlert(msg);
         return;
       }
       
@@ -1143,7 +1138,7 @@
           const msg = currentLanguage === 'en' ? 'Please select a month.' 
                     : currentLanguage === 'fr' ? 'Veuillez sélectionner un mois.' 
                     : 'Bitte wählen Sie einen Monat aus.';
-          alert(msg);
+          showAlert(msg);
           return;
         }
         antragSystem.updateAntragMonat(antragId, monat);
@@ -1156,7 +1151,7 @@
           const msg = currentLanguage === 'en' ? 'Please select at least one item of clothing.' 
                     : currentLanguage === 'fr' ? 'Veuillez sélectionner au moins un vêtement.' 
                     : 'Bitte wählen Sie mindestens ein Kleidungsstück aus.';
-          alert(msg);
+          showAlert(msg);
           return;
         }
         
@@ -1167,9 +1162,13 @@
       renderAntraege();
     }
 
-    function deleteAntrag() {
+    async function deleteAntrag() {
       const antragId = document.getElementById('editAntragId').value;
-      if (confirm('Möchten Sie diesen Antrag wirklich endgültig löschen?')) {
+      const msg = currentLanguage === 'en' ? 'Do you really want to permanently delete this application?'
+                : currentLanguage === 'fr' ? 'Voulez-vous vraiment supprimer définitivement cette demande?'
+                : 'Möchten Sie diesen Antrag wirklich endgültig löschen?';
+      const confirmed = await showConfirm(msg);
+      if (confirmed) {
         antragSystem.deleteAntrag(antragId);
         closeModal('editAntragModal');
         renderAntraege();
@@ -1207,7 +1206,7 @@
       
       // Entwürfe
       if (entwuerfe.length === 0) {
-        entwuerfeList.innerHTML = '<div class="empty-state"><div class="icon">📝</div><p>Keine Entwürfe vorhanden.</p><p class="hint">Klicken Sie auf "+ Neuer Antrag" und dann "Als Entwurf speichern"</p></div>';
+        entwuerfeList.innerHTML = '<div class="empty-state"><p>Keine Entwürfe vorhanden.</p><p class="hint">Klicken Sie auf "+ Neuer Antrag" und dann "Als Entwurf speichern"</p></div>';
       } else {
         entwuerfeList.innerHTML = entwuerfe.map(a => renderAntragCard(a, 'entwurf')).join('');
       }
@@ -1221,7 +1220,7 @@
       
       // Historie
       if (historieAntraege.length === 0) {
-        historieList.innerHTML = '<div class="empty-state"><div class="icon">📜</div><p>Noch keine abgeschlossenen Anträge.</p></div>';
+        historieList.innerHTML = '<div class="empty-state"><p>Noch keine abgeschlossenen Anträge.</p></div>';
       } else {
         historieList.innerHTML = historieAntraege.map(a => renderAntragCard(a, 'historie')).join('');
       }
@@ -1239,7 +1238,7 @@
       return `
         <div class="antrag-card aufgabe-card">
           <div class="aufgabe-header">
-            <span class="aufgabe-icon">📋</span>
+            <span class="aufgabe-icon"></span>
             <span class="aufgabe-label">${t('task.title')}</span>
             <span class="status-badge in-bearbeitung">⏳ ${t('status.open')}</span>
           </div>
@@ -1314,7 +1313,7 @@
       
       // Bei "Antwort" ist eine Eingabe erforderlich, bei "Kenntnisnahme" nicht
       if (erledigungsTyp === 'antwort' && !antwortText) {
-        alert(t('error.required'));
+        showAlert(t('error.required'));
         return;
       }
       
@@ -1331,13 +1330,13 @@
       notificationSystem.createNotification(
         aufgabe.erstelltVonId,
         'aufgabe-erledigt',
-        '✓ ' + t('task.complete'),
+        t('task.complete'),
         nachrichtText,
         aufgabe.antragId
       );
       
       closeModal('aufgabeInsasseModal');
-      alert(erledigungsTyp === 'kenntnisnahme' ? t('task.acknowledged') : t('success.submitted'));
+      showAlert(erledigungsTyp === 'kenntnisnahme' ? t('task.acknowledged') : t('success.submitted'));
       renderAntraege();
     }
   </script>
