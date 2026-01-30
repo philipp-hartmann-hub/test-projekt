@@ -431,6 +431,67 @@
     </div>
   </div>
 
+  <!-- Modal: Antrag weiterleiten -->
+  <div class="modal-overlay" id="weiterleitenModal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3>📤 Antrag weiterleiten?</h3>
+        <button class="modal-close" onclick="closeWeiterleitenModal(false)">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="weiterleiten-info">
+          <p id="weiterleitenPhaseInfo"></p>
+        </div>
+        
+        <div class="form-group">
+          <label>Möchten Sie den Antrag an einen anderen Mitarbeiter weiterleiten?</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="weiterleitenEntscheidung" value="nein" checked onchange="toggleWeiterleitenFelder()">
+              <span class="radio-label">❌ Nein, ich bearbeite weiter</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="weiterleitenEntscheidung" value="ja" onchange="toggleWeiterleitenFelder()">
+              <span class="radio-label">✓ Ja, an anderen Mitarbeiter weiterleiten</span>
+            </label>
+          </div>
+        </div>
+        
+        <div id="weiterleitenFelder" style="display: none;">
+          <div class="form-group">
+            <label for="weiterleitenMitarbeiterSuche">Mitarbeiter suchen</label>
+            <input type="text" id="weiterleitenMitarbeiterSuche" placeholder="Name eingeben..." oninput="filterWeiterleitenMitarbeiter()">
+          </div>
+          <div class="form-group">
+            <label>Mitarbeiter auswählen:</label>
+            <div class="mitarbeiter-liste" id="weiterleitenMitarbeiterListe" style="max-height: 250px; overflow-y: auto;">
+              <!-- Wird dynamisch gefüllt -->
+            </div>
+          </div>
+          <div class="form-group" id="weiterleitenSelectedContainer" style="display: none;">
+            <div class="selected-person-box">
+              <span class="selected-label">✓ Ausgewählt:</span>
+              <span class="selected-name" id="weiterleitenSelectedPersonName"></span>
+              <button type="button" class="btn-clear-small" onclick="clearWeiterleitenSelection()">×</button>
+            </div>
+          </div>
+          <input type="hidden" id="weiterleitenPersonId">
+          <div class="form-group">
+            <label for="weiterleitenNotiz">Notiz zur Weiterleitung (optional)</label>
+            <textarea id="weiterleitenNotiz" placeholder="Kurze Notiz für den nächsten Bearbeiter..." rows="3"></textarea>
+          </div>
+        </div>
+        
+        <input type="hidden" id="weiterleitenAntragId">
+        <input type="hidden" id="weiterleitenPhase">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeWeiterleitenModal(false)">Abbrechen</button>
+        <button class="btn btn-primary" onclick="confirmWeiterleiten()">Bestätigen</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Neuer Termin -->
   <div class="modal-overlay" id="terminModal">
     <div class="modal">
@@ -1350,21 +1411,23 @@
       const meineOffeneAufgabe = aufgabenZuAntrag.find(a => a.zugewiesenAnId === currentSession.userId && a.status === 'offen');
       const hatOffeneAufgabe = !!meineOffeneAufgabe;
       
-      // Der ursprüngliche Bearbeiter hat IMMER Zugriff (bis zur Veraktung)
+      // Der aktuelle Bearbeiter hat IMMER Zugriff (bis zur Veraktung)
+      // Dies umfasst sowohl den ursprünglichen Bearbeiter als auch jeden, der den Antrag durch Weiterleitung erhalten hat
       const istBearbeiter = antrag.bearbeiterId === currentSession.userId;
       
       // Prüfen ob der Benutzer den Antrag "abgegeben" hat (durch Aufgabenerledigung mit Antwort/Zurück)
-      const hatAntragAbgegeben = antragSystem.hatAntragAbgegeben(antragId, currentSession.userId);
+      // WICHTIG: Wenn jemand jetzt der Bearbeiter ist (durch Weiterleitung), ist er NICHT mehr "abgegeben"
+      const hatAntragAbgegeben = !istBearbeiter && antragSystem.hatAntragAbgegeben(antragId, currentSession.userId);
       
       let hatAktuellenZugriff = false;
       if (istBearbeiter) {
-        // Ursprünglicher Bearbeiter hat immer Zugriff
+        // Aktueller Bearbeiter hat immer vollen Zugriff (auch wenn er früher abgegeben hatte)
         hatAktuellenZugriff = true;
       } else if (hatOffeneAufgabe) {
         // Hat eine offene Aufgabe - kann sie bearbeiten (auch wenn vorher abgegeben)
         hatAktuellenZugriff = true;
       } else if (hatAntragAbgegeben) {
-        // Hat den Antrag abgegeben - kein Zugriff mehr
+        // Hat den Antrag abgegeben und ist nicht der aktuelle Bearbeiter - kein Zugriff mehr
         hatAktuellenZugriff = false;
       }
       
@@ -1810,13 +1873,19 @@
     // ============================================
     
     function markiereAlsGeprueft(antragId) {
-      if (!confirm('Bestätigen Sie, dass Sie den Antrag sachlich und fachlich geprüft haben?')) return;
-      
-      // Antrag als geprüft markieren
-      antragSystem.markiereAlsGeprueft(antragId, currentSession.userId, currentSession.name);
-      
-      // Detailansicht aktualisieren
-      openAntragDetail(antragId);
+      try {
+        if (!confirm('Bestätigen Sie, dass Sie den Antrag sachlich und fachlich geprüft haben?')) return;
+        
+        // Antrag als geprüft markieren
+        antragSystem.markiereAlsGeprueft(antragId, currentSession.userId, currentSession.name);
+        
+        // Nach Prüfung: Weiterleitung anbieten
+        openWeiterleitenModal(antragId, 'geprueft');
+      } catch (error) {
+        console.error('Fehler bei markiereAlsGeprueft:', error);
+        alert('Ein Fehler ist aufgetreten: ' + error.message);
+        openAntragDetail(antragId);
+      }
     }
 
     // ============================================
@@ -1858,13 +1927,13 @@
       antragSystem.abschliessenAntrag(antragId, status, begruendung, persoenlichEroeffnen, bescheidPdf, vollzugVorBekanntgabe);
       closeModal('entscheidenModal');
       
-      // Zurück zur Übersicht
-      closeAntragDetail();
-      
-      // Zur entsprechenden Ansicht wechseln
-      if (persoenlichEroeffnen || vollzugVorBekanntgabe) {
-        // Bei beiden Optionen bleibt der Antrag in "Meine Anträge und Aufgaben"
-        switchTab('bearbeitung');
+      // Nach Entscheidung: Weiterleitung anbieten
+      // Nur wenn KEINE persönliche Eröffnung oder Vollzug vor Bekanntgabe
+      if (!persoenlichEroeffnen && !vollzugVorBekanntgabe) {
+        openWeiterleitenModal(antragId, 'entschieden');
+      } else {
+        // Bei Pers. Eröffnung oder Vollzug vor Bekanntgabe: Detailansicht öffnen
+        openAntragDetail(antragId);
       }
     }
     
@@ -1904,8 +1973,8 @@
       antragSystem.bestaetigeVollzugVorBekanntgabe(antragId, vollzugKommentar, currentSession.userId, currentSession.name);
       closeModal('vollzugBestaetigenModal');
       
-      // Detailansicht aktualisieren
-      openAntragDetail(antragId);
+      // Nach Bekanntgabe: Weiterleitung anbieten
+      openWeiterleitenModal(antragId, 'bekanntgegeben');
     }
     
     // Entscheidung revidieren (nur für Hausleitung)
@@ -2555,7 +2624,224 @@
     function toggleVollzogen(antragId, checked) {
       if (checked) {
         antragSystem.markiereAlsVollzogen(antragId, currentSession.userId, currentSession.name);
-        // Detailansicht aktualisieren um den Verakten-Button zu aktivieren
+        // Nach Vollzug: Weiterleitung anbieten
+        openWeiterleitenModal(antragId, 'vollzug');
+      }
+    }
+
+    // ============================================
+    // ANTRAG WEITERLEITEN
+    // ============================================
+    
+    let weiterleitenCallback = null;
+    
+    function openWeiterleitenModal(antragId, phase) {
+      // Formular zurücksetzen
+      document.getElementById('weiterleitenAntragId').value = antragId;
+      document.getElementById('weiterleitenPhase').value = phase;
+      
+      // Radio-Buttons zurücksetzen
+      const radioNein = document.querySelector('input[name="weiterleitenEntscheidung"][value="nein"]');
+      if (radioNein) radioNein.checked = true;
+      
+      // Felder zurücksetzen
+      document.getElementById('weiterleitenFelder').style.display = 'none';
+      document.getElementById('weiterleitenNotiz').value = '';
+      document.getElementById('weiterleitenPersonId').value = '';
+      document.getElementById('weiterleitenSelectedContainer').style.display = 'none';
+      document.getElementById('weiterleitenMitarbeiterSuche').value = '';
+      
+      // Phase-Info setzen
+      const phaseTexte = {
+        'genommen': currentLanguage === 'en' ? 'You have taken the application. It is now in the "Review" phase.'
+                  : currentLanguage === 'fr' ? 'Vous avez pris la demande. Elle est maintenant en phase "Examen".'
+                  : 'Sie haben den Antrag genommen. Er befindet sich jetzt in der Phase "Prüfung".',
+        'geprueft': currentLanguage === 'en' ? 'The application has been reviewed. It is now in the "Decision" phase.'
+                  : currentLanguage === 'fr' ? 'La demande a été examinée. Elle est maintenant en phase "Décision".'
+                  : 'Der Antrag wurde geprüft. Er befindet sich jetzt in der Phase "Entscheidung".',
+        'entschieden': currentLanguage === 'en' ? 'A decision has been made. The application is now in the "Notification" phase.'
+                     : currentLanguage === 'fr' ? 'Une décision a été prise. La demande est maintenant en phase "Notification".'
+                     : 'Die Entscheidung wurde getroffen. Der Antrag befindet sich jetzt in der Phase "Bekanntgabe".',
+        'bekanntgegeben': currentLanguage === 'en' ? 'The decision has been communicated. The application is now in the "Execution" phase.'
+                        : currentLanguage === 'fr' ? 'La décision a été communiquée. La demande est maintenant en phase "Exécution".'
+                        : 'Die Entscheidung wurde bekannt gegeben. Der Antrag befindet sich jetzt in der Phase "Vollzug".',
+        'vollzug': currentLanguage === 'en' ? 'The application has been executed. It is now in the "Completion" phase.'
+                 : currentLanguage === 'fr' ? 'La demande a été exécutée. Elle est maintenant en phase "Achèvement".'
+                 : 'Der Antrag wurde vollzogen. Er befindet sich jetzt in der Phase "Abschluss".'
+      };
+      
+      document.getElementById('weiterleitenPhaseInfo').textContent = phaseTexte[phase] || '';
+      
+      // Mitarbeiterliste laden
+      loadWeiterleitenMitarbeiter();
+      
+      openModal('weiterleitenModal');
+    }
+    
+    function toggleWeiterleitenFelder() {
+      const entscheidung = document.querySelector('input[name="weiterleitenEntscheidung"]:checked').value;
+      const felder = document.getElementById('weiterleitenFelder');
+      
+      if (entscheidung === 'ja') {
+        felder.style.display = 'block';
+      } else {
+        felder.style.display = 'none';
+      }
+    }
+    
+    // Alle Mitarbeiter für Weiterleitung laden
+    function loadWeiterleitenMitarbeiter() {
+      const alleMitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
+      
+      // Sortieren nach Name
+      alleMitarbeiter.sort((a, b) => {
+        const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
+        const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
+        return nameA.localeCompare(nameB, 'de');
+      });
+      
+      renderWeiterleitenMitarbeiter(alleMitarbeiter);
+    }
+    
+    // Mitarbeiterliste für Weiterleitung rendern
+    function renderWeiterleitenMitarbeiter(mitarbeiter) {
+      const liste = document.getElementById('weiterleitenMitarbeiterListe');
+      const selectedId = document.getElementById('weiterleitenPersonId').value;
+      
+      if (!liste) return;
+      
+      if (mitarbeiter.length === 0) {
+        liste.innerHTML = '<div class="keine-ergebnisse">Keine Mitarbeiter gefunden</div>';
+        return;
+      }
+      
+      liste.innerHTML = mitarbeiter.map(m => {
+        const rolleText = getRolleText(m.rolle);
+        const hausText = m.jvas && m.jvas.length > 0 ? (HAUS_CONFIG[m.jvas[0]]?.name || m.jvas[0]) : '';
+        const stationText = m.station ? `Station ${m.station}` : '';
+        const zusatzInfo = [hausText, stationText].filter(Boolean).join(', ');
+        const isSelected = m.id === selectedId;
+        
+        return `
+          <div class="mitarbeiter-item ${isSelected ? 'selected' : ''}" onclick="selectWeiterleitenMitarbeiter('${m.id}', '${m.vorname} ${m.nachname}')">
+            <div class="mitarbeiter-item-name">${m.vorname} ${m.nachname}</div>
+            <div class="mitarbeiter-item-info">${rolleText}${zusatzInfo ? ' • ' + zusatzInfo : ''}</div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Mitarbeiterliste für Weiterleitung filtern
+    function filterWeiterleitenMitarbeiter() {
+      const suchbegriff = document.getElementById('weiterleitenMitarbeiterSuche').value.toLowerCase().trim();
+      const alleMitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
+      
+      let gefiltert = alleMitarbeiter;
+      
+      if (suchbegriff) {
+        gefiltert = alleMitarbeiter.filter(m => {
+          const vollName = `${m.vorname} ${m.nachname}`.toLowerCase();
+          const rolleText = getRolleText(m.rolle).toLowerCase();
+          const hausText = m.jvas && m.jvas.length > 0 ? (HAUS_CONFIG[m.jvas[0]]?.name || '').toLowerCase() : '';
+          return vollName.includes(suchbegriff) || rolleText.includes(suchbegriff) || hausText.includes(suchbegriff);
+        });
+      }
+      
+      // Sortieren nach Name
+      gefiltert.sort((a, b) => {
+        const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
+        const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
+        return nameA.localeCompare(nameB, 'de');
+      });
+      
+      renderWeiterleitenMitarbeiter(gefiltert);
+    }
+    
+    // Mitarbeiter für Weiterleitung auswählen
+    function selectWeiterleitenMitarbeiter(id, name) {
+      document.getElementById('weiterleitenPersonId').value = id;
+      document.getElementById('weiterleitenSelectedPersonName').textContent = name;
+      document.getElementById('weiterleitenSelectedContainer').style.display = 'block';
+      
+      // Liste neu rendern um Auswahl zu markieren
+      filterWeiterleitenMitarbeiter();
+    }
+    
+    // Auswahl für Weiterleitung löschen
+    function clearWeiterleitenSelection() {
+      document.getElementById('weiterleitenPersonId').value = '';
+      document.getElementById('weiterleitenSelectedContainer').style.display = 'none';
+      document.getElementById('weiterleitenMitarbeiterSuche').value = '';
+      loadWeiterleitenMitarbeiter();
+    }
+    
+    function closeWeiterleitenModal(confirmed) {
+      closeModal('weiterleitenModal');
+      
+      // Wenn abgebrochen, trotzdem die Detailansicht aktualisieren
+      const antragId = document.getElementById('weiterleitenAntragId').value;
+      if (antragId) {
+        openAntragDetail(antragId);
+      }
+    }
+    
+    function confirmWeiterleiten() {
+      const antragId = document.getElementById('weiterleitenAntragId').value;
+      const phase = document.getElementById('weiterleitenPhase').value;
+      const entscheidung = document.querySelector('input[name="weiterleitenEntscheidung"]:checked').value;
+      
+      if (entscheidung === 'ja') {
+        const personId = document.getElementById('weiterleitenPersonId').value;
+        if (!personId) {
+          const msg = currentLanguage === 'en' ? 'Please select a staff member.'
+                    : currentLanguage === 'fr' ? 'Veuillez sélectionner un employé.'
+                    : 'Bitte wählen Sie einen Mitarbeiter aus.';
+          alert(msg);
+          return;
+        }
+        
+        const person = userSystem.getUser(personId);
+        const notiz = document.getElementById('weiterleitenNotiz').value.trim();
+        
+        // Weiterleitung durchführen
+        antragSystem.weiterleitenAntrag(
+          antragId, 
+          personId, 
+          `${person.vorname} ${person.nachname}`,
+          currentSession.userId,
+          currentSession.name,
+          notiz
+        );
+        
+        // Benachrichtigung an neuen Bearbeiter
+        const nachrichtText = currentLanguage === 'en' 
+          ? `Application forwarded to you${notiz ? ': ' + notiz : ''}`
+          : currentLanguage === 'fr' 
+          ? `Demande transmise à vous${notiz ? ': ' + notiz : ''}`
+          : `Antrag an Sie weitergeleitet${notiz ? ': ' + notiz : ''}`;
+        
+        const antrag = antragSystem.getAntrag(antragId);
+        notificationSystem.createNotification(
+          personId,
+          'weiterleitung',
+          '📤 ' + (currentLanguage === 'en' ? 'Application forwarded' : currentLanguage === 'fr' ? 'Demande transmise' : 'Antrag weitergeleitet'),
+          `${nachrichtText} (${antrag.antragsNummer || antragId})`,
+          antragId
+        );
+        
+        closeModal('weiterleitenModal');
+        
+        // Zurück zur Übersicht
+        closeAntragDetail();
+        renderAntraege();
+        
+        const msgErfolg = currentLanguage === 'en' ? `Application forwarded to ${person.vorname} ${person.nachname}.`
+                        : currentLanguage === 'fr' ? `Demande transmise à ${person.vorname} ${person.nachname}.`
+                        : `Antrag an ${person.vorname} ${person.nachname} weitergeleitet.`;
+        alert(msgErfolg);
+      } else {
+        // Keine Weiterleitung - einfach schließen
+        closeModal('weiterleitenModal');
         openAntragDetail(antragId);
       }
     }
@@ -2769,19 +3055,25 @@
       
       const result = antragSystem.nehmeAntrag(antragId, currentSession);
       if (result) {
-        // Detailansicht aktualisieren (bleibt in der Detailansicht)
-        openAntragDetail(antragId);
         renderAntraege();
+        // Nach Antrag nehmen: Weiterleitung anbieten
+        openWeiterleitenModal(antragId, 'genommen');
       }
     }
 
     function bestaetigeEroeffnung(antragId) {
       if (confirm('Haben Sie das Ergebnis dem Insassen persönlich mitgeteilt?')) {
         // Persönliche Eröffnung bestätigen (Benachrichtigung wird in app.js gesendet)
-        antragSystem.bestaetigePersoenlicheEroeffnung(antragId);
+        const antrag = antragSystem.bestaetigePersoenlicheEroeffnung(antragId);
         renderAntraege();
-        // Detailansicht aktualisieren
-        openAntragDetail(antragId);
+        
+        // Nach Bekanntgabe: Weiterleitung anbieten (nur wenn kein Vollzug mehr aussteht)
+        if (!antrag.wartetAufVollzug) {
+          openWeiterleitenModal(antragId, 'bekanntgegeben');
+        } else {
+          // Noch Vollzug ausstehend - Detailansicht aktualisieren
+          openAntragDetail(antragId);
+        }
       }
     }
 

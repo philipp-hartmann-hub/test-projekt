@@ -1969,6 +1969,12 @@ class AufgabenSystem {
     this.aufgaben.push(aufgabe);
     this.saveAufgaben();
     
+    // WICHTIG: Wenn einem Mitarbeiter eine Aufgabe zugewiesen wird, aus abgegebenVon entfernen
+    // So kann ein ehemaliger Bearbeiter wieder Zugriff auf den Antrag bekommen
+    if (data.zugewiesenAnTyp === 'mitarbeiter' && data.antragId) {
+      antragSystem.entferneAusAbgegebenVon(data.antragId, data.zugewiesenAnId);
+    }
+    
     // Aktivität protokollieren
     const zielTypText = data.zugewiesenAnTyp === 'insasse' ? 'Insasse' : 'Mitarbeiter';
     const fristText = data.fristDatum ? ` (Frist: ${new Date(data.fristDatum).toLocaleDateString('de-DE')})` : '';
@@ -2894,6 +2900,11 @@ class AntragSystem {
         antrag.abgegebenVon.push(altBearbeiterId);
       }
       
+      // WICHTIG: Neuen Bearbeiter aus "abgegebenVon" entfernen, falls er früher abgegeben hat
+      if (antrag.abgegebenVon.includes(neuBearbeiterId)) {
+        antrag.abgegebenVon = antrag.abgegebenVon.filter(id => id !== neuBearbeiterId);
+      }
+      
       // Neuen Bearbeiter setzen
       antrag.bearbeiterId = neuBearbeiterId;
       antrag.bearbeiterName = neuBearbeiterName;
@@ -2927,6 +2938,77 @@ class AntragSystem {
       return antrag.abgegebenVon.includes(benutzerId);
     }
     return false;
+  }
+
+  // Entfernt einen Benutzer aus der "abgegebenVon"-Liste
+  // Wird verwendet, wenn jemand durch Aufgabe oder Weiterleitung wieder Zugriff bekommen soll
+  entferneAusAbgegebenVon(antragId, benutzerId) {
+    const antrag = this.antraege.find(a => a.id === antragId);
+    if (antrag && antrag.abgegebenVon && antrag.abgegebenVon.includes(benutzerId)) {
+      antrag.abgegebenVon = antrag.abgegebenVon.filter(id => id !== benutzerId);
+      this.saveAntraege();
+      return true;
+    }
+    return false;
+  }
+
+  // Antrag an anderen Mitarbeiter weiterleiten
+  weiterleitenAntrag(antragId, neuBearbeiterId, neuBearbeiterName, altBearbeiterId, altBearbeiterName, notiz = '') {
+    const antrag = this.antraege.find(a => a.id === antragId);
+    if (antrag) {
+      // Alten Bearbeiter als "abgegeben" markieren
+      if (!antrag.abgegebenVon) {
+        antrag.abgegebenVon = [];
+      }
+      if (altBearbeiterId && !antrag.abgegebenVon.includes(altBearbeiterId)) {
+        antrag.abgegebenVon.push(altBearbeiterId);
+      }
+      
+      // WICHTIG: Neuen Bearbeiter aus "abgegebenVon" entfernen, falls er früher abgegeben hat
+      // So kann ein ehemaliger Bearbeiter wieder vollen Zugriff bekommen
+      if (antrag.abgegebenVon.includes(neuBearbeiterId)) {
+        antrag.abgegebenVon = antrag.abgegebenVon.filter(id => id !== neuBearbeiterId);
+      }
+      
+      // Neuen Bearbeiter setzen
+      antrag.bearbeiterId = neuBearbeiterId;
+      antrag.bearbeiterName = neuBearbeiterName;
+      
+      // Weiterleitungs-Historie speichern
+      if (!antrag.weiterleitungen) {
+        antrag.weiterleitungen = [];
+      }
+      antrag.weiterleitungen.push({
+        von: altBearbeiterName,
+        vonId: altBearbeiterId,
+        an: neuBearbeiterName,
+        anId: neuBearbeiterId,
+        notiz: notiz,
+        datum: new Date().toISOString()
+      });
+      
+      this.saveAntraege();
+      
+      // Aktivität protokollieren
+      aktivitaetenSystem.logAktivitaet({
+        antragId: antragId,
+        typ: 'weitergeleitet',
+        beschreibung: `Antrag weitergeleitet an ${neuBearbeiterName}${notiz ? ': ' + notiz : ''}`,
+        details: { 
+          vonId: altBearbeiterId,
+          von: altBearbeiterName,
+          anId: neuBearbeiterId, 
+          an: neuBearbeiterName,
+          notiz: notiz
+        },
+        benutzerTyp: 'mitarbeiter',
+        benutzerId: altBearbeiterId,
+        benutzerName: altBearbeiterName
+      });
+      
+      return antrag;
+    }
+    return null;
   }
 }
 
@@ -3013,7 +3095,12 @@ function getRolleText(rolle) {
 
 // Modal-Funktionen
 function openModal(modalId) {
-  document.getElementById(modalId).classList.add('active');
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.add('active');
+  } else {
+    console.error('Modal nicht gefunden:', modalId);
+  }
 }
 
 function closeModal(modalId) {
