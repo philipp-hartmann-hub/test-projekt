@@ -55,13 +55,6 @@
         </div>
       </div>
       <div class="header-right">
-        <div class="language-selector">
-          <select id="languageSelect" onchange="changeLanguage(this.value)">
-            <option value="de">🇩🇪 Deutsch</option>
-            <option value="en">🇬🇧 English</option>
-            <option value="fr">🇫🇷 Français</option>
-          </select>
-        </div>
         <div class="user-badge">
           <div>
             <div class="role" data-i18n="role.inmate">Insasse</div>
@@ -454,141 +447,27 @@
   <script>
     let currentSession = null;
 
-    // ============================================
-    // SPRACHSTEUERUNG
-    // ============================================
-    
-    function changeLanguage(lang) {
-      setLanguage(lang);
-      updateUITranslations();
-      // Listen neu rendern mit neuer Sprache
-      if (currentSession) {
-        renderAntraege();
-        renderNotifications();
-      }
-    }
-    
-    function updateUITranslations() {
-      // Statische Elemente mit data-i18n Attribut übersetzen
-      document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        el.textContent = t(key);
-      });
-      
-      // Placeholder übersetzen
-      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-        const key = el.getAttribute('data-i18n-placeholder');
-        el.placeholder = t(key);
-      });
-      
-      // Tabs aktualisieren
-      const tabs = document.querySelectorAll('.tabs .tab');
-      if (tabs.length >= 2) {
-        tabs[0].textContent = t('nav.submittedApplications');
-        tabs[1].textContent = t('nav.history');
-      }
-      
-      // Postfach-Titel
-      const postfachTitle = document.querySelector('#notificationSection h2');
-      if (postfachTitle) {
-        const count = document.getElementById('notificationCount')?.textContent || '0';
-        postfachTitle.innerHTML = `${t('inbox.messages')} <span class="count" id="notificationCount">${count}</span>`;
-      }
-      
-      // "Neuer Antrag" Button
-      const newAntragBtn = document.querySelector('.action-bar .btn-primary');
-      if (newAntragBtn) {
-        newAntragBtn.textContent = '+ ' + t('application.new');
-      }
-      
-      // Entwürfe-Titel
-      const entwuerfeTitle = document.querySelector('.entwuerfe-section h2');
-      if (entwuerfeTitle) {
-        const count = document.getElementById('entwuerfeCount')?.textContent || '0';
-        entwuerfeTitle.innerHTML = `${t('nav.drafts')} <span class="count" id="entwuerfeCount">${count}</span>`;
-      }
-      
-      // ============================================
-      // MODAL-ÜBERSETZUNGEN (Insassen-Portal)
-      // ============================================
-      
-      // Neuer Antrag Modal
-      const newAntragModalTitle = document.querySelector('#newAntragModal .modal-header h3');
-      if (newAntragModalTitle) newAntragModalTitle.textContent = t('application.new');
-      
-      const antragsartLabel = document.querySelector('#newAntragModal label');
-      if (antragsartLabel && antragsartLabel.textContent.includes('Antragsart')) {
-        antragsartLabel.textContent = t('form.applicationType');
-      }
-      
-      // Modal-Buttons (Neuer Antrag)
-      const newAntragBtns = document.querySelectorAll('#newAntragModal .modal-footer .btn');
-      newAntragBtns.forEach(btn => {
-        if (btn.classList.contains('btn-secondary')) btn.textContent = t('button.cancel');
-        if (btn.classList.contains('btn-outline')) btn.textContent = t('button.saveDraft');
-        if (btn.classList.contains('btn-primary') && !btn.classList.contains('btn-outline')) btn.textContent = t('button.submit');
-      });
-      
-      // Antrag bearbeiten Modal
-      const editAntragModalTitle = document.querySelector('#editAntragModal .modal-header h3');
-      if (editAntragModalTitle) editAntragModalTitle.textContent = t('application.title') + ' ' + t('button.edit').toLowerCase();
-      
-      // Aufgabe bearbeiten Modal
-      const aufgabeInsasseModalTitle = document.querySelector('#aufgabeInsasseModal .modal-header h3');
-      if (aufgabeInsasseModalTitle) aufgabeInsasseModalTitle.textContent = t('task.edit');
-      
-      // Aufgabe abschließen Labels
-      const aufgabeAbschlussLabel = document.querySelector('#aufgabeInsasseModal .form-group > label');
-      if (aufgabeAbschlussLabel && aufgabeAbschlussLabel.textContent.includes('Wie möchten Sie')) {
-        aufgabeAbschlussLabel.textContent = currentLanguage === 'en' ? 'How would you like to complete the task?' 
-          : currentLanguage === 'fr' ? 'Comment souhaitez-vous terminer la tâche?' 
-          : 'Wie möchten Sie die Aufgabe abschließen?';
-      }
-      
-      // Radio-Labels für Aufgabe
-      const aufgabeInsasseRadios = document.querySelectorAll('#aufgabeInsasseModal .radio-label');
-      if (aufgabeInsasseRadios.length >= 2) {
-        aufgabeInsasseRadios[0].textContent = t('task.withAnswer');
-        aufgabeInsasseRadios[1].textContent = t('task.acknowledged');
-      }
-      
-      const antwortLabel = document.querySelector('label[for="aufgabeInsasseAntwort"]');
-      if (antwortLabel) antwortLabel.textContent = currentLanguage === 'en' ? 'Your answer' 
-        : currentLanguage === 'fr' ? 'Votre réponse' 
-        : 'Ihre Antwort';
-      
-      const antwortInput = document.getElementById('aufgabeInsasseAntwort');
-      if (antwortInput) antwortInput.placeholder = t('task.enterAnswer');
-      
-      // Aufgabe Modal Buttons
-      const aufgabeInsasseBtns = document.querySelectorAll('#aufgabeInsasseModal .modal-footer .btn');
-      if (aufgabeInsasseBtns.length >= 2) {
-        aufgabeInsasseBtns[0].textContent = t('button.cancel');
-        aufgabeInsasseBtns[1].textContent = t('task.complete');
-      }
-    }
-    
-    // Übersetzte Statusanzeige
+    // Statusanzeige (nur Deutsch)
     function getStatusText(status) {
       const statusMap = {
-        'entwurf': t('status.draft'),
-        'eingereicht': t('status.submitted'),
-        'in-bearbeitung': t('status.inProgress'),
-        'genehmigt': t('status.approved'),
-        'abgelehnt': t('status.rejected'),
-        'teilweise-genehmigt': t('status.partiallyApproved'),
-        'erledigt': t('status.completed'),
-        'offen': t('status.open')
+        'entwurf': 'Entwurf',
+        'eingereicht': 'Eingereicht',
+        'in-bearbeitung': 'In Bearbeitung',
+        'genehmigt': 'Genehmigt',
+        'abgelehnt': 'Abgelehnt',
+        'teilweise-genehmigt': 'Teilweise genehmigt',
+        'erledigt': 'Erledigt',
+        'offen': 'Offen'
       };
       return statusMap[status] || status;
     }
     
-    // Übersetzte Antragstypen
+    // Antragstypen (nur Deutsch)
     function getAntragsTypText(type) {
       const typeMap = {
-        'teilhabegeld': t('application.type.teilhabegeld'),
-        'eigentum': t('application.type.eigentum'),
-        'sonstiges': t('application.type.sonstiges')
+        'teilhabegeld': 'Teilhabegeld',
+        'eigentum': 'Eigentum in der Kammer',
+        'sonstiges': 'Sonstiges'
       };
       return typeMap[type] || type;
     }
@@ -615,7 +494,6 @@
     function logout() {
       sessionManager.logout();
       currentSession = null;
-      resetLanguage(); // Sprache zurücksetzen für nächsten Benutzer
       location.reload();
     }
     
@@ -626,15 +504,7 @@
       
       // Moin-Begrüßung setzen
       document.getElementById('welcomeGreeting').textContent = 'Moin, ' + currentSession.name + '!';
-      const welcomeMsg = currentLanguage === 'en' ? 'Welcome to the Inmate Portal.' 
-                       : currentLanguage === 'fr' ? 'Bienvenue dans le portail des détenus.' 
-                       : 'Willkommen im Insassen-Portal.';
-      document.getElementById('welcomeMessage').textContent = welcomeMsg;
-      
-      // Benutzersprache laden
-      loadUserLanguage(currentSession.userId);
-      document.getElementById('languageSelect').value = currentLanguage;
-      updateUITranslations();
+      document.getElementById('welcomeMessage').textContent = 'Willkommen im Insassen-Portal.';
       
       renderAntraege();
       renderNotifications();
@@ -824,14 +694,13 @@
         const kleidungCheckboxes = document.querySelectorAll('input[name="kleidung"]:checked');
         const kleidung = Array.from(kleidungCheckboxes).map(cb => cb.value);
         const antragBegruendungText = document.getElementById('eigentumBegruendung').value.trim();
-        // Begründung mit Sprachinfo speichern für spätere Übersetzung
-        const antragBegruendung = createTranslatableText(antragBegruendungText);
+        const antragBegruendung = antragBegruendungText;
         
         if (kleidung.length === 0) {
-          return { type, data: { aktion, kleidung, antragBegruendung }, valid: false, error: t('error.selectOption') };
+          return { type, data: { aktion, kleidung, antragBegruendung }, valid: false, error: 'Bitte wählen Sie eine Option aus.' };
         }
         if (!antragBegruendungText) {
-          return { type, data: { aktion, kleidung, antragBegruendung }, valid: false, error: t('error.required') };
+          return { type, data: { aktion, kleidung, antragBegruendung }, valid: false, error: 'Dieses Feld ist erforderlich.' };
         }
         return { type, data: { aktion, kleidung, antragBegruendung }, valid: true, error: null };
       }
@@ -867,10 +736,7 @@
       resetNewAntragForm();
       
       // Hinweis anzeigen
-      const msg = currentLanguage === 'en' ? 'Draft has been saved! You can find it in the right column.' 
-                : currentLanguage === 'fr' ? 'Le brouillon a été enregistré! Vous le trouverez dans la colonne de droite.' 
-                : 'Entwurf wurde gespeichert! Sie finden ihn in der rechten Spalte.';
-      showAlert(msg);
+      showAlert('Entwurf wurde gespeichert! Sie finden ihn in der rechten Spalte.');
     }
 
     function resetNewAntragForm() {
@@ -982,10 +848,7 @@
 
     async function deleteEntwurf() {
       const entwurfId = document.getElementById('entwurfId').value;
-      const msg = currentLanguage === 'en' ? 'Do you really want to delete this draft?'
-                : currentLanguage === 'fr' ? 'Voulez-vous vraiment supprimer ce brouillon?'
-                : 'Möchten Sie diesen Entwurf wirklich löschen?';
-      const confirmed = await showConfirm(msg);
+      const confirmed = await showConfirm('Möchten Sie diesen Entwurf wirklich löschen?');
       if (confirmed) {
         antragSystem.deleteAntrag(entwurfId);
         closeModal('entwurfModal');
@@ -994,7 +857,13 @@
     }
 
     function renderAntragCard(antrag, mode = 'aktiv') {
-      const statusClass = antrag.status;
+      // Sicherheitsprüfung
+      if (!antrag || typeof antrag !== 'object') {
+        console.error('Ungültiger Antrag:', antrag);
+        return '';
+      }
+      
+      const statusClass = antrag.status || 'offen';
       const isTeilweiseGenehmigt = antrag.status === 'teilweise-genehmigt';
       const isEntwurf = antrag.status === 'entwurf';
       
@@ -1002,23 +871,31 @@
       const antragsNummer = antrag.antragsNummer ? `<span class="antrags-nummer">${antrag.antragsNummer}</span> ` : '';
       
       let detailsHtml = '';
-      let typeLabel = '';
+      let typeLabel = 'Antrag';
       
       if (antrag.type === 'teilhabegeld') {
-        typeLabel = '💰 Teilhabegeld';
+        typeLabel = 'Teilhabegeld';
         if (antrag.monat) {
-          detailsHtml = `<p><strong>Monat:</strong> ${formatMonat(antrag.monat)}</p>`;
+          try {
+            detailsHtml = `<p><strong>Monat:</strong> ${formatMonat(antrag.monat)}</p>`;
+          } catch(e) {
+            detailsHtml = `<p><strong>Monat:</strong> ${antrag.monat}</p>`;
+          }
         } else {
           detailsHtml = `<p class="incomplete"><em>Monat noch nicht ausgewählt</em></p>`;
         }
       } else if (antrag.type === 'eigentum') {
-        typeLabel = '👕 Eigentum in der Kammer';
+        typeLabel = 'Eigentum in der Kammer';
         const aktionText = antrag.aktion === 'aufstocken' ? 'Kleidung aufstocken' : 'Kleidung tauschen';
         if (antrag.kleidung && antrag.kleidung.length > 0) {
+          let begruendungText = '';
+          if (antrag.antragBegruendung) {
+            begruendungText = typeof antrag.antragBegruendung === 'object' ? (antrag.antragBegruendung.text || '') : (antrag.antragBegruendung || '');
+          }
           detailsHtml = `
-            <p><strong>${t('application.concern')}:</strong> ${aktionText}</p>
+            <p><strong>Anliegen:</strong> ${aktionText}</p>
             <p><strong>Kleidung:</strong> ${antrag.kleidung.join(', ')}</p>
-            ${antrag.antragBegruendung ? `<p><strong>${t('application.justification')}:</strong> ${getTranslatedUserText(antrag.antragBegruendung)}</p>` : ''}
+            ${begruendungText ? `<p><strong>Begründung:</strong> ${begruendungText}</p>` : ''}
           `;
         } else {
           detailsHtml = `
@@ -1026,6 +903,10 @@
             <p class="incomplete"><em>Keine Kleidungsstücke ausgewählt</em></p>
           `;
         }
+      } else {
+        // Unbekannter Typ - trotzdem anzeigen
+        typeLabel = antrag.type || 'Antrag';
+        detailsHtml = `<p><strong>Typ:</strong> ${antrag.type || 'Unbekannt'}</p>`;
       }
       
       let actionsHtml = '';
@@ -1043,7 +924,7 @@
         if (antrag.begruendung) {
           actionsHtml = `
             <div class="antrag-feedback">
-              <strong>${currentLanguage === 'en' ? 'Reason' : currentLanguage === 'fr' ? 'Motif' : 'Begründung'}:</strong> ${getTranslatedUserText(antrag.begruendung)}
+              <strong>Begründung:</strong> ${antrag.begruendung || ''}
             </div>
           `;
         }
@@ -1051,7 +932,7 @@
         if (antrag.vollzugKommentar) {
           actionsHtml += `
             <div class="antrag-feedback vollzug-kommentar">
-              <strong>${currentLanguage === 'en' ? 'Note on execution' : currentLanguage === 'fr' ? 'Note sur l\'exécution' : 'Hinweis zum Vollzug'}:</strong> ${getTranslatedUserText(antrag.vollzugKommentar)}
+              <strong>Hinweis zum Vollzug:</strong> ${antrag.vollzugKommentar || ''}
             </div>
           `;
         }
@@ -1059,7 +940,7 @@
           actionsHtml += `
             <div class="antrag-actions">
               <button class="btn btn-secondary btn-sm" onclick="downloadBescheidPdf('${antrag.id}')">
-                ${currentLanguage === 'en' ? 'Download notice' : currentLanguage === 'fr' ? 'Télécharger l\'avis' : 'Bescheid herunterladen'}
+                Bescheid herunterladen
               </button>
             </div>
           `;
@@ -1088,10 +969,7 @@
     function downloadBescheidPdf(antragId) {
       const antrag = antragSystem.getAntrag(antragId);
       if (!antrag || !antrag.bescheidPdf) {
-        const msg = currentLanguage === 'en' ? 'No notice available.' 
-                  : currentLanguage === 'fr' ? 'Aucun avis disponible.' 
-                  : 'Kein Bescheid vorhanden.';
-        showAlert(msg);
+        showAlert('Kein Bescheid vorhanden.');
         return;
       }
       
@@ -1135,10 +1013,7 @@
       if (antrag.type === 'teilhabegeld') {
         const monat = document.getElementById('editMonatSelect').value;
         if (!monat) {
-          const msg = currentLanguage === 'en' ? 'Please select a month.' 
-                    : currentLanguage === 'fr' ? 'Veuillez sélectionner un mois.' 
-                    : 'Bitte wählen Sie einen Monat aus.';
-          showAlert(msg);
+          showAlert('Bitte wählen Sie einen Monat aus.');
           return;
         }
         antragSystem.updateAntragMonat(antragId, monat);
@@ -1148,10 +1023,7 @@
         const kleidung = Array.from(kleidungCheckboxes).map(cb => cb.value);
         
         if (kleidung.length === 0) {
-          const msg = currentLanguage === 'en' ? 'Please select at least one item of clothing.' 
-                    : currentLanguage === 'fr' ? 'Veuillez sélectionner au moins un vêtement.' 
-                    : 'Bitte wählen Sie mindestens ein Kleidungsstück aus.';
-          showAlert(msg);
+          showAlert('Bitte wählen Sie mindestens ein Kleidungsstück aus.');
           return;
         }
         
@@ -1164,10 +1036,7 @@
 
     async function deleteAntrag() {
       const antragId = document.getElementById('editAntragId').value;
-      const msg = currentLanguage === 'en' ? 'Do you really want to permanently delete this application?'
-                : currentLanguage === 'fr' ? 'Voulez-vous vraiment supprimer définitivement cette demande?'
-                : 'Möchten Sie diesen Antrag wirklich endgültig löschen?';
-      const confirmed = await showConfirm(msg);
+      const confirmed = await showConfirm('Möchten Sie diesen Antrag wirklich endgültig löschen?');
       if (confirmed) {
         antragSystem.deleteAntrag(antragId);
         closeModal('editAntragModal');
@@ -1183,6 +1052,19 @@
       const historieList = document.getElementById('historieList');
       const aufgabenList = document.getElementById('aufgabenList');
       const aufgabenSection = document.getElementById('aufgabenSection');
+      
+      // WICHTIG: Automatische ID-Reparatur für Anträge, die per Name diesem Insassen gehören
+      let needsSave = false;
+      antragSystem.antraege.forEach(antrag => {
+        if (antrag.insasseName === currentSession.name && antrag.insasseId !== currentSession.userId) {
+          console.log('Repariere Antrag-ID:', antrag.id, 'von', antrag.insasseId, 'zu', currentSession.userId);
+          antrag.insasseId = currentSession.userId;
+          needsSave = true;
+        }
+      });
+      if (needsSave) {
+        antragSystem.saveAntraege();
+      }
       
       const entwuerfe = antragSystem.getEntwuerfeInsasse(currentSession.userId);
       const aktiveAntraege = antragSystem.getAktiveAntraegeInsasse(currentSession.userId);
@@ -1213,16 +1095,28 @@
       
       // Aktive Anträge
       if (aktiveAntraege.length === 0) {
-        aktivList.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Keine eingereichten Anträge vorhanden.</p></div>';
+        aktivList.innerHTML = '<div class="empty-state"><p>Keine eingereichten Anträge vorhanden.</p></div>';
       } else {
-        aktivList.innerHTML = aktiveAntraege.map(a => renderAntragCard(a, 'aktiv')).join('');
+        try {
+          const html = aktiveAntraege.map(a => renderAntragCard(a, 'aktiv')).join('');
+          aktivList.innerHTML = html || '<div class="empty-state"><p>Fehler beim Anzeigen der Anträge.</p></div>';
+        } catch (e) {
+          console.error('Fehler beim Rendern aktiver Anträge:', e);
+          aktivList.innerHTML = '<div class="error-state" style="color:red;padding:1rem;">Fehler: ' + e.message + '</div>';
+        }
       }
       
       // Historie
       if (historieAntraege.length === 0) {
         historieList.innerHTML = '<div class="empty-state"><p>Noch keine abgeschlossenen Anträge.</p></div>';
       } else {
-        historieList.innerHTML = historieAntraege.map(a => renderAntragCard(a, 'historie')).join('');
+        try {
+          const html = historieAntraege.map(a => renderAntragCard(a, 'historie')).join('');
+          historieList.innerHTML = html || '<div class="empty-state"><p>Fehler beim Anzeigen der Anträge.</p></div>';
+        } catch (e) {
+          console.error('Fehler beim Rendern der Historie:', e);
+          historieList.innerHTML = '<div class="error-state" style="color:red;padding:1rem;">Fehler: ' + e.message + '</div>';
+        }
       }
     }
 
@@ -1233,25 +1127,23 @@
     function renderAufgabeCard(aufgabe) {
       const antrag = antragSystem.getAntrag(aufgabe.antragId);
       const antragsNummer = antrag ? antrag.antragsNummer : aufgabe.antragsNummer;
-      const receivedText = currentLanguage === 'en' ? 'Received' : currentLanguage === 'fr' ? 'Reçu' : 'Erhalten';
-      
       return `
         <div class="antrag-card aufgabe-card">
           <div class="aufgabe-header">
             <span class="aufgabe-icon"></span>
-            <span class="aufgabe-label">${t('task.title')}</span>
-            <span class="status-badge in-bearbeitung">⏳ ${t('status.open')}</span>
+            <span class="aufgabe-label">Aufgabe</span>
+            <span class="status-badge in-bearbeitung">Offen</span>
           </div>
           <div class="antrag-body">
-            <p><strong>${t('task.forApplication')}:</strong> ${antragsNummer || aufgabe.antragId}</p>
-            <p><strong>${currentLanguage === 'en' ? 'From' : currentLanguage === 'fr' ? 'De' : 'Von'}:</strong> ${aufgabe.erstelltVonName}</p>
-            <p><strong>${t('task.title')}:</strong> ${getTranslatedUserText(aufgabe.kurzbeschreibung || aufgabe.beschreibung)}</p>
-            ${aufgabe.beschreibung && aufgabe.kurzbeschreibung ? `<p><strong>${t('form.details')}:</strong> ${getTranslatedUserText(aufgabe.beschreibung)}</p>` : ''}
-            <p class="antrag-date">${receivedText}: ${formatDate(aufgabe.erstelltAm)}</p>
+            <p><strong>Zum Antrag:</strong> ${antragsNummer || aufgabe.antragId}</p>
+            <p><strong>Von:</strong> ${aufgabe.erstelltVonName}</p>
+            <p><strong>Aufgabe:</strong> ${aufgabe.kurzbeschreibung || aufgabe.beschreibung}</p>
+            ${aufgabe.beschreibung && aufgabe.kurzbeschreibung ? `<p><strong>Details:</strong> ${aufgabe.beschreibung}</p>` : ''}
+            <p class="antrag-date">Erhalten: ${formatDate(aufgabe.erstelltAm)}</p>
           </div>
           <div class="antrag-actions">
             <button class="btn btn-primary btn-sm" onclick="openAufgabeInsasseModal('${aufgabe.id}')">
-              ${t('task.edit')}
+              Bearbeiten
             </button>
           </div>
         </div>
@@ -1272,21 +1164,21 @@
       document.getElementById('aufgabeInsasseInfo').innerHTML = `
         <div class="detail-box">
           <div class="detail-row">
-            <span class="detail-label">${t('task.from')}:</span>
+            <span class="detail-label">Von:</span>
             <span class="detail-value">${aufgabe.erstelltVonName}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">${t('task.forApplication')}:</span>
+            <span class="detail-label">Zum Antrag:</span>
             <span class="detail-value">${aufgabe.antragsNummer || aufgabe.antragId}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">${t('task.title')}:</span>
-            <span class="detail-value">${getTranslatedUserText(aufgabe.kurzbeschreibung || aufgabe.beschreibung)}</span>
+            <span class="detail-label">Aufgabe:</span>
+            <span class="detail-value">${aufgabe.kurzbeschreibung || aufgabe.beschreibung}</span>
           </div>
           ${aufgabe.beschreibung && aufgabe.kurzbeschreibung ? `
           <div class="detail-row">
-            <span class="detail-label">${t('task.description')}:</span>
-            <span class="detail-value">${getTranslatedUserText(aufgabe.beschreibung)}</span>
+            <span class="detail-label">Beschreibung:</span>
+            <span class="detail-value">${aufgabe.beschreibung}</span>
           </div>
           ` : ''}
         </div>
@@ -1313,30 +1205,27 @@
       
       // Bei "Antwort" ist eine Eingabe erforderlich, bei "Kenntnisnahme" nicht
       if (erledigungsTyp === 'antwort' && !antwortText) {
-        showAlert(t('error.required'));
+        showAlert('Dieses Feld ist erforderlich.');
         return;
       }
       
-      // Antwort mit Sprachinfo für Übersetzung speichern
-      const antwort = antwortText ? createTranslatableText(antwortText) : '';
-      
-      const aufgabe = aufgabenSystem.erledigeAufgabe(aufgabeId, antwort, erledigungsTyp);
+      const aufgabe = aufgabenSystem.erledigeAufgabe(aufgabeId, antwortText, erledigungsTyp);
       
       // Benachrichtigung an den Ersteller
       const nachrichtText = erledigungsTyp === 'kenntnisnahme'
-        ? `${t('task.acknowledged')} (${t('application.id')}: ${aufgabe.antragsNummer || aufgabe.antragId})`
-        : `${t('task.answer')} (${t('application.id')}: ${aufgabe.antragsNummer || aufgabe.antragId})`;
+        ? `Zur Kenntnis genommen (Antrags-ID: ${aufgabe.antragsNummer || aufgabe.antragId})`
+        : `Antwort erhalten (Antrags-ID: ${aufgabe.antragsNummer || aufgabe.antragId})`;
       
       notificationSystem.createNotification(
         aufgabe.erstelltVonId,
         'aufgabe-erledigt',
-        t('task.complete'),
+        'Aufgabe erledigt',
         nachrichtText,
         aufgabe.antragId
       );
       
       closeModal('aufgabeInsasseModal');
-      showAlert(erledigungsTyp === 'kenntnisnahme' ? t('task.acknowledged') : t('success.submitted'));
+      showAlert(erledigungsTyp === 'kenntnisnahme' ? 'Zur Kenntnis genommen' : 'Erfolgreich übermittelt');
       renderAntraege();
     }
   </script>

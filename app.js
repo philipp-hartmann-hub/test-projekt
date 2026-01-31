@@ -2712,20 +2712,30 @@ class AntragSystem {
     ).sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
   }
 
-  // Aktive Anträge eines bestimmten Insassen (ohne Entwürfe)
+  // Aktive Anträge eines bestimmten Insassen (ohne Entwürfe, ohne erledigte)
   getAktiveAntraegeInsasse(insasseId) {
-    return this.antraege.filter(a => 
-      a.insasseId === insasseId &&
-      (a.status === 'offen' || a.status === 'in-bearbeitung')
-    ).sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
+    return this.antraege.filter(a => {
+      if (a.insasseId !== insasseId) return false;
+      if (a.status === 'entwurf') return false;
+      // Anträge die auf persönliche Eröffnung oder Vollzug warten, zeigen wir als aktiv
+      if (a.wartetAufEroeffnung || a.wartetAufVollzug) return true;
+      // Alle nicht-erledigten Anträge sind aktiv
+      if (a.erledigt !== true) return true;
+      return false;
+    }).sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
   }
 
-  // Historie eines bestimmten Insassen
+  // Historie eines bestimmten Insassen (erledigte Anträge, die bekannt gegeben wurden)
   getHistorieInsasse(insasseId) {
-    return this.antraege.filter(a => 
-      a.insasseId === insasseId &&
-      a.erledigt === true
-    ).sort((a, b) => new Date(b.bearbeitetAm) - new Date(a.bearbeitetAm));
+    return this.antraege.filter(a => {
+      if (a.insasseId !== insasseId) return false;
+      if (a.status === 'entwurf') return false;
+      // Anträge die noch auf Bekanntgabe warten, nicht in Historie
+      if (a.wartetAufEroeffnung || a.wartetAufVollzug) return false;
+      // Erledigte Anträge in Historie
+      if (a.erledigt === true) return true;
+      return false;
+    }).sort((a, b) => new Date(b.bearbeitetAm || b.erstelltAm) - new Date(a.bearbeitetAm || a.erstelltAm));
   }
 
   // ====== MITARBEITER-FUNKTIONEN ======

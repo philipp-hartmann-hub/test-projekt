@@ -56,13 +56,6 @@
         </div>
       </div>
       <div class="header-right">
-        <div class="language-selector">
-          <select id="languageSelect" onchange="changeLanguage(this.value)">
-            <option value="de">🇩🇪 Deutsch</option>
-            <option value="en">🇬🇧 English</option>
-            <option value="fr">🇫🇷 Français</option>
-          </select>
-        </div>
         <div class="user-badge">
           <div>
             <div class="role" id="userRole">Mitarbeiter</div>
@@ -937,7 +930,6 @@
     function logout() {
       sessionManager.logout();
       currentSession = null;
-      resetLanguage(); // Sprache zurücksetzen für nächsten Benutzer
       location.reload();
     }
     
@@ -949,15 +941,7 @@
       
       // Moin-Begrüßung setzen
       document.getElementById('welcomeGreeting').textContent = 'Moin, ' + currentSession.name + '!';
-      const welcomeMsg = currentLanguage === 'en' ? 'Welcome to the Staff Portal.' 
-                       : currentLanguage === 'fr' ? 'Bienvenue dans le portail des employés.' 
-                       : 'Willkommen im Mitarbeiter-Portal.';
-      document.getElementById('welcomeMessage').textContent = welcomeMsg;
-      
-      // Benutzersprache laden
-      loadUserLanguage(currentSession.userId);
-      document.getElementById('languageSelect').value = currentLanguage;
-      updateUITranslations();
+      document.getElementById('welcomeMessage').textContent = 'Willkommen im Mitarbeiter-Portal.';
       
       // Zuständigkeitsbereich anzeigen
       updateZustaendigkeitInfo();
