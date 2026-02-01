@@ -137,7 +137,6 @@
         <div class="tabs">
           <button class="tab active" onclick="switchTab('offen')">Anträge und Aufgaben meiner Gruppe</button>
           <button class="tab" onclick="switchTab('bearbeitung')">Meine Anträge und Aufgaben <span class="tab-count" id="bearbeitungTabCount">0</span></button>
-          <button class="tab" id="hausAntraegeTab" style="display: none;" onclick="switchTab('hausAntraege')">Anträge des Hauses <span class="tab-count" id="hausAntraegeTabCount">0</span></button>
           <button class="tab" onclick="switchTab('historie')">Erledigt</button>
         </div>
 
@@ -179,24 +178,6 @@
           </div>
         </section>
 
-        <!-- Anträge des Hauses (nur für Hausleitung) -->
-        <section class="section" id="hausAntraegeSection" style="display: none;">
-          <div class="section-header">
-            <h2>Anträge des Hauses <span class="count" id="hausAntraegeCount">0</span></h2>
-            <div class="sort-controls">
-              <label for="sortierungHaus">Sortieren:</label>
-              <select id="sortierungHaus" onchange="renderAntraege()">
-                <option value="datum-neu">Neueste zuerst</option>
-                <option value="datum-alt">Älteste zuerst</option>
-                <option value="antragsteller-az">Antragsteller A-Z</option>
-                <option value="antragsteller-za">Antragsteller Z-A</option>
-              </select>
-            </div>
-          </div>
-          <div class="antrag-list" id="hausAntraegeList">
-            <!-- Dynamisch gefüllt -->
-          </div>
-        </section>
 
         <!-- Erledigt / Historie -->
         <section class="section" id="historieSection" style="display: none;">
@@ -1271,20 +1252,16 @@
       
       document.getElementById('offenSection').style.display = 'none';
       document.getElementById('bearbeitungSection').style.display = 'none';
-      document.getElementById('hausAntraegeSection').style.display = 'none';
       document.getElementById('historieSection').style.display = 'none';
       
       if (tab === 'offen') {
-        document.querySelector('.tab[onclick*="offen"]').classList.add('active');
+        tabs[0].classList.add('active');
         document.getElementById('offenSection').style.display = 'block';
       } else if (tab === 'bearbeitung') {
-        document.querySelector('.tab[onclick*="bearbeitung"]').classList.add('active');
+        tabs[1].classList.add('active');
         document.getElementById('bearbeitungSection').style.display = 'block';
-      } else if (tab === 'hausAntraege') {
-        document.querySelector('.tab[onclick*="hausAntraege"]').classList.add('active');
-        document.getElementById('hausAntraegeSection').style.display = 'block';
-      } else if (tab === 'historie') {
-        document.querySelector('.tab[onclick*="historie"]').classList.add('active');
+      } else {
+        tabs[2].classList.add('active');
         document.getElementById('historieSection').style.display = 'block';
       }
     }
@@ -1413,25 +1390,6 @@ ${buttonText}
             </div>
           `;
         }
-      } else if (mode === 'hausAntraege') {
-        // Anträge des Hauses (für Hausleitung) - andere Mitarbeiter bearbeiten diese
-        bearbeiterInfo = `
-          <div class="bearbeiter-info">
-            <span class="bearbeiter-icon"></span>
-            <span>Bearbeitet von: <strong>${antrag.bearbeiterName || 'Unbekannt'}</strong></span>
-          </div>
-        `;
-        
-        actionsHtml = `
-          <div class="antrag-actions">
-            <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${antrag.id}', false, true)">
-              📂 ${t('button.open')}
-            </button>
-            <button class="btn btn-warning btn-sm" onclick="openHausleitungUebernahmeModal('${antrag.id}')">
-              Antrag übernehmen
-            </button>
-          </div>
-        `;
       } else if (mode === 'eroeffnung') {
         // Anträge die auf persönliche Eröffnung warten
         const ergebnisText = antrag.geplantesErgebnis === 'genehmigt' ? 'Genehmigt' : 
@@ -3930,24 +3888,11 @@ ${t('action.archive')}
       
       const offenList = document.getElementById('offenList');
       const bearbeitungList = document.getElementById('bearbeitungList');
-      const hausAntraegeList = document.getElementById('hausAntraegeList');
       const historieList = document.getElementById('historieList');
       
       let offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(currentSession);
       let inBearbeitungAntraege = antragSystem.getInBearbeitungAntraege(currentSession);
       let historieAntraege = antragSystem.getHistorieMitarbeiter(currentSession);
-      
-      // Anträge des Hauses (nur für Hausleitung)
-      let hausAntraege = [];
-      const istHausleitungAktuell = istHausleitung();
-      
-      if (istHausleitungAktuell) {
-        hausAntraege = antragSystem.getAntraegeDesHauses(currentSession);
-        // Tab sichtbar machen
-        document.getElementById('hausAntraegeTab').style.display = 'inline-block';
-      } else {
-        document.getElementById('hausAntraegeTab').style.display = 'none';
-      }
       
       // Debug-Ausgabe
       console.log('[Debug] renderAntraege - offeneAntraege:', offeneAntraege.length, offeneAntraege.map(a => ({id: a.id, status: a.status, zugewiesenAnGruppe: a.zugewiesenAnGruppe})));
@@ -3980,19 +3925,16 @@ ${t('action.archive')}
       // Sortierung für jede Liste anwenden
       const sortierungOffen = document.getElementById('sortierungOffen')?.value || 'datum-neu';
       const sortierungBearbeitung = document.getElementById('sortierung')?.value || 'datum-neu';
-      const sortierungHaus = document.getElementById('sortierungHaus')?.value || 'datum-neu';
       const sortierungHistorie = document.getElementById('sortierungHistorie')?.value || 'datum-neu';
       
       offeneAntraege = [...offeneAntraege].sort(erstelleSortierFunktion(sortierungOffen));
       inBearbeitungAntraege = [...inBearbeitungAntraege].sort(erstelleSortierFunktion(sortierungBearbeitung));
       meineAufgaben = [...meineAufgaben].sort(erstelleSortierFunktion(sortierungBearbeitung));
-      hausAntraege = [...hausAntraege].sort(erstelleSortierFunktion(sortierungHaus));
       historieAntraege = [...historieAntraege].sort(erstelleSortierFunktion(sortierungHistorie));
       
       const bearbeitungTotal = inBearbeitungAntraege.length + meineAufgaben.length;
       document.getElementById('offenCount').textContent = offeneAntraege.length;
       document.getElementById('bearbeitungCount').textContent = bearbeitungTotal;
-      document.getElementById('hausAntraegeCount').textContent = hausAntraege.length;
       document.getElementById('historieCount').textContent = historieAntraege.length;
       
       // Tab-Zähler für "Meine Anträge und Aufgaben" aktualisieren
@@ -4000,13 +3942,6 @@ ${t('action.archive')}
       if (tabCount) {
         tabCount.textContent = bearbeitungTotal;
         tabCount.style.display = bearbeitungTotal > 0 ? 'inline-block' : 'none';
-      }
-      
-      // Tab-Zähler für "Anträge des Hauses" aktualisieren
-      const hausTabCount = document.getElementById('hausAntraegeTabCount');
-      if (hausTabCount) {
-        hausTabCount.textContent = hausAntraege.length;
-        hausTabCount.style.display = hausAntraege.length > 0 ? 'inline-block' : 'none';
       }
       
       // Anträge und Aufgaben meiner Gruppe
@@ -4035,15 +3970,6 @@ ${t('action.archive')}
         bearbeitungList.innerHTML = '<div class="empty-state"><p>Keine Anträge oder Aufgaben vorhanden.</p></div>';
       } else {
         bearbeitungList.innerHTML = bearbeitungHtml;
-      }
-      
-      // Anträge des Hauses (nur für Hausleitung)
-      if (istHausleitungAktuell) {
-        if (hausAntraege.length === 0) {
-          hausAntraegeList.innerHTML = '<div class="empty-state"><p>Keine weiteren Anträge des Hauses vorhanden.</p></div>';
-        } else {
-          hausAntraegeList.innerHTML = hausAntraege.map(a => renderAntragCard(a, 'hausAntraege')).join('');
-        }
       }
       
       // Historie
