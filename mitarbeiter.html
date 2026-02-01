@@ -80,7 +80,7 @@
           <div class="notification-header" onclick="togglePostfach()">
             <div class="notification-header-left">
               <span class="postfach-toggle-icon" id="postfachToggleIcon">▶</span>
-              <h2>📬 Postfach <span class="count" id="notificationCount">0</span></h2>
+              <h2>Postfach <span class="count" id="notificationCount">0</span></h2>
             </div>
             <button class="btn btn-sm" onclick="markAllNotificationsRead(); event.stopPropagation();" id="markAllReadBtn" style="display: none;">
               Alle als gelesen markieren
@@ -258,7 +258,7 @@
         <div class="form-group">
           <label class="checkbox-option vollzug-vor-bekanntgabe">
             <input type="checkbox" id="entscheidungVollzugVorBekanntgabe">
-            <span class="checkbox-label">📦 Vollzug vor Bekanntgabe an den Insassen planen</span>
+            <span class="checkbox-label">Vollzug vor Bekanntgabe an den Insassen planen</span>
           </label>
           <p class="field-hint">Wenn aktiviert: Keine automatische Benachrichtigung. Das Ergebnis wird erst nach persönlicher Bestätigung übermittelt.</p>
         </div>
@@ -604,7 +604,7 @@
             </label>
             <label class="radio-option" id="terminStationOption" style="display: none;">
               <input type="radio" name="terminSichtbarkeit" value="station" onchange="updateTerminSichtbarkeit()">
-              <span class="radio-label">📍 Meine Station</span>
+              <span class="radio-label">Meine Station</span>
             </label>
           </div>
         </div>
@@ -708,7 +708,7 @@
       const postfachTitle = document.querySelector('#notificationSection h2');
       if (postfachTitle) {
         const count = document.getElementById('notificationCount')?.textContent || '0';
-        postfachTitle.innerHTML = `📬 ${t('inbox.title')} <span class="count" id="notificationCount">${count}</span>`;
+        postfachTitle.innerHTML = `${t('inbox.title')} <span class="count" id="notificationCount">${count}</span>`;
       }
       
       // Kalender-Titel
@@ -833,7 +833,7 @@
         const opts = terminTypSelect.querySelectorAll('option');
         if (opts.length >= 1) opts[0].textContent = t('appointment.private');
         if (opts.length >= 2) opts[1].textContent = '' + t('appointment.house');
-        if (opts.length >= 3) opts[2].textContent = '📍 ' + t('appointment.station');
+        if (opts.length >= 3) opts[2].textContent = t('appointment.station');
       }
       
       const terminModalBtns = document.querySelectorAll('#terminModal .modal-footer .btn');
@@ -869,7 +869,7 @@
       if (persEroeffnungLabel) persEroeffnungLabel.textContent = t('decision.personalOpeningCheck');
       
       const vollzugVorBekanntgabeLabel = document.querySelector('#entscheidungVollzugVorBekanntgabe + .checkbox-label');
-      if (vollzugVorBekanntgabeLabel) vollzugVorBekanntgabeLabel.textContent = '📦 ' + t('decision.executionBeforeNotification');
+      if (vollzugVorBekanntgabeLabel) vollzugVorBekanntgabeLabel.textContent = t('decision.executionBeforeNotification');
       
       // Hinweistexte für beide Checkboxen
       const checkboxHints = document.querySelectorAll('#entscheidenModal .field-hint');
@@ -1281,7 +1281,7 @@
         typeLabel = 'Teilhabegeld';
         detailsHtml = `<p><strong>Monat:</strong> ${formatMonat(antrag.monat)}</p>`;
       } else if (antrag.type === 'eigentum') {
-        typeLabel = '👕 Eigentum in der Kammer';
+        typeLabel = 'Eigentum in der Kammer';
         const aktionText = antrag.aktion === 'aufstocken' ? 'Kleidung aufstocken' : 'Kleidung tauschen';
         detailsHtml = `
           <p><strong>Aktion:</strong> ${aktionText}</p>
@@ -1674,7 +1674,7 @@ Persönlich eröffnet
           : (currentLanguage === 'en' ? 'Exchange clothing' : currentLanguage === 'fr' ? 'Échanger des vêtements' : 'Kleidung tauschen');
         anliegenHtml = `
           <div class="detail-box">
-            <h4>👕 ${t('application.type.eigentum')}</h4>
+            <h4>${t('application.type.eigentum')}</h4>
             <div class="detail-row">
               <span class="detail-label">${currentLanguage === 'en' ? 'Action' : currentLanguage === 'fr' ? 'Action' : 'Aktion'}:</span>
               <span class="detail-value">${aktionText}</span>
@@ -1816,7 +1816,7 @@ ${withdrawText}
           </div>
           <div class="prozess-pfeil ${prozessStatus.entscheiden === 'erledigt' ? 'aktiv' : ''}">→</div>
           <div class="prozess-schritt ${prozessStatus.bekanntgabe}">
-            <div class="prozess-icon">📢</div>
+            <div class="prozess-icon"></div>
             <div class="prozess-label">${t('process.notification')}</div>
           </div>
           <div class="prozess-pfeil ${prozessStatus.bekanntgabe === 'erledigt' ? 'aktiv' : ''}">→</div>
@@ -1910,7 +1910,7 @@ ${currentLanguage === 'en' ? 'Download notice' : currentLanguage === 'fr' ? 'Té
             ` : ''}
             
             <div class="detail-section">
-              <h3>⚙️ ${t('button.actions')}</h3>
+              <h3>${t('button.actions')}</h3>
               ${istOffen ? `
                 <div class="offen-hinweis">
                   <span class="hinweis-icon"></span>
@@ -1950,7 +1950,7 @@ ${currentLanguage === 'en' ? 'Confirm personal opening' : currentLanguage === 'f
               
               ${antrag.wartetAufVollzug ? `
                 <div class="warten-hinweis vollzug-warten">
-                  <span class="hinweis-icon">📦</span>
+                  <span class="hinweis-icon"></span>
                   <span>${currentLanguage === 'en' ? 'Execution before notification planned' : currentLanguage === 'fr' ? 'Exécution avant notification prévue' : 'Vollzug vor Bekanntgabe geplant'} - ${currentLanguage === 'en' ? 'Planned decision' : currentLanguage === 'fr' ? 'Décision prévue' : 'Geplante Entscheidung'}: ${getStatusText(antrag.geplantesErgebnis)}</span>
                 </div>
                 <div class="bestaetigung-checkbox">
@@ -2938,7 +2938,7 @@ ${t('action.archive')}
                 <div class="pdf-preview pdf-download" onclick="downloadAufgabePdf('${aufgabeId}', ${index})">
                   <span class="pdf-icon"></span>
                   <span class="pdf-name">${pdf.name}</span>
-                  <span class="download-hint">⬇</span>
+                  <span class="download-hint"></span>
                 </div>
               `).join('')}
             </div>
@@ -2954,7 +2954,7 @@ ${t('action.archive')}
               <div class="pdf-preview pdf-download" onclick="downloadAufgabePdfLegacy('${aufgabeId}')">
                 <span class="pdf-icon"></span>
                 <span class="pdf-name">Dokument.pdf</span>
-                <span class="download-hint">⬇</span>
+                <span class="download-hint"></span>
               </div>
             </div>
           </div>
@@ -4358,7 +4358,7 @@ ${t('action.archive')}
         </div>
         <div class="termin-detail-body">
           <p><strong>${dateLabel}:</strong> ${formatDatum}</p>
-          ${termin.uhrzeit ? `<p><strong>🕐 ${timeLabel}:</strong> ${termin.uhrzeit}</p>` : `<p><strong>🕐 ${timeLabel}:</strong> ${allDayText}</p>`}
+          ${termin.uhrzeit ? `<p><strong>${timeLabel}:</strong> ${termin.uhrzeit}</p>` : `<p><strong>${timeLabel}:</strong> ${allDayText}</p>`}
           ${termin.beschreibung ? `<p><strong>${descLabel}:</strong> ${getTranslatedUserText(termin.beschreibung)}</p>` : ''}
           <p><strong>${createdByLabel}:</strong> ${termin.erstelltVonName}</p>
           ${termin.antragId ? `<p><strong>${forAppLabel}:</strong> <a href="#" onclick="closeModal('terminDetailModal'); openAntragDetail('${termin.antragId}'); return false;">${openAppText}</a></p>` : ''}

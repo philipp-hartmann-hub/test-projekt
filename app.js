@@ -2777,10 +2777,10 @@ class AntragSystem {
         title = 'Antrag genehmigt';
         message = `Ihr Antrag "${antragsTyp}" wurde genehmigt.`;
       } else if (status === 'abgelehnt') {
-        title = '✕ Antrag abgelehnt';
+        title = 'Antrag abgelehnt';
         message = `Ihr Antrag "${antragsTyp}" wurde leider abgelehnt.${begruendung ? ' Begründung: ' + begruendung : ''}`;
       } else if (status === 'teilweise-genehmigt') {
-        title = '⚡ Antrag teilweise genehmigt';
+        title = 'Antrag teilweise genehmigt';
         message = `Ihr Antrag "${antragsTyp}" wurde teilweise genehmigt.${begruendung ? ' Hinweis: ' + begruendung : ''}`;
       }
       
@@ -2833,10 +2833,10 @@ class AntragSystem {
         title = 'Antrag genehmigt';
         message = `Ihr Antrag "${antragsTyp}" wurde genehmigt.${vollzugKommentar ? ' Hinweis zum Vollzug: ' + getTranslatedUserText(vollzugKommentar) : ''}`;
       } else if (status === 'abgelehnt') {
-        title = '✕ Antrag abgelehnt';
+        title = 'Antrag abgelehnt';
         message = `Ihr Antrag "${antragsTyp}" wurde leider abgelehnt.${vollzugKommentar ? ' Hinweis: ' + getTranslatedUserText(vollzugKommentar) : ''}`;
       } else if (status === 'teilweise-genehmigt') {
-        title = '⚡ Antrag teilweise genehmigt';
+        title = 'Antrag teilweise genehmigt';
         message = `Ihr Antrag "${antragsTyp}" wurde teilweise genehmigt.${vollzugKommentar ? ' Hinweis: ' + getTranslatedUserText(vollzugKommentar) : ''}`;
       }
       
@@ -2937,10 +2937,10 @@ class AntragSystem {
         title = 'Antrag genehmigt';
         message = `Ihr Antrag "${antragsTyp}" wurde genehmigt.`;
       } else if (status === 'abgelehnt') {
-        title = '✕ Antrag abgelehnt';
+        title = 'Antrag abgelehnt';
         message = `Ihr Antrag "${antragsTyp}" wurde leider abgelehnt.${begruendung ? ' Begründung: ' + (typeof begruendung === 'object' ? getTranslatedUserText(begruendung) : begruendung) : ''}`;
       } else if (status === 'teilweise-genehmigt') {
-        title = '⚡ Antrag teilweise genehmigt';
+        title = 'Antrag teilweise genehmigt';
         message = `Ihr Antrag "${antragsTyp}" wurde teilweise genehmigt.${begruendung ? ' Hinweis: ' + (typeof begruendung === 'object' ? getTranslatedUserText(begruendung) : begruendung) : ''}`;
       }
       
@@ -3596,11 +3596,11 @@ function getStatusText(status) {
 function getStatusIcon(status) {
   const icons = {
     'entwurf': '',
-    'offen': '📄',
+    'offen': '',
     'in-bearbeitung': '⏳',
     'genehmigt': '',
-    'abgelehnt': '✕',
-    'teilweise-genehmigt': '⚡'
+    'abgelehnt': '',
+    'teilweise-genehmigt': ''
   };
   return icons[status] || '•';
 }

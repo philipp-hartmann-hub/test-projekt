@@ -17,7 +17,7 @@
 
     <div class="login-card">
       <div class="login-header">
-        <div class="login-icon">🔐</div>
+        <div class="login-icon"></div>
         <h2>Admin-Anmeldung</h2>
       </div>
       <form id="loginForm" onsubmit="handleLogin(event)">
@@ -46,7 +46,7 @@
   <div id="adminSection" style="display: none;">
     <header class="header">
       <h1>
-        <span class="icon">⚙️</span>
+        <span class="icon"></span>
         Admin-Portal
       </h1>
       <div class="header-right">
@@ -979,7 +979,7 @@
             </div>
             <div class="user-actions">
               <button class="btn btn-secondary btn-sm" onclick="resetUserPassword('${user.id}')">
-                🔑 Neues Passwort
+                Neues Passwort
               </button>
               <button class="btn btn-secondary btn-sm" onclick="openEditInsasseModal('${user.id}')">
                 Bearbeiten
@@ -1034,7 +1034,7 @@
               </div>
               <div class="user-actions">
                 <button class="btn btn-secondary btn-sm" onclick="resetUserPassword('${user.id}')">
-                  🔑 Neues Passwort
+                  Neues Passwort
                 </button>
                 <button class="btn btn-secondary btn-sm" onclick="openEditMitarbeiterModal('${user.id}')">
                   Bearbeiten
@@ -1085,7 +1085,7 @@
                 <div class="termin-titel-admin">${escapeHtml(termin.titel)}</div>
                 <div class="termin-meta-admin">
                   <span>${formatDatum}</span>
-                  ${termin.uhrzeit ? `<span>🕐 ${termin.uhrzeit} Uhr</span>` : ''}
+                  ${termin.uhrzeit ? `<span>${termin.uhrzeit} Uhr</span>` : ''}
                 </div>
                 ${termin.beschreibung ? `<p class="termin-beschreibung-admin">${escapeHtml(termin.beschreibung)}</p>` : ''}
               </div>
