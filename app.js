@@ -3187,8 +3187,8 @@ class AntragSystem {
       const hatAmAntragGearbeitet = aktivitaetenSystem.istMitarbeiterBeteiligt(a.id, mitarbeiter.userId);
       const hatAufgabenbezug = hatAufgabeErhalten || hatAufgabeErstellt || hatAmAntragGearbeitet;
       
-      // Hausleitung sieht alle "in Bearbeitung" Anträge ihres Hauses
-      if (mitarbeiter.rolle === 'jva-leitung' || mitarbeiter.rolle === 'haus-leitung') {
+      // VAL sieht alle "in Bearbeitung" Anträge ihres Hauses
+      if (mitarbeiter.rolle === 'jva-leitung' || mitarbeiter.rolle === 'haus-leitung' || mitarbeiter.rolle === 'hausleitung') {
         return this._matchesHaus(mitarbeiter.jvas, a.insasseJva);
       }
       
@@ -3209,8 +3209,8 @@ class AntragSystem {
       // Nur veraktete Anträge in der Historie
       if (!a.veraktet) return false;
       
-      // Hausleitung sieht alle verakteten Anträge ihres Hauses
-      if (mitarbeiter.rolle === 'jva-leitung' || mitarbeiter.rolle === 'haus-leitung') {
+      // VAL sieht alle verakteten Anträge ihres Hauses
+      if (mitarbeiter.rolle === 'jva-leitung' || mitarbeiter.rolle === 'haus-leitung' || mitarbeiter.rolle === 'hausleitung') {
         return this._matchesHaus(mitarbeiter.jvas, a.insasseJva);
       }
       
