@@ -2414,6 +2414,7 @@ class AntragSystem {
     });
     
     // Fall 1: Offener Antrag - komplett übernehmen
+    // Auch Hausleitung kann offene Anträge übernehmen
     if (antrag.status === 'offen') {
       antrag.status = 'in-bearbeitung';
       antrag.bearbeiterId = mitarbeiter.userId;
@@ -2547,6 +2548,32 @@ class AntragSystem {
           zugewiesenAnTyp: a.zugewiesenAnTyp,
           zugewiesenAnGruppe: a.zugewiesenAnGruppe
         })));
+        
+        // Fall 3b: Hausleitung kann Antrag übernehmen, auch wenn keine Gruppenaufgaben vorhanden
+        const istHausleitung = mitarbeiter.rolle === 'jva-leitung' || 
+                               mitarbeiter.rolle === 'haus-leitung' || 
+                               mitarbeiter.rolle === 'hausleitung';
+        
+        if (istHausleitung && antrag.status === 'in-bearbeitung' && antrag.bearbeiterId !== mitarbeiter.userId) {
+          console.log('[Debug] nehmeAntrag Fall 3b: Hausleitung übernimmt Antrag');
+          
+          const alterBearbeiter = antrag.bearbeiterName;
+          antrag.bearbeiterId = mitarbeiter.userId;
+          antrag.bearbeiterName = mitarbeiter.name;
+          this.saveAntraege();
+          
+          // Aktivität protokollieren
+          aktivitaetenSystem.logAktivitaet({
+            antragId: antragId,
+            typ: 'uebernommen',
+            beschreibung: `Antrag übernommen von ${alterBearbeiter || 'unbekannt'} (Hausleitung)`,
+            benutzerTyp: 'mitarbeiter',
+            benutzerId: mitarbeiter.userId,
+            benutzerName: mitarbeiter.name
+          });
+          
+          return antrag;
+        }
       }
     }
     
