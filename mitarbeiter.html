@@ -2442,7 +2442,7 @@ ${t('action.archive')}
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
         const haus = HAUS_CONFIG[hausKey];
         haus.stationen.forEach(station => {
-          select.innerHTML += `<option value="station|${hausKey}|${station}">VAD ${haus.name} Station ${station}</option>`;
+          select.innerHTML += `<option value="station|${hausKey}|${station}">AVD ${haus.name} Station ${station}</option>`;
         });
       });
     }
@@ -2516,12 +2516,12 @@ ${t('action.archive')}
           m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
         );
       } else if (gruppeTyp === 'station') {
-        // Nur VAD (Mitarbeiter) dieser Station - VAL gehört NICHT dazu
+        // Nur AVD (Mitarbeiter) dieser Station - VAL gehört NICHT dazu
         mitarbeiter = mitarbeiter.filter(m => {
           const imHaus = m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'));
           if (!imHaus) return false;
           
-          // VAL gehört NICHT zur VAD-Gruppe
+          // VAL gehört NICHT zur AVD-Gruppe
           if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return false;
           
           // Mitarbeiter muss auf dieser Station sein
@@ -2817,7 +2817,7 @@ ${t('action.archive')}
           } else if (gruppeTyp === 'arbeitskoordination') {
             zugewiesenAnName = `Arbeitskoordination ${hausName}`;
           } else {
-            zugewiesenAnName = `VAD ${hausName} Station ${gruppeStation}`;
+            zugewiesenAnName = `AVD ${hausName} Station ${gruppeStation}`;
           }
           zugewiesenAnId = null; // Keine spezifische Person
         }
@@ -3235,7 +3235,7 @@ ${t('action.archive')}
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
         const haus = HAUS_CONFIG[hausKey];
         haus.stationen.forEach(station => {
-          select.innerHTML += `<option value="station|${hausKey}|${station}">VAD ${haus.name} Station ${station}</option>`;
+          select.innerHTML += `<option value="station|${hausKey}|${station}">AVD ${haus.name} Station ${station}</option>`;
         });
       });
     }
@@ -3305,11 +3305,11 @@ ${t('action.archive')}
           m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
         );
       } else if (gruppeTyp === 'station') {
-        // Nur VAD (Mitarbeiter) dieser Station - VAL gehört NICHT dazu
+        // Nur AVD (Mitarbeiter) dieser Station - VAL gehört NICHT dazu
         mitarbeiter = mitarbeiter.filter(m => {
           const imHaus = m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'));
           if (!imHaus) return false;
-          // VAL gehört NICHT zur VAD-Gruppe
+          // VAL gehört NICHT zur AVD-Gruppe
           if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return false;
           return m.station === station;
         });
@@ -3505,7 +3505,7 @@ ${t('action.archive')}
           } else if (gruppeTyp === 'arbeitskoordination') {
             gruppeName = `Arbeitskoordination ${hausName}`;
           } else {
-            gruppeName = `VAD ${hausName} Station ${gruppeStation}`;
+            gruppeName = `AVD ${hausName} Station ${gruppeStation}`;
           }
           
           // Weiterleitung an Gruppe durchführen

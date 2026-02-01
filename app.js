@@ -3152,7 +3152,7 @@ class AntragSystem {
       // Nur Hausleitungen dieses Hauses
       return istHausleitung;
     } else if (gruppe.typ === 'station') {
-      // VAL gehört NICHT zur VAD-Gruppe (Station)
+      // VAL gehört NICHT zur AVD-Gruppe (Station)
       // VAL hat nur die Funktion, Anträge des Hauses zu übernehmen
       if (istHausleitung) return false;
       // Mitarbeiter muss auf dieser Station sein
@@ -3618,7 +3618,7 @@ function getJvaName(jvaKey) {
 
 function getRolleText(rolle) {
   const rollen = {
-    'mitarbeiter': 'VAD',
+    'mitarbeiter': 'AVD',
     'jva-leitung': 'VAL',
     'haus-leitung': 'VAL',
     'hausleitung': 'VAL',
