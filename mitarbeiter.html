@@ -323,7 +323,7 @@
             </label>
             <label class="radio-option">
               <input type="radio" name="aufgabeZiel" value="mitarbeiter" onchange="toggleAufgabeZiel('mitarbeiter')">
-              <span class="radio-label">Mitarbeitende</span>
+              <span class="radio-label">VAD</span>
             </label>
           </div>
         </div>
@@ -353,11 +353,11 @@
           
           <div id="aufgabePersonSuche" style="display: none;">
             <div class="form-group">
-              <label for="aufgabeMitarbeiterSuche">Mitarbeiter suchen</label>
+              <label for="aufgabeMitarbeiterSuche">VAD suchen</label>
               <input type="text" id="aufgabeMitarbeiterSuche" placeholder="Name eingeben..." oninput="filterMitarbeiterListe()">
             </div>
             <div class="form-group">
-              <label>Mitarbeiter auswählen:</label>
+              <label>VAD auswählen:</label>
               <div class="mitarbeiter-liste" id="aufgabeMitarbeiterListe">
                 <!-- Wird dynamisch gefüllt -->
               </div>
@@ -490,7 +490,7 @@
         </div>
         
         <div class="form-group">
-          <label>Möchten Sie den Antrag an einen anderen Mitarbeiter weiterleiten?</label>
+          <label>Möchten Sie den Antrag an einen anderen VAD weiterleiten?</label>
           <div class="radio-group">
             <label class="radio-option">
               <input type="radio" name="weiterleitenEntscheidung" value="nein" checked onchange="toggleWeiterleitenFelder()">
@@ -498,7 +498,7 @@
             </label>
             <label class="radio-option">
               <input type="radio" name="weiterleitenEntscheidung" value="ja" onchange="toggleWeiterleitenFelder()">
-              <span class="radio-label">Ja, an anderen Mitarbeiter weiterleiten</span>
+              <span class="radio-label">Ja, an anderen VAD weiterleiten</span>
             </label>
           </div>
         </div>
@@ -527,11 +527,11 @@
           
           <div id="weiterleitenPersonSuche" style="display: none;">
             <div class="form-group">
-              <label for="weiterleitenMitarbeiterSuche">Mitarbeiter suchen</label>
+              <label for="weiterleitenMitarbeiterSuche">VAD suchen</label>
               <input type="text" id="weiterleitenMitarbeiterSuche" placeholder="Name eingeben..." oninput="filterWeiterleitenMitarbeiter()">
             </div>
             <div class="form-group">
-              <label>Mitarbeiter auswählen:</label>
+              <label>VAD auswählen:</label>
               <div class="mitarbeiter-liste" id="weiterleitenMitarbeiterListe" style="max-height: 250px; overflow-y: auto;">
                 <!-- Wird dynamisch gefüllt -->
               </div>
@@ -1229,7 +1229,7 @@
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>Mitarbeiter</strong> sehen Sie Anträge und Aufgaben des <strong>${hausNames} - Station ${currentSession.station}</strong> und Ihre persönlich bearbeiteten Anträge</span>
+            <span>Als <strong>VAD</strong> sehen Sie Anträge und Aufgaben des <strong>${hausNames} - Station ${currentSession.station}</strong> und Ihre persönlich bearbeiteten Anträge</span>
           </div>
         `;
       }
