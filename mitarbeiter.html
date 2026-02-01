@@ -1897,7 +1897,7 @@ ${t('button.takeApplication')}
                     ${t('task.edit')}
                   </button>
                 ` : ''}
-                ${!istOffen && !istErledigt && (istBearbeiter || istAufgabenBeteiligter) && !antrag.entscheidungGetroffen ? `
+                ${!istOffen && !istErledigt && istBearbeiter && !antrag.entscheidungGetroffen ? `
                   ${!antrag.sachlichGeprueft ? `
                     <button class="btn btn-warning btn-large" onclick="markiereAlsGeprueft('${antrag.id}')">
                       ${t('action.technicalReview')}
@@ -1912,17 +1912,17 @@ ${t('button.takeApplication')}
 ${t('task.create')}
                   </button>
                 ` : ''}
-                ${antrag.entscheidungGetroffen && !antrag.erledigt && (istBearbeiter || istAufgabenBeteiligter) ? `
+                ${antrag.entscheidungGetroffen && !antrag.erledigt && istBearbeiter ? `
                   <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
 ${t('task.create')}
                   </button>
                 ` : ''}
-                ${istErledigt && !antrag.veraktet && kannVollziehenVerakten ? `
+                ${istErledigt && !antrag.veraktet && istBearbeiter ? `
                   <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
 ${t('task.create')}
                   </button>
                 ` : ''}
-                ${!antrag.veraktet && kannVollziehenVerakten && prozessStatus.abschluss === 'aktiv' ? `
+                ${!antrag.veraktet && istBearbeiter && prozessStatus.abschluss === 'aktiv' ? `
                   <button class="btn btn-secondary btn-large" onclick="veraktenAntrag('${antrag.id}')">
 ${t('action.archive')}
                   </button>
