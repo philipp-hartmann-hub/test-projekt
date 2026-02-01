@@ -1961,6 +1961,7 @@ class AufgabenSystem {
       beschreibung: data.beschreibung || '', // ausführliche Beschreibung (optional)
       anhangPdfs: data.anhangPdfs || null, // Array von PDFs [{name, data}, ...]
       fristDatum: data.fristDatum || null,
+      bearbeitungNachErledigung: data.bearbeitungNachErledigung || 'zurueck', // 'zurueck' oder 'uebertragen' (nur bei Mitarbeiter-Aufgaben)
       letzteErinnerung: null,
       status: 'offen', // 'offen', 'erledigt', 'geloescht'
       antwort: null,

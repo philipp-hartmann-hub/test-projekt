@@ -346,6 +346,23 @@
               <button type="button" class="btn-clear" onclick="clearSelectedPerson()">&times;</button>
             </div>
           </div>
+          
+          <!-- Option: Hauptbearbeitung übertragen -->
+          <div class="form-group">
+            <label>Nach Erledigung der Aufgabe:</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="aufgabeBearbeitungUebergabe" value="zurueck" checked>
+                <span class="radio-label">Antrag zurück an mich</span>
+                <p class="option-hint">Nach Erledigung der Aufgabe erhalten Sie den Antrag zur weiteren Bearbeitung zurück</p>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="aufgabeBearbeitungUebergabe" value="uebertragen">
+                <span class="radio-label">Hauptbearbeitung übertragen</span>
+                <p class="option-hint">Der Empfänger wird nach Erledigung der Aufgabe zum Hauptbearbeiter des Antrags</p>
+              </label>
+            </div>
+          </div>
         </div>
         
         <div class="form-group">
@@ -408,20 +425,10 @@
           </div>
         </div>
         
-        <!-- Optionen bei "Zur Kenntnis" -->
+        <!-- Hinweis bei "Zur Kenntnis" -->
         <div class="form-group" id="aufgabeKenntnisnahmeOptionen" style="display: none;">
-          <label>Was soll mit dem Antrag passieren?</label>
-          <div class="radio-group">
-            <label class="radio-option">
-              <input type="radio" name="kenntnisnahmeAktion" value="zurueck" checked>
-              <span class="radio-label">Zurueck an Aufgabensteller</span>
-              <p class="option-hint">Der Antrag geht zurück und wird in Ihre "Erledigt"-Liste verschoben</p>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="kenntnisnahmeAktion" value="uebernehmen">
-              <span class="radio-label">Bearbeitung uebernehmen</span>
-              <p class="option-hint">Sie werden zum Hauptbearbeiter des Antrags</p>
-            </label>
+          <div class="info-box">
+            <p>Der Antrag wird nach der Kenntnisnahme gemäß der Vorgabe des Aufgabenstellers behandelt.</p>
           </div>
         </div>
         
@@ -2241,6 +2248,10 @@ ${t('action.archive')}
       document.querySelectorAll('input[name="aufgabeZiel"]').forEach(r => r.checked = false);
       document.getElementById('mitarbeiterAuswahl').style.display = 'none';
       
+      // Option für Hauptbearbeitung zurücksetzen (Standard: zurück an Ersteller)
+      const bearbeitungRadio = document.querySelector('input[name="aufgabeBearbeitungUebergabe"][value="zurueck"]');
+      if (bearbeitungRadio) bearbeitungRadio.checked = true;
+      
       // Mitarbeiter-Auswahl zurücksetzen
       document.getElementById('aufgabeMitarbeiterSuche').value = '';
       document.getElementById('aufgabePersonId').value = '';
@@ -2485,6 +2496,15 @@ ${t('action.archive')}
         zugewiesenAnTyp = 'mitarbeiter';
       }
       
+      // Option für Hauptbearbeitung bei Mitarbeiter-Aufgaben ermitteln
+      let bearbeitungNachErledigung = 'zurueck'; // Standard: zurück an Ersteller
+      if (zielRadio.value === 'mitarbeiter') {
+        const bearbeitungRadio = document.querySelector('input[name="aufgabeBearbeitungUebergabe"]:checked');
+        if (bearbeitungRadio) {
+          bearbeitungNachErledigung = bearbeitungRadio.value;
+        }
+      }
+      
       // Aufgabe erstellen (mit Array von PDFs)
       aufgabenSystem.createAufgabe({
         antragId: antragId,
@@ -2497,7 +2517,8 @@ ${t('action.archive')}
         kurzbeschreibung: kurzbeschreibung,
         beschreibung: beschreibung,
         fristDatum: fristDatum || null,
-        anhangPdfs: aufgabePdfs.length > 0 ? [...aufgabePdfs] : null
+        anhangPdfs: aufgabePdfs.length > 0 ? [...aufgabePdfs] : null,
+        bearbeitungNachErledigung: bearbeitungNachErledigung // 'zurueck' oder 'uebertragen'
       });
       
       // Benachrichtigung erstellen
@@ -2535,9 +2556,8 @@ ${t('action.archive')}
       document.getElementById('aufgabeAntwortGruppe').style.display = 'block';
       document.getElementById('aufgabeAntwortPdfGruppe').style.display = 'block';
       
-      // Kenntnisnahme-Optionen zurücksetzen und verstecken
+      // Kenntnisnahme-Hinweis verstecken
       document.getElementById('aufgabeKenntnisnahmeOptionen').style.display = 'none';
-      document.querySelector('input[name="kenntnisnahmeAktion"][value="zurueck"]').checked = true;
       
       // Angehängte PDFs der Aufgabe anzeigen
       let anhangPdfsHtml = '';
@@ -2643,8 +2663,6 @@ ${t('action.archive')}
         antwortGruppe.style.display = 'none';
         pdfGruppe.style.display = 'none';
         kenntnisnahmeOptionen.style.display = 'block';
-        // Standard: zurück an Aufgabensteller
-        document.querySelector('input[name="kenntnisnahmeAktion"][value="zurueck"]').checked = true;
       } else {
         antwortGruppe.style.display = 'block';
         pdfGruppe.style.display = 'block';
@@ -2663,14 +2681,8 @@ ${t('action.archive')}
         return;
       }
       
-      // Bei "Zur Kenntnis" die gewählte Aktion ermitteln
-      let kenntnisnahmeAktion = 'zurueck'; // Standard
-      if (erledigungsTyp === 'kenntnisnahme') {
-        const aktionRadio = document.querySelector('input[name="kenntnisnahmeAktion"]:checked');
-        if (aktionRadio) {
-          kenntnisnahmeAktion = aktionRadio.value;
-        }
-      }
+      // Aufgabe-Objekt vorab laden um bearbeitungNachErledigung zu prüfen
+      const aufgabeVorab = aufgabenSystem.getAufgabe(aufgabeId);
       
       // Antwort mit Sprachinfo für Übersetzung speichern
       const antwort = antwortText ? createTranslatableText(antwortText) : '';
@@ -2679,8 +2691,12 @@ ${t('action.archive')}
       const aufgabe = aufgabenSystem.erledigeAufgabe(aufgabeId, antwort, erledigungsTyp, antwortPdfs.length > 0 ? [...antwortPdfs] : null);
       const antrag = antragSystem.getAntrag(aufgabe.antragId);
       
-      // Logik basierend auf Erledigungstyp und Aktion
-      if (erledigungsTyp === 'antwort' || (erledigungsTyp === 'kenntnisnahme' && kenntnisnahmeAktion === 'zurueck')) {
+      // Prüfen ob bei der Aufgabenerstellung die Hauptbearbeitung übertragen werden soll
+      // Dies wurde vom Aufgabensteller festgelegt (nur bei Mitarbeiter-Aufgaben)
+      const sollUebertragen = aufgabeVorab && aufgabeVorab.bearbeitungNachErledigung === 'uebertragen';
+      
+      // Logik basierend auf Erledigungstyp und der Einstellung des Aufgabenstellers
+      if (erledigungsTyp === 'antwort' || (erledigungsTyp === 'kenntnisnahme' && !sollUebertragen)) {
         // Antrag geht zurück an den Aufgabensteller
         // Der Empfänger verliert den Zugriff (wird als "abgegeben" markiert)
         antragSystem.markiereAufgabeAbgegeben(aufgabe.antragId, currentSession.userId);
@@ -2709,8 +2725,9 @@ ${t('action.archive')}
                         : 'Aufgabe erledigt. Der Antrag wurde an den Aufgabensteller zurückgegeben.';
         showAlert(msgZurueck);
         
-      } else if (erledigungsTyp === 'kenntnisnahme' && kenntnisnahmeAktion === 'uebernehmen') {
+      } else if (erledigungsTyp === 'kenntnisnahme' && sollUebertragen) {
         // Bearbeitung übernehmen - Empfänger wird neuer Hauptbearbeiter
+        // (Nur wenn der Aufgabensteller dies bei der Aufgabenerstellung so festgelegt hat)
         antragSystem.uebernehmBearbeitung(aufgabe.antragId, currentSession.userId, currentSession.name, aufgabe.erstelltVonId);
         
         // Benachrichtigung an den ehemaligen Bearbeiter (Aufgabensteller)
