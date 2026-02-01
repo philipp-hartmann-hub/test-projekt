@@ -920,11 +920,15 @@
           </div>
         `;
       } else if (mode === 'historie') {
-        // Erledigte Anträge (genehmigt/abgelehnt)
+        // Erledigte Anträge (genehmigt/abgelehnt/teilweise-genehmigt)
         if (antrag.begruendung) {
+          // Begründung kann ein Objekt (mit text-Property) oder ein String sein
+          const begruendungText = typeof antrag.begruendung === 'object' 
+            ? (antrag.begruendung.text || JSON.stringify(antrag.begruendung)) 
+            : antrag.begruendung;
           actionsHtml = `
             <div class="antrag-feedback">
-              <strong>Begründung:</strong> ${antrag.begruendung || ''}
+              <strong>Begründung:</strong> ${begruendungText}
             </div>
           `;
         }
