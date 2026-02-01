@@ -223,11 +223,11 @@
           <div class="radio-group">
             <label class="radio-option">
               <input type="radio" name="mitRolle" value="mitarbeiter" checked onchange="updateMitarbeiterFields()">
-              <span class="radio-label">Mitarbeiter</span>
+              <span class="radio-label">VAD</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="mitRolle" value="haus-leitung" onchange="updateMitarbeiterFields()">
-              <span class="radio-label">🏛️ Hausleitung</span>
+              <span class="radio-label">🏛️ VAL</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="mitRolle" value="zahlstelle" onchange="updateMitarbeiterFields()">
@@ -300,7 +300,7 @@
           <div class="radio-group">
             <label class="radio-option">
               <input type="radio" name="editMitRolle" value="mitarbeiter" onchange="updateEditMitarbeiterFields()">
-              <span class="radio-label">Mitarbeiter</span>
+              <span class="radio-label">VAD</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="editMitRolle" value="stationsleitung" onchange="updateEditMitarbeiterFields()">
@@ -308,7 +308,7 @@
             </label>
             <label class="radio-option">
               <input type="radio" name="editMitRolle" value="haus-leitung" onchange="updateEditMitarbeiterFields()">
-              <span class="radio-label">🏛️ Hausleitung</span>
+              <span class="radio-label">🏛️ VAL</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="editMitRolle" value="zahlstelle" onchange="updateEditMitarbeiterFields()">
@@ -630,7 +630,7 @@
       if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
         for (const haus of selectedHaeuser) {
           if (userSystem.hasJvaLeitung(haus)) {
-            hausWarning.textContent = `Für ${getHausName(haus)} existiert bereits eine Hausleitung.`;
+            hausWarning.textContent = `Für ${getHausName(haus)} existiert bereits eine VAL.`;
             hausWarning.style.display = 'block';
             break;
           }
@@ -690,11 +690,11 @@
       // Validierungen für Hausleitung
       if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
         if (selectedHaeuser.length > 1) {
-          showAlert('Eine Hausleitung kann nur einem Haus zugeordnet werden.');
+          showAlert('Eine VAL kann nur einem Haus zugeordnet werden.');
           return;
         }
         if (userSystem.hasJvaLeitung(selectedHaeuser[0])) {
-          showAlert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine Hausleitung.`);
+          showAlert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine VAL.`);
           return;
         }
         userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
@@ -794,7 +794,7 @@
         for (const haus of selectedHaeuser) {
           const existing = userSystem.getJvaLeitung(haus, userId);
           if (existing) {
-            hausWarning.textContent = `Für ${getHausName(haus)} existiert bereits eine Hausleitung (${existing.vorname} ${existing.nachname}).`;
+            hausWarning.textContent = `Für ${getHausName(haus)} existiert bereits eine VAL (${existing.vorname} ${existing.nachname}).`;
             hausWarning.style.display = 'block';
             break;
           }
@@ -856,12 +856,12 @@
       
       if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
         if (selectedHaeuser.length > 1) {
-          showAlert('Eine Hausleitung kann nur einem Haus zugeordnet werden.');
+          showAlert('Eine VAL kann nur einem Haus zugeordnet werden.');
           return;
         }
         const existing = userSystem.getJvaLeitung(selectedHaeuser[0], id);
         if (existing) {
-          showAlert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine Hausleitung.`);
+          showAlert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine VAL.`);
           return;
         }
         userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });

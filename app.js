@@ -2568,7 +2568,7 @@ class AntragSystem {
           aktivitaetenSystem.logAktivitaet({
             antragId: antragId,
             typ: 'uebernommen',
-            beschreibung: `Antrag übernommen von ${alterBearbeiter || 'unbekannt'} (Hausleitung)`,
+            beschreibung: `Antrag übernommen von ${alterBearbeiter || 'unbekannt'} (VAL)`,
             benutzerTyp: 'mitarbeiter',
             benutzerId: mitarbeiter.userId,
             benutzerName: mitarbeiter.name
@@ -2870,7 +2870,7 @@ class AntragSystem {
       aktivitaetenSystem.logAktivitaet({
         antragId: id,
         typ: 'entscheidung-revidiert',
-        beschreibung: 'Entscheidung durch Hausleitung revidiert',
+        beschreibung: 'Entscheidung durch VAL revidiert',
         benutzerTyp: 'mitarbeiter',
         benutzerId: mitarbeiterId,
         benutzerName: mitarbeiterName
@@ -3617,11 +3617,13 @@ function getJvaName(jvaKey) {
 
 function getRolleText(rolle) {
   const rollen = {
-    'mitarbeiter': 'Mitarbeiter',
-    'jva-leitung': 'Hausleitung',
-    'haus-leitung': 'Hausleitung',
-    'hausleitung': 'Hausleitung',
-    'stationsleitung': 'Stationsleitung'
+    'mitarbeiter': 'VAD',
+    'jva-leitung': 'VAL',
+    'haus-leitung': 'VAL',
+    'hausleitung': 'VAL',
+    'stationsleitung': 'Stationsleitung',
+    'zahlstelle': 'Zahlstelle',
+    'arbeitskoordination': 'Arbeitskoordination'
   };
   return rollen[rolle] || rolle;
 }

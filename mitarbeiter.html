@@ -634,7 +634,7 @@
     </div>
   </div>
 
-  <!-- Modal: Antrag durch Hausleitung übernehmen -->
+  <!-- Modal: Antrag durch VAL übernehmen -->
   <div class="modal-overlay" id="hausleitungUebernahmeModal">
     <div class="modal">
       <div class="modal-header">
@@ -643,7 +643,7 @@
       </div>
       <div class="modal-body">
         <div class="info-box warning">
-          <p>Sie sind dabei, diesen Antrag als Hausleitung zu übernehmen. Der aktuelle Bearbeiter verliert seinen Zugriff auf den Antrag und wird über die Übernahme informiert.</p>
+          <p>Sie sind dabei, diesen Antrag als VAL zu übernehmen. Der aktuelle Bearbeiter verliert seinen Zugriff auf den Antrag und wird über die Übernahme informiert.</p>
         </div>
         <div id="hausleitungUebernahmeInfo">
           <!-- Wird dynamisch gefüllt -->
@@ -1215,7 +1215,7 @@
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>Hausleitung</strong> sehen Sie alle Anträge des <strong>${hausNames}</strong> (alle Stationen)</span>
+            <span>Als <strong>VAL</strong> sehen Sie alle Anträge des <strong>${hausNames}</strong> (alle Stationen)</span>
           </div>
         `;
       } else if (currentSession.rolle === 'stationsleitung') {
@@ -1963,7 +1963,7 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
               ${antrag.entscheidungGetroffen && currentSession.rolle === 'hausleitung' && !antrag.veraktet ? `
                 <div class="revision-bereich">
                   <button class="btn btn-danger btn-sm" onclick="revidiereEntscheidung('${antrag.id}')">
-                    ${currentLanguage === 'en' ? 'Revise decision (House management)' : currentLanguage === 'fr' ? 'Réviser la décision (Direction)' : 'Entscheidung revidieren (Hausleitung)'}
+                    ${currentLanguage === 'en' ? 'Revise decision (VAL)' : currentLanguage === 'fr' ? 'Réviser la décision (VAL)' : 'Entscheidung revidieren (VAL)'}
                   </button>
                 </div>
               ` : ''}
@@ -2237,7 +2237,7 @@ ${t('action.archive')}
         ? 'Are you sure you want to revise this decision? This action can only be performed by house management.'
         : currentLanguage === 'fr'
         ? 'Êtes-vous sûr de vouloir réviser cette décision ? Cette action ne peut être effectuée que par la direction de la maison.'
-        : 'Sind Sie sicher, dass Sie diese Entscheidung revidieren möchten? Diese Aktion kann nur von der Hausleitung durchgeführt werden.';
+        : 'Sind Sie sicher, dass Sie diese Entscheidung revidieren möchten? Diese Aktion kann nur von der VAL durchgeführt werden.';
       
       if (!await showConfirm(confirmMsg)) return;
       
@@ -2423,7 +2423,7 @@ ${t('action.archive')}
       // Hausleitung als Option (pro Haus)
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
         const hausName = HAUS_CONFIG[hausKey].name;
-        select.innerHTML += `<option value="hausleitung|${hausKey}">Hausleitung ${hausName}</option>`;
+        select.innerHTML += `<option value="hausleitung|${hausKey}">VAL ${hausName}</option>`;
       });
       
       // Zahlstelle als Option (pro Haus)
@@ -2811,7 +2811,7 @@ ${t('action.archive')}
           // Gruppennamen generieren
           const hausName = HAUS_CONFIG[gruppeHaus]?.name || gruppeHaus;
           if (gruppeTyp === 'hausleitung') {
-            zugewiesenAnName = `Hausleitung ${hausName}`;
+            zugewiesenAnName = `VAL ${hausName}`;
           } else if (gruppeTyp === 'zahlstelle') {
             zugewiesenAnName = `Zahlstelle ${hausName}`;
           } else if (gruppeTyp === 'arbeitskoordination') {
@@ -3216,7 +3216,7 @@ ${t('action.archive')}
       // Hausleitung als Option (pro Haus)
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
         const hausName = HAUS_CONFIG[hausKey].name;
-        select.innerHTML += `<option value="hausleitung|${hausKey}">Hausleitung ${hausName}</option>`;
+        select.innerHTML += `<option value="hausleitung|${hausKey}">VAL ${hausName}</option>`;
       });
       
       // Zahlstelle als Option (pro Haus)
@@ -3497,7 +3497,7 @@ ${t('action.archive')}
           const hausName = HAUS_CONFIG[gruppeHaus]?.name || gruppeHaus;
           let gruppeName;
           if (gruppeTyp === 'hausleitung') {
-            gruppeName = `Hausleitung ${hausName}`;
+            gruppeName = `VAL ${hausName}`;
           } else if (gruppeTyp === 'zahlstelle') {
             gruppeName = `Zahlstelle ${hausName}`;
           } else if (gruppeTyp === 'arbeitskoordination') {
@@ -3895,8 +3895,8 @@ ${t('action.archive')}
           notificationSystem.createNotification(
             result.alterBearbeiterId,
             'antrag-uebernommen',
-            'Antrag durch Hausleitung übernommen',
-            `Der Antrag ${result.antrag.antragsNummer || antragId} wurde von ${currentSession.name} (Hausleitung) übernommen. Begründung: ${begruendung}`,
+            'Antrag durch VAL übernommen',
+            `Der Antrag ${result.antrag.antragsNummer || antragId} wurde von ${currentSession.name} (VAL) übernommen. Begründung: ${begruendung}`,
             antragId
           );
         }
