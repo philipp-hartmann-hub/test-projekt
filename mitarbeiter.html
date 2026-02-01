@@ -2516,13 +2516,13 @@ ${t('action.archive')}
           m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
         );
       } else if (gruppeTyp === 'station') {
-        // Mitarbeiter dieser Station (und Hausleitung)
+        // Nur VAD (Mitarbeiter) dieser Station - VAL gehört NICHT dazu
         mitarbeiter = mitarbeiter.filter(m => {
           const imHaus = m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'));
           if (!imHaus) return false;
           
-          // Hausleitung kann alles im Haus sehen
-          if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return true;
+          // VAL gehört NICHT zur VAD-Gruppe
+          if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return false;
           
           // Mitarbeiter muss auf dieser Station sein
           return m.station === station;
@@ -3305,10 +3305,12 @@ ${t('action.archive')}
           m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
         );
       } else if (gruppeTyp === 'station') {
+        // Nur VAD (Mitarbeiter) dieser Station - VAL gehört NICHT dazu
         mitarbeiter = mitarbeiter.filter(m => {
           const imHaus = m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'));
           if (!imHaus) return false;
-          if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return true;
+          // VAL gehört NICHT zur VAD-Gruppe
+          if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return false;
           return m.station === station;
         });
       }

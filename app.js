@@ -3152,8 +3152,9 @@ class AntragSystem {
       // Nur Hausleitungen dieses Hauses
       return istHausleitung;
     } else if (gruppe.typ === 'station') {
-      // Hausleitung kann alle Stationsaufgaben sehen
-      if (istHausleitung) return true;
+      // VAL gehört NICHT zur VAD-Gruppe (Station)
+      // VAL hat nur die Funktion, Anträge des Hauses zu übernehmen
+      if (istHausleitung) return false;
       // Mitarbeiter muss auf dieser Station sein
       return mitarbeiter.station === gruppe.station;
     } else if (gruppe.typ === 'zahlstelle') {
