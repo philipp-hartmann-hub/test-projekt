@@ -60,8 +60,8 @@
         <!-- Tabs -->
         <div class="tabs">
           <button class="tab active" onclick="switchTab('insassen')">Insassen</button>
-          <button class="tab" onclick="switchTab('mitarbeiter')">🛡️ Mitarbeiter</button>
-          <button class="tab" onclick="switchTab('termine')">📅 Termine</button>
+          <button class="tab" onclick="switchTab('mitarbeiter')">Mitarbeiter</button>
+          <button class="tab" onclick="switchTab('termine')">Termine</button>
         </div>
 
         <!-- Insassen-Verwaltung -->
@@ -78,7 +78,7 @@
         <!-- Mitarbeiter-Verwaltung -->
         <section class="section" id="mitarbeiterSection" style="display: none;">
           <div class="section-header">
-            <h2>🛡️ Mitarbeiter-Verwaltung <span class="count" id="mitarbeiterCount">0</span></h2>
+            <h2>Mitarbeiter-Verwaltung <span class="count" id="mitarbeiterCount">0</span></h2>
             <button class="btn btn-primary" onclick="openNewMitarbeiterModal()">+ Neuer Mitarbeiter</button>
           </div>
           <div class="user-list" id="mitarbeiterList">
@@ -227,15 +227,15 @@
             </label>
             <label class="radio-option">
               <input type="radio" name="mitRolle" value="haus-leitung" onchange="updateMitarbeiterFields()">
-              <span class="radio-label">🏛️ VAL</span>
+              <span class="radio-label">VAL</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="mitRolle" value="zahlstelle" onchange="updateMitarbeiterFields()">
-              <span class="radio-label">💰 Zahlstelle</span>
+              <span class="radio-label">Zahlstelle</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="mitRolle" value="arbeitskoordination" onchange="updateMitarbeiterFields()">
-              <span class="radio-label">👷 Arbeitskoordination</span>
+              <span class="radio-label">Arbeitskoordination</span>
             </label>
           </div>
         </div>
@@ -304,19 +304,19 @@
             </label>
             <label class="radio-option">
               <input type="radio" name="editMitRolle" value="stationsleitung" onchange="updateEditMitarbeiterFields()">
-              <span class="radio-label">📋 Stationsleitung</span>
+              <span class="radio-label">Stationsleitung</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="editMitRolle" value="haus-leitung" onchange="updateEditMitarbeiterFields()">
-              <span class="radio-label">🏛️ VAL</span>
+              <span class="radio-label">VAL</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="editMitRolle" value="zahlstelle" onchange="updateEditMitarbeiterFields()">
-              <span class="radio-label">💰 Zahlstelle</span>
+              <span class="radio-label">Zahlstelle</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="editMitRolle" value="arbeitskoordination" onchange="updateEditMitarbeiterFields()">
-              <span class="radio-label">👷 Arbeitskoordination</span>
+              <span class="radio-label">Arbeitskoordination</span>
             </label>
           </div>
         </div>
@@ -948,7 +948,7 @@
       if (insassen.length === 0) {
         insassenList.innerHTML = `
           <div class="empty-state">
-            <div class="icon">👤</div>
+            <div class="icon"></div>
             <p>Noch keine Insassen angelegt.</p>
           </div>
         `;
@@ -964,7 +964,7 @@
                 </div>
                 <div class="user-meta">
                   <span>${formatDateOnly(user.geburtsdatum)}</span>
-                  <span>🏢 ${getHausName(user.jva)} - Station ${user.station}</span>
+                  <span>${getHausName(user.jva)} - Station ${user.station}</span>
                 </div>
                 <div class="user-credentials">
                   <span class="credential-inline">
@@ -972,7 +972,7 @@
                   </span>
                   <span class="credential-inline">
                     <strong>Passwort:</strong> <code>${user.password || '-'}</code>
-                    <button class="btn-copy-inline" onclick="copyText('${user.password}')" title="Kopieren">📋</button>
+                    <button class="btn-copy-inline" onclick="copyText('${user.password}')" title="Kopieren">Kopieren</button>
                   </span>
                 </div>
               </div>
@@ -982,10 +982,10 @@
                 🔑 Neues Passwort
               </button>
               <button class="btn btn-secondary btn-sm" onclick="openEditInsasseModal('${user.id}')">
-                ✏️ Bearbeiten
+                Bearbeiten
               </button>
               <button class="btn btn-danger btn-sm" onclick="deleteInsasse('${user.id}', '${escapeHtml(user.vorname)} ${escapeHtml(user.nachname)}')">
-                🗑️ Löschen
+                Löschen
               </button>
             </div>
           </div>
@@ -996,7 +996,7 @@
       if (mitarbeiter.length === 0) {
         mitarbeiterList.innerHTML = `
           <div class="empty-state">
-            <div class="icon">🛡️</div>
+            <div class="icon"></div>
             <p>Noch keine Mitarbeiter angelegt.</p>
           </div>
         `;
@@ -1006,9 +1006,9 @@
           const stationInfo = (user.rolle === 'stationsleitung' || user.rolle === 'mitarbeiter') && user.station ? ` - Station ${user.station}` : '';
           
           // Icon basierend auf Rolle
-          let roleIcon = '👷';
-          if (user.rolle === 'jva-leitung' || user.rolle === 'haus-leitung') roleIcon = '🏛️';
-          else if (user.rolle === 'stationsleitung') roleIcon = '📋';
+          let roleIcon = '';
+          if (user.rolle === 'jva-leitung' || user.rolle === 'haus-leitung') roleIcon = '';
+          else if (user.rolle === 'stationsleitung') roleIcon = '';
           
           return `
             <div class="user-card">
@@ -1019,7 +1019,7 @@
                   <div class="user-role-badge ${user.rolle}">${getRolleText(user.rolle)}</div>
                   <div class="user-meta">
                     <span>${formatDateOnly(user.geburtsdatum)}</span>
-                    <span>🏢 ${hausNames}${stationInfo}</span>
+                    <span>${hausNames}${stationInfo}</span>
                   </div>
                   <div class="user-credentials">
                     <span class="credential-inline">
@@ -1027,7 +1027,7 @@
                     </span>
                     <span class="credential-inline">
                       <strong>Passwort:</strong> <code>${user.password || '-'}</code>
-                      <button class="btn-copy-inline" onclick="copyText('${user.password}')" title="Kopieren">📋</button>
+                      <button class="btn-copy-inline" onclick="copyText('${user.password}')" title="Kopieren">Kopieren</button>
                     </span>
                   </div>
                 </div>
@@ -1037,10 +1037,10 @@
                   🔑 Neues Passwort
                 </button>
                 <button class="btn btn-secondary btn-sm" onclick="openEditMitarbeiterModal('${user.id}')">
-                  ✏️ Bearbeiten
+                  Bearbeiten
                 </button>
                 <button class="btn btn-danger btn-sm" onclick="deleteMitarbeiter('${user.id}', '${escapeHtml(user.vorname)} ${escapeHtml(user.nachname)}')">
-                  🗑️ Löschen
+                  Löschen
                 </button>
               </div>
             </div>
@@ -1062,7 +1062,7 @@
       if (termine.length === 0) {
         liste.innerHTML = `
           <div class="empty-state">
-            <div class="icon">📅</div>
+            <div class="icon"></div>
             <p>Noch keine allgemeinen Termine angelegt.</p>
           </div>
         `;
@@ -1084,7 +1084,7 @@
               <div class="termin-info">
                 <div class="termin-titel-admin">${escapeHtml(termin.titel)}</div>
                 <div class="termin-meta-admin">
-                  <span>📅 ${formatDatum}</span>
+                  <span>${formatDatum}</span>
                   ${termin.uhrzeit ? `<span>🕐 ${termin.uhrzeit} Uhr</span>` : ''}
                 </div>
                 ${termin.beschreibung ? `<p class="termin-beschreibung-admin">${escapeHtml(termin.beschreibung)}</p>` : ''}
@@ -1092,7 +1092,7 @@
             </div>
             <div class="termin-actions">
               <button class="btn btn-danger btn-sm" onclick="deleteAdminTermin('${termin.id}')">
-                🗑️ Löschen
+                Löschen
               </button>
             </div>
           </div>

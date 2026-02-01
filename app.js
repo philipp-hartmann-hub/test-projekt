@@ -1893,7 +1893,7 @@ class TerminSystem {
     if (existierend) return existierend;
     
     return this.createTermin({
-      titel: `📋 Aufgabe: ${aufgabe.beschreibung.substring(0, 50)}${aufgabe.beschreibung.length > 50 ? '...' : ''}`,
+      titel: `Aufgabe: ${aufgabe.beschreibung.substring(0, 50)}${aufgabe.beschreibung.length > 50 ? '...' : ''}`,
       beschreibung: aufgabe.beschreibung,
       datum: aufgabe.fristDatum,
       typ: 'aufgabe',
@@ -2107,7 +2107,7 @@ class AufgabenSystem {
           notificationSystem.createNotification(
             aufgabe.zugewiesenAnId,
             'aufgabe-ueberfaellig',
-            '⚠️ Aufgabe überfällig',
+            'Aufgabe überfällig',
             `Die Aufgabe zum Antrag ${aufgabe.antragsNummer} ist überfällig (Frist: ${new Date(aufgabe.fristDatum).toLocaleDateString('de-DE')}).`,
             aufgabe.antragId
           );
@@ -2116,7 +2116,7 @@ class AufgabenSystem {
           notificationSystem.createNotification(
             aufgabe.erstelltVonId,
             'aufgabe-ueberfaellig',
-            '⚠️ Aufgabe überfällig',
+            'Aufgabe überfällig',
             `Ihre erstellte Aufgabe zum Antrag ${aufgabe.antragsNummer} ist noch nicht erledigt (Frist: ${new Date(aufgabe.fristDatum).toLocaleDateString('de-DE')}).`,
             aufgabe.antragId
           );
@@ -2774,7 +2774,7 @@ class AntragSystem {
       let title, message;
       
       if (status === 'genehmigt') {
-        title = '✓ Antrag genehmigt';
+        title = 'Antrag genehmigt';
         message = `Ihr Antrag "${antragsTyp}" wurde genehmigt.`;
       } else if (status === 'abgelehnt') {
         title = '✕ Antrag abgelehnt';
@@ -2830,7 +2830,7 @@ class AntragSystem {
       let title, message;
       
       if (status === 'genehmigt') {
-        title = '✓ Antrag genehmigt';
+        title = 'Antrag genehmigt';
         message = `Ihr Antrag "${antragsTyp}" wurde genehmigt.${vollzugKommentar ? ' Hinweis zum Vollzug: ' + getTranslatedUserText(vollzugKommentar) : ''}`;
       } else if (status === 'abgelehnt') {
         title = '✕ Antrag abgelehnt';
@@ -2934,7 +2934,7 @@ class AntragSystem {
       let title, message;
       
       if (status === 'genehmigt') {
-        title = '✓ Antrag genehmigt';
+        title = 'Antrag genehmigt';
         message = `Ihr Antrag "${antragsTyp}" wurde genehmigt.`;
       } else if (status === 'abgelehnt') {
         title = '✕ Antrag abgelehnt';
@@ -3595,10 +3595,10 @@ function getStatusText(status) {
 
 function getStatusIcon(status) {
   const icons = {
-    'entwurf': '📝',
+    'entwurf': '',
     'offen': '📄',
     'in-bearbeitung': '⏳',
-    'genehmigt': '✓',
+    'genehmigt': '',
     'abgelehnt': '✕',
     'teilweise-genehmigt': '⚡'
   };
