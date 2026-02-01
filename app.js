@@ -1948,6 +1948,13 @@ class AufgabenSystem {
 
   // Aufgabe erstellen
   createAufgabe(data) {
+    // Debug-Ausgabe bei Aufgabenerstellung
+    console.log('[Debug] createAufgabe - Eingabedaten:', {
+      zugewiesenAnTyp: data.zugewiesenAnTyp,
+      zugewiesenAnGruppe: data.zugewiesenAnGruppe,
+      zugewiesenAnName: data.zugewiesenAnName
+    });
+    
     const aufgabe = {
       id: this.generateId(),
       antragId: data.antragId,
@@ -1956,7 +1963,8 @@ class AufgabenSystem {
       erstelltVonName: data.erstelltVonName,
       zugewiesenAnId: data.zugewiesenAnId,
       zugewiesenAnName: data.zugewiesenAnName,
-      zugewiesenAnTyp: data.zugewiesenAnTyp, // 'insasse' oder 'mitarbeiter'
+      zugewiesenAnTyp: data.zugewiesenAnTyp, // 'insasse', 'mitarbeiter' oder 'gruppe'
+      zugewiesenAnGruppe: data.zugewiesenAnGruppe || null, // { typ: 'hausleitung'|'station', hausId, station }
       kurzbeschreibung: data.kurzbeschreibung || data.beschreibung, // max 40 Zeichen
       beschreibung: data.beschreibung || '', // ausführliche Beschreibung (optional)
       anhangPdfs: data.anhangPdfs || null, // Array von PDFs [{name, data}, ...]
@@ -1970,17 +1978,25 @@ class AufgabenSystem {
       erstelltAm: new Date().toISOString(),
       erledigtAm: null
     };
+    
+    console.log('[Debug] createAufgabe - Erstellte Aufgabe:', {
+      id: aufgabe.id,
+      zugewiesenAnTyp: aufgabe.zugewiesenAnTyp,
+      zugewiesenAnGruppe: aufgabe.zugewiesenAnGruppe
+    });
+    
     this.aufgaben.push(aufgabe);
     this.saveAufgaben();
     
     // WICHTIG: Wenn einem Mitarbeiter eine Aufgabe zugewiesen wird, aus abgegebenVon entfernen
     // So kann ein ehemaliger Bearbeiter wieder Zugriff auf den Antrag bekommen
-    if (data.zugewiesenAnTyp === 'mitarbeiter' && data.antragId) {
+    if (data.zugewiesenAnTyp === 'mitarbeiter' && data.antragId && data.zugewiesenAnId) {
       antragSystem.entferneAusAbgegebenVon(data.antragId, data.zugewiesenAnId);
     }
     
     // Aktivität protokollieren
-    const zielTypText = data.zugewiesenAnTyp === 'insasse' ? 'Insasse' : 'Mitarbeiter';
+    let zielTypText = data.zugewiesenAnTyp === 'insasse' ? 'Insasse' : 
+                      data.zugewiesenAnTyp === 'gruppe' ? 'Gruppe' : 'Mitarbeiter';
     const fristText = data.fristDatum ? ` (Frist: ${new Date(data.fristDatum).toLocaleDateString('de-DE')})` : '';
     aktivitaetenSystem.logAktivitaet({
       antragId: data.antragId,
@@ -1989,7 +2005,8 @@ class AufgabenSystem {
       details: { 
         kurzbeschreibung: data.kurzbeschreibung || data.beschreibung, 
         beschreibung: data.beschreibung,
-        zugewiesenAn: data.zugewiesenAnName, 
+        zugewiesenAn: data.zugewiesenAnName,
+        zugewiesenAnGruppe: data.zugewiesenAnGruppe,
         frist: data.fristDatum 
       },
       benutzerTyp: 'mitarbeiter',
@@ -2139,6 +2156,70 @@ class AufgabenSystem {
 
   getAufgabe(id) {
     return this.aufgaben.find(a => a.id === id);
+  }
+  
+  // Offene Gruppenaufgaben für einen Mitarbeiter zu einem bestimmten Antrag
+  getOffeneGruppenAufgabenFuerMitarbeiter(antragId, mitarbeiter) {
+    console.log('[Debug] getOffeneGruppenAufgabenFuerMitarbeiter aufgerufen:', { antragId, antragIdType: typeof antragId, mitarbeiterId: mitarbeiter.userId });
+    
+    // Alle Gruppenaufgaben für diesen Mitarbeiter anzeigen (zur Diagnose)
+    const alleGruppenAufgaben = this.aufgaben.filter(a => a.zugewiesenAnTyp === 'gruppe' && a.status === 'offen');
+    console.log('[Debug] Alle offenen Gruppenaufgaben:', alleGruppenAufgaben.map(a => ({
+      aufgabeId: a.id,
+      aufgabeAntragId: a.antragId,
+      aufgabeAntragIdType: typeof a.antragId,
+      matchesAntragId: a.antragId === antragId,
+      matchesAntragIdLoose: a.antragId == antragId
+    })));
+    
+    const ergebnis = this.aufgaben.filter(a => {
+      // Vergleich mit == statt === für Typ-Toleranz (String vs Number)
+      if (a.antragId != antragId) return false;
+      if (a.status !== 'offen') return false;
+      if (a.zugewiesenAnTyp !== 'gruppe') return false;
+      if (!a.zugewiesenAnGruppe) return false;
+      
+      // Prüfen ob Mitarbeiter zur Gruppe gehört
+      const gehoertZuGruppe = antragSystem._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
+      console.log('[Debug] Aufgabe prüfen:', { aufgabeId: a.id, gehoertZuGruppe });
+      return gehoertZuGruppe;
+    });
+    
+    console.log('[Debug] getOffeneGruppenAufgabenFuerMitarbeiter Ergebnis:', ergebnis.length);
+    return ergebnis;
+  }
+  
+  // Alle offenen Gruppenaufgaben für einen Mitarbeiter (über alle Anträge)
+  getAlleOffenenGruppenAufgabenFuerMitarbeiter(mitarbeiter) {
+    const ergebnis = this.aufgaben.filter(a => {
+      if (a.status !== 'offen') return false;
+      if (a.zugewiesenAnTyp !== 'gruppe') return false;
+      if (!a.zugewiesenAnGruppe) return false;
+      
+      return antragSystem._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
+    });
+    
+    console.log('[Debug] getAlleOffenenGruppenAufgabenFuerMitarbeiter:', {
+      mitarbeiterId: mitarbeiter.userId,
+      mitarbeiterRolle: mitarbeiter.rolle,
+      mitarbeiterJvas: mitarbeiter.jvas,
+      alleGruppenAufgaben: this.aufgaben.filter(a => a.zugewiesenAnTyp === 'gruppe' && a.status === 'offen').map(a => ({
+        id: a.id,
+        antragId: a.antragId,
+        gruppe: a.zugewiesenAnGruppe
+      })),
+      gefundene: ergebnis.length
+    });
+    
+    return ergebnis;
+  }
+  
+  // Alle Antrags-IDs mit offenen Gruppenaufgaben für einen Mitarbeiter
+  getAntragsIdsMitGruppenaufgaben(mitarbeiter) {
+    const gruppenAufgaben = this.getAlleOffenenGruppenAufgabenFuerMitarbeiter(mitarbeiter);
+    // Einzigartige Antrags-IDs extrahieren
+    const antragIds = [...new Set(gruppenAufgaben.map(a => a.antragId))];
+    return antragIds;
   }
 }
 
@@ -2317,11 +2398,50 @@ class AntragSystem {
 
   // Antrag "nehmen" - einem Mitarbeiter zuweisen
   nehmeAntrag(antragId, mitarbeiter) {
+    console.log('[Debug] nehmeAntrag aufgerufen:', { antragId, mitarbeiterId: mitarbeiter.userId });
+    
     const antrag = this.antraege.find(a => a.id === antragId);
-    if (antrag && antrag.status === 'offen') {
+    if (!antrag) {
+      console.log('[Debug] nehmeAntrag: Antrag nicht gefunden');
+      return null;
+    }
+    
+    console.log('[Debug] nehmeAntrag - Antrag gefunden:', {
+      status: antrag.status,
+      bearbeiterId: antrag.bearbeiterId,
+      hauptbearbeitungWartetAufUebernahme: antrag.hauptbearbeitungWartetAufUebernahme,
+      zugewiesenAnGruppe: antrag.zugewiesenAnGruppe
+    });
+    
+    // Fall 1: Offener Antrag - komplett übernehmen
+    if (antrag.status === 'offen') {
       antrag.status = 'in-bearbeitung';
       antrag.bearbeiterId = mitarbeiter.userId;
       antrag.bearbeiterName = mitarbeiter.name;
+      
+      // Gruppenzuweisung löschen, da jetzt eine konkrete Person zugewiesen ist
+      if (antrag.zugewiesenAnGruppe) {
+        antrag.zugewiesenAnGruppe = null;
+        antrag.zugewiesenAnGruppeName = null;
+      }
+      
+      // Markierungen löschen
+      antrag.hauptbearbeitungWartetAufUebernahme = false;
+      antrag.urspruenglicherBearbeiterId = null;
+      antrag.urspruenglicherBearbeiterName = null;
+      
+      // Alle offenen Gruppenaufgaben für diesen Antrag dem Mitarbeiter zuweisen
+      const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, mitarbeiter);
+      gruppenAufgaben.forEach(aufgabe => {
+        aufgabe.zugewiesenAnTyp = 'mitarbeiter';
+        aufgabe.zugewiesenAnId = mitarbeiter.userId;
+        aufgabe.zugewiesenAnName = mitarbeiter.name;
+        aufgabe.zugewiesenAnGruppe = null;
+      });
+      if (gruppenAufgaben.length > 0) {
+        aufgabenSystem.saveAufgaben();
+      }
+      
       this.saveAntraege();
       
       // Aktivität protokollieren
@@ -2336,6 +2456,101 @@ class AntragSystem {
       
       return antrag;
     }
+    
+    // Fall 2: Antrag in Bearbeitung mit wartender Hauptbearbeitungsübergabe
+    // (Weiterleitung an Gruppe mit Option "Hauptbearbeitung übertragen")
+    if (antrag.status === 'in-bearbeitung' && antrag.hauptbearbeitungWartetAufUebernahme && antrag.zugewiesenAnGruppe) {
+      const alterBearbeiterId = antrag.bearbeiterId;
+      const alterBearbeiterName = antrag.bearbeiterName;
+      
+      // Alten Bearbeiter als "abgegeben" markieren
+      if (!antrag.abgegebenVon) {
+        antrag.abgegebenVon = [];
+      }
+      if (alterBearbeiterId && !antrag.abgegebenVon.includes(alterBearbeiterId)) {
+        antrag.abgegebenVon.push(alterBearbeiterId);
+      }
+      
+      // Hauptbearbeitung übertragen
+      antrag.bearbeiterId = mitarbeiter.userId;
+      antrag.bearbeiterName = mitarbeiter.name;
+      
+      // Gruppenzuweisung und Markierungen löschen
+      antrag.zugewiesenAnGruppe = null;
+      antrag.zugewiesenAnGruppeName = null;
+      antrag.hauptbearbeitungWartetAufUebernahme = false;
+      antrag.urspruenglicherBearbeiterId = null;
+      antrag.urspruenglicherBearbeiterName = null;
+      
+      // Alle offenen Gruppenaufgaben für diesen Antrag dem Mitarbeiter zuweisen
+      const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, mitarbeiter);
+      gruppenAufgaben.forEach(aufgabe => {
+        aufgabe.zugewiesenAnTyp = 'mitarbeiter';
+        aufgabe.zugewiesenAnId = mitarbeiter.userId;
+        aufgabe.zugewiesenAnName = mitarbeiter.name;
+        aufgabe.zugewiesenAnGruppe = null;
+      });
+      if (gruppenAufgaben.length > 0) {
+        aufgabenSystem.saveAufgaben();
+      }
+      
+      this.saveAntraege();
+      
+      // Aktivität protokollieren
+      aktivitaetenSystem.logAktivitaet({
+        antragId: antragId,
+        typ: 'hauptbearbeitung-uebernommen',
+        beschreibung: `Hauptbearbeitung übernommen von ${alterBearbeiterName || 'unbekannt'}`,
+        benutzerTyp: 'mitarbeiter',
+        benutzerId: mitarbeiter.userId,
+        benutzerName: mitarbeiter.name
+      });
+      
+      return antrag;
+    }
+    
+    // Fall 3: Gruppenaufgaben übernehmen (unabhängig vom Antragsstatus, solange nicht veraktet)
+    // Dies gilt für Anträge in Bearbeitung, genehmigt, teilweise-genehmigt, abgelehnt etc.
+    if (!antrag.veraktet) {
+      console.log('[Debug] nehmeAntrag Fall 3: Antrag nicht veraktet (Status: ' + antrag.status + '), suche Gruppenaufgaben...');
+      
+      const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, mitarbeiter);
+      console.log('[Debug] nehmeAntrag: Gefundene Gruppenaufgaben:', gruppenAufgaben.length);
+      
+      if (gruppenAufgaben.length > 0) {
+        gruppenAufgaben.forEach(aufgabe => {
+          console.log('[Debug] Konvertiere Aufgabe:', aufgabe.id);
+          aufgabe.zugewiesenAnTyp = 'mitarbeiter';
+          aufgabe.zugewiesenAnId = mitarbeiter.userId;
+          aufgabe.zugewiesenAnName = mitarbeiter.name;
+          aufgabe.zugewiesenAnGruppe = null;
+        });
+        aufgabenSystem.saveAufgaben();
+        
+        // Aktivität protokollieren
+        aktivitaetenSystem.logAktivitaet({
+          antragId: antragId,
+          typ: 'aufgaben-genommen',
+          beschreibung: `${gruppenAufgaben.length} Gruppenaufgabe(n) übernommen`,
+          benutzerTyp: 'mitarbeiter',
+          benutzerId: mitarbeiter.userId,
+          benutzerName: mitarbeiter.name
+        });
+        
+        console.log('[Debug] nehmeAntrag: Aufgaben erfolgreich übernommen');
+        return antrag;
+      } else {
+        console.log('[Debug] nehmeAntrag: Keine Gruppenaufgaben gefunden - prüfe alle Aufgaben für diesen Antrag');
+        const alleAufgaben = aufgabenSystem.aufgaben.filter(a => a.antragId === antragId && a.status === 'offen');
+        console.log('[Debug] Alle offenen Aufgaben zu diesem Antrag:', alleAufgaben.map(a => ({
+          id: a.id,
+          zugewiesenAnTyp: a.zugewiesenAnTyp,
+          zugewiesenAnGruppe: a.zugewiesenAnGruppe
+        })));
+      }
+    }
+    
+    console.log('[Debug] nehmeAntrag: Kein passender Fall gefunden, return null');
     return null;
   }
 
@@ -2809,18 +3024,112 @@ class AntragSystem {
 
   // Anträge und Aufgaben der Gruppe für Mitarbeiter (basierend auf Haus/Station)
   getOffeneAntraegeMitarbeiter(mitarbeiter) {
+    // Prüfen ob Mitarbeiter Hausleitung ist
+    const istHausleitung = mitarbeiter.rolle === 'jva-leitung' || 
+                           mitarbeiter.rolle === 'haus-leitung' || 
+                           mitarbeiter.rolle === 'hausleitung';
+    
+    // Vorab alle Antrags-IDs mit Gruppenaufgaben für diesen Mitarbeiter ermitteln
+    const antragsIdsMitGruppenaufgaben = aufgabenSystem.getAntragsIdsMitGruppenaufgaben(mitarbeiter);
+    
+    console.log('[Debug] getOffeneAntraegeMitarbeiter:', {
+      mitarbeiterId: mitarbeiter.userId,
+      istHausleitung: istHausleitung,
+      antragsIdsMitGruppenaufgaben: antragsIdsMitGruppenaufgaben
+    });
+    
     return this.antraege.filter(a => {
-      if (a.status !== 'offen') return false;
-      
-      // Hausleitung sieht alle Anträge ihres Hauses
-      if (mitarbeiter.rolle === 'jva-leitung' || mitarbeiter.rolle === 'haus-leitung') {
-        return this._matchesHaus(mitarbeiter.jvas, a.insasseJva);
+      // 1. Offene Anträge (noch kein Bearbeiter)
+      if (a.status === 'offen') {
+        // Prüfen ob der Antrag einer Gruppe zugewiesen wurde
+        if (a.zugewiesenAnGruppe) {
+          // Nur Mitglieder der zugewiesenen Gruppe sehen den Antrag
+          return this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
+        }
+        
+        // Normale offene Anträge (ohne Gruppenzuweisung)
+        // Hausleitung sieht alle Anträge ihres Hauses
+        if (istHausleitung) {
+          return this._matchesHaus(mitarbeiter.jvas, a.insasseJva);
+        }
+        // Mitarbeiter und Stationsleitung sehen nur ihre Station
+        return this._matchesHaus(mitarbeiter.jvas, a.insasseJva) && 
+               a.insasseStation === mitarbeiter.station;
       }
       
-      // Mitarbeiter und Stationsleitung sehen nur ihre Station
-      return this._matchesHaus(mitarbeiter.jvas, a.insasseJva) && 
-             a.insasseStation === mitarbeiter.station;
+      // 2. Anträge in Bearbeitung mit Gruppenzuweisung (Hauptbearbeitung wartet auf Übernahme)
+      // Der aktuelle Bearbeiter bleibt noch Hauptbearbeiter, aber der Antrag erscheint für die Gruppe
+      if (a.status === 'in-bearbeitung' && a.zugewiesenAnGruppe && a.hauptbearbeitungWartetAufUebernahme) {
+        // Nicht für den aktuellen Hauptbearbeiter anzeigen (der sieht ihn in "Meine Anträge")
+        if (a.bearbeiterId === mitarbeiter.userId) {
+          return false;
+        }
+        // Nur Mitglieder der zugewiesenen Gruppe sehen den Antrag
+        return this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
+      }
+      
+      // 3. Anträge mit Gruppenaufgaben für diesen Mitarbeiter
+      // Prüfen ob dieser Antrag in der Liste der Anträge mit Gruppenaufgaben ist
+      if (antragsIdsMitGruppenaufgaben.includes(a.id)) {
+        // Nicht für den aktuellen Bearbeiter anzeigen (der sieht den Antrag sowieso)
+        if (a.bearbeiterId === mitarbeiter.userId) {
+          return false;
+        }
+        return true;
+      }
+      
+      return false;
     }).sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
+  }
+  
+  // Prüft ob ein Mitarbeiter zu einer Gruppe gehört
+  _mitarbeiterGehoertZuGruppe(mitarbeiter, gruppe) {
+    if (!gruppe) {
+      console.log('[Debug] _mitarbeiterGehoertZuGruppe: gruppe ist null/undefined');
+      return false;
+    }
+    
+    const istHausleitung = mitarbeiter.rolle === 'jva-leitung' || 
+                           mitarbeiter.rolle === 'haus-leitung' || 
+                           mitarbeiter.rolle === 'hausleitung';
+    
+    // Normalisiere Haus-ID der Gruppe
+    const normHausId = gruppe.hausId?.replace('jva', 'haus');
+    
+    // Mitarbeiter-Häuser: Berücksichtige sowohl jvas (Array) als auch jva (String, Legacy)
+    let mitarbeiterHaeuser = [];
+    if (mitarbeiter.jvas && Array.isArray(mitarbeiter.jvas)) {
+      mitarbeiterHaeuser = mitarbeiter.jvas.map(h => h?.replace('jva', 'haus'));
+    } else if (mitarbeiter.jva) {
+      // Legacy: Einzelnes Haus
+      mitarbeiterHaeuser = [mitarbeiter.jva.replace('jva', 'haus')];
+    }
+    
+    const imSelbenHaus = mitarbeiterHaeuser.includes(normHausId);
+    
+    console.log('[Debug] _mitarbeiterGehoertZuGruppe:', {
+      mitarbeiterRolle: mitarbeiter.rolle,
+      mitarbeiterHaeuser: mitarbeiterHaeuser,
+      gruppeTyp: gruppe.typ,
+      gruppeHausId: normHausId,
+      gruppeStation: gruppe.station,
+      imSelbenHaus: imSelbenHaus,
+      istHausleitung: istHausleitung
+    });
+    
+    if (!imSelbenHaus) return false;
+    
+    if (gruppe.typ === 'hausleitung') {
+      // Nur Hausleitungen dieses Hauses
+      return istHausleitung;
+    } else if (gruppe.typ === 'station') {
+      // Hausleitung kann alle Stationsaufgaben sehen
+      if (istHausleitung) return true;
+      // Mitarbeiter muss auf dieser Station sein
+      return mitarbeiter.station === gruppe.station;
+    }
+    
+    return false;
   }
 
   // In Bearbeitung befindliche Anträge (inkl. entschiedene aber nicht veraktete)
@@ -3122,6 +3431,82 @@ class AntragSystem {
     }
     return null;
   }
+  
+  // Antrag an Gruppe weiterleiten (ohne konkreten Bearbeiter)
+  // hauptbearbeitungUebertragen: wenn true, bleibt der ursprüngliche Bearbeiter zunächst Hauptbearbeiter
+  // und die Hauptbearbeitung wird erst übertragen wenn ein Gruppenmitglied den Antrag "nimmt"
+  weiterleitenAnGruppe(antragId, gruppe, gruppeName, altBearbeiterId, altBearbeiterName, notiz = '', hauptbearbeitungUebertragen = true) {
+    const antrag = this.antraege.find(a => a.id === antragId);
+    if (antrag) {
+      // Gruppenzuweisung speichern
+      antrag.zugewiesenAnGruppe = gruppe;
+      antrag.zugewiesenAnGruppeName = gruppeName;
+      
+      // Markierung: Hauptbearbeitung soll bei "Antrag nehmen" übertragen werden
+      antrag.hauptbearbeitungWartetAufUebernahme = hauptbearbeitungUebertragen;
+      antrag.urspruenglicherBearbeiterId = altBearbeiterId;
+      antrag.urspruenglicherBearbeiterName = altBearbeiterName;
+      
+      if (hauptbearbeitungUebertragen) {
+        // Hauptbearbeiter bleibt zunächst erhalten
+        // Der Antrag erscheint trotzdem in der Gruppenliste (durch zugewiesenAnGruppe)
+        // Status bleibt "in-bearbeitung"
+      } else {
+        // Altes Verhalten: Bearbeiter sofort entfernen
+        if (!antrag.abgegebenVon) {
+          antrag.abgegebenVon = [];
+        }
+        if (altBearbeiterId && !antrag.abgegebenVon.includes(altBearbeiterId)) {
+          antrag.abgegebenVon.push(altBearbeiterId);
+        }
+        
+        antrag.bearbeiterId = null;
+        antrag.bearbeiterName = null;
+        
+        // Status auf "offen" setzen
+        if (antrag.status === 'in-bearbeitung') {
+          antrag.status = 'offen';
+        }
+      }
+      
+      // Weiterleitungs-Historie speichern
+      if (!antrag.weiterleitungen) {
+        antrag.weiterleitungen = [];
+      }
+      antrag.weiterleitungen.push({
+        von: altBearbeiterName,
+        vonId: altBearbeiterId,
+        anGruppe: gruppe,
+        anGruppeName: gruppeName,
+        notiz: notiz,
+        hauptbearbeitungUebertragen: hauptbearbeitungUebertragen,
+        datum: new Date().toISOString()
+      });
+      
+      this.saveAntraege();
+      
+      // Aktivität protokollieren
+      aktivitaetenSystem.logAktivitaet({
+        antragId: antragId,
+        typ: 'weitergeleitet-gruppe',
+        beschreibung: `Antrag weitergeleitet an ${gruppeName}${notiz ? ': ' + notiz : ''}${hauptbearbeitungUebertragen ? ' (Hauptbearbeitung wird bei Übernahme übertragen)' : ''}`,
+        details: { 
+          vonId: altBearbeiterId,
+          von: altBearbeiterName,
+          anGruppe: gruppe,
+          anGruppeName: gruppeName,
+          notiz: notiz,
+          hauptbearbeitungUebertragen: hauptbearbeitungUebertragen
+        },
+        benutzerTyp: 'mitarbeiter',
+        benutzerId: altBearbeiterId,
+        benutzerName: altBearbeiterName
+      });
+      
+      return antrag;
+    }
+    return null;
+  }
 }
 
 // Globale Instanz
@@ -3200,6 +3585,7 @@ function getRolleText(rolle) {
     'mitarbeiter': 'Mitarbeiter',
     'jva-leitung': 'Hausleitung',
     'haus-leitung': 'Hausleitung',
+    'hausleitung': 'Hausleitung',
     'stationsleitung': 'Stationsleitung'
   };
   return rollen[rolle] || rolle;

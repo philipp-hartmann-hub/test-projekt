@@ -328,27 +328,50 @@
           </div>
         </div>
         
-        <!-- Mitarbeiter-Auswahl (direkt mit Suche) -->
+        <!-- Mitarbeiter-Auswahl -->
         <div id="mitarbeiterAuswahl" style="display: none;">
+          <!-- Schritt 1: Gruppe auswählen -->
           <div class="form-group">
-            <label for="aufgabeMitarbeiterSuche">Mitarbeiter suchen</label>
-            <input type="text" id="aufgabeMitarbeiterSuche" placeholder="Name eingeben..." oninput="filterMitarbeiterListe()">
-          </div>
-          <div class="form-group">
-            <label>Mitarbeiter auswählen:</label>
-            <div class="mitarbeiter-liste" id="aufgabeMitarbeiterListe">
+            <label>Gruppe auswählen: *</label>
+            <select id="aufgabeGruppeSelect" onchange="onAufgabeGruppeChange()">
+              <option value="">-- Bitte Gruppe wählen --</option>
               <!-- Wird dynamisch gefüllt -->
+            </select>
+            <input type="hidden" id="aufgabeGruppeTyp">
+            <input type="hidden" id="aufgabeGruppeHaus">
+            <input type="hidden" id="aufgabeGruppeStation">
+          </div>
+          
+          <!-- Schritt 2: Optional konkrete Person auswählen -->
+          <div class="form-group" id="aufgabePersonAuswahlContainer" style="display: none;">
+            <label>
+              <input type="checkbox" id="aufgabeKonkretePersonCheckbox" onchange="toggleAufgabeKonkretePerson()">
+              Konkrete Person auswählen (optional)
+            </label>
+            <p class="field-hint">Ohne Auswahl wird die Aufgabe der gesamten Gruppe zugewiesen</p>
+          </div>
+          
+          <div id="aufgabePersonSuche" style="display: none;">
+            <div class="form-group">
+              <label for="aufgabeMitarbeiterSuche">Mitarbeiter suchen</label>
+              <input type="text" id="aufgabeMitarbeiterSuche" placeholder="Name eingeben..." oninput="filterMitarbeiterListe()">
             </div>
-            <input type="hidden" id="aufgabePersonId">
-            <div class="selected-person" id="selectedPersonDisplay" style="display: none;">
-              <span class="selected-label">Ausgewählt:</span>
-              <span class="selected-name" id="selectedPersonName"></span>
-              <button type="button" class="btn-clear" onclick="clearSelectedPerson()">&times;</button>
+            <div class="form-group">
+              <label>Mitarbeiter auswählen:</label>
+              <div class="mitarbeiter-liste" id="aufgabeMitarbeiterListe">
+                <!-- Wird dynamisch gefüllt -->
+              </div>
+              <input type="hidden" id="aufgabePersonId">
+              <div class="selected-person" id="selectedPersonDisplay" style="display: none;">
+                <span class="selected-label">Ausgewählt:</span>
+                <span class="selected-name" id="selectedPersonName"></span>
+                <button type="button" class="btn-clear" onclick="clearSelectedPerson()">&times;</button>
+              </div>
             </div>
           </div>
           
           <!-- Option: Hauptbearbeitung übertragen -->
-          <div class="form-group">
+          <div class="form-group" id="aufgabeBearbeitungOptionen" style="display: none;">
             <label>Nach Erledigung der Aufgabe:</label>
             <div class="radio-group">
               <label class="radio-option">
@@ -413,21 +436,22 @@
         <div class="form-group">
           <label>Wie möchten Sie die Aufgabe abschließen?</label>
           <div class="radio-group">
-            <label class="radio-option">
+            <label class="radio-option" id="aufgabeOptionAntwort">
               <input type="radio" name="aufgabeErledigungsTyp" value="antwort" checked onchange="toggleAntwortFeld()">
               <span class="radio-label">Mit Antwort</span>
               <p class="option-hint">Antrag geht zurück an den Aufgabensteller</p>
             </label>
-            <label class="radio-option">
+            <label class="radio-option" id="aufgabeOptionKenntnis">
               <input type="radio" name="aufgabeErledigungsTyp" value="kenntnisnahme" onchange="toggleAntwortFeld()">
               <span class="radio-label">Zur Kenntnis genommen</span>
+              <p class="option-hint" id="aufgabeKenntnisHint" style="display: none;"></p>
             </label>
           </div>
         </div>
         
         <!-- Hinweis bei "Zur Kenntnis" -->
         <div class="form-group" id="aufgabeKenntnisnahmeOptionen" style="display: none;">
-          <div class="info-box">
+          <div class="info-box" id="aufgabeKenntnisnahmeInfo">
             <p>Der Antrag wird nach der Kenntnisnahme gemäß der Vorgabe des Aufgabenstellers behandelt.</p>
           </div>
         </div>
@@ -480,24 +504,48 @@
         </div>
         
         <div id="weiterleitenFelder" style="display: none;">
+          <!-- Schritt 1: Gruppe auswählen -->
           <div class="form-group">
-            <label for="weiterleitenMitarbeiterSuche">Mitarbeiter suchen</label>
-            <input type="text" id="weiterleitenMitarbeiterSuche" placeholder="Name eingeben..." oninput="filterWeiterleitenMitarbeiter()">
-          </div>
-          <div class="form-group">
-            <label>Mitarbeiter auswählen:</label>
-            <div class="mitarbeiter-liste" id="weiterleitenMitarbeiterListe" style="max-height: 250px; overflow-y: auto;">
+            <label>Gruppe auswählen: *</label>
+            <select id="weiterleitenGruppeSelect" onchange="onWeiterleitenGruppeChange()">
+              <option value="">-- Bitte Gruppe wählen --</option>
               <!-- Wird dynamisch gefüllt -->
-            </div>
+            </select>
+            <input type="hidden" id="weiterleitenGruppeTyp">
+            <input type="hidden" id="weiterleitenGruppeHaus">
+            <input type="hidden" id="weiterleitenGruppeStation">
           </div>
-          <div class="form-group" id="weiterleitenSelectedContainer" style="display: none;">
-            <div class="selected-person-box">
-              <span class="selected-label">Ausgewaehlt:</span>
-              <span class="selected-name" id="weiterleitenSelectedPersonName"></span>
-              <button type="button" class="btn-clear-small" onclick="clearWeiterleitenSelection()">×</button>
-            </div>
+          
+          <!-- Schritt 2: Optional konkrete Person auswählen -->
+          <div class="form-group" id="weiterleitenPersonAuswahlContainer" style="display: none;">
+            <label>
+              <input type="checkbox" id="weiterleitenKonkretePersonCheckbox" onchange="toggleWeiterleitenKonkretePerson()">
+              Konkrete Person auswählen (optional)
+            </label>
+            <p class="field-hint">Ohne Auswahl wird der Antrag der gesamten Gruppe zugewiesen</p>
           </div>
-          <input type="hidden" id="weiterleitenPersonId">
+          
+          <div id="weiterleitenPersonSuche" style="display: none;">
+            <div class="form-group">
+              <label for="weiterleitenMitarbeiterSuche">Mitarbeiter suchen</label>
+              <input type="text" id="weiterleitenMitarbeiterSuche" placeholder="Name eingeben..." oninput="filterWeiterleitenMitarbeiter()">
+            </div>
+            <div class="form-group">
+              <label>Mitarbeiter auswählen:</label>
+              <div class="mitarbeiter-liste" id="weiterleitenMitarbeiterListe" style="max-height: 250px; overflow-y: auto;">
+                <!-- Wird dynamisch gefüllt -->
+              </div>
+            </div>
+            <div class="form-group" id="weiterleitenSelectedContainer" style="display: none;">
+              <div class="selected-person-box">
+                <span class="selected-label">Ausgewaehlt:</span>
+                <span class="selected-name" id="weiterleitenSelectedPersonName"></span>
+                <button type="button" class="btn-clear-small" onclick="clearWeiterleitenSelection()">×</button>
+              </div>
+            </div>
+            <input type="hidden" id="weiterleitenPersonId">
+          </div>
+          
           <div class="form-group">
             <label for="weiterleitenNotiz">Notiz zur Weiterleitung (optional)</label>
             <textarea id="weiterleitenNotiz" placeholder="Kurze Notiz für den nächsten Bearbeiter..." rows="3"></textarea>
@@ -1253,17 +1301,59 @@
         </div>
       `;
       
+      // Prüfen ob es Gruppenaufgaben oder wartende Hauptbearbeitungsübergabe gibt (für mode 'offen')
+      let gruppenaufgabenInfo = '';
+      let hatGruppenaufgaben = false;
+      let hatWartendeUebergabe = false;
+      if (mode === 'offen') {
+        const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antrag.id, currentSession);
+        hatGruppenaufgaben = gruppenAufgaben.length > 0;
+        hatWartendeUebergabe = antrag.hauptbearbeitungWartetAufUebernahme && antrag.zugewiesenAnGruppe;
+        
+        if (hatGruppenaufgaben) {
+          // Aufgaben-Details anzeigen
+          const aufgabenListe = gruppenAufgaben.map(a => `<li>${a.kurzbeschreibung || a.beschreibung}</li>`).join('');
+          gruppenaufgabenInfo = `
+            <div class="gruppenaufgaben-info" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 8px; margin: 8px 0;">
+              <strong style="color: #856404;">📋 Offene Aufgabe(n) für Ihre Gruppe:</strong>
+              <ul style="margin: 4px 0 0 20px; padding: 0; color: #856404;">${aufgabenListe}</ul>
+            </div>
+          `;
+        }
+        
+        if (hatWartendeUebergabe) {
+          // Info: Hauptbearbeitung wird bei Übernahme übertragen
+          const aktuellerBearbeiter = antrag.bearbeiterName || 'unbekannt';
+          gruppenaufgabenInfo += `
+            <div class="uebergabe-info" style="background: #d1ecf1; border: 1px solid #17a2b8; border-radius: 4px; padding: 8px; margin: 8px 0;">
+              <strong style="color: #0c5460;">🔄 Weitergeleitet von: ${aktuellerBearbeiter}</strong>
+              <p style="margin: 4px 0 0 0; color: #0c5460; font-size: 0.9em;">
+                Bei Übernahme wird die Hauptbearbeitung an Sie übertragen.
+              </p>
+            </div>
+          `;
+        }
+      }
+      
       let actionsHtml = '';
       let bearbeiterInfo = '';
       
       if (mode === 'offen') {
+        // Button-Text anpassen je nachdem ob es ein offener Antrag, Gruppenaufgaben oder wartende Übergabe sind
+        let buttonText = t('button.takeApplication');
+        if (hatWartendeUebergabe) {
+          buttonText = currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande';
+        } else if (hatGruppenaufgaben && antrag.status === 'in-bearbeitung') {
+          buttonText = currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche';
+        }
+        
         actionsHtml = `
           <div class="antrag-actions">
             <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${antrag.id}', false, true)">
               📂 ${t('button.open')}
             </button>
             <button class="btn btn-primary btn-sm" onclick="nehmeAntrag('${antrag.id}')">
-${t('button.takeApplication')}
+${buttonText}
             </button>
           </div>
         `;
@@ -1359,6 +1449,7 @@ Persönlich eröffnet
             <p class="antrag-date">Eingereicht: ${formatDate(antrag.erstelltAm)}</p>
             ${antrag.bearbeitetAm ? `<p class="antrag-date">Bearbeitet: ${formatDate(antrag.bearbeitetAm)}</p>` : ''}
           </div>
+          ${gruppenaufgabenInfo}
           ${bearbeiterInfo}
           ${actionsHtml}
         </div>
@@ -1509,6 +1600,18 @@ Persönlich eröffnet
       const istOffen = antrag.status === 'offen';
       const istErledigt = antrag.erledigt || ['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(antrag.status);
       
+      // Prüfen ob es Gruppenaufgaben für diesen Mitarbeiter gibt
+      const meineGruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, currentSession);
+      const hatGruppenaufgaben = meineGruppenAufgaben.length > 0;
+      
+      // Prüfen ob eine Hauptbearbeitungsübergabe wartet
+      const hatWartendeUebergabe = antrag.hauptbearbeitungWartetAufUebernahme && 
+                                    antrag.zugewiesenAnGruppe && 
+                                    antragSystem._mitarbeiterGehoertZuGruppe(currentSession, antrag.zugewiesenAnGruppe);
+      
+      // Kann der Mitarbeiter diesen Antrag/Aufgabe übernehmen?
+      const kannUebernehmen = istOffen || hatGruppenaufgaben || hatWartendeUebergabe;
+      
       // Prüfen ob der aktuelle Benutzer berechtigt ist
       const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(antragId);
       const meineOffeneAufgabe = aufgabenZuAntrag.find(a => a.zugewiesenAnId === currentSession.userId && a.status === 'offen');
@@ -1528,6 +1631,9 @@ Persönlich eröffnet
         hatAktuellenZugriff = true;
       } else if (hatOffeneAufgabe) {
         // Hat eine offene Aufgabe - kann sie bearbeiten (auch wenn vorher abgegeben)
+        hatAktuellenZugriff = true;
+      } else if (kannUebernehmen) {
+        // Kann den Antrag/Aufgabe übernehmen (offener Antrag, Gruppenaufgabe oder wartende Übergabe)
         hatAktuellenZugriff = true;
       } else if (hatAntragAbgegeben) {
         // Hat den Antrag abgegeben und ist nicht der aktuelle Bearbeiter - kein Zugriff mehr
@@ -1881,13 +1987,33 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                 </div>
               ` : ''}
               
+              ${hatGruppenaufgaben ? `
+                <div class="gruppenaufgaben-info" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 12px; margin: 12px 0;">
+                  <strong style="color: #856404;">📋 Offene Aufgabe(n) für Ihre Gruppe:</strong>
+                  <ul style="margin: 8px 0 0 20px; padding: 0; color: #856404;">
+                    ${meineGruppenAufgaben.map(a => `<li>${a.kurzbeschreibung || a.beschreibung}</li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+              
+              ${hatWartendeUebergabe ? `
+                <div class="uebergabe-info" style="background: #d1ecf1; border: 1px solid #17a2b8; border-radius: 4px; padding: 12px; margin: 12px 0;">
+                  <strong style="color: #0c5460;">🔄 Weitergeleitet von: ${antrag.bearbeiterName || 'unbekannt'}</strong>
+                  <p style="margin: 8px 0 0 0; color: #0c5460; font-size: 0.9em;">
+                    Bei Übernahme wird die Hauptbearbeitung an Sie übertragen.
+                  </p>
+                </div>
+              ` : ''}
+              
               <div class="action-buttons">
-                ${istOffen ? `
+                ${kannUebernehmen && !istBearbeiter ? `
                   <button class="btn btn-primary btn-large" onclick="nehmeAntragUndBleibeInDetail('${antrag.id}')">
-${t('button.takeApplication')}
+                    ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : 
+                      hatGruppenaufgaben ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche') : 
+                      t('button.takeApplication')}
                   </button>
                 ` : ''}
-                ${!istOffen && !istBearbeiter && istHausleitung() && antrag.status === 'in-bearbeitung' ? `
+                ${!kannUebernehmen && !istBearbeiter && istHausleitung() && antrag.status === 'in-bearbeitung' ? `
                   <button class="btn btn-warning btn-large" onclick="openHausleitungUebernahmeModal('${antrag.id}')">
                     Antrag übernehmen
                   </button>
@@ -2252,6 +2378,16 @@ ${t('action.archive')}
       const bearbeitungRadio = document.querySelector('input[name="aufgabeBearbeitungUebergabe"][value="zurueck"]');
       if (bearbeitungRadio) bearbeitungRadio.checked = true;
       
+      // Gruppen-Auswahl komplett zurücksetzen
+      document.getElementById('aufgabeGruppeSelect').value = '';
+      document.getElementById('aufgabeGruppeTyp').value = '';
+      document.getElementById('aufgabeGruppeHaus').value = '';
+      document.getElementById('aufgabeGruppeStation').value = '';
+      document.getElementById('aufgabeKonkretePersonCheckbox').checked = false;
+      document.getElementById('aufgabePersonAuswahlContainer').style.display = 'none';
+      document.getElementById('aufgabePersonSuche').style.display = 'none';
+      document.getElementById('aufgabeBearbeitungOptionen').style.display = 'none';
+      
       // Mitarbeiter-Auswahl zurücksetzen
       document.getElementById('aufgabeMitarbeiterSuche').value = '';
       document.getElementById('aufgabePersonId').value = '';
@@ -2268,13 +2404,131 @@ ${t('action.archive')}
     function toggleAufgabeZiel(ziel) {
       if (ziel === 'mitarbeiter') {
         document.getElementById('mitarbeiterAuswahl').style.display = 'block';
-        loadAlleMitarbeiter();
+        loadAufgabeGruppen();
       } else {
         document.getElementById('mitarbeiterAuswahl').style.display = 'none';
+        // Reset
+        document.getElementById('aufgabeGruppeSelect').value = '';
+        document.getElementById('aufgabePersonAuswahlContainer').style.display = 'none';
+        document.getElementById('aufgabePersonSuche').style.display = 'none';
+        document.getElementById('aufgabeBearbeitungOptionen').style.display = 'none';
       }
     }
     
-    // Alle Mitarbeiter laden und anzeigen
+    // Gruppen für Aufgabenzuweisung laden
+    function loadAufgabeGruppen() {
+      const select = document.getElementById('aufgabeGruppeSelect');
+      select.innerHTML = '<option value="">-- Bitte Gruppe wählen --</option>';
+      
+      // Hausleitung als Option (pro Haus)
+      Object.keys(HAUS_CONFIG).forEach(hausKey => {
+        const hausName = HAUS_CONFIG[hausKey].name;
+        select.innerHTML += `<option value="hausleitung|${hausKey}">Hausleitung ${hausName}</option>`;
+      });
+      
+      // Stationen als Option
+      Object.keys(HAUS_CONFIG).forEach(hausKey => {
+        const haus = HAUS_CONFIG[hausKey];
+        haus.stationen.forEach(station => {
+          select.innerHTML += `<option value="station|${hausKey}|${station}">Mitarbeitende ${haus.name} Station ${station}</option>`;
+        });
+      });
+    }
+    
+    // Wenn Gruppe ausgewählt wird
+    function onAufgabeGruppeChange() {
+      const select = document.getElementById('aufgabeGruppeSelect');
+      const value = select.value;
+      
+      // Hidden fields zurücksetzen
+      document.getElementById('aufgabeGruppeTyp').value = '';
+      document.getElementById('aufgabeGruppeHaus').value = '';
+      document.getElementById('aufgabeGruppeStation').value = '';
+      document.getElementById('aufgabePersonId').value = '';
+      document.getElementById('selectedPersonDisplay').style.display = 'none';
+      document.getElementById('aufgabeKonkretePersonCheckbox').checked = false;
+      
+      if (!value) {
+        document.getElementById('aufgabePersonAuswahlContainer').style.display = 'none';
+        document.getElementById('aufgabePersonSuche').style.display = 'none';
+        document.getElementById('aufgabeBearbeitungOptionen').style.display = 'none';
+        return;
+      }
+      
+      const parts = value.split('|');
+      const gruppeTyp = parts[0];
+      
+      if (gruppeTyp === 'hausleitung') {
+        document.getElementById('aufgabeGruppeTyp').value = 'hausleitung';
+        document.getElementById('aufgabeGruppeHaus').value = parts[1];
+      } else if (gruppeTyp === 'station') {
+        document.getElementById('aufgabeGruppeTyp').value = 'station';
+        document.getElementById('aufgabeGruppeHaus').value = parts[1];
+        document.getElementById('aufgabeGruppeStation').value = parts[2];
+      }
+      
+      // Person-Auswahl anzeigen
+      document.getElementById('aufgabePersonAuswahlContainer').style.display = 'block';
+      document.getElementById('aufgabeBearbeitungOptionen').style.display = 'block';
+      
+      // Mitarbeiterliste für diese Gruppe laden
+      loadMitarbeiterFuerGruppe(gruppeTyp, parts[1], parts[2]);
+    }
+    
+    // Mitarbeiter einer Gruppe laden
+    function loadMitarbeiterFuerGruppe(gruppeTyp, hausKey, station) {
+      let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter');
+      
+      if (gruppeTyp === 'hausleitung') {
+        // Nur Hausleitungen dieses Hauses
+        mitarbeiter = mitarbeiter.filter(m => 
+          (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
+          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
+        );
+      } else if (gruppeTyp === 'station') {
+        // Mitarbeiter dieser Station (und Hausleitung)
+        mitarbeiter = mitarbeiter.filter(m => {
+          const imHaus = m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'));
+          if (!imHaus) return false;
+          
+          // Hausleitung kann alles im Haus sehen
+          if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return true;
+          
+          // Mitarbeiter muss auf dieser Station sein
+          return m.station === station;
+        });
+      }
+      
+      // Sortieren
+      mitarbeiter.sort((a, b) => {
+        const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
+        const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
+        return nameA.localeCompare(nameB, 'de');
+      });
+      
+      renderMitarbeiterListe(mitarbeiter);
+    }
+    
+    // Checkbox für konkrete Personenauswahl
+    function toggleAufgabeKonkretePerson() {
+      const checkbox = document.getElementById('aufgabeKonkretePersonCheckbox');
+      const personSuche = document.getElementById('aufgabePersonSuche');
+      
+      if (checkbox.checked) {
+        personSuche.style.display = 'block';
+        // Mitarbeiterliste neu laden basierend auf gewählter Gruppe
+        const gruppeTyp = document.getElementById('aufgabeGruppeTyp').value;
+        const hausKey = document.getElementById('aufgabeGruppeHaus').value;
+        const station = document.getElementById('aufgabeGruppeStation').value;
+        loadMitarbeiterFuerGruppe(gruppeTyp, hausKey, station);
+      } else {
+        personSuche.style.display = 'none';
+        document.getElementById('aufgabePersonId').value = '';
+        document.getElementById('selectedPersonDisplay').style.display = 'none';
+      }
+    }
+    
+    // Alle Mitarbeiter laden und anzeigen (Legacy-Funktion)
     function loadAlleMitarbeiter() {
       const liste = document.getElementById('aufgabeMitarbeiterListe');
       const alleMitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter');
@@ -2474,6 +2728,7 @@ ${t('action.archive')}
       }
       
       let zugewiesenAnId, zugewiesenAnName, zugewiesenAnTyp;
+      let zugewiesenAnGruppe = null; // Für Gruppenzuweisung
       
       if (zielRadio.value === 'insasse') {
         // Aufgabe an den Antragsteller
@@ -2481,29 +2736,76 @@ ${t('action.archive')}
         zugewiesenAnName = antrag.insasseName;
         zugewiesenAnTyp = 'insasse';
       } else {
-        // Aufgabe an Mitarbeiter
+        // Aufgabe an Mitarbeiter/Gruppe
+        const gruppeTyp = document.getElementById('aufgabeGruppeTyp').value;
+        const gruppeHaus = document.getElementById('aufgabeGruppeHaus').value;
+        const gruppeStation = document.getElementById('aufgabeGruppeStation').value;
         const personId = document.getElementById('aufgabePersonId').value;
-        if (!personId) {
-          const msg = currentLanguage === 'en' ? 'Please select a staff member.' 
-                    : currentLanguage === 'fr' ? 'Veuillez sélectionner un employé.' 
-                    : 'Bitte wählen Sie einen Mitarbeiter aus.';
-          showAlert(msg);
+        const konkretePersonChecked = document.getElementById('aufgabeKonkretePersonCheckbox').checked;
+        
+        // Debug-Ausgabe
+        console.log('[Debug] sendeAufgabe - Gruppenwerte:', {
+          gruppeTyp: gruppeTyp,
+          gruppeHaus: gruppeHaus,
+          gruppeStation: gruppeStation,
+          personId: personId,
+          konkretePersonChecked: konkretePersonChecked
+        });
+        
+        if (!gruppeTyp) {
+          showAlert('Bitte wählen Sie eine Gruppe aus.');
           return;
         }
-        const person = userSystem.getUser(personId);
-        zugewiesenAnId = personId;
-        zugewiesenAnName = `${person.vorname} ${person.nachname}`;
-        zugewiesenAnTyp = 'mitarbeiter';
+        
+        if (konkretePersonChecked && personId) {
+          // Konkrete Person ausgewählt
+          const person = userSystem.getUser(personId);
+          zugewiesenAnId = personId;
+          zugewiesenAnName = `${person.vorname} ${person.nachname}`;
+          zugewiesenAnTyp = 'mitarbeiter';
+        } else {
+          // Nur Gruppe ausgewählt - Aufgabe geht an die Gruppe
+          zugewiesenAnTyp = 'gruppe';
+          zugewiesenAnGruppe = {
+            typ: gruppeTyp,
+            hausId: gruppeHaus,
+            station: gruppeStation || null
+          };
+          
+          // Debug-Ausgabe
+          console.log('[Debug] sendeAufgabe - Gruppenaufgabe wird erstellt:', {
+            zugewiesenAnTyp: zugewiesenAnTyp,
+            zugewiesenAnGruppe: zugewiesenAnGruppe
+          });
+          
+          // Gruppennamen generieren
+          const hausName = HAUS_CONFIG[gruppeHaus]?.name || gruppeHaus;
+          if (gruppeTyp === 'hausleitung') {
+            zugewiesenAnName = `Hausleitung ${hausName}`;
+          } else {
+            zugewiesenAnName = `Mitarbeitende ${hausName} Station ${gruppeStation}`;
+          }
+          zugewiesenAnId = null; // Keine spezifische Person
+        }
       }
       
-      // Option für Hauptbearbeitung bei Mitarbeiter-Aufgaben ermitteln
+      // Option für Hauptbearbeitung bei Mitarbeiter- und Gruppenaufgaben ermitteln
       let bearbeitungNachErledigung = 'zurueck'; // Standard: zurück an Ersteller
       if (zielRadio.value === 'mitarbeiter') {
+        // Bei Mitarbeiter-Aufgaben (sowohl Gruppe als auch konkrete Person)
         const bearbeitungRadio = document.querySelector('input[name="aufgabeBearbeitungUebergabe"]:checked');
         if (bearbeitungRadio) {
           bearbeitungNachErledigung = bearbeitungRadio.value;
         }
       }
+      
+      // FINALE Debug-Ausgabe vor Aufgabenerstellung
+      console.log('=== AUFGABE WIRD ERSTELLT ===');
+      console.log('zugewiesenAnTyp:', zugewiesenAnTyp);
+      console.log('zugewiesenAnGruppe:', zugewiesenAnGruppe);
+      console.log('zugewiesenAnId:', zugewiesenAnId);
+      console.log('zugewiesenAnName:', zugewiesenAnName);
+      console.log('bearbeitungNachErledigung:', bearbeitungNachErledigung);
       
       // Aufgabe erstellen (mit Array von PDFs)
       aufgabenSystem.createAufgabe({
@@ -2514,6 +2816,7 @@ ${t('action.archive')}
         zugewiesenAnId: zugewiesenAnId,
         zugewiesenAnName: zugewiesenAnName,
         zugewiesenAnTyp: zugewiesenAnTyp,
+        zugewiesenAnGruppe: zugewiesenAnGruppe,
         kurzbeschreibung: kurzbeschreibung,
         beschreibung: beschreibung,
         fristDatum: fristDatum || null,
@@ -2521,14 +2824,16 @@ ${t('action.archive')}
         bearbeitungNachErledigung: bearbeitungNachErledigung // 'zurueck' oder 'uebertragen'
       });
       
-      // Benachrichtigung erstellen
-      notificationSystem.createNotification(
-        zugewiesenAnId,
-        'aufgabe',
-        '' + t('task.title'),
-        `${kurzbeschreibungText} (${t('application.id')}: ${antrag.antragsNummer || antragId})`,
-        antragId
-      );
+      // Benachrichtigung erstellen (nur wenn konkrete Person)
+      if (zugewiesenAnId) {
+        notificationSystem.createNotification(
+          zugewiesenAnId,
+          'aufgabe',
+          '' + t('task.title'),
+          `${kurzbeschreibungText} (${t('application.id')}: ${antrag.antragsNummer || antragId})`,
+          antragId
+        );
+      }
       
       closeModal('aufgabeModal');
       showAlert(t('success.taskCreated'));
@@ -2551,13 +2856,42 @@ ${t('action.archive')}
       // PDF-Upload zurücksetzen
       clearAntwortPdfs();
       
-      // Radio-Button auf "Antwort" setzen und Felder anzeigen
-      document.querySelector('input[name="aufgabeErledigungsTyp"][value="antwort"]').checked = true;
-      document.getElementById('aufgabeAntwortGruppe').style.display = 'block';
-      document.getElementById('aufgabeAntwortPdfGruppe').style.display = 'block';
+      // Prüfen ob die Hauptbearbeitung übertragen werden soll
+      const sollUebertragen = aufgabe.bearbeitungNachErledigung === 'uebertragen';
       
-      // Kenntnisnahme-Hinweis verstecken
-      document.getElementById('aufgabeKenntnisnahmeOptionen').style.display = 'none';
+      // Option "Mit Antwort" nur anzeigen, wenn keine Hauptbearbeitungsübergabe
+      const antwortOption = document.getElementById('aufgabeOptionAntwort');
+      const kenntnisHint = document.getElementById('aufgabeKenntnisHint');
+      const kenntnisnahmeInfo = document.getElementById('aufgabeKenntnisnahmeInfo');
+      
+      if (sollUebertragen) {
+        // "Mit Antwort" ausblenden, nur "Zur Kenntnis" erlauben
+        antwortOption.style.display = 'none';
+        document.querySelector('input[name="aufgabeErledigungsTyp"][value="kenntnisnahme"]').checked = true;
+        document.getElementById('aufgabeAntwortGruppe').style.display = 'none';
+        document.getElementById('aufgabeAntwortPdfGruppe').style.display = 'none';
+        document.getElementById('aufgabeKenntnisnahmeOptionen').style.display = 'block';
+        
+        // Hinweis anpassen
+        kenntnisHint.style.display = 'block';
+        kenntnisHint.textContent = currentLanguage === 'de' ? 'Sie werden nach Erledigung zum Hauptbearbeiter des Antrags' :
+                                   currentLanguage === 'en' ? 'You will become the main processor after completion' :
+                                   'Vous deviendrez le responsable principal après l\'achèvement';
+        kenntnisnahmeInfo.innerHTML = `<p style="color: #0c5460;"><strong>📋 Hauptbearbeitung wird übertragen:</strong> Nach der Kenntnisnahme werden Sie der neue Hauptbearbeiter dieses Antrags.</p>`;
+      } else {
+        // Normale Ansicht: beide Optionen anzeigen
+        antwortOption.style.display = 'flex';
+        kenntnisHint.style.display = 'none';
+        kenntnisnahmeInfo.innerHTML = `<p>Der Antrag wird nach der Kenntnisnahme gemäß der Vorgabe des Aufgabenstellers behandelt.</p>`;
+        
+        // Radio-Button auf "Antwort" setzen und Felder anzeigen
+        document.querySelector('input[name="aufgabeErledigungsTyp"][value="antwort"]').checked = true;
+        document.getElementById('aufgabeAntwortGruppe').style.display = 'block';
+        document.getElementById('aufgabeAntwortPdfGruppe').style.display = 'block';
+        
+        // Kenntnisnahme-Hinweis verstecken
+        document.getElementById('aufgabeKenntnisnahmeOptionen').style.display = 'none';
+      }
       
       // Angehängte PDFs der Aufgabe anzeigen
       let anhangPdfsHtml = '';
@@ -2789,6 +3123,19 @@ ${t('action.archive')}
       document.getElementById('weiterleitenSelectedContainer').style.display = 'none';
       document.getElementById('weiterleitenMitarbeiterSuche').value = '';
       
+      // Gruppenauswahl zurücksetzen
+      document.getElementById('weiterleitenGruppeSelect').value = '';
+      document.getElementById('weiterleitenGruppeTyp').value = '';
+      document.getElementById('weiterleitenGruppeHaus').value = '';
+      document.getElementById('weiterleitenGruppeStation').value = '';
+      document.getElementById('weiterleitenPersonAuswahlContainer').style.display = 'none';
+      document.getElementById('weiterleitenPersonSuche').style.display = 'none';
+      const konkretePersonCheckbox = document.getElementById('weiterleitenKonkretePersonCheckbox');
+      if (konkretePersonCheckbox) konkretePersonCheckbox.checked = false;
+      
+      // Gruppen laden
+      loadWeiterleitenGruppen();
+      
       // Phase-Info setzen
       const phaseTexte = {
         'genommen': currentLanguage === 'en' ? 'You have taken the application. It is now in the "Review" phase.'
@@ -2827,7 +3174,111 @@ ${t('action.archive')}
       }
     }
     
-    // Alle Mitarbeiter für Weiterleitung laden
+    // Gruppen für Weiterleitung laden
+    function loadWeiterleitenGruppen() {
+      const select = document.getElementById('weiterleitenGruppeSelect');
+      select.innerHTML = '<option value="">-- Bitte Gruppe wählen --</option>';
+      
+      // Hausleitung als Option (pro Haus)
+      Object.keys(HAUS_CONFIG).forEach(hausKey => {
+        const hausName = HAUS_CONFIG[hausKey].name;
+        select.innerHTML += `<option value="hausleitung|${hausKey}">Hausleitung ${hausName}</option>`;
+      });
+      
+      // Stationen als Option
+      Object.keys(HAUS_CONFIG).forEach(hausKey => {
+        const haus = HAUS_CONFIG[hausKey];
+        haus.stationen.forEach(station => {
+          select.innerHTML += `<option value="station|${hausKey}|${station}">Mitarbeitende ${haus.name} Station ${station}</option>`;
+        });
+      });
+    }
+    
+    // Wenn Gruppe beim Weiterleiten ausgewählt wird
+    function onWeiterleitenGruppeChange() {
+      const select = document.getElementById('weiterleitenGruppeSelect');
+      const value = select.value;
+      
+      // Hidden fields zurücksetzen
+      document.getElementById('weiterleitenGruppeTyp').value = '';
+      document.getElementById('weiterleitenGruppeHaus').value = '';
+      document.getElementById('weiterleitenGruppeStation').value = '';
+      document.getElementById('weiterleitenPersonId').value = '';
+      document.getElementById('weiterleitenSelectedContainer').style.display = 'none';
+      const konkretePersonCheckbox = document.getElementById('weiterleitenKonkretePersonCheckbox');
+      if (konkretePersonCheckbox) konkretePersonCheckbox.checked = false;
+      
+      if (!value) {
+        document.getElementById('weiterleitenPersonAuswahlContainer').style.display = 'none';
+        document.getElementById('weiterleitenPersonSuche').style.display = 'none';
+        return;
+      }
+      
+      const parts = value.split('|');
+      const gruppeTyp = parts[0];
+      
+      if (gruppeTyp === 'hausleitung') {
+        document.getElementById('weiterleitenGruppeTyp').value = 'hausleitung';
+        document.getElementById('weiterleitenGruppeHaus').value = parts[1];
+      } else if (gruppeTyp === 'station') {
+        document.getElementById('weiterleitenGruppeTyp').value = 'station';
+        document.getElementById('weiterleitenGruppeHaus').value = parts[1];
+        document.getElementById('weiterleitenGruppeStation').value = parts[2];
+      }
+      
+      // Person-Auswahl anzeigen
+      document.getElementById('weiterleitenPersonAuswahlContainer').style.display = 'block';
+      
+      // Mitarbeiterliste für diese Gruppe laden
+      loadWeiterleitenMitarbeiterFuerGruppe(gruppeTyp, parts[1], parts[2]);
+    }
+    
+    // Mitarbeiter einer Gruppe für Weiterleitung laden
+    function loadWeiterleitenMitarbeiterFuerGruppe(gruppeTyp, hausKey, station) {
+      let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
+      
+      if (gruppeTyp === 'hausleitung') {
+        mitarbeiter = mitarbeiter.filter(m => 
+          (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
+          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
+        );
+      } else if (gruppeTyp === 'station') {
+        mitarbeiter = mitarbeiter.filter(m => {
+          const imHaus = m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'));
+          if (!imHaus) return false;
+          if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return true;
+          return m.station === station;
+        });
+      }
+      
+      mitarbeiter.sort((a, b) => {
+        const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
+        const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
+        return nameA.localeCompare(nameB, 'de');
+      });
+      
+      renderWeiterleitenMitarbeiter(mitarbeiter);
+    }
+    
+    // Checkbox für konkrete Personenauswahl beim Weiterleiten
+    function toggleWeiterleitenKonkretePerson() {
+      const checkbox = document.getElementById('weiterleitenKonkretePersonCheckbox');
+      const personSuche = document.getElementById('weiterleitenPersonSuche');
+      
+      if (checkbox.checked) {
+        personSuche.style.display = 'block';
+        const gruppeTyp = document.getElementById('weiterleitenGruppeTyp').value;
+        const hausKey = document.getElementById('weiterleitenGruppeHaus').value;
+        const station = document.getElementById('weiterleitenGruppeStation').value;
+        loadWeiterleitenMitarbeiterFuerGruppe(gruppeTyp, hausKey, station);
+      } else {
+        personSuche.style.display = 'none';
+        document.getElementById('weiterleitenPersonId').value = '';
+        document.getElementById('weiterleitenSelectedContainer').style.display = 'none';
+      }
+    }
+    
+    // Alle Mitarbeiter für Weiterleitung laden (Legacy)
     function loadWeiterleitenMitarbeiter() {
       const alleMitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
       
@@ -2929,54 +3380,82 @@ ${t('action.archive')}
       const entscheidung = document.querySelector('input[name="weiterleitenEntscheidung"]:checked').value;
       
       if (entscheidung === 'ja') {
+        const gruppeTyp = document.getElementById('weiterleitenGruppeTyp').value;
+        const gruppeHaus = document.getElementById('weiterleitenGruppeHaus').value;
+        const gruppeStation = document.getElementById('weiterleitenGruppeStation').value;
         const personId = document.getElementById('weiterleitenPersonId').value;
-        if (!personId) {
-          const msg = currentLanguage === 'en' ? 'Please select a staff member.'
-                    : currentLanguage === 'fr' ? 'Veuillez sélectionner un employé.'
-                    : 'Bitte wählen Sie einen Mitarbeiter aus.';
-          showAlert(msg);
+        const konkretePersonChecked = document.getElementById('weiterleitenKonkretePersonCheckbox')?.checked;
+        const notiz = document.getElementById('weiterleitenNotiz').value.trim();
+        
+        if (!gruppeTyp) {
+          showAlert('Bitte wählen Sie eine Gruppe aus.');
           return;
         }
         
-        const person = userSystem.getUser(personId);
-        const notiz = document.getElementById('weiterleitenNotiz').value.trim();
-        
-        // Weiterleitung durchführen
-        antragSystem.weiterleitenAntrag(
-          antragId, 
-          personId, 
-          `${person.vorname} ${person.nachname}`,
-          currentSession.userId,
-          currentSession.name,
-          notiz
-        );
-        
-        // Benachrichtigung an neuen Bearbeiter
-        const nachrichtText = currentLanguage === 'en' 
-          ? `Application forwarded to you${notiz ? ': ' + notiz : ''}`
-          : currentLanguage === 'fr' 
-          ? `Demande transmise à vous${notiz ? ': ' + notiz : ''}`
-          : `Antrag an Sie weitergeleitet${notiz ? ': ' + notiz : ''}`;
-        
         const antrag = antragSystem.getAntrag(antragId);
-        notificationSystem.createNotification(
-          personId,
-          'weiterleitung',
-          '' + (currentLanguage === 'en' ? 'Application forwarded' : currentLanguage === 'fr' ? 'Demande transmise' : 'Antrag weitergeleitet'),
-          `${nachrichtText} (${antrag.antragsNummer || antragId})`,
-          antragId
-        );
         
-        closeModal('weiterleitenModal');
-        
-        // Zurück zur Übersicht
-        closeAntragDetail();
-        renderAntraege();
-        
-        const msgErfolg = currentLanguage === 'en' ? `Application forwarded to ${person.vorname} ${person.nachname}.`
-                        : currentLanguage === 'fr' ? `Demande transmise à ${person.vorname} ${person.nachname}.`
-                        : `Antrag an ${person.vorname} ${person.nachname} weitergeleitet.`;
-        showAlert(msgErfolg);
+        if (konkretePersonChecked && personId) {
+          // Konkrete Person ausgewählt
+          const person = userSystem.getUser(personId);
+          
+          // Weiterleitung durchführen
+          antragSystem.weiterleitenAntrag(
+            antragId, 
+            personId, 
+            `${person.vorname} ${person.nachname}`,
+            currentSession.userId,
+            currentSession.name,
+            notiz
+          );
+          
+          // Benachrichtigung an neuen Bearbeiter
+          const nachrichtText = `Antrag an Sie weitergeleitet${notiz ? ': ' + notiz : ''}`;
+          notificationSystem.createNotification(
+            personId,
+            'weiterleitung',
+            'Antrag weitergeleitet',
+            `${nachrichtText} (${antrag.antragsNummer || antragId})`,
+            antragId
+          );
+          
+          closeModal('weiterleitenModal');
+          closeAntragDetail();
+          renderAntraege();
+          
+          showAlert(`Antrag an ${person.vorname} ${person.nachname} weitergeleitet.`);
+        } else {
+          // Nur Gruppe ausgewählt - Antrag geht an die Gruppe
+          const gruppe = {
+            typ: gruppeTyp,
+            hausId: gruppeHaus,
+            station: gruppeStation || null
+          };
+          
+          // Gruppennamen generieren
+          const hausName = HAUS_CONFIG[gruppeHaus]?.name || gruppeHaus;
+          let gruppeName;
+          if (gruppeTyp === 'hausleitung') {
+            gruppeName = `Hausleitung ${hausName}`;
+          } else {
+            gruppeName = `Mitarbeitende ${hausName} Station ${gruppeStation}`;
+          }
+          
+          // Weiterleitung an Gruppe durchführen
+          antragSystem.weiterleitenAnGruppe(
+            antragId, 
+            gruppe,
+            gruppeName,
+            currentSession.userId,
+            currentSession.name,
+            notiz
+          );
+          
+          closeModal('weiterleitenModal');
+          closeAntragDetail();
+          renderAntraege();
+          
+          showAlert(`Antrag an ${gruppeName} weitergeleitet.`);
+        }
       } else {
         // Keine Weiterleitung - einfach schließen
         closeModal('weiterleitenModal');
@@ -3229,24 +3708,79 @@ ${t('action.archive')}
     }
 
     function nehmeAntrag(antragId) {
-      if (!currentSession) return;
+      if (!currentSession) {
+        alert('Fehler: Keine Session vorhanden');
+        return;
+      }
+      
+      console.log('[Debug Frontend] nehmeAntrag wird aufgerufen für:', antragId);
       
       const result = antragSystem.nehmeAntrag(antragId, currentSession);
+      console.log('[Debug Frontend] nehmeAntrag Ergebnis:', result);
+      
       if (result) {
         renderAntraege();
         // Automatisch zum "Meine Anträge und Aufgaben" Tab wechseln
         switchTab('bearbeitung');
+        
+        // Erfolgsmeldung
+        const msg = currentLanguage === 'de' ? 'Erfolgreich übernommen!' : 
+                    currentLanguage === 'en' ? 'Successfully taken!' : 'Repris avec succès!';
+        alert(msg);
+      } else {
+        // Fehlermeldung mit Debug-Info
+        const antrag = antragSystem.getAntrag(antragId);
+        const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, currentSession);
+        const alleGruppenAufgaben = aufgabenSystem.getAlleOffenenGruppenAufgabenFuerMitarbeiter(currentSession);
+        
+        console.error('[Debug] nehmeAntrag fehlgeschlagen:', {
+          antragId,
+          antragStatus: antrag?.status,
+          antragBearbeiterId: antrag?.bearbeiterId,
+          hauptbearbeitungWartetAufUebernahme: antrag?.hauptbearbeitungWartetAufUebernahme,
+          zugewiesenAnGruppe: antrag?.zugewiesenAnGruppe,
+          gruppenAufgabenFuerAntrag: gruppenAufgaben.length,
+          alleGruppenAufgaben: alleGruppenAufgaben.length,
+          currentUserId: currentSession.userId
+        });
+        
+        alert(`Fehler: Antrag konnte nicht übernommen werden.\n\nDebug-Info:\n- Antrag-Status: ${antrag?.status}\n- Gruppenaufgaben für diesen Antrag: ${gruppenAufgaben.length}\n- Alle Gruppenaufgaben: ${alleGruppenAufgaben.length}\n\nBitte prüfen Sie die Browser-Konsole (F12) für Details.`);
       }
     }
     
     function nehmeAntragUndBleibeInDetail(antragId) {
-      if (!currentSession) return;
+      if (!currentSession) {
+        alert('Fehler: Keine Session vorhanden');
+        return;
+      }
+      
+      console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail wird aufgerufen für:', antragId);
       
       const result = antragSystem.nehmeAntrag(antragId, currentSession);
+      console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail Ergebnis:', result);
+      
       if (result) {
         renderAntraege();
         // Direkt in der Detailansicht weiterarbeiten (keine Weiterleitungs-Abfrage)
         openAntragDetail(antragId);
+      } else {
+        // Fehlermeldung mit Debug-Info
+        const antrag = antragSystem.getAntrag(antragId);
+        const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, currentSession);
+        const alleGruppenAufgaben = aufgabenSystem.getAlleOffenenGruppenAufgabenFuerMitarbeiter(currentSession);
+        
+        console.error('[Debug] nehmeAntragUndBleibeInDetail fehlgeschlagen:', {
+          antragId,
+          antragStatus: antrag?.status,
+          antragBearbeiterId: antrag?.bearbeiterId,
+          hauptbearbeitungWartetAufUebernahme: antrag?.hauptbearbeitungWartetAufUebernahme,
+          zugewiesenAnGruppe: antrag?.zugewiesenAnGruppe,
+          gruppenAufgabenFuerAntrag: gruppenAufgaben.length,
+          alleGruppenAufgaben: alleGruppenAufgaben.length,
+          currentUserId: currentSession.userId
+        });
+        
+        alert(`Fehler: Antrag konnte nicht übernommen werden.\n\nDebug-Info:\n- Antrag-Status: ${antrag?.status}\n- Gruppenaufgaben für diesen Antrag: ${gruppenAufgaben.length}\n- Alle Gruppenaufgaben: ${alleGruppenAufgaben.length}\n\nBitte prüfen Sie die Browser-Konsole (F12) für Details.`);
       }
     }
 
@@ -3343,6 +3877,15 @@ ${t('action.archive')}
     function renderAntraege() {
       if (!currentSession) return;
       
+      // Debug-Ausgabe
+      console.log('[Debug] renderAntraege - currentSession:', {
+        userId: currentSession.userId,
+        rolle: currentSession.rolle,
+        jvas: currentSession.jvas,
+        jva: currentSession.jva,
+        station: currentSession.station
+      });
+      
       const offenList = document.getElementById('offenList');
       const bearbeitungList = document.getElementById('bearbeitungList');
       const historieList = document.getElementById('historieList');
@@ -3350,6 +3893,9 @@ ${t('action.archive')}
       let offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(currentSession);
       let inBearbeitungAntraege = antragSystem.getInBearbeitungAntraege(currentSession);
       let historieAntraege = antragSystem.getHistorieMitarbeiter(currentSession);
+      
+      // Debug-Ausgabe
+      console.log('[Debug] renderAntraege - offeneAntraege:', offeneAntraege.length, offeneAntraege.map(a => ({id: a.id, status: a.status, zugewiesenAnGruppe: a.zugewiesenAnGruppe})));
       
       // Aufgaben für den aktuellen Benutzer laden
       let meineAufgaben = aufgabenSystem.getOffeneAufgaben(currentSession.userId);
@@ -3851,6 +4397,99 @@ ${t('action.archive')}
       closeModal('terminDetailModal');
       renderKalender();
     }
+    
+    // ============================================
+    // DEBUG-FUNKTIONEN (in Konsole aufrufbar)
+    // ============================================
+    
+    // Zeigt alle Aufgaben mit Gruppenzuweisung
+    window.debugAufgaben = function() {
+      const aufgaben = aufgabenSystem.aufgaben;
+      console.log('=== ALLE AUFGABEN ===');
+      aufgaben.forEach(a => {
+        console.log({
+          id: a.id,
+          antragId: a.antragId,
+          status: a.status,
+          zugewiesenAnTyp: a.zugewiesenAnTyp,
+          zugewiesenAnGruppe: a.zugewiesenAnGruppe,
+          zugewiesenAnName: a.zugewiesenAnName
+        });
+      });
+      console.log('=== GRUPPENAUFGABEN ===');
+      const gruppenAufgaben = aufgaben.filter(a => a.zugewiesenAnTyp === 'gruppe' && a.status === 'offen');
+      console.log('Anzahl offene Gruppenaufgaben:', gruppenAufgaben.length);
+      gruppenAufgaben.forEach(a => console.log(a));
+    };
+    
+    // Zeigt Session-Daten
+    window.debugSession = function() {
+      console.log('=== AKTUELLE SESSION ===');
+      console.log(currentSession);
+    };
+    
+    // Testet Gruppenzugehörigkeit
+    window.debugGruppenZugehoerigkeit = function(gruppeTyp, hausId, station) {
+      const gruppe = { typ: gruppeTyp, hausId: hausId, station: station || null };
+      console.log('=== TESTE GRUPPENZUGEHÖRIGKEIT ===');
+      console.log('Gruppe:', gruppe);
+      console.log('Session:', currentSession);
+      const result = antragSystem._mitarbeiterGehoertZuGruppe(currentSession, gruppe);
+      console.log('Ergebnis:', result);
+      return result;
+    };
+    
+    // Erstellt eine Test-Gruppenaufgabe direkt
+    window.testGruppenaufgabe = function(antragId, gruppeTyp, hausId) {
+      if (!antragId) {
+        const antraege = antragSystem.antraege.filter(a => a.status === 'in-bearbeitung');
+        if (antraege.length === 0) {
+          console.log('Keine Anträge in Bearbeitung gefunden');
+          return;
+        }
+        antragId = antraege[0].id;
+        console.log('Verwende Antrag:', antragId);
+      }
+      
+      const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag) {
+        console.log('Antrag nicht gefunden:', antragId);
+        return;
+      }
+      
+      gruppeTyp = gruppeTyp || 'hausleitung';
+      hausId = hausId || 'haus1';
+      
+      console.log('Erstelle Gruppenaufgabe...');
+      console.log('Antrag:', antragId);
+      console.log('Gruppe:', gruppeTyp, hausId);
+      
+      aufgabenSystem.createAufgabe({
+        antragId: antragId,
+        antragsNummer: antrag.antragsNummer,
+        erstelltVonId: currentSession.userId,
+        erstelltVonName: currentSession.name,
+        zugewiesenAnId: null,
+        zugewiesenAnName: `Test-Gruppe ${gruppeTyp} ${hausId}`,
+        zugewiesenAnTyp: 'gruppe',
+        zugewiesenAnGruppe: {
+          typ: gruppeTyp,
+          hausId: hausId,
+          station: null
+        },
+        kurzbeschreibung: 'Test-Gruppenaufgabe',
+        beschreibung: 'Diese Aufgabe wurde als Test erstellt',
+        bearbeitungNachErledigung: 'zurueck'
+      });
+      
+      console.log('Gruppenaufgabe erstellt! Rufen Sie debugAufgaben() auf um zu prüfen.');
+    };
+    
+    console.log('Debug-Funktionen verfügbar:');
+    console.log('- debugAufgaben() - Zeigt alle Aufgaben');
+    console.log('- debugSession() - Zeigt Session-Daten');
+    console.log('- debugGruppenZugehoerigkeit(typ, hausId, station) - Testet Gruppenzugehörigkeit');
+    console.log('- testGruppenaufgabe(antragId, gruppeTyp, hausId) - Erstellt Test-Gruppenaufgabe');
   </script>
 </body>
 </html>
