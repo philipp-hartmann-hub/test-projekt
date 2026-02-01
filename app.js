@@ -3703,6 +3703,10 @@ document.addEventListener('keydown', (e) => {
 // HTML escapen
 function escapeHtml(text) {
   if (!text) return '';
+  // Falls es ein Übersetzungs-Objekt ist, den Text extrahieren
+  if (typeof text === 'object') {
+    text = text.text || '';
+  }
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;

@@ -1162,7 +1162,7 @@
               <span class="kommentar-autor">${k.benutzerName}</span>
               <span class="kommentar-datum">${datumStr}</span>
             </div>
-            <div class="kommentar-text">${k.text.replace(/\n/g, '<br>')}</div>
+            <div class="kommentar-text">${getTranslatedUserText(k.text).replace(/\n/g, '<br>')}</div>
           </div>
         `;
       }).join('');
@@ -1312,7 +1312,7 @@
         
         if (hatGruppenaufgaben) {
           // Aufgaben-Details anzeigen
-          const aufgabenListe = gruppenAufgaben.map(a => `<li>${a.kurzbeschreibung || a.beschreibung}</li>`).join('');
+          const aufgabenListe = gruppenAufgaben.map(a => `<li>${getTranslatedUserText(a.kurzbeschreibung || a.beschreibung)}</li>`).join('');
           gruppenaufgabenInfo = `
             <div class="gruppenaufgaben-info" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 8px; margin: 8px 0;">
               <strong style="color: #856404;">📋 Offene Aufgabe(n) für Ihre Gruppe:</strong>
@@ -1991,7 +1991,7 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                 <div class="gruppenaufgaben-info" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 12px; margin: 12px 0;">
                   <strong style="color: #856404;">📋 Offene Aufgabe(n) für Ihre Gruppe:</strong>
                   <ul style="margin: 8px 0 0 20px; padding: 0; color: #856404;">
-                    ${meineGruppenAufgaben.map(a => `<li>${a.kurzbeschreibung || a.beschreibung}</li>`).join('')}
+                    ${meineGruppenAufgaben.map(a => `<li>${getTranslatedUserText(a.kurzbeschreibung || a.beschreibung)}</li>`).join('')}
                   </ul>
                 </div>
               ` : ''}
@@ -4238,8 +4238,8 @@ ${t('action.archive')}
             <span class="termin-typ-badge" style="background: ${getTerminFarbe(termin.typ)}">${getTerminTypText(termin.typ)}</span>
             ${termin.uhrzeit ? `<span class="termin-block-zeit">${termin.uhrzeit} Uhr</span>` : '<span class="termin-block-zeit">Ganztägig</span>'}
           </div>
-          <div class="termin-block-titel">${termin.titel}</div>
-          ${termin.beschreibung ? `<div class="termin-block-beschreibung">${termin.beschreibung}</div>` : ''}
+          <div class="termin-block-titel">${getTranslatedUserText(termin.titel)}</div>
+          ${termin.beschreibung ? `<div class="termin-block-beschreibung">${getTranslatedUserText(termin.beschreibung)}</div>` : ''}
           <div class="termin-block-meta">${currentLanguage === 'en' ? 'From' : currentLanguage === 'fr' ? 'De' : 'Von'}: ${termin.erstelltVonName}</div>
         </div>
       `;
@@ -4291,7 +4291,7 @@ ${t('action.archive')}
         <div class="termin-detail-body">
           <p><strong>${dateLabel}:</strong> ${formatDatum}</p>
           ${termin.uhrzeit ? `<p><strong>🕐 ${timeLabel}:</strong> ${termin.uhrzeit}</p>` : `<p><strong>🕐 ${timeLabel}:</strong> ${allDayText}</p>`}
-          ${termin.beschreibung ? `<p><strong>${descLabel}:</strong> ${termin.beschreibung}</p>` : ''}
+          ${termin.beschreibung ? `<p><strong>${descLabel}:</strong> ${getTranslatedUserText(termin.beschreibung)}</p>` : ''}
           <p><strong>${createdByLabel}:</strong> ${termin.erstelltVonName}</p>
           ${termin.antragId ? `<p><strong>${forAppLabel}:</strong> <a href="#" onclick="closeModal('terminDetailModal'); openAntragDetail('${termin.antragId}'); return false;">${openAppText}</a></p>` : ''}
         </div>
