@@ -579,6 +579,34 @@
     </div>
   </div>
 
+  <!-- Modal: Antrag durch Hausleitung übernehmen -->
+  <div class="modal-overlay" id="hausleitungUebernahmeModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Antrag übernehmen</h3>
+        <button class="modal-close" onclick="closeModal('hausleitungUebernahmeModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="info-box warning">
+          <p>Sie sind dabei, diesen Antrag als Hausleitung zu übernehmen. Der aktuelle Bearbeiter verliert seinen Zugriff auf den Antrag und wird über die Übernahme informiert.</p>
+        </div>
+        <div id="hausleitungUebernahmeInfo">
+          <!-- Wird dynamisch gefüllt -->
+        </div>
+        <div class="form-group">
+          <label for="hausleitungUebernahmeBegruendung">Begründung für die Übernahme <span class="required">*</span></label>
+          <textarea id="hausleitungUebernahmeBegruendung" placeholder="Bitte begründen Sie, warum Sie diesen Antrag übernehmen..." rows="4" required></textarea>
+          <p class="field-hint">Diese Begründung wird im Bearbeitungsverlauf dokumentiert und dem bisherigen Bearbeiter mitgeteilt.</p>
+        </div>
+        <input type="hidden" id="hausleitungUebernahmeAntragId">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('hausleitungUebernahmeModal')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="bestaeigeHausleitungUebernahme()">Antrag übernehmen</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
   <script>
     let currentSession = null;
@@ -1252,6 +1280,18 @@ ${t('button.takeApplication')}
               </button>
             </div>
           `;
+        } else if (istHausleitung()) {
+          // Hausleitung kann fremde Anträge übernehmen
+          actionsHtml = `
+            <div class="antrag-actions">
+              <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${antrag.id}', false, true)">
+                ${t('button.open')}
+              </button>
+              <button class="btn btn-warning btn-sm" onclick="openHausleitungUebernahmeModal('${antrag.id}')">
+                Antrag übernehmen
+              </button>
+            </div>
+          `;
         }
       } else if (mode === 'eroeffnung') {
         // Anträge die auf persönliche Eröffnung warten
@@ -1838,6 +1878,11 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                 ${istOffen ? `
                   <button class="btn btn-primary btn-large" onclick="nehmeAntragUndBleibeInDetail('${antrag.id}')">
 ${t('button.takeApplication')}
+                  </button>
+                ` : ''}
+                ${!istOffen && !istBearbeiter && istHausleitung() && antrag.status === 'in-bearbeitung' ? `
+                  <button class="btn btn-warning btn-large" onclick="openHausleitungUebernahmeModal('${antrag.id}')">
+                    Antrag übernehmen
                   </button>
                 ` : ''}
                 ${hatOffeneAufgabe ? `
@@ -3186,6 +3231,75 @@ ${t('action.archive')}
         // Direkt in der Detailansicht weiterarbeiten (keine Weiterleitungs-Abfrage)
         openAntragDetail(antragId);
       }
+    }
+
+    // ============================================
+    // HAUSLEITUNG: ANTRAG ÜBERNEHMEN
+    // ============================================
+    
+    function openHausleitungUebernahmeModal(antragId) {
+      const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag) return;
+      
+      document.getElementById('hausleitungUebernahmeAntragId').value = antragId;
+      document.getElementById('hausleitungUebernahmeBegruendung').value = '';
+      
+      // Info über den Antrag anzeigen
+      const bearbeiterInfo = antrag.bearbeiterName ? 
+        `<p><strong>Aktueller Bearbeiter:</strong> ${antrag.bearbeiterName}</p>` : 
+        '<p><strong>Status:</strong> Noch kein Bearbeiter zugewiesen</p>';
+      
+      document.getElementById('hausleitungUebernahmeInfo').innerHTML = `
+        <div class="detail-box" style="margin-bottom: 1rem;">
+          <p><strong>Antrag:</strong> ${antrag.antragsNummer || antrag.id}</p>
+          <p><strong>Antragsteller:</strong> ${antrag.insasseName}</p>
+          <p><strong>Antragstyp:</strong> ${antrag.type === 'teilhabegeld' ? 'Teilhabegeld' : 'Eigentum in der Kammer'}</p>
+          ${bearbeiterInfo}
+        </div>
+      `;
+      
+      openModal('hausleitungUebernahmeModal');
+    }
+    
+    function bestaeigeHausleitungUebernahme() {
+      const antragId = document.getElementById('hausleitungUebernahmeAntragId').value;
+      const begruendung = document.getElementById('hausleitungUebernahmeBegruendung').value.trim();
+      
+      if (!begruendung) {
+        showAlert('Bitte geben Sie eine Begründung für die Übernahme an.');
+        return;
+      }
+      
+      const result = antragSystem.uebernehmeAntragAlsHausleitung(antragId, currentSession, begruendung);
+      
+      if (result.success) {
+        // Benachrichtigung an den ursprünglichen Bearbeiter senden
+        if (result.alterBearbeiterId) {
+          notificationSystem.createNotification(
+            result.alterBearbeiterId,
+            'antrag-uebernommen',
+            'Antrag durch Hausleitung übernommen',
+            `Der Antrag ${result.antrag.antragsNummer || antragId} wurde von ${currentSession.name} (Hausleitung) übernommen. Begründung: ${begruendung}`,
+            antragId
+          );
+        }
+        
+        closeModal('hausleitungUebernahmeModal');
+        showAlert('Der Antrag wurde erfolgreich übernommen.');
+        renderAntraege();
+        
+        // Tab wechseln zu "Meine Anträge und Aufgaben"
+        switchTab('bearbeitung');
+      } else {
+        showAlert(result.error || 'Fehler beim Übernehmen des Antrags.');
+      }
+    }
+    
+    // Prüft ob der aktuelle Benutzer Hausleitung ist
+    function istHausleitung() {
+      if (!currentSession) return false;
+      const rolle = currentSession.rolle;
+      return rolle === 'hausleitung' || rolle === 'jva-leitung' || rolle === 'haus-leitung';
     }
 
     async function bestaetigeEroeffnung(antragId) {

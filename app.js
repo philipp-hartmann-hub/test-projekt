@@ -2363,6 +2363,58 @@ class AntragSystem {
     return null;
   }
 
+  // Antrag durch Hausleitung übernehmen (mit Pflichtbegründung)
+  // Diese Funktion ermöglicht es der Hausleitung, jeden Antrag in ihrem Haus zu übernehmen
+  uebernehmeAntragAlsHausleitung(antragId, hausleitung, begruendung) {
+    const antrag = this.antraege.find(a => a.id === antragId);
+    if (!antrag) return { success: false, error: 'Antrag nicht gefunden' };
+    
+    // Prüfen ob der Antrag bereits einen Bearbeiter hat
+    const alterBearbeiterId = antrag.bearbeiterId;
+    const alterBearbeiterName = antrag.bearbeiterName;
+    
+    // Wenn der Antrag noch offen ist, Status auf in-bearbeitung setzen
+    if (antrag.status === 'offen') {
+      antrag.status = 'in-bearbeitung';
+    }
+    
+    // Hausleitung als neuen Bearbeiter setzen
+    antrag.bearbeiterId = hausleitung.userId;
+    antrag.bearbeiterName = hausleitung.name;
+    
+    // Übernahme-Informationen speichern
+    antrag.uebernommenVonHausleitung = true;
+    antrag.uebernahmeBegruendung = begruendung;
+    antrag.uebernahmeAm = new Date().toISOString();
+    antrag.uebernahmeVon = hausleitung.name;
+    antrag.uebernahmeVonId = hausleitung.userId;
+    antrag.alterBearbeiterBeiUebernahme = alterBearbeiterName;
+    antrag.alterBearbeiterIdBeiUebernahme = alterBearbeiterId;
+    
+    this.saveAntraege();
+    
+    // Aktivität protokollieren
+    aktivitaetenSystem.logAktivitaet({
+      antragId: antragId,
+      typ: 'hausleitung-uebernahme',
+      beschreibung: `Antrag durch Hausleitung übernommen${alterBearbeiterName ? ' von ' + alterBearbeiterName : ''}`,
+      details: { 
+        begruendung: begruendung,
+        alterBearbeiter: alterBearbeiterName || null
+      },
+      benutzerTyp: 'mitarbeiter',
+      benutzerId: hausleitung.userId,
+      benutzerName: hausleitung.name
+    });
+    
+    return { 
+      success: true, 
+      antrag: antrag,
+      alterBearbeiterId: alterBearbeiterId,
+      alterBearbeiterName: alterBearbeiterName
+    };
+  }
+
   // Antrag als sachlich/fachlich geprüft markieren
   markiereAlsGeprueft(antragId, mitarbeiterId, mitarbeiterName, pruefungsKommentar = '') {
     const antrag = this.antraege.find(a => a.id === antragId);
