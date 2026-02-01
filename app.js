@@ -3132,7 +3132,8 @@ class AntragSystem {
     return false;
   }
 
-  // In Bearbeitung befindliche Anträge (inkl. entschiedene aber nicht veraktete)
+  // In Bearbeitung befindliche Anträge - NUR persönliche Anträge (direkte Zuweisung oder Aufgabenbezug)
+  // Für "Meine Anträge und Aufgaben" - auch Hausleitung sieht hier nur ihre persönlichen Anträge
   getInBearbeitungAntraege(mitarbeiter) {
     return this.antraege.filter(a => {
       // Anträge in Bearbeitung ODER entschieden aber noch nicht veraktet
@@ -3151,20 +3152,53 @@ class AntragSystem {
       const hatAmAntragGearbeitet = aktivitaetenSystem.istMitarbeiterBeteiligt(a.id, mitarbeiter.userId);
       const hatAufgabenbezug = hatAufgabeErhalten || hatAufgabeErstellt || hatAmAntragGearbeitet;
       
-      // Hausleitung sieht alle "in Bearbeitung" Anträge ihres Hauses
-      if (mitarbeiter.rolle === 'jva-leitung' || mitarbeiter.rolle === 'haus-leitung') {
-        return this._matchesHaus(mitarbeiter.jvas, a.insasseJva);
-      }
-      
-      // Stationsleitung sieht alle "in Bearbeitung" Anträge ihrer Station
-      if (mitarbeiter.rolle === 'stationsleitung') {
-        return this._matchesHaus(mitarbeiter.jvas, a.insasseJva) && 
-               a.insasseStation === mitarbeiter.station;
-      }
-      
-      // Normale Mitarbeiter sehen ihre persönlich bearbeiteten Anträge ODER Anträge mit Aufgabenbezug
+      // ALLE Mitarbeiter (auch Hausleitung) sehen hier NUR ihre persönlich bearbeiteten Anträge 
+      // ODER Anträge mit direktem Aufgabenbezug
+      // (Hausleitung sieht andere Anträge des Hauses in "Anträge des Hauses")
       return istBearbeiter || hatAufgabenbezug;
     }).sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
+  }
+  
+  // Anträge des Hauses (für Hausleitung) - alle Anträge des Hauses, die nicht persönlich bearbeitet werden
+  getAntraegeDesHauses(mitarbeiter) {
+    // Nur für Hausleitung/JVA-Leitung
+    if (mitarbeiter.rolle !== 'jva-leitung' && mitarbeiter.rolle !== 'haus-leitung' && mitarbeiter.rolle !== 'hausleitung') {
+      return [];
+    }
+    
+    return this.antraege.filter(a => {
+      // Anträge in Bearbeitung (nicht offen, nicht veraktet)
+      const istInBearbeitung = a.status === 'in-bearbeitung';
+      const istEntschieden = a.erledigt && !a.veraktet;
+      
+      if (!istInBearbeitung && !istEntschieden) return false;
+      if (a.veraktet) return false;
+      
+      // Muss zum Haus des Mitarbeiters gehören
+      if (!this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) return false;
+      
+      // NICHT die persönlich bearbeiteten Anträge (die sind in "Meine Anträge und Aufgaben")
+      if (a.bearbeiterId === mitarbeiter.userId) return false;
+      
+      // NICHT Anträge mit Gruppenaufgaben für Hausleitung (die sind in "Anträge und Aufgaben meiner Gruppe")
+      const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(a.id, mitarbeiter);
+      if (gruppenAufgaben.length > 0) return false;
+      
+      // NICHT Anträge mit wartender Hauptbearbeitungsübergabe an Hausleitung-Gruppe
+      if (a.hauptbearbeitungWartetAufUebernahme && a.zugewiesenAnGruppe) {
+        if (this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe)) {
+          return false;
+        }
+      }
+      
+      // NICHT Anträge mit direktem Aufgabenbezug (die sind in "Meine Anträge und Aufgaben")
+      const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(a.id);
+      const hatAufgabeErhalten = aufgabenZuAntrag.some(auf => auf.zugewiesenAnId === mitarbeiter.userId);
+      if (hatAufgabeErhalten) return false;
+      
+      // Alle anderen Anträge des Hauses
+      return true;
+    }).sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
   }
 
   // Historie für Mitarbeiter (nur veraktete Anträge)
