@@ -135,15 +135,15 @@
 
         <!-- Tabs -->
         <div class="tabs">
-          <button class="tab active" onclick="switchTab('offen')">Offene Anträge</button>
+          <button class="tab active" onclick="switchTab('offen')">Anträge und Aufgaben meiner Gruppe</button>
           <button class="tab" onclick="switchTab('bearbeitung')">Meine Anträge und Aufgaben <span class="tab-count" id="bearbeitungTabCount">0</span></button>
           <button class="tab" onclick="switchTab('historie')">Erledigt</button>
         </div>
 
-        <!-- Offene Anträge -->
+        <!-- Anträge und Aufgaben meiner Gruppe -->
         <section class="section" id="offenSection">
           <div class="section-header">
-            <h2>Offene Anträge <span class="count" id="offenCount">0</span></h2>
+            <h2>Anträge und Aufgaben meiner Gruppe <span class="count" id="offenCount">0</span></h2>
             <div class="sort-controls">
               <label for="sortierungOffen">Sortieren:</label>
               <select id="sortierungOffen" onchange="renderAntraege()">
@@ -1181,7 +1181,7 @@
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>Mitarbeiter</strong> sehen Sie offene Anträge des <strong>${hausNames} - Station ${currentSession.station}</strong> und Ihre persönlich bearbeiteten Anträge</span>
+            <span>Als <strong>Mitarbeiter</strong> sehen Sie Anträge und Aufgaben des <strong>${hausNames} - Station ${currentSession.station}</strong> und Ihre persönlich bearbeiteten Anträge</span>
           </div>
         `;
       }
@@ -3398,7 +3398,7 @@ ${t('action.archive')}
         tabCount.style.display = bearbeitungTotal > 0 ? 'inline-block' : 'none';
       }
       
-      // Offene Anträge
+      // Anträge und Aufgaben meiner Gruppe
       if (offeneAntraege.length === 0) {
         offenList.innerHTML = '<div class="empty-state"><p>Keine offenen Anträge vorhanden.</p></div>';
       } else {

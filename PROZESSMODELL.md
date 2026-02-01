@@ -11,7 +11,7 @@ Das Antragswesen durchläuft einen strukturierten Prozess von der Antragstellung
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                         ANTRAGSPROZESS                                                   │
-└─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────────────────────────────────────────────────┘h 
 
 ┌─────────────┐      ┌─────────────┐      ┌─────────────┐      ┌─────────────┐      ┌─────────────┐      ┌─────────────┐
 │   EINGANG   │ ───► │   PRÜFUNG   │ ───► │ ENTSCHEIDEN │ ───► │ BEKANNTGABE │ ───► │   VOLLZUG   │ ───► │  ABSCHLUSS  │
@@ -70,7 +70,8 @@ Das Antragswesen durchläuft einen strukturierten Prozess von der Antragstellung
 │                                                               │
 │  ┌─────────────────┐     ┌─────────────────┐                 │
 │  │ Antrag in       │ ──► │ "Antrag nehmen" │                 │
-│  │ "Offene Anträge"│     │ betätigen       │                 │
+│  │ "Anträge meiner │     │ betätigen       │                 │
+│  │  Gruppe"        │     │                 │                 │
 │  └─────────────────┘     └────────┬────────┘                 │
 │                                   │                           │
 │                                   ▼                           │

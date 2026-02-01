@@ -53,7 +53,7 @@ const TRANSLATIONS = {
     'login.error': 'Ungültige Anmeldedaten',
     
     // Navigation / Tabs
-    'nav.openApplications': 'Offene Anträge',
+    'nav.openApplications': 'Anträge und Aufgaben meiner Gruppe',
     'nav.myApplicationsTasks': 'Meine Anträge und Aufgaben',
     'nav.personalOpening': 'Pers. Eröffnung',
     'nav.completed': 'Erledigt',
@@ -344,7 +344,7 @@ const TRANSLATIONS = {
     'login.error': 'Invalid credentials',
     
     // Navigation / Tabs
-    'nav.openApplications': 'Open Applications',
+    'nav.openApplications': 'Applications and Tasks of my Group',
     'nav.myApplicationsTasks': 'My Applications and Tasks',
     'nav.personalOpening': 'Personal Opening',
     'nav.completed': 'Completed',
@@ -627,7 +627,7 @@ const TRANSLATIONS = {
     'login.error': 'Identifiants invalides',
     
     // Navigation / Onglets
-    'nav.openApplications': 'Demandes ouvertes',
+    'nav.openApplications': 'Demandes et tâches de mon groupe',
     'nav.myApplicationsTasks': 'Mes demandes et tâches',
     'nav.personalOpening': 'Ouverture personnelle',
     'nav.completed': 'Terminé',
@@ -2807,7 +2807,7 @@ class AntragSystem {
     return mitarbeiterJvas.some(j => normalisiereHaus(j) === antragHausNormalisiert);
   }
 
-  // Offene Anträge für Mitarbeiter (basierend auf Haus/Station)
+  // Anträge und Aufgaben der Gruppe für Mitarbeiter (basierend auf Haus/Station)
   getOffeneAntraegeMitarbeiter(mitarbeiter) {
     return this.antraege.filter(a => {
       if (a.status !== 'offen') return false;

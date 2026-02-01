@@ -3278,7 +3278,7 @@ body.hamburg-start {
   color: var(--accent-success);
 }
 
-/* Hinweis-Box für offene Anträge */
+/* Hinweis-Box für Anträge und Aufgaben der Gruppe */
 .offen-hinweis {
   display: flex;
   align-items: center;
