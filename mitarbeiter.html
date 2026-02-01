@@ -2442,7 +2442,7 @@ ${t('action.archive')}
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
         const haus = HAUS_CONFIG[hausKey];
         haus.stationen.forEach(station => {
-          select.innerHTML += `<option value="station|${hausKey}|${station}">Mitarbeitende ${haus.name} Station ${station}</option>`;
+          select.innerHTML += `<option value="station|${hausKey}|${station}">VAD ${haus.name} Station ${station}</option>`;
         });
       });
     }
@@ -2817,7 +2817,7 @@ ${t('action.archive')}
           } else if (gruppeTyp === 'arbeitskoordination') {
             zugewiesenAnName = `Arbeitskoordination ${hausName}`;
           } else {
-            zugewiesenAnName = `Mitarbeitende ${hausName} Station ${gruppeStation}`;
+            zugewiesenAnName = `VAD ${hausName} Station ${gruppeStation}`;
           }
           zugewiesenAnId = null; // Keine spezifische Person
         }
@@ -3235,7 +3235,7 @@ ${t('action.archive')}
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
         const haus = HAUS_CONFIG[hausKey];
         haus.stationen.forEach(station => {
-          select.innerHTML += `<option value="station|${hausKey}|${station}">Mitarbeitende ${haus.name} Station ${station}</option>`;
+          select.innerHTML += `<option value="station|${hausKey}|${station}">VAD ${haus.name} Station ${station}</option>`;
         });
       });
     }
@@ -3503,7 +3503,7 @@ ${t('action.archive')}
           } else if (gruppeTyp === 'arbeitskoordination') {
             gruppeName = `Arbeitskoordination ${hausName}`;
           } else {
-            gruppeName = `Mitarbeitende ${hausName} Station ${gruppeStation}`;
+            gruppeName = `VAD ${hausName} Station ${gruppeStation}`;
           }
           
           // Weiterleitung an Gruppe durchführen
