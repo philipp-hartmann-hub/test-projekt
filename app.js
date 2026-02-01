@@ -3156,6 +3156,12 @@ class AntragSystem {
       if (istHausleitung) return true;
       // Mitarbeiter muss auf dieser Station sein
       return mitarbeiter.station === gruppe.station;
+    } else if (gruppe.typ === 'zahlstelle') {
+      // Nur Zahlstellen-Mitarbeiter dieses Hauses
+      return mitarbeiter.rolle === 'zahlstelle';
+    } else if (gruppe.typ === 'arbeitskoordination') {
+      // Nur Arbeitskoordinations-Mitarbeiter dieses Hauses
+      return mitarbeiter.rolle === 'arbeitskoordination';
     }
     
     return false;

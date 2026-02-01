@@ -226,12 +226,16 @@
               <span class="radio-label">Mitarbeiter</span>
             </label>
             <label class="radio-option">
-              <input type="radio" name="mitRolle" value="stationsleitung" onchange="updateMitarbeiterFields()">
-              <span class="radio-label">📋 Stationsleitung</span>
-            </label>
-            <label class="radio-option">
               <input type="radio" name="mitRolle" value="haus-leitung" onchange="updateMitarbeiterFields()">
               <span class="radio-label">🏛️ Hausleitung</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="mitRolle" value="zahlstelle" onchange="updateMitarbeiterFields()">
+              <span class="radio-label">💰 Zahlstelle</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="mitRolle" value="arbeitskoordination" onchange="updateMitarbeiterFields()">
+              <span class="radio-label">👷 Arbeitskoordination</span>
             </label>
           </div>
         </div>
@@ -305,6 +309,14 @@
             <label class="radio-option">
               <input type="radio" name="editMitRolle" value="haus-leitung" onchange="updateEditMitarbeiterFields()">
               <span class="radio-label">🏛️ Hausleitung</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="editMitRolle" value="zahlstelle" onchange="updateEditMitarbeiterFields()">
+              <span class="radio-label">💰 Zahlstelle</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="editMitRolle" value="arbeitskoordination" onchange="updateEditMitarbeiterFields()">
+              <span class="radio-label">👷 Arbeitskoordination</span>
             </label>
           </div>
         </div>
@@ -588,6 +600,10 @@
       if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
         stationGroup.style.display = 'none';
         hausHint.textContent = '(Ein Haus auswählen)';
+      } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
+        // Zahlstelle und Arbeitskoordination sind keiner Station zugeordnet
+        stationGroup.style.display = 'none';
+        hausHint.textContent = '(Mehrfachauswahl möglich)';
       } else if (rolle === 'stationsleitung') {
         stationGroup.style.display = 'block';
         hausHint.textContent = '(Mehrfachauswahl möglich)';
@@ -621,8 +637,8 @@
         }
       }
       
-      // Bei Hausleitung keine Station nötig
-      if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
+      // Bei Hausleitung, Zahlstelle und Arbeitskoordination keine Station nötig
+      if (rolle === 'haus-leitung' || rolle === 'jva-leitung' || rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
         stationSelect.innerHTML = '<option value="">Nicht erforderlich</option>';
         stationSelect.disabled = true;
         return;
@@ -681,6 +697,9 @@
           showAlert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine Hausleitung.`);
           return;
         }
+        userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
+      } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
+        // Zahlstelle und Arbeitskoordination - keine Station erforderlich
         userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
       } else if (rolle === 'stationsleitung') {
         // Stationsleitung - Einschränkungen prüfen
@@ -747,6 +766,10 @@
       if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
         stationGroup.style.display = 'none';
         hausHint.textContent = '(Ein Haus auswählen)';
+      } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
+        // Zahlstelle und Arbeitskoordination sind keiner Station zugeordnet
+        stationGroup.style.display = 'none';
+        hausHint.textContent = '(Mehrfachauswahl möglich)';
       } else {
         stationGroup.style.display = 'block';
         hausHint.textContent = '(Mehrfachauswahl möglich)';
@@ -778,8 +801,8 @@
         }
       }
       
-      // Bei Hausleitung keine Station nötig
-      if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
+      // Bei Hausleitung, Zahlstelle und Arbeitskoordination keine Station nötig
+      if (rolle === 'haus-leitung' || rolle === 'jva-leitung' || rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
         stationSelect.innerHTML = '<option value="">Nicht erforderlich</option>';
         stationSelect.disabled = true;
         return;
@@ -841,6 +864,9 @@
           showAlert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine Hausleitung.`);
           return;
         }
+        userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
+      } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
+        // Zahlstelle und Arbeitskoordination - keine Station erforderlich
         userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
       } else if (rolle === 'stationsleitung') {
         // Stationsleitung - Einschränkungen prüfen

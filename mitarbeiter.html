@@ -2426,6 +2426,18 @@ ${t('action.archive')}
         select.innerHTML += `<option value="hausleitung|${hausKey}">Hausleitung ${hausName}</option>`;
       });
       
+      // Zahlstelle als Option (pro Haus)
+      Object.keys(HAUS_CONFIG).forEach(hausKey => {
+        const hausName = HAUS_CONFIG[hausKey].name;
+        select.innerHTML += `<option value="zahlstelle|${hausKey}">💰 Zahlstelle ${hausName}</option>`;
+      });
+      
+      // Arbeitskoordination als Option (pro Haus)
+      Object.keys(HAUS_CONFIG).forEach(hausKey => {
+        const hausName = HAUS_CONFIG[hausKey].name;
+        select.innerHTML += `<option value="arbeitskoordination|${hausKey}">👷 Arbeitskoordination ${hausName}</option>`;
+      });
+      
       // Stationen als Option
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
         const haus = HAUS_CONFIG[hausKey];
@@ -2461,6 +2473,12 @@ ${t('action.archive')}
       if (gruppeTyp === 'hausleitung') {
         document.getElementById('aufgabeGruppeTyp').value = 'hausleitung';
         document.getElementById('aufgabeGruppeHaus').value = parts[1];
+      } else if (gruppeTyp === 'zahlstelle') {
+        document.getElementById('aufgabeGruppeTyp').value = 'zahlstelle';
+        document.getElementById('aufgabeGruppeHaus').value = parts[1];
+      } else if (gruppeTyp === 'arbeitskoordination') {
+        document.getElementById('aufgabeGruppeTyp').value = 'arbeitskoordination';
+        document.getElementById('aufgabeGruppeHaus').value = parts[1];
       } else if (gruppeTyp === 'station') {
         document.getElementById('aufgabeGruppeTyp').value = 'station';
         document.getElementById('aufgabeGruppeHaus').value = parts[1];
@@ -2483,6 +2501,18 @@ ${t('action.archive')}
         // Nur Hausleitungen dieses Hauses
         mitarbeiter = mitarbeiter.filter(m => 
           (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
+          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
+        );
+      } else if (gruppeTyp === 'zahlstelle') {
+        // Nur Zahlstellen-Mitarbeiter dieses Hauses
+        mitarbeiter = mitarbeiter.filter(m => 
+          m.rolle === 'zahlstelle' &&
+          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
+        );
+      } else if (gruppeTyp === 'arbeitskoordination') {
+        // Nur Arbeitskoordinations-Mitarbeiter dieses Hauses
+        mitarbeiter = mitarbeiter.filter(m => 
+          m.rolle === 'arbeitskoordination' &&
           m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
         );
       } else if (gruppeTyp === 'station') {
@@ -2782,6 +2812,10 @@ ${t('action.archive')}
           const hausName = HAUS_CONFIG[gruppeHaus]?.name || gruppeHaus;
           if (gruppeTyp === 'hausleitung') {
             zugewiesenAnName = `Hausleitung ${hausName}`;
+          } else if (gruppeTyp === 'zahlstelle') {
+            zugewiesenAnName = `Zahlstelle ${hausName}`;
+          } else if (gruppeTyp === 'arbeitskoordination') {
+            zugewiesenAnName = `Arbeitskoordination ${hausName}`;
           } else {
             zugewiesenAnName = `Mitarbeitende ${hausName} Station ${gruppeStation}`;
           }
@@ -3185,6 +3219,18 @@ ${t('action.archive')}
         select.innerHTML += `<option value="hausleitung|${hausKey}">Hausleitung ${hausName}</option>`;
       });
       
+      // Zahlstelle als Option (pro Haus)
+      Object.keys(HAUS_CONFIG).forEach(hausKey => {
+        const hausName = HAUS_CONFIG[hausKey].name;
+        select.innerHTML += `<option value="zahlstelle|${hausKey}">💰 Zahlstelle ${hausName}</option>`;
+      });
+      
+      // Arbeitskoordination als Option (pro Haus)
+      Object.keys(HAUS_CONFIG).forEach(hausKey => {
+        const hausName = HAUS_CONFIG[hausKey].name;
+        select.innerHTML += `<option value="arbeitskoordination|${hausKey}">👷 Arbeitskoordination ${hausName}</option>`;
+      });
+      
       // Stationen als Option
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
         const haus = HAUS_CONFIG[hausKey];
@@ -3220,6 +3266,12 @@ ${t('action.archive')}
       if (gruppeTyp === 'hausleitung') {
         document.getElementById('weiterleitenGruppeTyp').value = 'hausleitung';
         document.getElementById('weiterleitenGruppeHaus').value = parts[1];
+      } else if (gruppeTyp === 'zahlstelle') {
+        document.getElementById('weiterleitenGruppeTyp').value = 'zahlstelle';
+        document.getElementById('weiterleitenGruppeHaus').value = parts[1];
+      } else if (gruppeTyp === 'arbeitskoordination') {
+        document.getElementById('weiterleitenGruppeTyp').value = 'arbeitskoordination';
+        document.getElementById('weiterleitenGruppeHaus').value = parts[1];
       } else if (gruppeTyp === 'station') {
         document.getElementById('weiterleitenGruppeTyp').value = 'station';
         document.getElementById('weiterleitenGruppeHaus').value = parts[1];
@@ -3240,6 +3292,16 @@ ${t('action.archive')}
       if (gruppeTyp === 'hausleitung') {
         mitarbeiter = mitarbeiter.filter(m => 
           (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
+          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
+        );
+      } else if (gruppeTyp === 'zahlstelle') {
+        mitarbeiter = mitarbeiter.filter(m => 
+          m.rolle === 'zahlstelle' &&
+          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
+        );
+      } else if (gruppeTyp === 'arbeitskoordination') {
+        mitarbeiter = mitarbeiter.filter(m => 
+          m.rolle === 'arbeitskoordination' &&
           m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
         );
       } else if (gruppeTyp === 'station') {
@@ -3436,6 +3498,10 @@ ${t('action.archive')}
           let gruppeName;
           if (gruppeTyp === 'hausleitung') {
             gruppeName = `Hausleitung ${hausName}`;
+          } else if (gruppeTyp === 'zahlstelle') {
+            gruppeName = `Zahlstelle ${hausName}`;
+          } else if (gruppeTyp === 'arbeitskoordination') {
+            gruppeName = `Arbeitskoordination ${hausName}`;
           } else {
             gruppeName = `Mitarbeitende ${hausName} Station ${gruppeStation}`;
           }
