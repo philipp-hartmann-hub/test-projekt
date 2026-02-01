@@ -2550,12 +2550,14 @@ class AntragSystem {
         })));
         
         // Fall 3b: Hausleitung kann Antrag übernehmen, auch wenn keine Gruppenaufgaben vorhanden
+        // Dies gilt für alle Status außer offen und veraktet
         const istHausleitung = mitarbeiter.rolle === 'jva-leitung' || 
                                mitarbeiter.rolle === 'haus-leitung' || 
                                mitarbeiter.rolle === 'hausleitung';
         
-        if (istHausleitung && antrag.status === 'in-bearbeitung' && antrag.bearbeiterId !== mitarbeiter.userId) {
-          console.log('[Debug] nehmeAntrag Fall 3b: Hausleitung übernimmt Antrag');
+        const erlaubteStatus = ['in-bearbeitung', 'genehmigt', 'abgelehnt', 'teilweise-genehmigt'];
+        if (istHausleitung && erlaubteStatus.includes(antrag.status) && antrag.bearbeiterId !== mitarbeiter.userId) {
+          console.log('[Debug] nehmeAntrag Fall 3b: Hausleitung übernimmt Antrag (Status: ' + antrag.status + ')');
           
           const alterBearbeiter = antrag.bearbeiterName;
           antrag.bearbeiterId = mitarbeiter.userId;
