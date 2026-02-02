@@ -237,6 +237,10 @@
               <input type="radio" name="mitRolle" value="arbeitskoordination" onchange="updateMitarbeiterFields()">
               <span class="radio-label">Arbeitskoordination</span>
             </label>
+            <label class="radio-option">
+              <input type="radio" name="mitRolle" value="kammer" onchange="updateMitarbeiterFields()">
+              <span class="radio-label">Kammer</span>
+            </label>
           </div>
         </div>
         <div class="form-group">
@@ -317,6 +321,10 @@
             <label class="radio-option">
               <input type="radio" name="editMitRolle" value="arbeitskoordination" onchange="updateEditMitarbeiterFields()">
               <span class="radio-label">Arbeitskoordination</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="editMitRolle" value="kammer" onchange="updateEditMitarbeiterFields()">
+              <span class="radio-label">Kammer</span>
             </label>
           </div>
         </div>
@@ -596,13 +604,20 @@
       const rolle = document.querySelector('input[name="mitRolle"]:checked').value;
       const stationGroup = document.getElementById('mitStationGroup');
       const hausHint = document.getElementById('mitJvaHint');
+      const hausGroup = document.getElementById('mitJvaGroup');
       
       if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
         stationGroup.style.display = 'none';
+        hausGroup.style.display = 'block';
         hausHint.textContent = '(Ein Haus auswählen)';
+      } else if (rolle === 'kammer') {
+        // Kammer ist hausunabhängig - keine Station, kein Haus nötig
+        stationGroup.style.display = 'none';
+        hausGroup.style.display = 'none';
       } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
         // Zahlstelle und Arbeitskoordination sind keiner Station zugeordnet
         stationGroup.style.display = 'none';
+        hausGroup.style.display = 'block';
         hausHint.textContent = '(Mehrfachauswahl möglich)';
       } else if (rolle === 'stationsleitung') {
         stationGroup.style.display = 'block';
@@ -637,8 +652,8 @@
         }
       }
       
-      // Bei Hausleitung, Zahlstelle und Arbeitskoordination keine Station nötig
-      if (rolle === 'haus-leitung' || rolle === 'jva-leitung' || rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
+      // Bei Hausleitung, Zahlstelle, Arbeitskoordination und Kammer keine Station nötig
+      if (rolle === 'haus-leitung' || rolle === 'jva-leitung' || rolle === 'zahlstelle' || rolle === 'arbeitskoordination' || rolle === 'kammer') {
         stationSelect.innerHTML = '<option value="">Nicht erforderlich</option>';
         stationSelect.disabled = true;
         return;
@@ -682,6 +697,14 @@
         showAlert('Bitte Geburtsdatum eingeben.');
         return;
       }
+      // Kammer braucht kein Haus (hausunabhängig)
+      if (rolle === 'kammer') {
+        userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
+        closeModal('newMitarbeiterModal');
+        renderUsers();
+        return;
+      }
+      
       if (selectedHaeuser.length === 0) {
         showAlert('Bitte mindestens ein Haus auswählen.');
         return;
@@ -761,17 +784,25 @@
     function updateEditMitarbeiterFields() {
       const rolle = document.querySelector('input[name="editMitRolle"]:checked').value;
       const stationGroup = document.getElementById('editMitStationGroup');
+      const hausGroup = document.getElementById('editMitJvaGroup');
       const hausHint = document.getElementById('editMitJvaHint');
       
       if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
         stationGroup.style.display = 'none';
+        hausGroup.style.display = 'block';
         hausHint.textContent = '(Ein Haus auswählen)';
+      } else if (rolle === 'kammer') {
+        // Kammer ist hausunabhängig
+        stationGroup.style.display = 'none';
+        hausGroup.style.display = 'none';
       } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
         // Zahlstelle und Arbeitskoordination sind keiner Station zugeordnet
         stationGroup.style.display = 'none';
+        hausGroup.style.display = 'block';
         hausHint.textContent = '(Mehrfachauswahl möglich)';
       } else {
         stationGroup.style.display = 'block';
+        hausGroup.style.display = 'block';
         hausHint.textContent = '(Mehrfachauswahl möglich)';
       }
       
@@ -801,8 +832,8 @@
         }
       }
       
-      // Bei Hausleitung, Zahlstelle und Arbeitskoordination keine Station nötig
-      if (rolle === 'haus-leitung' || rolle === 'jva-leitung' || rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
+      // Bei Hausleitung, Zahlstelle, Arbeitskoordination und Kammer keine Station nötig
+      if (rolle === 'haus-leitung' || rolle === 'jva-leitung' || rolle === 'zahlstelle' || rolle === 'arbeitskoordination' || rolle === 'kammer') {
         stationSelect.innerHTML = '<option value="">Nicht erforderlich</option>';
         stationSelect.disabled = true;
         return;
@@ -849,6 +880,15 @@
         showAlert('Bitte Geburtsdatum eingeben.');
         return;
       }
+      
+      // Kammer braucht kein Haus (hausunabhängig)
+      if (rolle === 'kammer') {
+        userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
+        closeModal('editMitarbeiterModal');
+        renderUsers();
+        return;
+      }
+      
       if (selectedHaeuser.length === 0) {
         showAlert('Bitte mindestens ein Haus auswählen.');
         return;

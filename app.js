@@ -1892,9 +1892,20 @@ class TerminSystem {
     const existierend = this.termine.find(t => t.aufgabeId === aufgabe.id);
     if (existierend) return existierend;
     
+    // Text aus Kurzbeschreibung oder Beschreibung extrahieren (kann String oder Objekt sein)
+    const getText = (field) => {
+      if (!field) return '';
+      if (typeof field === 'string') return field;
+      if (typeof field === 'object' && field.text) return field.text;
+      return String(field);
+    };
+    
+    const titelText = getText(aufgabe.kurzbeschreibung) || getText(aufgabe.beschreibung);
+    const titelKurz = titelText.substring(0, 50) + (titelText.length > 50 ? '...' : '');
+    
     return this.createTermin({
-      titel: `Aufgabe: ${aufgabe.beschreibung.substring(0, 50)}${aufgabe.beschreibung.length > 50 ? '...' : ''}`,
-      beschreibung: aufgabe.beschreibung,
+      titel: `Aufgabe: ${titelKurz}`,
+      beschreibung: getText(aufgabe.beschreibung),
       datum: aufgabe.fristDatum,
       typ: 'aufgabe',
       erstelltVonId: aufgabe.erstelltVonId,
@@ -1982,7 +1993,8 @@ class AufgabenSystem {
     console.log('[Debug] createAufgabe - Erstellte Aufgabe:', {
       id: aufgabe.id,
       zugewiesenAnTyp: aufgabe.zugewiesenAnTyp,
-      zugewiesenAnGruppe: aufgabe.zugewiesenAnGruppe
+      zugewiesenAnGruppe: aufgabe.zugewiesenAnGruppe,
+      gruppeTyp: aufgabe.zugewiesenAnGruppe?.typ
     });
     
     this.aufgaben.push(aufgabe);
@@ -2189,25 +2201,84 @@ class AufgabenSystem {
     return ergebnis;
   }
   
+  // ALLE offenen Gruppenaufgaben für einen Antrag (unabhängig von der Gruppe)
+  // Wird verwendet um bei Übernahme alle Gruppenaufgaben zu schließen
+  getAlleOffenenGruppenAufgabenFuerAntrag(antragId) {
+    return this.aufgaben.filter(a => {
+      if (a.antragId != antragId) return false;
+      if (a.status !== 'offen') return false;
+      if (a.zugewiesenAnTyp !== 'gruppe') return false;
+      return true;
+    });
+  }
+  
+  // Schließt offene Gruppenaufgaben für einen Antrag bei Phasenübergang
+  // Wird aufgerufen bei: Entscheidung, Vollzug, Veraktung
+  // AUSNAHME: Kammer, Zahlstelle, Arbeitskoordination - diese bleiben offen
+  schliesseAlleGruppenAufgabenFuerAntrag(antragId) {
+    const gruppenAufgaben = this.getAlleOffenenGruppenAufgabenFuerAntrag(antragId);
+    // Gruppen die auch nach Entscheidung Aufgaben bekommen können
+    const nachEntscheidungGruppen = ['kammer', 'zahlstelle', 'arbeitskoordination'];
+    
+    let geschlossen = 0;
+    if (gruppenAufgaben.length > 0) {
+      gruppenAufgaben.forEach(aufgabe => {
+        // Spezielle Gruppen nicht schließen
+        const gruppeTyp = aufgabe.zugewiesenAnGruppe?.typ;
+        if (nachEntscheidungGruppen.includes(gruppeTyp)) {
+          console.log(`[Phasenwechsel] Aufgabe für ${gruppeTyp} bleibt offen`);
+          return;
+        }
+        aufgabe.status = 'erledigt';
+        aufgabe.erledigtAm = new Date().toISOString();
+        aufgabe.erledigtDurchPhasenwechsel = true;
+        geschlossen++;
+      });
+      if (geschlossen > 0) {
+        this.saveAufgaben();
+        console.log(`[Phasenwechsel] ${geschlossen} Gruppenaufgaben für Antrag ${antragId} geschlossen`);
+      }
+    }
+    return geschlossen;
+  }
+  
   // Alle offenen Gruppenaufgaben für einen Mitarbeiter (über alle Anträge)
   getAlleOffenenGruppenAufgabenFuerMitarbeiter(mitarbeiter) {
+    // Debug: Alle offenen Gruppenaufgaben anzeigen
+    const alleGruppenAufgaben = this.aufgaben.filter(a => a.zugewiesenAnTyp === 'gruppe' && a.status === 'offen');
+    console.log('[Debug] Alle offenen Gruppenaufgaben:', alleGruppenAufgaben.map(a => ({
+      id: a.id,
+      antragId: a.antragId,
+      zugewiesenAnGruppe: a.zugewiesenAnGruppe,
+      gruppeTyp: a.zugewiesenAnGruppe?.typ
+    })));
+    
+    // Spezielle Prüfung für Kammer
+    if (mitarbeiter.rolle === 'kammer') {
+      console.log('[Debug] KAMMER-MITARBEITER ERKANNT');
+      const kammerAufgaben = alleGruppenAufgaben.filter(a => a.zugewiesenAnGruppe?.typ === 'kammer');
+      console.log('[Debug] Kammer-Aufgaben gefunden:', kammerAufgaben.length, kammerAufgaben);
+    }
+    
     const ergebnis = this.aufgaben.filter(a => {
       if (a.status !== 'offen') return false;
       if (a.zugewiesenAnTyp !== 'gruppe') return false;
       if (!a.zugewiesenAnGruppe) return false;
       
-      return antragSystem._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
+      const gehoertZuGruppe = antragSystem._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
+      console.log('[Debug] Aufgabe prüfen:', {
+        aufgabeId: a.id,
+        gruppeTyp: a.zugewiesenAnGruppe.typ,
+        mitarbeiterRolle: mitarbeiter.rolle,
+        gehoertZuGruppe: gehoertZuGruppe
+      });
+      return gehoertZuGruppe;
     });
     
     console.log('[Debug] getAlleOffenenGruppenAufgabenFuerMitarbeiter:', {
       mitarbeiterId: mitarbeiter.userId,
       mitarbeiterRolle: mitarbeiter.rolle,
       mitarbeiterJvas: mitarbeiter.jvas,
-      alleGruppenAufgaben: this.aufgaben.filter(a => a.zugewiesenAnTyp === 'gruppe' && a.status === 'offen').map(a => ({
-        id: a.id,
-        antragId: a.antragId,
-        gruppe: a.zugewiesenAnGruppe
-      })),
       gefundene: ergebnis.length
     });
     
@@ -2431,8 +2502,9 @@ class AntragSystem {
       antrag.urspruenglicherBearbeiterId = null;
       antrag.urspruenglicherBearbeiterName = null;
       
-      // Alle offenen Gruppenaufgaben für diesen Antrag dem Mitarbeiter zuweisen
-      const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, mitarbeiter);
+      // ALLE offenen Gruppenaufgaben für diesen Antrag dem Mitarbeiter zuweisen
+      // (nicht nur die seiner Gruppe, damit der Antrag aus allen Gruppen-Listen verschwindet)
+      const gruppenAufgaben = aufgabenSystem.getAlleOffenenGruppenAufgabenFuerAntrag(antragId);
       gruppenAufgaben.forEach(aufgabe => {
         aufgabe.zugewiesenAnTyp = 'mitarbeiter';
         aufgabe.zugewiesenAnId = mitarbeiter.userId;
@@ -2483,8 +2555,9 @@ class AntragSystem {
       antrag.urspruenglicherBearbeiterId = null;
       antrag.urspruenglicherBearbeiterName = null;
       
-      // Alle offenen Gruppenaufgaben für diesen Antrag dem Mitarbeiter zuweisen
-      const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, mitarbeiter);
+      // ALLE offenen Gruppenaufgaben für diesen Antrag dem Mitarbeiter zuweisen
+      // (nicht nur die seiner Gruppe, damit der Antrag aus allen Gruppen-Listen verschwindet)
+      const gruppenAufgaben = aufgabenSystem.getAlleOffenenGruppenAufgabenFuerAntrag(antragId);
       gruppenAufgaben.forEach(aufgabe => {
         aufgabe.zugewiesenAnTyp = 'mitarbeiter';
         aufgabe.zugewiesenAnId = mitarbeiter.userId;
@@ -2693,6 +2766,15 @@ class AntragSystem {
     if (antrag) {
       const bearbeiterId = antrag.bearbeiterId;
       const bearbeiterName = antrag.bearbeiterName;
+      
+      // PHASENÜBERGANG: Alle offenen Gruppenaufgaben schließen
+      // Ein Antrag in Phase "Entscheiden" kann nicht mehr in "Prüfung" zurück
+      aufgabenSystem.schliesseAlleGruppenAufgabenFuerAntrag(id);
+      
+      // Gruppenzuweisung löschen (Antrag ist nicht mehr "zu nehmen")
+      antrag.zugewiesenAnGruppe = null;
+      antrag.zugewiesenAnGruppeName = null;
+      antrag.hauptbearbeitungWartetAufUebernahme = false;
       
       // Entscheidung speichern (kann nur von Hausleitung revidiert werden)
       antrag.entscheidungGetroffen = true;
@@ -2958,17 +3040,13 @@ class AntragSystem {
     ).sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
   }
 
-  // Antrag neu einreichen (nach Zurückgabe)
+  // Antrag neu einreichen (nur für Entwürfe oder zurückgegebene Anträge)
+  // KEIN Zurücksetzen von Anträgen die bereits in Bearbeitung waren
   updateAntragMonat(id, monat) {
     const antrag = this.antraege.find(a => a.id === id);
-    if (antrag) {
+    // Nur erlaubt wenn Antrag noch Entwurf ist
+    if (antrag && antrag.status === 'entwurf') {
       antrag.monat = monat;
-      antrag.status = 'offen';
-      antrag.begruendung = null;
-      antrag.bearbeitetAm = null;
-      antrag.bearbeiterId = null;
-      antrag.bearbeiterName = null;
-      antrag.erledigt = false;
       this.saveAntraege();
     }
     return antrag;
@@ -2976,15 +3054,10 @@ class AntragSystem {
 
   updateAntragEigentum(id, aktion, kleidung) {
     const antrag = this.antraege.find(a => a.id === id);
-    if (antrag) {
+    // Nur erlaubt wenn Antrag noch Entwurf ist
+    if (antrag && antrag.status === 'entwurf') {
       antrag.aktion = aktion;
       antrag.kleidung = kleidung;
-      antrag.status = 'offen';
-      antrag.begruendung = null;
-      antrag.bearbeitetAm = null;
-      antrag.bearbeiterId = null;
-      antrag.bearbeiterName = null;
-      antrag.erledigt = false;
       this.saveAntraege();
     }
     return antrag;
@@ -3097,11 +3170,16 @@ class AntragSystem {
         return this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
       }
       
-      // 3. Anträge mit Gruppenaufgaben für diesen Mitarbeiter
-      // Prüfen ob dieser Antrag in der Liste der Anträge mit Gruppenaufgaben ist
+      // 3. Anträge mit NEUEN/OFFENEN Gruppenaufgaben für diesen Mitarbeiter
+      // Wenn eine neue Aufgabe an die Gruppe zugewiesen wird (auch nach Entscheidung),
+      // soll die Gruppe den Antrag sehen und bearbeiten können
       if (antragsIdsMitGruppenaufgaben.includes(a.id)) {
         // Nicht für den aktuellen Bearbeiter anzeigen (der sieht den Antrag sowieso)
         if (a.bearbeiterId === mitarbeiter.userId) {
+          return false;
+        }
+        // Nicht für veraktete Anträge
+        if (a.veraktet) {
           return false;
         }
         return true;
@@ -3165,6 +3243,13 @@ class AntragSystem {
       imSelbenHaus: imSelbenHaus,
       istHausleitung: istHausleitung
     });
+    
+    // Kammer ist hausunabhängig - Prüfung VOR der Haus-Prüfung
+    if (gruppe.typ === 'kammer') {
+      const istKammer = mitarbeiter.rolle === 'kammer';
+      console.log('[Debug] Kammer-Prüfung:', { mitarbeiterRolle: mitarbeiter.rolle, istKammer: istKammer });
+      return istKammer;
+    }
     
     if (!imSelbenHaus) return false;
     
@@ -3265,6 +3350,9 @@ class AntragSystem {
   verakteAntrag(antragId, mitarbeiterId, mitarbeiterName) {
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag) {
+      // PHASENÜBERGANG: Alle offenen Aufgaben für diesen Antrag schließen
+      aufgabenSystem.schliesseAlleGruppenAufgabenFuerAntrag(antragId);
+      
       antrag.veraktet = true;
       antrag.veraktetAm = new Date().toISOString();
       antrag.veraktetVon = mitarbeiterName;
@@ -3516,7 +3604,8 @@ class AntragSystem {
         // Der Antrag erscheint trotzdem in der Gruppenliste (durch zugewiesenAnGruppe)
         // Status bleibt "in-bearbeitung"
       } else {
-        // Altes Verhalten: Bearbeiter sofort entfernen
+        // Bearbeiter entfernen, aber Status bleibt "in-bearbeitung"
+        // (kein Zurückfallen auf frühere Phasen)
         if (!antrag.abgegebenVon) {
           antrag.abgegebenVon = [];
         }
@@ -3526,11 +3615,7 @@ class AntragSystem {
         
         antrag.bearbeiterId = null;
         antrag.bearbeiterName = null;
-        
-        // Status auf "offen" setzen
-        if (antrag.status === 'in-bearbeitung') {
-          antrag.status = 'offen';
-        }
+        // Status bleibt "in-bearbeitung" - kein Zurückspringen auf "offen"
       }
       
       // Weiterleitungs-Historie speichern
@@ -3575,6 +3660,72 @@ class AntragSystem {
 
 // Globale Instanz
 const antragSystem = new AntragSystem();
+
+// REPARATUR: Öffne fälschlicherweise geschlossene Aufgaben für spezielle Gruppen
+// Kammer, Zahlstelle, Arbeitskoordination können auch nach Entscheidung Aufgaben bekommen
+(function repariereSpezielleGruppenAufgaben() {
+  const nachEntscheidungGruppen = ['kammer', 'zahlstelle', 'arbeitskoordination'];
+  let geoeffnet = 0;
+  
+  aufgabenSystem.aufgaben.forEach(aufgabe => {
+    const gruppeTyp = aufgabe.zugewiesenAnGruppe?.typ;
+    // Für spezielle Gruppen die durch Migration oder Phasenwechsel geschlossen wurden
+    if (nachEntscheidungGruppen.includes(gruppeTyp) && 
+        aufgabe.status === 'erledigt' && 
+        (aufgabe.erledigtDurchMigration === true || aufgabe.erledigtDurchPhasenwechsel === true)) {
+      aufgabe.status = 'offen';
+      aufgabe.erledigtAm = null;
+      aufgabe.erledigtDurchMigration = null;
+      aufgabe.erledigtDurchPhasenwechsel = null;
+      geoeffnet++;
+    }
+  });
+  
+  if (geoeffnet > 0) {
+    aufgabenSystem.saveAufgaben();
+    console.log(`[Reparatur] ${geoeffnet} Aufgaben für spezielle Gruppen wieder geöffnet`);
+  }
+})();
+
+// MIGRATION: Bereinige inkonsistente Gruppenaufgaben
+// Schließt Gruppenaufgaben für Anträge die bereits entschieden/veraktet wurden
+// AUSNAHME: Kammer, Zahlstelle, Arbeitskoordination - diese bekommen Aufgaben NACH Entscheidung
+(function bereingeInkonsistenteAufgaben() {
+  let geschlossen = 0;
+  const offeneGruppenaufgaben = aufgabenSystem.aufgaben.filter(a => 
+    a.zugewiesenAnTyp === 'gruppe' && a.status === 'offen'
+  );
+  
+  // Gruppen die auch nach Entscheidung Aufgaben bekommen können
+  const nachEntscheidungGruppen = ['kammer', 'zahlstelle', 'arbeitskoordination'];
+  
+  offeneGruppenaufgaben.forEach(aufgabe => {
+    // Spezielle Gruppen nicht automatisch schließen
+    const gruppeTyp = aufgabe.zugewiesenAnGruppe?.typ;
+    if (nachEntscheidungGruppen.includes(gruppeTyp)) {
+      return; // Diese Aufgabe nicht schließen
+    }
+    
+    const antrag = antragSystem.getAntrag(aufgabe.antragId);
+    if (antrag) {
+      // Nur für normale Gruppen: Anträge in Phase 3+ sollten keine offenen Aufgaben haben
+      const istEntschieden = ['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(antrag.status);
+      const istVeraktet = antrag.veraktet;
+      
+      if (istEntschieden || istVeraktet) {
+        aufgabe.status = 'erledigt';
+        aufgabe.erledigtAm = new Date().toISOString();
+        aufgabe.erledigtDurchMigration = true;
+        geschlossen++;
+      }
+    }
+  });
+  
+  if (geschlossen > 0) {
+    aufgabenSystem.saveAufgaben();
+    console.log(`[Migration] ${geschlossen} inkonsistente Gruppenaufgaben bereinigt`);
+  }
+})();
 
 // ============================================
 // HILFSFUNKTIONEN
@@ -3652,7 +3803,8 @@ function getRolleText(rolle) {
     'hausleitung': 'VAL',
     'stationsleitung': 'Stationsleitung',
     'zahlstelle': 'Zahlstelle',
-    'arbeitskoordination': 'Arbeitskoordination'
+    'arbeitskoordination': 'Arbeitskoordination',
+    'kammer': 'Kammer'
   };
   return rollen[rolle] || rolle;
 }

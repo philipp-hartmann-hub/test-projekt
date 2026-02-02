@@ -1241,7 +1241,7 @@
       const info = document.getElementById('zustaendigkeitInfo');
       const hausNames = currentSession.jvas ? currentSession.jvas.map(j => getHausName(j)).join(', ') : '-';
       
-      if (currentSession.rolle === 'jva-leitung' || currentSession.rolle === 'haus-leitung') {
+      if (currentSession.rolle === 'jva-leitung' || currentSession.rolle === 'haus-leitung' || currentSession.rolle === 'hausleitung') {
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
@@ -1255,11 +1255,32 @@
             <span>Als <strong>Stationsleitung</strong> sehen Sie alle Anträge des <strong>${hausNames} - Station ${currentSession.station}</strong></span>
           </div>
         `;
+      } else if (currentSession.rolle === 'kammer') {
+        info.innerHTML = `
+          <div class="info-content">
+            <span class="info-icon"></span>
+            <span>Als <strong>Kammer</strong> sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Kammer zugewiesen wurden</span>
+          </div>
+        `;
+      } else if (currentSession.rolle === 'zahlstelle') {
+        info.innerHTML = `
+          <div class="info-content">
+            <span class="info-icon"></span>
+            <span>Als <strong>Zahlstelle</strong> (${hausNames}) sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Zahlstelle zugewiesen wurden</span>
+          </div>
+        `;
+      } else if (currentSession.rolle === 'arbeitskoordination') {
+        info.innerHTML = `
+          <div class="info-content">
+            <span class="info-icon"></span>
+            <span>Als <strong>Arbeitskoordination</strong> (${hausNames}) sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Arbeitskoordination zugewiesen wurden</span>
+          </div>
+        `;
       } else {
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>Mitarbeiter</strong> sehen Sie Anträge und Aufgaben des <strong>${hausNames} - Station ${currentSession.station}</strong> und Ihre persönlich bearbeiteten Anträge</span>
+            <span>Als <strong>AVD</strong> sehen Sie Anträge und Aufgaben des <strong>${hausNames} - Station ${currentSession.station}</strong> und Ihre persönlich bearbeiteten Anträge</span>
           </div>
         `;
       }
@@ -2465,6 +2486,9 @@ ${t('action.archive')}
       const select = document.getElementById('aufgabeGruppeSelect');
       select.innerHTML = '<option value="">-- Bitte Gruppe wählen --</option>';
       
+      // Kammer als Option (hausunabhängig)
+      select.innerHTML += `<option value="kammer|">Kammer</option>`;
+      
       // Hausleitung als Option (pro Haus)
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
         const hausName = HAUS_CONFIG[hausKey].name;
@@ -2515,7 +2539,10 @@ ${t('action.archive')}
       const parts = value.split('|');
       const gruppeTyp = parts[0];
       
-      if (gruppeTyp === 'hausleitung') {
+      if (gruppeTyp === 'kammer') {
+        document.getElementById('aufgabeGruppeTyp').value = 'kammer';
+        document.getElementById('aufgabeGruppeHaus').value = '';
+      } else if (gruppeTyp === 'hausleitung') {
         document.getElementById('aufgabeGruppeTyp').value = 'hausleitung';
         document.getElementById('aufgabeGruppeHaus').value = parts[1];
       } else if (gruppeTyp === 'zahlstelle') {
@@ -2534,15 +2561,18 @@ ${t('action.archive')}
       document.getElementById('aufgabePersonAuswahlContainer').style.display = 'block';
       document.getElementById('aufgabeBearbeitungOptionen').style.display = 'block';
       
-      // Mitarbeiterliste für diese Gruppe laden
+      // Mitarbeiterliste für diese Gruppe laden (hierarchisch - nur Mitglieder dieser Gruppe)
       loadMitarbeiterFuerGruppe(gruppeTyp, parts[1], parts[2]);
     }
     
-    // Mitarbeiter einer Gruppe laden
+    // Mitarbeiter einer Gruppe laden (hierarchisch - nur Mitglieder dieser Gruppe)
     function loadMitarbeiterFuerGruppe(gruppeTyp, hausKey, station) {
       let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter');
       
-      if (gruppeTyp === 'hausleitung') {
+      if (gruppeTyp === 'kammer') {
+        // Nur Kammer-Mitarbeiter (hausunabhängig)
+        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'kammer');
+      } else if (gruppeTyp === 'hausleitung') {
         // Nur Hausleitungen dieses Hauses
         mitarbeiter = mitarbeiter.filter(m => 
           (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
@@ -2644,15 +2674,47 @@ ${t('action.archive')}
       }).join('');
     }
     
-    // Mitarbeiterliste filtern
+    // Mitarbeiterliste filtern (hierarchisch - nur Mitglieder der ausgewählten Gruppe)
     function filterMitarbeiterListe() {
       const suchbegriff = document.getElementById('aufgabeMitarbeiterSuche').value.toLowerCase().trim();
-      const alleMitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter');
       
-      let gefiltert = alleMitarbeiter;
+      // Hierarchisch: Nur Mitarbeiter der ausgewählten Gruppe anzeigen
+      const gruppeTyp = document.getElementById('aufgabeGruppeTyp').value;
+      const hausKey = document.getElementById('aufgabeGruppeHaus').value;
+      const station = document.getElementById('aufgabeGruppeStation').value;
       
+      let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter');
+      
+      // Nach Gruppe filtern (hierarchisches Konzept)
+      if (gruppeTyp === 'kammer') {
+        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'kammer');
+      } else if (gruppeTyp === 'hausleitung') {
+        mitarbeiter = mitarbeiter.filter(m => 
+          (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
+          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
+        );
+      } else if (gruppeTyp === 'zahlstelle') {
+        mitarbeiter = mitarbeiter.filter(m => 
+          m.rolle === 'zahlstelle' &&
+          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
+        );
+      } else if (gruppeTyp === 'arbeitskoordination') {
+        mitarbeiter = mitarbeiter.filter(m => 
+          m.rolle === 'arbeitskoordination' &&
+          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
+        );
+      } else if (gruppeTyp === 'station') {
+        mitarbeiter = mitarbeiter.filter(m => {
+          const imHaus = m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'));
+          if (!imHaus) return false;
+          if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return false;
+          return m.station === station;
+        });
+      }
+      
+      // Nach Suchbegriff filtern
       if (suchbegriff) {
-        gefiltert = alleMitarbeiter.filter(m => {
+        mitarbeiter = mitarbeiter.filter(m => {
           const vollName = `${m.vorname} ${m.nachname}`.toLowerCase();
           const rolleText = getRolleText(m.rolle).toLowerCase();
           return vollName.includes(suchbegriff) || rolleText.includes(suchbegriff);
@@ -2660,13 +2722,13 @@ ${t('action.archive')}
       }
       
       // Sortieren nach Name
-      gefiltert.sort((a, b) => {
+      mitarbeiter.sort((a, b) => {
         const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
         const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
         return nameA.localeCompare(nameB, 'de');
       });
       
-      renderMitarbeiterListe(gefiltert);
+      renderMitarbeiterListe(mitarbeiter);
     }
     
     // Mitarbeiter auswählen
@@ -2855,7 +2917,9 @@ ${t('action.archive')}
           
           // Gruppennamen generieren
           const hausName = HAUS_CONFIG[gruppeHaus]?.name || gruppeHaus;
-          if (gruppeTyp === 'hausleitung') {
+          if (gruppeTyp === 'kammer') {
+            zugewiesenAnName = 'Kammer';
+          } else if (gruppeTyp === 'hausleitung') {
             zugewiesenAnName = `VAL ${hausName}`;
           } else if (gruppeTyp === 'zahlstelle') {
             zugewiesenAnName = `Zahlstelle ${hausName}`;
@@ -3258,6 +3322,9 @@ ${t('action.archive')}
       const select = document.getElementById('weiterleitenGruppeSelect');
       select.innerHTML = '<option value="">-- Bitte Gruppe wählen --</option>';
       
+      // Kammer als Option (hausunabhängig)
+      select.innerHTML += `<option value="kammer|">Kammer</option>`;
+      
       // Hausleitung als Option (pro Haus)
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
         const hausName = HAUS_CONFIG[hausKey].name;
@@ -3308,7 +3375,10 @@ ${t('action.archive')}
       const parts = value.split('|');
       const gruppeTyp = parts[0];
       
-      if (gruppeTyp === 'hausleitung') {
+      if (gruppeTyp === 'kammer') {
+        document.getElementById('weiterleitenGruppeTyp').value = 'kammer';
+        document.getElementById('weiterleitenGruppeHaus').value = '';
+      } else if (gruppeTyp === 'hausleitung') {
         document.getElementById('weiterleitenGruppeTyp').value = 'hausleitung';
         document.getElementById('weiterleitenGruppeHaus').value = parts[1];
       } else if (gruppeTyp === 'zahlstelle') {
@@ -3326,15 +3396,18 @@ ${t('action.archive')}
       // Person-Auswahl anzeigen
       document.getElementById('weiterleitenPersonAuswahlContainer').style.display = 'block';
       
-      // Mitarbeiterliste für diese Gruppe laden
+      // Mitarbeiterliste für diese Gruppe laden (hierarchisch - nur Mitglieder dieser Gruppe)
       loadWeiterleitenMitarbeiterFuerGruppe(gruppeTyp, parts[1], parts[2]);
     }
     
-    // Mitarbeiter einer Gruppe für Weiterleitung laden
+    // Mitarbeiter einer Gruppe für Weiterleitung laden (hierarchisch - nur Mitglieder dieser Gruppe)
     function loadWeiterleitenMitarbeiterFuerGruppe(gruppeTyp, hausKey, station) {
       let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
       
-      if (gruppeTyp === 'hausleitung') {
+      if (gruppeTyp === 'kammer') {
+        // Nur Kammer-Mitarbeiter (hausunabhängig)
+        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'kammer');
+      } else if (gruppeTyp === 'hausleitung') {
         mitarbeiter = mitarbeiter.filter(m => 
           (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
           m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
@@ -3429,15 +3502,47 @@ ${t('action.archive')}
       }).join('');
     }
     
-    // Mitarbeiterliste für Weiterleitung filtern
+    // Mitarbeiterliste für Weiterleitung filtern (hierarchisch - nur Mitglieder der ausgewählten Gruppe)
     function filterWeiterleitenMitarbeiter() {
       const suchbegriff = document.getElementById('weiterleitenMitarbeiterSuche').value.toLowerCase().trim();
-      const alleMitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
       
-      let gefiltert = alleMitarbeiter;
+      // Hierarchisch: Nur Mitarbeiter der ausgewählten Gruppe anzeigen
+      const gruppeTyp = document.getElementById('weiterleitenGruppeTyp').value;
+      const hausKey = document.getElementById('weiterleitenGruppeHaus').value;
+      const station = document.getElementById('weiterleitenGruppeStation').value;
       
+      let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
+      
+      // Nach Gruppe filtern (hierarchisches Konzept)
+      if (gruppeTyp === 'kammer') {
+        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'kammer');
+      } else if (gruppeTyp === 'hausleitung') {
+        mitarbeiter = mitarbeiter.filter(m => 
+          (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
+          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
+        );
+      } else if (gruppeTyp === 'zahlstelle') {
+        mitarbeiter = mitarbeiter.filter(m => 
+          m.rolle === 'zahlstelle' &&
+          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
+        );
+      } else if (gruppeTyp === 'arbeitskoordination') {
+        mitarbeiter = mitarbeiter.filter(m => 
+          m.rolle === 'arbeitskoordination' &&
+          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
+        );
+      } else if (gruppeTyp === 'station') {
+        mitarbeiter = mitarbeiter.filter(m => {
+          const imHaus = m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'));
+          if (!imHaus) return false;
+          if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return false;
+          return m.station === station;
+        });
+      }
+      
+      // Nach Suchbegriff filtern
       if (suchbegriff) {
-        gefiltert = alleMitarbeiter.filter(m => {
+        mitarbeiter = mitarbeiter.filter(m => {
           const vollName = `${m.vorname} ${m.nachname}`.toLowerCase();
           const rolleText = getRolleText(m.rolle).toLowerCase();
           const hausText = m.jvas && m.jvas.length > 0 ? (HAUS_CONFIG[m.jvas[0]]?.name || '').toLowerCase() : '';
@@ -3446,13 +3551,13 @@ ${t('action.archive')}
       }
       
       // Sortieren nach Name
-      gefiltert.sort((a, b) => {
+      mitarbeiter.sort((a, b) => {
         const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
         const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
         return nameA.localeCompare(nameB, 'de');
       });
       
-      renderWeiterleitenMitarbeiter(gefiltert);
+      renderWeiterleitenMitarbeiter(mitarbeiter);
     }
     
     // Mitarbeiter für Weiterleitung auswählen
@@ -3543,7 +3648,9 @@ ${t('action.archive')}
           // Gruppennamen generieren
           const hausName = HAUS_CONFIG[gruppeHaus]?.name || gruppeHaus;
           let gruppeName;
-          if (gruppeTyp === 'hausleitung') {
+          if (gruppeTyp === 'kammer') {
+            gruppeName = 'Kammer';
+          } else if (gruppeTyp === 'hausleitung') {
             gruppeName = `VAL ${hausName}`;
           } else if (gruppeTyp === 'zahlstelle') {
             gruppeName = `Zahlstelle ${hausName}`;
@@ -3998,6 +4105,28 @@ ${t('action.archive')}
         jva: currentSession.jva,
         station: currentSession.station
       });
+      
+      // KAMMER DEBUG: Alle offenen Gruppenaufgaben anzeigen
+      const alleAufgaben = aufgabenSystem.aufgaben;
+      const gruppenAufgaben = alleAufgaben.filter(a => a.zugewiesenAnTyp === 'gruppe' && a.status === 'offen');
+      const kammerAufgaben = gruppenAufgaben.filter(a => a.zugewiesenAnGruppe?.typ === 'kammer');
+      
+      // Detaillierte Debug-Ausgabe in Konsole
+      console.log('=== KAMMER DEBUG ===');
+      console.log('Alle Aufgaben gesamt:', alleAufgaben.length);
+      console.log('Offene Gruppenaufgaben:', gruppenAufgaben.length);
+      console.log('Davon Kammer-Aufgaben:', kammerAufgaben.length);
+      console.log('Aktuelle Rolle:', currentSession.rolle);
+      console.log('Ist Kammer:', currentSession.rolle === 'kammer');
+      
+      if (gruppenAufgaben.length > 0) {
+        console.log('Gruppenaufgaben Details:');
+        gruppenAufgaben.forEach(a => {
+          console.log('  -', a.id, '| Typ:', a.zugewiesenAnGruppe?.typ, '| Gruppe:', JSON.stringify(a.zugewiesenAnGruppe));
+        });
+      }
+      console.log('===================');
+      
       
       const offenList = document.getElementById('offenList');
       const bearbeitungList = document.getElementById('bearbeitungList');
