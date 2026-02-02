@@ -1369,24 +1369,39 @@
       let bearbeiterInfo = '';
       
       if (mode === 'offen') {
-        // Button-Text anpassen je nachdem ob es ein offener Antrag, Gruppenaufgaben oder wartende Übergabe sind
-        let buttonText = t('button.takeApplication');
-        if (hatWartendeUebergabe) {
-          buttonText = currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande';
-        } else if (hatGruppenaufgaben && antrag.status === 'in-bearbeitung') {
-          buttonText = currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche';
-        }
-        
-        actionsHtml = `
-          <div class="antrag-actions">
-            <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${antrag.id}', false, true)">
-              ${t('button.open')}
-            </button>
-            <button class="btn btn-primary btn-sm" onclick="nehmeAntrag('${antrag.id}')">
+        // VAL bekommt "Antrag übernehmen" mit Begründungspflicht (wie in Meine Anträge)
+        if (istHausleitung() && antrag.status !== 'offen') {
+          // Für Anträge die bereits in Bearbeitung sind: Übernahme mit Begründung
+          actionsHtml = `
+            <div class="antrag-actions">
+              <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${antrag.id}', false, true)">
+                ${t('button.open')}
+              </button>
+              <button class="btn btn-warning btn-sm" onclick="openHausleitungUebernahmeModal('${antrag.id}')">
+                Antrag übernehmen
+              </button>
+            </div>
+          `;
+        } else {
+          // Für andere Rollen oder offene Anträge: Standard-Verhalten
+          let buttonText = t('button.takeApplication');
+          if (hatWartendeUebergabe) {
+            buttonText = currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande';
+          } else if (hatGruppenaufgaben && antrag.status === 'in-bearbeitung') {
+            buttonText = currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche';
+          }
+          
+          actionsHtml = `
+            <div class="antrag-actions">
+              <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${antrag.id}', false, true)">
+                ${t('button.open')}
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="nehmeAntrag('${antrag.id}')">
 ${buttonText}
-            </button>
-          </div>
-        `;
+              </button>
+            </div>
+          `;
+        }
       } else if (mode === 'bearbeitung') {
         // Bearbeiter-Info anzeigen (wichtig für Leitungen)
         if (antrag.bearbeiterName) {
