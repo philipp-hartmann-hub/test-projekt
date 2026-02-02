@@ -1779,6 +1779,49 @@ body.hamburg-start {
   background: var(--text-muted);
 }
 
+/* Kalender Toggle (ausklappbar wie Postfach) */
+.kalender-section.collapsed .kalender-collapsible-content {
+  display: none;
+}
+
+.kalender-section.expanded .kalender-collapsible-content {
+  display: block;
+}
+
+.kalender-toggle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.kalender-toggle-header:hover {
+  opacity: 0.9;
+}
+
+.kalender-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kalender-toggle-icon {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+
+.kalender-toggle-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.kalender-collapsible-content {
+  margin-top: 0.5rem;
+}
+
 .notification-card {
   display: flex;
   align-items: flex-start;

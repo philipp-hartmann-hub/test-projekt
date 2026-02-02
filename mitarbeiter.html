@@ -96,33 +96,40 @@
           </div>
         </section>
 
-        <!-- Kalender / Terminübersicht -->
-        <section class="section kalender-section" id="kalenderSection">
-          <div class="kalender-header-bar">
-            <h2>Terminuebersicht</h2>
-            <div class="kalender-toolbar">
-              <div class="kalender-view-buttons">
-                <button type="button" class="view-btn" id="viewTagBtn" onclick="setKalenderAnsicht('tag')">Tag</button>
-                <button type="button" class="view-btn" id="viewWocheBtn" onclick="setKalenderAnsicht('woche')">Woche</button>
-                <button type="button" class="view-btn active" id="viewMonatBtn" onclick="setKalenderAnsicht('monat')">Monat</button>
-              </div>
-              <div class="kalender-nav">
-                <button type="button" class="nav-btn" onclick="kalenderZurueck()" title="Zurück">◀</button>
-                <button type="button" class="nav-btn heute-btn" onclick="kalenderHeute()">Heute</button>
-                <span class="kalender-anzeige" id="kalenderAnzeige">Januar 2024</span>
-                <button type="button" class="nav-btn" onclick="kalenderVor()" title="Vor">▶</button>
-              </div>
-              <button type="button" class="btn btn-primary btn-sm" onclick="openTerminModal()">+ Neuer Termin</button>
+        <!-- Kalender / Terminübersicht (aufklappbar) -->
+        <section class="section kalender-section collapsed" id="kalenderSection">
+          <div class="kalender-toggle-header" onclick="toggleKalender()">
+            <div class="kalender-toggle-left">
+              <span class="kalender-toggle-icon" id="kalenderToggleIcon">▶</span>
+              <h2>Terminuebersicht</h2>
             </div>
           </div>
-          <div class="kalender-content">
-            <div class="kalender-main" id="kalenderMain">
-              <!-- Dynamisch gefüllt: Tag, Woche oder Monat -->
+          <div class="kalender-collapsible-content" id="kalenderCollapsibleContent">
+            <div class="kalender-header-bar">
+              <div class="kalender-toolbar">
+                <div class="kalender-view-buttons">
+                  <button type="button" class="view-btn" id="viewTagBtn" onclick="setKalenderAnsicht('tag')">Tag</button>
+                  <button type="button" class="view-btn" id="viewWocheBtn" onclick="setKalenderAnsicht('woche')">Woche</button>
+                  <button type="button" class="view-btn active" id="viewMonatBtn" onclick="setKalenderAnsicht('monat')">Monat</button>
+                </div>
+                <div class="kalender-nav">
+                  <button type="button" class="nav-btn" onclick="kalenderZurueck()" title="Zurück">◀</button>
+                  <button type="button" class="nav-btn heute-btn" onclick="kalenderHeute()">Heute</button>
+                  <span class="kalender-anzeige" id="kalenderAnzeige">Januar 2024</span>
+                  <button type="button" class="nav-btn" onclick="kalenderVor()" title="Vor">▶</button>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" onclick="openTerminModal()">+ Neuer Termin</button>
+              </div>
             </div>
-            <div class="termine-sidebar" id="termineSidebar">
-              <h4 id="termineSidebarTitel">Termine heute</h4>
-              <div id="termineSidebarListe">
-                <!-- Dynamisch gefüllt -->
+            <div class="kalender-content">
+              <div class="kalender-main" id="kalenderMain">
+                <!-- Dynamisch gefüllt: Tag, Woche oder Monat -->
+              </div>
+              <div class="termine-sidebar" id="termineSidebar">
+                <h4 id="termineSidebarTitel">Termine heute</h4>
+                <div id="termineSidebarListe">
+                  <!-- Dynamisch gefüllt -->
+                </div>
               </div>
             </div>
           </div>
@@ -712,7 +719,7 @@
       }
       
       // Kalender-Titel
-      const kalenderTitle = document.querySelector('.kalender-header-bar h2');
+      const kalenderTitle = document.querySelector('.kalender-toggle-header h2');
       if (kalenderTitle) {
         kalenderTitle.textContent = '' + t('calendar.title');
       }
@@ -1065,6 +1072,29 @@
         section.classList.remove('expanded');
         section.classList.add('collapsed');
         icon.textContent = '▶';
+      }
+    }
+    
+    // Kalender auf-/zuklappen
+    let kalenderExpanded = false;
+    
+    function toggleKalender() {
+      const section = document.getElementById('kalenderSection');
+      const icon = document.getElementById('kalenderToggleIcon');
+      const content = document.getElementById('kalenderCollapsibleContent');
+      
+      kalenderExpanded = !kalenderExpanded;
+      
+      if (kalenderExpanded) {
+        section.classList.remove('collapsed');
+        section.classList.add('expanded');
+        icon.textContent = '▼';
+        content.style.display = 'block';
+      } else {
+        section.classList.remove('expanded');
+        section.classList.add('collapsed');
+        icon.textContent = '▶';
+        content.style.display = 'none';
       }
     }
     
