@@ -3107,6 +3107,26 @@ class AntragSystem {
         return true;
       }
       
+      // 4. VAL sieht alle Anträge des Hauses in "Anträge und Aufgaben meiner Gruppe"
+      // (außer eigene Anträge und offene Anträge - die werden oben schon behandelt)
+      if (istHausleitung && a.status !== 'offen' && !a.veraktet) {
+        // Muss im selben Haus sein
+        if (!this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) return false;
+        
+        // Nicht anzeigen wenn VAL bereits der Bearbeiter ist
+        if (a.bearbeiterId === mitarbeiter.userId) return false;
+        
+        // Nicht anzeigen wenn VAL persönlichen Aufgabenbezug hat (erscheint dann in "Meine Anträge")
+        const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(a.id);
+        const hatPersoenlicheAufgabe = aufgabenZuAntrag.some(auf => auf.zugewiesenAnId === mitarbeiter.userId);
+        const hatAufgabeErstellt = aufgabenZuAntrag.some(auf => auf.erstelltVonId === mitarbeiter.userId);
+        const hatAmAntragGearbeitet = aktivitaetenSystem.istMitarbeiterBeteiligt(a.id, mitarbeiter.userId);
+        
+        if (hatPersoenlicheAufgabe || hatAufgabeErstellt || hatAmAntragGearbeitet) return false;
+        
+        return true;
+      }
+      
       return false;
     }).sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
   }
@@ -3187,9 +3207,17 @@ class AntragSystem {
       const hatAmAntragGearbeitet = aktivitaetenSystem.istMitarbeiterBeteiligt(a.id, mitarbeiter.userId);
       const hatAufgabenbezug = hatAufgabeErhalten || hatAufgabeErstellt || hatAmAntragGearbeitet;
       
-      // VAL sieht alle "in Bearbeitung" Anträge ihres Hauses
+      // VAL sieht in "Meine Anträge und Aufgaben" NUR Anträge, bei denen:
+      // 1. Sie der Hauptbearbeiter ist (hat Antrag übernommen)
+      // 2. Sie persönlich (nicht über Gruppe) eine Aufgabe erhalten hat
+      // 3. Sie am Antrag gearbeitet hat (z.B. Aufgabe erstellt)
+      // Alle anderen Anträge des Hauses erscheinen in "Anträge und Aufgaben meiner Gruppe"
       if (mitarbeiter.rolle === 'jva-leitung' || mitarbeiter.rolle === 'haus-leitung' || mitarbeiter.rolle === 'hausleitung') {
-        return this._matchesHaus(mitarbeiter.jvas, a.insasseJva);
+        // Muss im selben Haus sein
+        if (!this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) return false;
+        
+        // Nur wenn persönlicher Bezug besteht
+        return istBearbeiter || hatAufgabenbezug;
       }
       
       // Stationsleitung sieht alle "in Bearbeitung" Anträge ihrer Station
