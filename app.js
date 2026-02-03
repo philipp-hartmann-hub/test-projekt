@@ -3500,12 +3500,15 @@ class AntragSystem {
       antrag.kommentare.push(kommentar);
       this.saveAntraege();
       
-      // Aktivität protokollieren
+      // Aktivität protokollieren (inkl. Kommentartext für Bearbeitungsverlauf)
       aktivitaetenSystem.logAktivitaet({
         antragId: antragId,
         typ: 'kommentar',
         beschreibung: 'Kommentar hinzugefuegt',
-        details: { kommentarId: kommentar.id },
+        details: { 
+          kommentarId: kommentar.id,
+          kommentarText: kommentarText  // Kommentartext für Anzeige im Verlauf
+        },
         benutzerTyp: 'mitarbeiter',
         benutzerId: benutzerId,
         benutzerName: benutzerName

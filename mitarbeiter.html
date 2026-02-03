@@ -1812,12 +1812,30 @@ ${withdrawText}
       }
       
       // Verlauf/Aktivitäten zu diesem Antrag laden
-      const aktivitaeten = aktivitaetenSystem.getAktivitaetenZuAntrag(antragId);
+      let aktivitaeten = aktivitaetenSystem.getAktivitaetenZuAntrag(antragId);
+      
+      // Sortierung anwenden (Standard: neueste zuerst)
+      const verlaufSortierung = window.verlaufSortierung || 'neueste';
+      if (verlaufSortierung === 'neueste') {
+        aktivitaeten = aktivitaeten.sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
+      } else {
+        aktivitaeten = aktivitaeten.sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
+      }
+      
       let verlaufHtml = '';
       if (aktivitaeten.length > 0) {
+        const neuesteLabel = currentLanguage === 'en' ? 'Newest first' : currentLanguage === 'fr' ? 'Plus récent' : 'Neueste zuerst';
+        const aeltesteLabel = currentLanguage === 'en' ? 'Oldest first' : currentLanguage === 'fr' ? 'Plus ancien' : 'Aelteste zuerst';
+        
         verlaufHtml = `
           <div class="detail-section">
-            <h3>${t('history.title')}</h3>
+            <div class="verlauf-header">
+              <h3>${t('history.title')}</h3>
+              <select id="verlaufSortSelect" class="verlauf-sort-select" onchange="changeVerlaufSortierung('${antragId}')">
+                <option value="neueste" ${verlaufSortierung === 'neueste' ? 'selected' : ''}>${neuesteLabel}</option>
+                <option value="aelteste" ${verlaufSortierung === 'aelteste' ? 'selected' : ''}>${aeltesteLabel}</option>
+              </select>
+            </div>
             <div class="verlauf-liste">
               ${aktivitaeten.map(a => `
                 <div class="verlauf-item">
@@ -1843,6 +1861,11 @@ ${withdrawText}
                     ${a.details && a.details.antwort ? `
                       <div class="verlauf-details">
                         <em>${t('task.answer')}: ${getTranslatedUserText(a.details.antwort)}</em>
+                      </div>
+                    ` : ''}
+                    ${a.details && a.details.kommentarText ? `
+                      <div class="verlauf-details">
+                        <em>"${getTranslatedUserText(a.details.kommentarText)}"</em>
                       </div>
                     ` : ''}
                     ${a.details && a.details.erledigungsTyp === 'kenntnisnahme' && a.typ !== 'aufgabe-erledigt' ? `
@@ -2151,6 +2174,17 @@ ${t('action.archive')}
       document.getElementById('antragDetailView').style.display = 'block';
     }
     
+    // Sortierung des Bearbeitungsverlaufs ändern
+    function changeVerlaufSortierung(antragId) {
+      const select = document.getElementById('verlaufSortSelect');
+      window.verlaufSortierung = select.value;
+      // Detail-Ansicht neu rendern mit neuer Sortierung
+      openAntragDetail(antragId);
+    }
+    
+    // Initialisierung: Standard-Sortierung ist "neueste zuerst"
+    window.verlaufSortierung = 'neueste';
+    
     function closeAntragDetail() {
       document.getElementById('antragDetailView').style.display = 'none';
       document.getElementById('dashboardView').style.display = 'block';
@@ -2247,14 +2281,9 @@ ${t('action.archive')}
       antragSystem.abschliessenAntrag(antragId, status, begruendung, persoenlichEroeffnen, bescheidPdf, vollzugVorBekanntgabe);
       closeModal('entscheidenModal');
       
-      // Nach Entscheidung: Weiterleitung anbieten
-      // Nur wenn KEINE persönliche Eröffnung oder Vollzug vor Bekanntgabe
-      if (!persoenlichEroeffnen && !vollzugVorBekanntgabe) {
-        openWeiterleitenModal(antragId, 'entschieden');
-      } else {
-        // Bei Pers. Eröffnung oder Vollzug vor Bekanntgabe: Detailansicht öffnen
-        openAntragDetail(antragId);
-      }
+      // Nach Entscheidung: Weiterleitung immer anbieten (auch bei pers. Eröffnung/Vollzug)
+      // Die Phase Entscheidung ist abgeschlossen, unabhängig davon ob noch Bekanntgabe aussteht
+      openWeiterleitenModal(antragId, 'entschieden');
     }
     
     // Modal für Vollzugs-Bestätigung öffnen
@@ -3885,28 +3914,33 @@ ${t('action.archive')}
       // Prüfung - wenn genommen aber noch nicht geprüft
       if (antrag.status === 'in-bearbeitung' && !antrag.sachlichGeprueft) {
         status.pruefung = 'aktiv';
-      } else if (antrag.sachlichGeprueft || antrag.erledigt) {
+      } else if (antrag.sachlichGeprueft || antrag.entscheidungGetroffen || antrag.erledigt) {
         status.pruefung = 'erledigt';
       }
       
       // Entscheiden - wenn geprüft aber noch nicht entschieden
-      if (antrag.status === 'in-bearbeitung' && antrag.sachlichGeprueft && !antrag.erledigt) {
+      // entscheidungGetroffen wird gesetzt sobald eine Entscheidung getroffen wurde (auch bei pers. Eröffnung/Vollzug)
+      if (antrag.status === 'in-bearbeitung' && antrag.sachlichGeprueft && !antrag.entscheidungGetroffen && !antrag.erledigt) {
         status.entscheiden = 'aktiv';
-      } else if (antrag.erledigt) {
+      } else if (antrag.entscheidungGetroffen || antrag.erledigt) {
         status.entscheiden = 'erledigt';
       }
       
-      // Bekanntgabe - wenn entschieden, aber bei pers. Eröffnung noch nicht durchgeführt
-      if (antrag.erledigt && antrag.persoenlichEroeffnen && !antrag.persoenlichEroeffnet) {
+      // Bekanntgabe - wenn entschieden, aber noch auf Eröffnung/Vollzug gewartet wird
+      // wartetAufEroeffnung = persönliche Eröffnung gewählt
+      // wartetAufVollzug = Vollzug vor Bekanntgabe gewählt
+      const wartetAufBekanntgabe = antrag.wartetAufEroeffnung || antrag.wartetAufVollzug;
+      
+      if (antrag.entscheidungGetroffen && wartetAufBekanntgabe) {
         status.bekanntgabe = 'aktiv';
-      } else if (antrag.erledigt && (!antrag.persoenlichEroeffnen || antrag.persoenlichEroeffnet)) {
+      } else if (antrag.erledigt) {
         status.bekanntgabe = 'erledigt';
       }
       
       // Vollzug - wenn Bekanntgabe erfolgt, aber noch nicht vollzogen
       // Nur relevant für genehmigt/teilweise-genehmigt
       const istGenehmigt = antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt';
-      const bekanntgabeErfolgt = antrag.erledigt && (!antrag.persoenlichEroeffnen || antrag.persoenlichEroeffnet);
+      const bekanntgabeErfolgt = antrag.erledigt && !wartetAufBekanntgabe;
       
       if (istGenehmigt && bekanntgabeErfolgt && !antrag.vollzogen) {
         status.vollzug = 'aktiv';

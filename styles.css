@@ -2673,6 +2673,40 @@ body.hamburg-start {
    VERLAUF / AKTIVITÄTEN
    ============================================ */
 
+.verlauf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.verlauf-header h3 {
+  margin-bottom: 0 !important;
+  flex-shrink: 0;
+}
+
+.verlauf-sort-select {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  min-width: 130px;
+}
+
+.verlauf-sort-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.verlauf-sort-select:hover {
+  border-color: var(--primary-color);
+}
+
 .verlauf-liste {
   display: flex;
   flex-direction: column;
