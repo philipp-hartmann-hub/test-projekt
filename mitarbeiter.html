@@ -313,6 +313,52 @@
     </div>
   </div>
 
+  <!-- Modal: Dokumente für Insassen freigeben (vor Bekanntgabe) -->
+  <div class="modal-overlay" id="dokumenteFreigebenModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Dokumente fuer Insassen freigeben</h3>
+        <button class="modal-close" onclick="closeModal('dokumenteFreigebenModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="field-hint">Waehlen Sie aus, welche Dokumente zusaetzlich zum Bescheid an den Insassen uebermittelt werden sollen:</p>
+        
+        <div id="dokumenteFreigebenListe" class="dokumente-freigeben-liste">
+          <!-- Wird dynamisch gefüllt -->
+        </div>
+        
+        <input type="hidden" id="dokumenteFreigebenAntragId">
+        <input type="hidden" id="dokumenteFreigebenCallback">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="skipDokumenteFreigeben()">Keine Dokumente freigeben</button>
+        <button class="btn btn-primary" onclick="confirmDokumenteFreigeben()">Ausgewaehlte freigeben</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Einzelnes Dokument für Insassen freigeben (nach Upload) -->
+  <div class="modal-overlay" id="dokumentNachtraeglichFreigebenModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Dokument an Insassen uebermitteln?</h3>
+        <button class="modal-close" onclick="closeModal('dokumentNachtraeglichFreigebenModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Der Antrag wurde bereits an den Insassen bekanntgegeben.</p>
+        <p>Moechten Sie das hochgeladene Dokument "<span id="nachtraeglichDokumentName"></span>" auch fuer den Insassen freigeben?</p>
+        <p class="field-hint">Der Insasse wird ueber das neue Dokument benachrichtigt.</p>
+        
+        <input type="hidden" id="nachtraeglichDokumentAntragId">
+        <input type="hidden" id="nachtraeglichDokumentIndex">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('dokumentNachtraeglichFreigebenModal')">Nein, nur intern</button>
+        <button class="btn btn-primary" onclick="confirmNachtraeglichFreigeben()">Ja, an Insassen uebermitteln</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Aufgabe erstellen -->
   <div class="modal-overlay" id="aufgabeModal">
     <div class="modal modal-large">
@@ -991,6 +1037,29 @@
           
         case 'veraktet':
           return t('history.archived');
+          
+        case 'dokument-hochgeladen':
+          const dokName = details.dokumentName || '';
+          return currentLanguage === 'en' ? `Document uploaded: ${dokName}` 
+               : currentLanguage === 'fr' ? `Document téléchargé: ${dokName}`
+               : `Dokument hochgeladen: ${dokName}`;
+          
+        case 'dokument-geloescht':
+          const geloeschtName = details.dokumentName || '';
+          return currentLanguage === 'en' ? `Document deleted: ${geloeschtName}` 
+               : currentLanguage === 'fr' ? `Document supprimé: ${geloeschtName}`
+               : `Dokument geloescht: ${geloeschtName}`;
+          
+        case 'dokument-freigegeben':
+          const freigegebenName = details.dokumentName || '';
+          return currentLanguage === 'en' ? `Document shared with inmate: ${freigegebenName}` 
+               : currentLanguage === 'fr' ? `Document partagé avec le détenu: ${freigegebenName}`
+               : `Dokument fuer Insassen freigegeben: ${freigegebenName}`;
+          
+        case 'kommentar':
+          return currentLanguage === 'en' ? 'Note added' 
+               : currentLanguage === 'fr' ? 'Note ajoutée'
+               : 'Notiz hinzugefuegt';
           
         default:
           // Fallback: versuche Freitext zu übersetzen
@@ -2148,6 +2217,22 @@ ${t('action.archive')}
           
           <!-- Rechte Spalte: Verlauf und Kommentare -->
           <div class="detail-sidebar">
+            <!-- Dokumente-Bereich -->
+            <div class="detail-section dokumente-section">
+              <h3>${currentLanguage === 'en' ? 'Documents' : currentLanguage === 'fr' ? 'Documents' : 'Dokumente'}</h3>
+              ${!antrag.veraktet && hatAktuellenZugriff ? `
+                <div class="dokument-upload">
+                  <label class="btn btn-secondary btn-sm upload-btn">
+                    ${currentLanguage === 'en' ? '+ Upload PDF' : currentLanguage === 'fr' ? '+ Télécharger PDF' : '+ PDF hochladen'}
+                    <input type="file" id="antragDokumentUpload" accept=".pdf" multiple onchange="handleAntragDokumentUpload(this, '${antrag.id}')" style="display: none;">
+                  </label>
+                </div>
+              ` : ''}
+              <div class="dokument-liste" id="antragDokumentListe">
+                ${renderAntragDokumente(antrag.dokumente || [], antrag.id, !antrag.veraktet && hatAktuellenZugriff)}
+              </div>
+            </div>
+            
             <!-- Kommentar-Bereich -->
             <div class="detail-section kommentar-section">
               <h3>${currentLanguage === 'en' ? 'Notes' : currentLanguage === 'fr' ? 'Notes' : 'Notizen'}</h3>
@@ -2281,9 +2366,20 @@ ${t('action.archive')}
       antragSystem.abschliessenAntrag(antragId, status, begruendung, persoenlichEroeffnen, bescheidPdf, vollzugVorBekanntgabe);
       closeModal('entscheidenModal');
       
-      // Nach Entscheidung: Weiterleitung immer anbieten (auch bei pers. Eröffnung/Vollzug)
-      // Die Phase Entscheidung ist abgeschlossen, unabhängig davon ob noch Bekanntgabe aussteht
-      openWeiterleitenModal(antragId, 'entschieden');
+      // Prüfen ob persönliche Eröffnung oder Vollzug vor Bekanntgabe gewählt wurde
+      if (persoenlichEroeffnen || vollzugVorBekanntgabe) {
+        // Bei pers. Eröffnung/Vollzug: Keine sofortige Bekanntgabe an Insassen
+        // Dokumentenfreigabe erfolgt später bei Bestätigung
+        openWeiterleitenModal(antragId, 'entschieden');
+      } else {
+        // Direkte Bekanntgabe: Dokumentenfreigabe-Modal anzeigen
+        const antrag = antragSystem.getAntrag(antragId);
+        if (antrag?.dokumente && antrag.dokumente.length > 0) {
+          openDokumenteFreigebenModal(antragId, 'weiterleiten-entschieden');
+        } else {
+          openWeiterleitenModal(antragId, 'entschieden');
+        }
+      }
     }
     
     // Modal für Vollzugs-Bestätigung öffnen
@@ -2322,8 +2418,13 @@ ${t('action.archive')}
       antragSystem.bestaetigeVollzugVorBekanntgabe(antragId, vollzugKommentar, currentSession.userId, currentSession.name);
       closeModal('vollzugBestaetigenModal');
       
-      // Nach Bekanntgabe: Weiterleitung anbieten
-      openWeiterleitenModal(antragId, 'bekanntgegeben');
+      // Bekanntgabe erfolgt jetzt: Dokumentenfreigabe-Modal anzeigen
+      const antrag = antragSystem.getAntrag(antragId);
+      if (antrag?.dokumente && antrag.dokumente.length > 0) {
+        openDokumenteFreigebenModal(antragId, 'weiterleiten-bekanntgegeben');
+      } else {
+        openWeiterleitenModal(antragId, 'bekanntgegeben');
+      }
     }
     
     // Entscheidung revidieren (nur für Hausleitung)
@@ -2775,6 +2876,171 @@ ${t('action.archive')}
       document.getElementById('aufgabePersonId').value = '';
       document.getElementById('selectedPersonDisplay').style.display = 'none';
       filterMitarbeiterListe();
+    }
+    
+    // ============================================
+    // ANTRAGS-DOKUMENTE UPLOAD
+    // ============================================
+    
+    function handleAntragDokumentUpload(input, antragId) {
+      const antrag = antragSystem.getAntrag(antragId);
+      const files = input.files;
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file && file.type === 'application/pdf') {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const dokument = {
+              name: file.name,
+              data: e.target.result,
+              hochgeladenVon: currentSession.name,
+              hochgeladenVonId: currentSession.userId,
+              hochgeladenAm: new Date().toISOString(),
+              fuerInsasseFreigegeben: false // Standardmäßig nicht freigegeben
+            };
+            const neuesDokument = antragSystem.addDokument(antragId, dokument, currentSession.userId, currentSession.name);
+            
+            // Prüfen ob Bekanntgabe bereits erfolgt ist (Insasse wurde informiert)
+            const bekanntgabeErfolgt = antrag.erledigt && !antrag.wartetAufEroeffnung && !antrag.wartetAufVollzug;
+            
+            if (bekanntgabeErfolgt && neuesDokument) {
+              // Modal für nachträgliche Freigabe öffnen
+              const dokIndex = (antrag.dokumente || []).length - 1;
+              openNachtraeglichFreigebenModal(antragId, dokIndex, file.name);
+            } else {
+              openAntragDetail(antragId); // Ansicht aktualisieren
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+      input.value = ''; // Reset für weitere Uploads
+    }
+    
+    // Modal für nachträgliche Dokumentenfreigabe öffnen
+    function openNachtraeglichFreigebenModal(antragId, dokumentIndex, dokumentName) {
+      document.getElementById('nachtraeglichDokumentAntragId').value = antragId;
+      document.getElementById('nachtraeglichDokumentIndex').value = dokumentIndex;
+      document.getElementById('nachtraeglichDokumentName').textContent = dokumentName;
+      openModal('dokumentNachtraeglichFreigebenModal');
+    }
+    
+    // Nachträgliche Freigabe bestätigen
+    function confirmNachtraeglichFreigeben() {
+      const antragId = document.getElementById('nachtraeglichDokumentAntragId').value;
+      const dokumentIndex = parseInt(document.getElementById('nachtraeglichDokumentIndex').value);
+      
+      // Dokument für Insasse freigeben und benachrichtigen
+      antragSystem.gebeDokumentFuerInsasseFrei(antragId, dokumentIndex, currentSession.userId, currentSession.name, true);
+      
+      closeModal('dokumentNachtraeglichFreigebenModal');
+      openAntragDetail(antragId);
+    }
+    
+    // Modal für Dokumentenfreigabe vor Bekanntgabe öffnen
+    function openDokumenteFreigebenModal(antragId, callback) {
+      const antrag = antragSystem.getAntrag(antragId);
+      const dokumente = antrag?.dokumente || [];
+      
+      // Liste der verfügbaren Dokumente rendern
+      const container = document.getElementById('dokumenteFreigebenListe');
+      
+      if (dokumente.length === 0) {
+        container.innerHTML = `<p class="empty-hint">${currentLanguage === 'en' ? 'No documents uploaded.' : currentLanguage === 'fr' ? 'Aucun document téléchargé.' : 'Keine Dokumente hochgeladen.'}</p>`;
+      } else {
+        container.innerHTML = dokumente.map((dok, index) => `
+          <div class="dokument-freigabe-item">
+            <label class="checkbox-option">
+              <input type="checkbox" name="dokumentFreigabe" value="${index}" data-dok-index="${index}">
+              <span class="checkbox-label">
+                <span class="dokument-icon">PDF</span>
+                ${dok.name}
+                <span class="dokument-meta-inline">(${dok.hochgeladenVon}, ${formatDate(dok.hochgeladenAm)})</span>
+              </span>
+            </label>
+          </div>
+        `).join('');
+      }
+      
+      document.getElementById('dokumenteFreigebenAntragId').value = antragId;
+      document.getElementById('dokumenteFreigebenCallback').value = callback || '';
+      openModal('dokumenteFreigebenModal');
+    }
+    
+    // Dokumentenfreigabe bestätigen
+    function confirmDokumenteFreigeben() {
+      const antragId = document.getElementById('dokumenteFreigebenAntragId').value;
+      const callback = document.getElementById('dokumenteFreigebenCallback').value;
+      
+      // Ausgewählte Dokumente ermitteln
+      const checkboxes = document.querySelectorAll('input[name="dokumentFreigabe"]:checked');
+      const selectedIndices = Array.from(checkboxes).map(cb => parseInt(cb.value));
+      
+      // Dokumente freigeben
+      selectedIndices.forEach(index => {
+        antragSystem.gebeDokumentFuerInsasseFrei(antragId, index, currentSession.userId, currentSession.name, false);
+      });
+      
+      closeModal('dokumenteFreigebenModal');
+      
+      // Callback ausführen (Weiterleitung nach Bekanntgabe)
+      if (callback === 'weiterleiten-entschieden') {
+        openWeiterleitenModal(antragId, 'entschieden');
+      } else if (callback === 'weiterleiten-bekanntgegeben') {
+        openWeiterleitenModal(antragId, 'bekanntgegeben');
+      } else {
+        openAntragDetail(antragId);
+      }
+    }
+    
+    // Keine Dokumente freigeben - direkt weiter
+    function skipDokumenteFreigeben() {
+      const antragId = document.getElementById('dokumenteFreigebenAntragId').value;
+      const callback = document.getElementById('dokumenteFreigebenCallback').value;
+      
+      closeModal('dokumenteFreigebenModal');
+      
+      // Callback ausführen
+      if (callback === 'weiterleiten-entschieden') {
+        openWeiterleitenModal(antragId, 'entschieden');
+      } else if (callback === 'weiterleiten-bekanntgegeben') {
+        openWeiterleitenModal(antragId, 'bekanntgegeben');
+      } else {
+        openAntragDetail(antragId);
+      }
+    }
+    
+    function renderAntragDokumente(dokumente, antragId, kannLoeschen) {
+      if (!dokumente || dokumente.length === 0) {
+        const emptyText = currentLanguage === 'en' ? 'No documents yet.' 
+                        : currentLanguage === 'fr' ? 'Pas encore de documents.' 
+                        : 'Noch keine Dokumente.';
+        return `<p class="empty-hint">${emptyText}</p>`;
+      }
+      
+      return dokumente.map((dok, index) => `
+        <div class="dokument-item ${dok.fuerInsasseFreigegeben ? 'freigegeben' : ''}">
+          <div class="dokument-info">
+            <a href="${dok.data}" download="${dok.name}" class="dokument-link" title="${currentLanguage === 'en' ? 'Download' : currentLanguage === 'fr' ? 'Télécharger' : 'Herunterladen'}">
+              <span class="dokument-icon">PDF</span>
+              <span class="dokument-name">${dok.name}</span>
+              ${dok.fuerInsasseFreigegeben ? `<span class="freigabe-badge">${currentLanguage === 'en' ? 'Shared' : currentLanguage === 'fr' ? 'Partagé' : 'Freigegeben'}</span>` : ''}
+            </a>
+            <div class="dokument-meta">
+              ${dok.hochgeladenVon} - ${formatDate(dok.hochgeladenAm)}
+            </div>
+          </div>
+          ${kannLoeschen ? `
+            <button type="button" class="btn-remove-dok" onclick="removeAntragDokument('${antragId}', ${index})" title="${currentLanguage === 'en' ? 'Delete' : currentLanguage === 'fr' ? 'Supprimer' : 'Loeschen'}">&times;</button>
+          ` : ''}
+        </div>
+      `).join('');
+    }
+    
+    function removeAntragDokument(antragId, index) {
+      antragSystem.removeDokument(antragId, index, currentSession.userId, currentSession.name);
+      openAntragDetail(antragId); // Ansicht aktualisieren
     }
     
     // PDF-Upload-Funktionen für Aufgaben (multiple PDFs)
@@ -4120,7 +4386,12 @@ ${t('action.archive')}
         
         // Nach Bekanntgabe: Weiterleitung anbieten (nur wenn kein Vollzug mehr aussteht)
         if (!antrag.wartetAufVollzug) {
-          openWeiterleitenModal(antragId, 'bekanntgegeben');
+          // Bekanntgabe erfolgt jetzt: Dokumentenfreigabe-Modal anzeigen
+          if (antrag.dokumente && antrag.dokumente.length > 0) {
+            openDokumenteFreigebenModal(antragId, 'weiterleiten-bekanntgegeben');
+          } else {
+            openWeiterleitenModal(antragId, 'bekanntgegeben');
+          }
         } else {
           // Noch Vollzug ausstehend - Detailansicht aktualisieren
           openAntragDetail(antragId);

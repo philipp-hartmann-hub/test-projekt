@@ -963,6 +963,24 @@
             </div>
           `;
         }
+        
+        // Freigegebene Dokumente anzeigen
+        const freigegebeneDokumente = antragSystem.getFreigegebeneDokumente(antrag.id);
+        if (freigegebeneDokumente && freigegebeneDokumente.length > 0) {
+          actionsHtml += `
+            <div class="freigegebene-dokumente">
+              <strong>Weitere Dokumente:</strong>
+              <div class="dokumente-download-liste">
+                ${freigegebeneDokumente.map(dok => `
+                  <a href="${dok.data}" download="${dok.name}" class="dokument-download-link">
+                    <span class="dokument-icon-small">PDF</span>
+                    ${dok.name}
+                  </a>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
       }
       
       return `

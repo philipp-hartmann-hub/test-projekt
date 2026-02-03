@@ -2212,31 +2212,22 @@ class AufgabenSystem {
     });
   }
   
-  // Schließt offene Gruppenaufgaben für einen Antrag bei Phasenübergang
-  // Wird aufgerufen bei: Entscheidung, Vollzug, Veraktung
-  // AUSNAHME: Kammer, Zahlstelle, Arbeitskoordination - diese bleiben offen
+  // Schließt ALLE offene Gruppenaufgaben für einen Antrag bei VERAKTUNG
+  // Wird NUR bei Veraktung aufgerufen - bis dahin können Aufgaben jederzeit zugewiesen werden
   schliesseAlleGruppenAufgabenFuerAntrag(antragId) {
     const gruppenAufgaben = this.getAlleOffenenGruppenAufgabenFuerAntrag(antragId);
-    // Gruppen die auch nach Entscheidung Aufgaben bekommen können
-    const nachEntscheidungGruppen = ['kammer', 'zahlstelle', 'arbeitskoordination'];
     
     let geschlossen = 0;
     if (gruppenAufgaben.length > 0) {
       gruppenAufgaben.forEach(aufgabe => {
-        // Spezielle Gruppen nicht schließen
-        const gruppeTyp = aufgabe.zugewiesenAnGruppe?.typ;
-        if (nachEntscheidungGruppen.includes(gruppeTyp)) {
-          console.log(`[Phasenwechsel] Aufgabe für ${gruppeTyp} bleibt offen`);
-          return;
-        }
         aufgabe.status = 'erledigt';
         aufgabe.erledigtAm = new Date().toISOString();
-        aufgabe.erledigtDurchPhasenwechsel = true;
+        aufgabe.erledigtDurchVeraktung = true;
         geschlossen++;
       });
       if (geschlossen > 0) {
         this.saveAufgaben();
-        console.log(`[Phasenwechsel] ${geschlossen} Gruppenaufgaben für Antrag ${antragId} geschlossen`);
+        console.log(`[Veraktung] ${geschlossen} Gruppenaufgaben für Antrag ${antragId} geschlossen`);
       }
     }
     return geschlossen;
@@ -2767,11 +2758,9 @@ class AntragSystem {
       const bearbeiterId = antrag.bearbeiterId;
       const bearbeiterName = antrag.bearbeiterName;
       
-      // PHASENÜBERGANG: Alle offenen Gruppenaufgaben schließen
-      // Ein Antrag in Phase "Entscheiden" kann nicht mehr in "Prüfung" zurück
-      aufgabenSystem.schliesseAlleGruppenAufgabenFuerAntrag(id);
-      
-      // Gruppenzuweisung löschen (Antrag ist nicht mehr "zu nehmen")
+      // Gruppenzuweisung für "Antrag nehmen" löschen (Antrag ist nicht mehr "zu nehmen")
+      // HINWEIS: Gruppenaufgaben werden NICHT automatisch geschlossen
+      // Aufgaben können jederzeit bis zur Veraktung zugewiesen werden
       antrag.zugewiesenAnGruppe = null;
       antrag.zugewiesenAnGruppeName = null;
       antrag.hauptbearbeitungWartetAufUebernahme = false;
@@ -2854,16 +2843,18 @@ class AntragSystem {
       // Benachrichtigung für den Insassen erstellen
       const antragsTyp = antrag.type === 'teilhabegeld' ? 'Teilhabegeld' : 'Eigentum in der Kammer';
       let title, message;
+      // Begründung als Text extrahieren (kann Objekt oder String sein)
+      const begruendungText = begruendung ? (typeof begruendung === 'object' ? getTranslatedUserText(begruendung) : begruendung) : '';
       
       if (status === 'genehmigt') {
         title = 'Antrag genehmigt';
         message = `Ihr Antrag "${antragsTyp}" wurde genehmigt.`;
       } else if (status === 'abgelehnt') {
         title = 'Antrag abgelehnt';
-        message = `Ihr Antrag "${antragsTyp}" wurde leider abgelehnt.${begruendung ? ' Begründung: ' + begruendung : ''}`;
+        message = `Ihr Antrag "${antragsTyp}" wurde leider abgelehnt.${begruendungText ? ' Begruendung: ' + begruendungText : ''}`;
       } else if (status === 'teilweise-genehmigt') {
         title = 'Antrag teilweise genehmigt';
-        message = `Ihr Antrag "${antragsTyp}" wurde teilweise genehmigt.${begruendung ? ' Hinweis: ' + begruendung : ''}`;
+        message = `Ihr Antrag "${antragsTyp}" wurde teilweise genehmigt.${begruendungText ? ' Hinweis: ' + begruendungText : ''}`;
       }
       
       if (title && antrag.insasseId) {
@@ -3528,6 +3519,105 @@ class AntragSystem {
     return [];
   }
 
+  // Dokument zu einem Antrag hinzufügen
+  addDokument(antragId, dokument, benutzerId, benutzerName) {
+    const antrag = this.antraege.find(a => a.id === antragId);
+    if (antrag) {
+      if (!antrag.dokumente) {
+        antrag.dokumente = [];
+      }
+      
+      dokument.id = 'DOK-' + Date.now().toString(36).toUpperCase();
+      antrag.dokumente.push(dokument);
+      this.saveAntraege();
+      
+      // Aktivität protokollieren
+      aktivitaetenSystem.logAktivitaet({
+        antragId: antragId,
+        typ: 'dokument-hochgeladen',
+        beschreibung: 'Dokument hochgeladen: ' + dokument.name,
+        details: { dokumentId: dokument.id, dokumentName: dokument.name },
+        benutzerTyp: 'mitarbeiter',
+        benutzerId: benutzerId,
+        benutzerName: benutzerName
+      });
+      
+      return dokument;
+    }
+    return null;
+  }
+
+  // Dokument von einem Antrag entfernen
+  removeDokument(antragId, dokumentIndex, benutzerId, benutzerName) {
+    const antrag = this.antraege.find(a => a.id === antragId);
+    if (antrag && antrag.dokumente && antrag.dokumente[dokumentIndex]) {
+      const dokument = antrag.dokumente[dokumentIndex];
+      antrag.dokumente.splice(dokumentIndex, 1);
+      this.saveAntraege();
+      
+      // Aktivität protokollieren
+      aktivitaetenSystem.logAktivitaet({
+        antragId: antragId,
+        typ: 'dokument-geloescht',
+        beschreibung: 'Dokument geloescht: ' + dokument.name,
+        details: { dokumentName: dokument.name },
+        benutzerTyp: 'mitarbeiter',
+        benutzerId: benutzerId,
+        benutzerName: benutzerName
+      });
+      
+      return true;
+    }
+    return false;
+  }
+
+  // Dokument für Insassen freigeben
+  gebeDokumentFuerInsasseFrei(antragId, dokumentIndex, benutzerId, benutzerName, mitBenachrichtigung = false) {
+    const antrag = this.antraege.find(a => a.id === antragId);
+    if (antrag && antrag.dokumente && antrag.dokumente[dokumentIndex]) {
+      const dokument = antrag.dokumente[dokumentIndex];
+      dokument.fuerInsasseFreigegeben = true;
+      dokument.freigegebenVon = benutzerName;
+      dokument.freigegebenVonId = benutzerId;
+      dokument.freigegebenAm = new Date().toISOString();
+      this.saveAntraege();
+      
+      // Aktivität protokollieren
+      aktivitaetenSystem.logAktivitaet({
+        antragId: antragId,
+        typ: 'dokument-freigegeben',
+        beschreibung: 'Dokument fuer Insassen freigegeben: ' + dokument.name,
+        details: { dokumentName: dokument.name, dokumentId: dokument.id },
+        benutzerTyp: 'mitarbeiter',
+        benutzerId: benutzerId,
+        benutzerName: benutzerName
+      });
+      
+      // Benachrichtigung an Insassen senden (bei nachträglicher Freigabe)
+      if (mitBenachrichtigung && antrag.insasseId) {
+        notificationSystem.createNotification(
+          antrag.insasseId,
+          'dokument',
+          'Neues Dokument verfuegbar',
+          `Ein neues Dokument "${dokument.name}" wurde zu Ihrem Antrag hinzugefuegt.`,
+          antragId
+        );
+      }
+      
+      return dokument;
+    }
+    return null;
+  }
+
+  // Alle für Insassen freigegebenen Dokumente eines Antrags abrufen
+  getFreigegebeneDokumente(antragId) {
+    const antrag = this.antraege.find(a => a.id === antragId);
+    if (antrag && antrag.dokumente) {
+      return antrag.dokumente.filter(d => d.fuerInsasseFreigegeben === true);
+    }
+    return [];
+  }
+
   // Antrag an anderen Mitarbeiter weiterleiten
   weiterleitenAntrag(antragId, neuBearbeiterId, neuBearbeiterName, altBearbeiterId, altBearbeiterName, notiz = '') {
     const antrag = this.antraege.find(a => a.id === antragId);
@@ -3664,58 +3754,52 @@ class AntragSystem {
 // Globale Instanz
 const antragSystem = new AntragSystem();
 
-// REPARATUR: Öffne fälschlicherweise geschlossene Aufgaben für spezielle Gruppen
-// Kammer, Zahlstelle, Arbeitskoordination können auch nach Entscheidung Aufgaben bekommen
-(function repariereSpezielleGruppenAufgaben() {
-  const nachEntscheidungGruppen = ['kammer', 'zahlstelle', 'arbeitskoordination'];
+// REPARATUR: Öffne fälschlicherweise geschlossene Gruppenaufgaben
+// Aufgaben für NICHT veraktete Anträge sollen offen bleiben
+// Dies repariert Aufgaben die durch alte Migration/Phasenwechsel-Logik geschlossen wurden
+(function repariereGruppenAufgaben() {
   let geoeffnet = 0;
   
   aufgabenSystem.aufgaben.forEach(aufgabe => {
-    const gruppeTyp = aufgabe.zugewiesenAnGruppe?.typ;
-    // Für spezielle Gruppen die durch Migration oder Phasenwechsel geschlossen wurden
-    if (nachEntscheidungGruppen.includes(gruppeTyp) && 
+    // Nur Gruppenaufgaben die durch automatische Prozesse geschlossen wurden
+    if (aufgabe.zugewiesenAnTyp === 'gruppe' && 
         aufgabe.status === 'erledigt' && 
         (aufgabe.erledigtDurchMigration === true || aufgabe.erledigtDurchPhasenwechsel === true)) {
-      aufgabe.status = 'offen';
-      aufgabe.erledigtAm = null;
-      aufgabe.erledigtDurchMigration = null;
-      aufgabe.erledigtDurchPhasenwechsel = null;
-      geoeffnet++;
+      
+      // Prüfen ob der Antrag wirklich veraktet ist
+      const antrag = antragSystem.getAntrag(aufgabe.antragId);
+      if (antrag && !antrag.veraktet) {
+        // Antrag ist nicht veraktet - Aufgabe wieder öffnen
+        aufgabe.status = 'offen';
+        aufgabe.erledigtAm = null;
+        aufgabe.erledigtDurchMigration = null;
+        aufgabe.erledigtDurchPhasenwechsel = null;
+        geoeffnet++;
+      }
     }
   });
   
   if (geoeffnet > 0) {
     aufgabenSystem.saveAufgaben();
-    console.log(`[Reparatur] ${geoeffnet} Aufgaben für spezielle Gruppen wieder geöffnet`);
+    console.log(`[Reparatur] ${geoeffnet} Gruppenaufgaben für nicht-veraktete Anträge wieder geöffnet`);
   }
 })();
 
 // MIGRATION: Bereinige inkonsistente Gruppenaufgaben
-// Schließt Gruppenaufgaben für Anträge die bereits entschieden/veraktet wurden
-// AUSNAHME: Kammer, Zahlstelle, Arbeitskoordination - diese bekommen Aufgaben NACH Entscheidung
+// Schließt Gruppenaufgaben NUR für Anträge die bereits VERAKTET wurden
+// Aufgaben können jederzeit bis zur Veraktung zugewiesen werden
 (function bereingeInkonsistenteAufgaben() {
   let geschlossen = 0;
   const offeneGruppenaufgaben = aufgabenSystem.aufgaben.filter(a => 
     a.zugewiesenAnTyp === 'gruppe' && a.status === 'offen'
   );
   
-  // Gruppen die auch nach Entscheidung Aufgaben bekommen können
-  const nachEntscheidungGruppen = ['kammer', 'zahlstelle', 'arbeitskoordination'];
-  
   offeneGruppenaufgaben.forEach(aufgabe => {
-    // Spezielle Gruppen nicht automatisch schließen
-    const gruppeTyp = aufgabe.zugewiesenAnGruppe?.typ;
-    if (nachEntscheidungGruppen.includes(gruppeTyp)) {
-      return; // Diese Aufgabe nicht schließen
-    }
-    
     const antrag = antragSystem.getAntrag(aufgabe.antragId);
     if (antrag) {
-      // Nur für normale Gruppen: Anträge in Phase 3+ sollten keine offenen Aufgaben haben
-      const istEntschieden = ['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(antrag.status);
-      const istVeraktet = antrag.veraktet;
-      
-      if (istEntschieden || istVeraktet) {
+      // NUR veraktete Anträge: Aufgaben werden automatisch geschlossen
+      // Bis zur Veraktung können jederzeit Aufgaben an alle Gruppen zugewiesen werden
+      if (antrag.veraktet) {
         aufgabe.status = 'erledigt';
         aufgabe.erledigtAm = new Date().toISOString();
         aufgabe.erledigtDurchMigration = true;
@@ -3726,7 +3810,7 @@ const antragSystem = new AntragSystem();
   
   if (geschlossen > 0) {
     aufgabenSystem.saveAufgaben();
-    console.log(`[Migration] ${geschlossen} inkonsistente Gruppenaufgaben bereinigt`);
+    console.log(`[Migration] ${geschlossen} Gruppenaufgaben für veraktete Anträge bereinigt`);
   }
 })();
 

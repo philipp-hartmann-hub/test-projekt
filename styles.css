@@ -3022,6 +3022,187 @@ body.hamburg-start {
   font-style: italic;
 }
 
+/* Dokumente-Bereich */
+.dokumente-section {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.dokument-upload {
+  margin-bottom: 1rem;
+}
+
+.dokument-upload .upload-btn {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.dokument-liste {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.dokument-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.5rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.5rem;
+}
+
+.dokument-item:last-child {
+  margin-bottom: 0;
+}
+
+.dokument-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dokument-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--hamburg-blau);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.dokument-link:hover {
+  text-decoration: underline;
+}
+
+.dokument-icon {
+  background: var(--hamburg-rot);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: bold;
+  padding: 0.15rem 0.3rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.dokument-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dokument-meta {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 0.25rem;
+  padding-left: 2rem;
+}
+
+.btn-remove-dok {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.btn-remove-dok:hover {
+  color: var(--hamburg-rot);
+}
+
+/* Freigabe-Badge für freigegebene Dokumente */
+.freigabe-badge {
+  background: var(--success-color, #28a745);
+  color: white;
+  font-size: 0.65rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  margin-left: 0.5rem;
+}
+
+.dokument-item.freigegeben {
+  border-left: 3px solid var(--success-color, #28a745);
+}
+
+/* Dokumenten-Freigabe Modal Liste */
+.dokumente-freigeben-liste {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.dokument-freigabe-item {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.5rem;
+}
+
+.dokument-freigabe-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.dokument-freigabe-item .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dokument-meta-inline {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-left: 0.5rem;
+}
+
+/* Freigegebene Dokumente im Insassen-Portal */
+.freigegebene-dokumente {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.freigegebene-dokumente strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.dokumente-download-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dokument-download-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--hamburg-blau);
+  text-decoration: none;
+  font-size: 0.85rem;
+  padding: 0.25rem 0;
+}
+
+.dokument-download-link:hover {
+  text-decoration: underline;
+}
+
+.dokument-icon-small {
+  background: var(--hamburg-rot);
+  color: white;
+  font-size: 0.55rem;
+  font-weight: bold;
+  padding: 0.1rem 0.25rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
 /* Kommentar-Bereich */
 .kommentar-section {
   background: var(--bg-card);
