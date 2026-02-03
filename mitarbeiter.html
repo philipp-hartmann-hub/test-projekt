@@ -1924,7 +1924,12 @@ ${withdrawText}
                     </div>
                     ${a.details && a.details.begruendung ? `
                       <div class="verlauf-details">
-                        <em>${t('decision.reason')}: ${getTranslatedUserText(a.details.begruendung)}</em>
+                        <em>${t('decision.reason')}: "${getTranslatedUserText(a.details.begruendung)}"</em>
+                      </div>
+                    ` : ''}
+                    ${a.details && a.details.kommentar && a.typ === 'sachlich-geprueft' ? `
+                      <div class="verlauf-details">
+                        <em>${currentLanguage === 'en' ? 'Review comment' : currentLanguage === 'fr' ? 'Commentaire de vérification' : 'Pruefungskommentar'}: "${getTranslatedUserText(a.details.kommentar)}"</em>
                       </div>
                     ` : ''}
                     ${a.details && a.details.antwort ? `
