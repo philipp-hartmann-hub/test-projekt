@@ -3262,8 +3262,84 @@ body.hamburg-start {
   border-left: 3px solid var(--hamburg-blau);
 }
 
+.kommentar-item.kommentar-privat {
+  border-left-color: #6c757d;
+  background: #f8f9fa;
+}
+
 .kommentar-item:last-child {
   margin-bottom: 0;
+}
+
+/* Notiz-Badges */
+.notiz-badge {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  margin-left: 0.5rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.notiz-badge.notiz-privat {
+  background: #6c757d;
+  color: white;
+}
+
+.notiz-badge.notiz-akte {
+  background: var(--hamburg-blau);
+  color: white;
+}
+
+/* Notiz-Typ-Auswahl Modal */
+.notiz-typ-auswahl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.notiz-typ-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.notiz-typ-option:hover {
+  border-color: var(--hamburg-blau);
+  background: var(--bg-secondary);
+}
+
+.notiz-typ-option input[type="radio"] {
+  margin-top: 0.25rem;
+}
+
+.notiz-typ-option input[type="radio"]:checked ~ .notiz-typ-content {
+  color: var(--hamburg-blau);
+}
+
+.notiz-typ-option:has(input:checked) {
+  border-color: var(--hamburg-blau);
+  background: rgba(0, 75, 147, 0.05);
+}
+
+.notiz-typ-content {
+  flex: 1;
+}
+
+.notiz-typ-content strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.notiz-typ-hint {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  margin: 0;
 }
 
 .kommentar-header {

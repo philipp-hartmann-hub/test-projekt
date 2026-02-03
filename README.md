@@ -292,6 +292,20 @@ Die Anwendung enthält vordefinierte Testbenutzer, die über das Admin-Portal ve
 - **Notizen/Kommentare** mit Inhalt im Verlauf
 - **Sortierung**: Neueste/Älteste zuerst
 
+### Notizensystem
+
+Drei Arten von Notizen mit unterschiedlicher Sichtbarkeit:
+
+| Typ | Sichtbarkeit | Bearbeitungsverlauf | In Veraktungs-PDF |
+|-----|--------------|---------------------|-------------------|
+| **Notiz für mich** | Nur Ersteller | Nein | Nein |
+| **Notiz für alle** | Alle Mitarbeiter | Ja | Nein |
+| **Notiz für Akte** | Alle Mitarbeiter | Ja | Ja |
+
+- Bei jeder Notiz wird vor dem Speichern der Typ abgefragt
+- Private Notizen sind mit grauem Badge "Privat" markiert
+- Akte-Notizen sind mit blauem Badge "Für Akte" markiert
+
 ### Mehrsprachigkeit
 
 - UI in Deutsch, Englisch, Französisch

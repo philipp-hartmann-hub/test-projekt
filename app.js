@@ -3473,7 +3473,8 @@ class AntragSystem {
   }
 
   // Kommentar zu einem Antrag hinzufügen
-  addKommentar(antragId, kommentarText, benutzerId, benutzerName) {
+  // typ: 'privat' (nur Ersteller), 'alle' (alle Mitarbeiter), 'akte' (alle + in Veraktungs-PDF)
+  addKommentar(antragId, kommentarText, benutzerId, benutzerName, typ = 'alle') {
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag) {
       if (!antrag.kommentare) {
@@ -3485,29 +3486,42 @@ class AntragSystem {
         text: kommentarText,
         benutzerId: benutzerId,
         benutzerName: benutzerName,
+        typ: typ, // 'privat', 'alle', 'akte'
         erstelltAm: new Date().toISOString()
       };
       
       antrag.kommentare.push(kommentar);
       this.saveAntraege();
       
-      // Aktivität protokollieren (inkl. Kommentartext für Bearbeitungsverlauf)
-      aktivitaetenSystem.logAktivitaet({
-        antragId: antragId,
-        typ: 'kommentar',
-        beschreibung: 'Kommentar hinzugefuegt',
-        details: { 
-          kommentarId: kommentar.id,
-          kommentarText: kommentarText  // Kommentartext für Anzeige im Verlauf
-        },
-        benutzerTyp: 'mitarbeiter',
-        benutzerId: benutzerId,
-        benutzerName: benutzerName
-      });
+      // Aktivität nur protokollieren wenn NICHT privat (nur bei 'alle' und 'akte')
+      if (typ !== 'privat') {
+        aktivitaetenSystem.logAktivitaet({
+          antragId: antragId,
+          typ: 'kommentar',
+          beschreibung: typ === 'akte' ? 'Notiz fuer Akte hinzugefuegt' : 'Notiz hinzugefuegt',
+          details: { 
+            kommentarId: kommentar.id,
+            kommentarText: kommentarText,  // Kommentartext für Anzeige im Verlauf
+            kommentarTyp: typ
+          },
+          benutzerTyp: 'mitarbeiter',
+          benutzerId: benutzerId,
+          benutzerName: benutzerName
+        });
+      }
       
       return kommentar;
     }
     return null;
+  }
+  
+  // Alle Akte-Notizen eines Antrags abrufen (für Veraktungs-PDF)
+  getAkteNotizen(antragId) {
+    const antrag = this.antraege.find(a => a.id === antragId);
+    if (antrag && antrag.kommentare) {
+      return antrag.kommentare.filter(k => k.typ === 'akte');
+    }
+    return [];
   }
 
   // Alle Kommentare eines Antrags abrufen

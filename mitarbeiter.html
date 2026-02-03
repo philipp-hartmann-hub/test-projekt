@@ -359,6 +359,47 @@
     </div>
   </div>
 
+  <!-- Modal: Notiz-Typ auswählen -->
+  <div class="modal-overlay" id="notizTypModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Notiz speichern als</h3>
+        <button class="modal-close" onclick="closeModal('notizTypModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="notiz-typ-auswahl">
+          <label class="notiz-typ-option" onclick="selectNotizTyp('privat')">
+            <input type="radio" name="notizTyp" value="privat">
+            <div class="notiz-typ-content">
+              <strong>Notiz fuer mich</strong>
+              <p class="notiz-typ-hint">Nur Sie koennen diese Notiz sehen. Sie erscheint nicht im Bearbeitungsverlauf.</p>
+            </div>
+          </label>
+          <label class="notiz-typ-option" onclick="selectNotizTyp('alle')">
+            <input type="radio" name="notizTyp" value="alle">
+            <div class="notiz-typ-content">
+              <strong>Notiz fuer alle</strong>
+              <p class="notiz-typ-hint">Alle Mitarbeitenden koennen diese Notiz sehen. Sie erscheint im Bearbeitungsverlauf.</p>
+            </div>
+          </label>
+          <label class="notiz-typ-option" onclick="selectNotizTyp('akte')">
+            <input type="radio" name="notizTyp" value="akte">
+            <div class="notiz-typ-content">
+              <strong>Notiz fuer Akte</strong>
+              <p class="notiz-typ-hint">Wie "Notiz fuer alle" und zusaetzlich in der Veraktungs-PDF enthalten.</p>
+            </div>
+          </label>
+        </div>
+        <input type="hidden" id="notizTypAntragId">
+        <input type="hidden" id="notizTypText">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('notizTypModal')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="confirmNotizTyp()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Aufgabe erstellen -->
   <div class="modal-overlay" id="aufgabeModal">
     <div class="modal modal-large">
@@ -1248,17 +1289,45 @@
         return `<p class="empty-hint">${emptyText}</p>`;
       }
       
+      // Filtern: Private Notizen nur für den Ersteller anzeigen
+      const sichtbar = kommentare.filter(k => {
+        // Wenn keine Typ-Info vorhanden (Altdaten), als "alle" behandeln
+        if (!k.typ || k.typ === 'alle' || k.typ === 'akte') {
+          return true;
+        }
+        // Private Notizen nur für den Ersteller
+        if (k.typ === 'privat') {
+          return k.benutzerId === currentSession.userId;
+        }
+        return true;
+      });
+      
+      if (sichtbar.length === 0) {
+        const emptyText = currentLanguage === 'en' ? 'No notes yet.' 
+                        : currentLanguage === 'fr' ? 'Pas encore de notes.' 
+                        : 'Noch keine Notizen.';
+        return `<p class="empty-hint">${emptyText}</p>`;
+      }
+      
       // Sortieren: neueste zuerst
-      const sortiert = [...kommentare].sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
+      const sortiert = [...sichtbar].sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
       
       return sortiert.map(k => {
         const datum = new Date(k.erstelltAm);
         const datumStr = datum.toLocaleDateString('de-DE') + ' ' + datum.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
         
+        // Typ-Badge erstellen
+        let typBadge = '';
+        if (k.typ === 'privat') {
+          typBadge = `<span class="notiz-badge notiz-privat">${currentLanguage === 'en' ? 'Private' : currentLanguage === 'fr' ? 'Privé' : 'Privat'}</span>`;
+        } else if (k.typ === 'akte') {
+          typBadge = `<span class="notiz-badge notiz-akte">${currentLanguage === 'en' ? 'For file' : currentLanguage === 'fr' ? 'Pour dossier' : 'Fuer Akte'}</span>`;
+        }
+        
         return `
-          <div class="kommentar-item">
+          <div class="kommentar-item ${k.typ === 'privat' ? 'kommentar-privat' : ''}">
             <div class="kommentar-header">
-              <span class="kommentar-autor">${k.benutzerName}</span>
+              <span class="kommentar-autor">${k.benutzerName} ${typBadge}</span>
               <span class="kommentar-datum">${datumStr}</span>
             </div>
             <div class="kommentar-text">${getTranslatedUserText(k.text).replace(/\n/g, '<br>')}</div>
@@ -1267,6 +1336,7 @@
       }).join('');
     }
     
+    // Notiz-Typ-Modal öffnen
     function addKommentar(antragId) {
       const textarea = document.getElementById('neuerKommentar');
       const text = textarea.value.trim();
@@ -1279,11 +1349,44 @@
         return;
       }
       
-      // Kommentar speichern
-      antragSystem.addKommentar(antragId, text, currentSession.userId, currentSession.name);
+      // Text und Antrag-ID im Modal speichern
+      document.getElementById('notizTypAntragId').value = antragId;
+      document.getElementById('notizTypText').value = text;
       
-      // Eingabefeld leeren und Ansicht aktualisieren
-      textarea.value = '';
+      // Radio-Buttons zurücksetzen
+      document.querySelectorAll('input[name="notizTyp"]').forEach(r => r.checked = false);
+      
+      // Modal öffnen
+      openModal('notizTypModal');
+    }
+    
+    // Notiz-Typ auswählen (Radio-Button aktivieren)
+    function selectNotizTyp(typ) {
+      document.querySelector(`input[name="notizTyp"][value="${typ}"]`).checked = true;
+    }
+    
+    // Notiz mit ausgewähltem Typ speichern
+    function confirmNotizTyp() {
+      const antragId = document.getElementById('notizTypAntragId').value;
+      const text = document.getElementById('notizTypText').value;
+      const selectedTyp = document.querySelector('input[name="notizTyp"]:checked');
+      
+      if (!selectedTyp) {
+        const msg = currentLanguage === 'en' ? 'Please select a note type.' 
+                  : currentLanguage === 'fr' ? 'Veuillez sélectionner un type de note.' 
+                  : 'Bitte waehlen Sie einen Notiz-Typ aus.';
+        showAlert(msg);
+        return;
+      }
+      
+      const typ = selectedTyp.value;
+      
+      // Kommentar mit Typ speichern
+      antragSystem.addKommentar(antragId, text, currentSession.userId, currentSession.name, typ);
+      
+      // Modal schließen, Eingabefeld leeren und Ansicht aktualisieren
+      closeModal('notizTypModal');
+      document.getElementById('neuerKommentar').value = '';
       openAntragDetail(antragId);
     }
     
@@ -4106,8 +4209,9 @@ ${t('action.archive')}
         yPos += 20;
       }
       
-      // Kommentare/Notizen (wenn vorhanden)
-      if (antrag.kommentare && antrag.kommentare.length > 0) {
+      // Kommentare/Notizen für Akte (nur typ === 'akte')
+      const akteNotizen = (antrag.kommentare || []).filter(k => k.typ === 'akte');
+      if (akteNotizen.length > 0) {
         // Neue Seite wenn nötig
         if (yPos > 220) {
           doc.addPage();
@@ -4117,12 +4221,12 @@ ${t('action.archive')}
         doc.line(20, yPos, 190, yPos);
         yPos += 10;
         doc.setFontSize(14);
-        doc.text('Notizen', 20, yPos);
+        doc.text('Notizen fuer Akte', 20, yPos);
         yPos += 10;
         doc.setFontSize(10);
         
         // Sortieren: älteste zuerst für chronologische Darstellung
-        const sortierteKommentare = [...antrag.kommentare].sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
+        const sortierteKommentare = [...akteNotizen].sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
         
         sortierteKommentare.forEach(k => {
           // Neue Seite wenn nötig
@@ -4139,7 +4243,8 @@ ${t('action.archive')}
           doc.setFont(undefined, 'normal');
           yPos += 6;
           
-          const splitText = doc.splitTextToSize(k.text, 160);
+          const notizText = typeof k.text === 'object' ? getTranslatedUserText(k.text) : k.text;
+          const splitText = doc.splitTextToSize(notizText, 160);
           doc.text(splitText, 25, yPos);
           yPos += splitText.length * 5 + 5;
         });
