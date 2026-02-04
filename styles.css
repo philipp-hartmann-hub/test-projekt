@@ -2622,6 +2622,35 @@ body.hamburg-start {
   margin-top: 0.25rem;
 }
 
+/* Schnellantwort-Buttons */
+.schnellantwort-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.btn-schnellantwort {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-schnellantwort:hover {
+  background: var(--hamburg-blau);
+  border-color: var(--hamburg-blau);
+  color: white;
+}
+
+.btn-schnellantwort:active {
+  transform: scale(0.95);
+}
+
 /* Sortier-Kontrollen */
 .sort-controls {
   display: flex;
@@ -3520,10 +3549,12 @@ body.hamburg-start {
     flex-wrap: wrap;
     gap: 0.5rem;
     justify-content: center;
+    padding: 0.75rem 1rem;
   }
   
   .prozess-schritt {
     min-width: 60px;
+    padding: 0.5rem 0.75rem;
   }
   
   .prozess-pfeil {
@@ -3540,11 +3571,16 @@ body.hamburg-start {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 1.5rem;
+  padding: 1rem 1.5rem;
   background: var(--bg-card);
   border-radius: var(--radius);
   margin-bottom: 1.5rem;
   overflow-x: auto;
+  /* Sticky-Verhalten: bleibt beim Scrollen sichtbar */
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .prozess-schritt {

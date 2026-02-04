@@ -552,6 +552,12 @@
         
         <div class="form-group" id="aufgabeAntwortGruppe">
           <label for="aufgabeAntwortText">Antwort</label>
+          <div class="schnellantwort-buttons">
+            <button type="button" class="btn-schnellantwort" onclick="insertSchnellantwort('Ja')">Ja</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertSchnellantwort('Nein')">Nein</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertSchnellantwort('Ist vollstaendig')">Ist vollstaendig</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertSchnellantwort('Kann entschieden werden')">Kann entschieden werden</button>
+          </div>
           <textarea id="aufgabeAntwortText" placeholder="Geben Sie Ihre Antwort ein..." rows="4"></textarea>
         </div>
         
@@ -3531,6 +3537,26 @@ ${t('action.archive')}
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+    }
+    
+    // Schnellantwort in das Antwortfeld einfügen
+    function insertSchnellantwort(text) {
+      const textarea = document.getElementById('aufgabeAntwortText');
+      const currentValue = textarea.value;
+      
+      // Wenn bereits Text vorhanden ist, mit Leerzeichen oder Zeilenumbruch trennen
+      if (currentValue.trim()) {
+        // Prüfen ob der Text schon mit dem Schnelltext endet
+        if (!currentValue.trim().endsWith(text)) {
+          textarea.value = currentValue + ' ' + text;
+        }
+      } else {
+        textarea.value = text;
+      }
+      
+      // Cursor ans Ende setzen und Fokus geben
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
     }
     
     function toggleAntwortFeld() {

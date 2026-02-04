@@ -284,6 +284,13 @@ Die Anwendung enthält vordefinierte Testbenutzer, die über das Admin-Portal ve
 - **PDF-Anhänge** (mehrere möglich)
 - **Antwortoptionen**: "Zur Kenntnis" oder "Mit Antwort"
 - **Hauptbearbeitung übertragen** möglich
+- **Schnellantwort-Buttons**: Vordefinierte Antworten ("Ja", "Nein", "Ist vollständig", "Kann entschieden werden") per Klick einfügen
+
+### Fortschrittsanzeige
+
+- **Phasenübersicht**: Eingang → Prüfung → Entscheiden → Bekanntgabe → Vollzug → Abschluss
+- **Sticky-Verhalten**: Bleibt beim Scrollen am oberen Bildschirmrand sichtbar
+- **Visueller Status**: Aktive Phase hervorgehoben, erledigte Phasen markiert
 
 ### Bearbeitungsverlauf
 
