@@ -2,6 +2,18 @@
   "version": 2,
   "buildCommand": null,
   "outputDirectory": ".",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/(.*\\.(html|css|js|json|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
+      "destination": "/$1"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ],
   "functions": {
     "api/[[...path]].js": {
       "maxDuration": 30
