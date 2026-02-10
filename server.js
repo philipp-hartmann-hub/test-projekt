@@ -21,12 +21,8 @@ if (!process.env.VERCEL) {
 
 const DB_FILE = path.join(__dirname, 'database.json');
 
-// PostgreSQL initialisieren (falls DATABASE_URL gesetzt)
-if (process.env.DATABASE_URL) {
-  dbLayer.initPostgres().catch(err => {
-    console.error('⚠️  PostgreSQL-Initialisierung fehlgeschlagen, verwende JSON-Fallback:', err.message);
-  });
-}
+// PostgreSQL initialisieren (falls DATABASE_URL gesetzt) - lazy init beim ersten API-Call
+// Nicht beim Modul-Laden, um Vercel-Deployment-Probleme zu vermeiden
 
 // ============================================
 // HILFSFUNKTIONEN

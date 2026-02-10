@@ -11,9 +11,10 @@ const USE_POSTGRES = !!process.env.DATABASE_URL;
 
 let pgClient = null;
 
-// PostgreSQL-Client initialisieren
+// PostgreSQL-Client initialisieren (lazy - nur beim ersten Aufruf)
 async function initPostgres() {
-  if (!USE_POSTGRES || pgClient) return;
+  if (!USE_POSTGRES) return;
+  if (pgClient) return; // Bereits initialisiert
   
   try {
     pgClient = new Client({
@@ -24,7 +25,8 @@ async function initPostgres() {
     console.log('✅ PostgreSQL-Verbindung hergestellt (Neon)');
   } catch (error) {
     console.error('❌ Fehler bei PostgreSQL-Verbindung:', error.message);
-    throw error;
+    // Nicht werfen, damit JSON-Fallback verwendet werden kann
+    pgClient = null;
   }
 }
 
@@ -77,6 +79,11 @@ function saveJSONDatabase(db) {
 async function getAll(tableName) {
   if (USE_POSTGRES) {
     await initPostgres();
+    if (!pgClient) {
+      // Fallback zu JSON wenn PostgreSQL-Verbindung fehlgeschlagen ist
+      const db = loadJSONDatabase();
+      return db[tableName] || [];
+    }
     const result = await pgClient.query(`SELECT data FROM ${tableName} ORDER BY id`);
     return result.rows.map(row => row.data);
   } else {
