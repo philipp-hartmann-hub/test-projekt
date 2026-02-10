@@ -10,7 +10,10 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Fuer PDF-Uploads
-app.use(express.static(path.join(__dirname)));
+// Statische Dateien nur lokal servieren; auf Vercel macht das Vercel selbst
+if (!process.env.VERCEL) {
+  app.use(express.static(path.join(__dirname)));
+}
 
 // ============================================
 // DATENBANK-INITIALISIERUNG
@@ -408,18 +411,20 @@ app.delete('/api/termine/:id', async (req, res) => {
 });
 
 // ============================================
-// FALLBACK ROUTE - SPA SUPPORT
+// FALLBACK ROUTE - SPA SUPPORT (nur lokal; auf Vercel serviert Vercel die statischen Dateien)
 // ============================================
 
-app.get('*', (req, res) => {
-  // Wenn keine API-Route, dann statische Datei oder index.html
-  const filePath = path.join(__dirname, req.path);
-  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-    res.sendFile(filePath);
-  } else {
-    res.sendFile(path.join(__dirname, 'index.html'));
-  }
-});
+if (!process.env.VERCEL) {
+  app.get('*', (req, res) => {
+    // Wenn keine API-Route, dann statische Datei oder index.html
+    const filePath = path.join(__dirname, req.path);
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      res.sendFile(filePath);
+    } else {
+      res.sendFile(path.join(__dirname, 'index.html'));
+    }
+  });
+}
 
 // ============================================
 // SERVER STARTEN (nur lokal; auf Vercel wird die App als Serverless Function genutzt)
