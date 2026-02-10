@@ -9,8 +9,8 @@
       "destination": "/api/[[...path]]"
     },
     {
-      "source": "/(.*)",
-      "destination": "/public/index.html"
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ],
   "functions": {
