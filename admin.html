@@ -399,22 +399,41 @@
     </div>
   </div>
 
+  <script src="data-sync.js"></script>
   <script src="app.js"></script>
   <script>
     // ============================================
     // LOGIN
     // ============================================
     
-    function handleLogin(e) {
+    async function handleLogin(e) {
       e.preventDefault();
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
-      
-      if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+      const errEl = document.getElementById('loginError');
+      errEl.style.display = 'none';
+      errEl.textContent = 'Ungültige Zugangsdaten. Bitte versuchen Sie es erneut.';
+
+      if (window.DataSync) {
+        const res = await window.DataSync.serverLogin(username, password, 'mitarbeiter');
+        if (res.success && res.user && res.user.rolle === 'admin') {
+          sessionStorage.setItem('adminLoggedIn', 'true');
+          showAdminSection();
+          return;
+        }
+        if (res.success) {
+          errEl.textContent = 'Kein Zugang zum Admin-Portal mit diesem Benutzer.';
+          errEl.style.display = 'block';
+          return;
+        }
+        // Server fehlgeschlagen oder nicht erreichbar – Fallback auf lokale Zugangsdaten
+      }
+
+      if (typeof ADMIN_CREDENTIALS !== 'undefined' && username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
         sessionStorage.setItem('adminLoggedIn', 'true');
         showAdminSection();
       } else {
-        document.getElementById('loginError').style.display = 'block';
+        errEl.style.display = 'block';
       }
     }
     
@@ -433,6 +452,10 @@
     if (sessionStorage.getItem('adminLoggedIn') === 'true') {
       showAdminSection();
     }
+
+    window.addEventListener('dataSyncLoaded', () => {
+      if (document.getElementById('adminSection').style.display !== 'none') renderUsers();
+    });
 
     // ============================================
     // TAB-WECHSEL
@@ -489,7 +512,7 @@
       stationSelect.disabled = false;
     }
     
-    function createInsasse() {
+    async function createInsasse() {
       const vorname = document.getElementById('insVorname').value.trim();
       const nachname = document.getElementById('insNachname').value.trim();
       const geburtsdatum = document.getElementById('insGeburtsdatum').value;
@@ -512,6 +535,7 @@
       userSystem.createInsasse({ vorname, nachname, geburtsdatum, jva, station });
       closeModal('newInsasseModal');
       renderUsers();
+      if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
     }
     
     function openEditInsasseModal(id) {
@@ -572,6 +596,7 @@
       userSystem.updateUser(id, { vorname, nachname, geburtsdatum, jva, station });
       closeModal('editInsasseModal');
       renderUsers();
+      if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
     }
     
     async function deleteInsasse(id, name) {
@@ -580,6 +605,7 @@
       
       userSystem.deleteUser(id);
       renderUsers();
+      if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
     }
 
     // ============================================
@@ -681,7 +707,7 @@
       stationSelect.disabled = false;
     }
     
-    function createMitarbeiter() {
+    async function createMitarbeiter() {
       const vorname = document.getElementById('mitVorname').value.trim();
       const nachname = document.getElementById('mitNachname').value.trim();
       const geburtsdatum = document.getElementById('mitGeburtsdatum').value;
@@ -702,6 +728,7 @@
         userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
         closeModal('newMitarbeiterModal');
         renderUsers();
+        if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
         return;
       }
       
@@ -748,6 +775,7 @@
       
       closeModal('newMitarbeiterModal');
       renderUsers();
+      if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
     }
     
     function openEditMitarbeiterModal(id) {
@@ -886,6 +914,7 @@
         userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
         closeModal('editMitarbeiterModal');
         renderUsers();
+        if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
         return;
       }
       
@@ -933,6 +962,7 @@
       
       closeModal('editMitarbeiterModal');
       renderUsers();
+      if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
     }
     
     async function deleteMitarbeiter(id, name) {
@@ -941,6 +971,7 @@
       
       userSystem.deleteUser(id);
       renderUsers();
+      if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
     }
 
     // ============================================
@@ -955,6 +986,7 @@
       if (newPassword) {
         showAlert(`Neues Passwort: ${newPassword}`);
         renderUsers();
+        if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
       }
     }
     

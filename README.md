@@ -12,7 +12,8 @@ Ein webbasiertes Verwaltungssystem für die Bearbeitung von Anträgen in Justizv
 4. [Prozessmodell](#prozessmodell)
 5. [Systemkomponenten](#systemkomponenten)
 6. [Installation & Start](#installation--start)
-7. [Besondere Features](#besondere-features)
+7. [Betrieb mit Backend (optional)](#betrieb-mit-backend-optional)
+8. [Besondere Features](#besondere-features)
 
 ---
 
@@ -56,23 +57,24 @@ Ein webbasiertes Verwaltungssystem für die Bearbeitung von Anträgen in Justizv
 │                        FRONTEND                                  │
 ├─────────────────────────────────────────────────────────────────┤
 │  HTML5          │  Semantische Struktur, Barrierefreiheit       │
-│  CSS3           │  Custom Properties, Flexbox, Grid              │
-│  JavaScript     │  ES6+, Vanilla (keine Frameworks)              │
-│  jsPDF          │  PDF-Generierung im Browser                    │
+│  CSS3           │  Custom Properties, Flexbox, Grid             │
+│  JavaScript     │  ES6+, Vanilla (keine Frameworks)             │
+│  jsPDF          │  PDF-Generierung im Browser                   │
+│  data-sync.js   │  Optional: Sync mit Backend, Server-Login       │
 └─────────────────────────────────────────────────────────────────┘
                               │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     DATENSPEICHERUNG                             │
-├─────────────────────────────────────────────────────────────────┤
-│  localStorage   │  Persistente Speicherung im Browser            │
-│                 │  - Benutzer (users)                            │
-│                 │  - Anträge (antraege)                          │
-│                 │  - Aufgaben (aufgaben)                         │
-│                 │  - Benachrichtigungen (notifications)          │
-│                 │  - Aktivitäten (aktivitaeten)                  │
-│                 │  - Termine (termine)                           │
-└─────────────────────────────────────────────────────────────────┘
+         ┌────────────────────┼────────────────────┐
+         ▼                    ▼                    ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│  Nur Browser    │  │  Mit Backend    │  │  Mit Backend     │
+│  (Standard)     │  │  (optional)     │  │  (optional)      │
+├─────────────────┤  ├─────────────────┤  ├─────────────────┤
+│  localStorage   │  │  localStorage   │  │  Node.js/Express │
+│  - Benutzer     │  │  als Cache      │  │  + JSON-DB oder  │
+│  - Anträge      │  │  + Sync zu API  │  │  SQLite/Neon     │
+│  - Aufgaben     │  │  Login über API │  │  Persistenz      │
+│  - etc.         │  │                 │  │  internetfähig   │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
 ### Dateistruktur
@@ -84,6 +86,9 @@ JVA-Antragssystem/
 ├── mitarbeiter.html    # Mitarbeiter-Portal (Antragsbearbeitung)
 ├── insassen.html       # Insassen-Portal (Antragsstellung)
 ├── app.js              # Kernlogik und alle Systeme
+├── data-sync.js        # Optional: Sync mit Backend, Server-Login
+├── server.js           # Optional: Express-Backend (Node.js)
+├── database.json       # Optional: Persistenz bei JSON-Backend
 ├── styles.css          # Globale Styles (Hamburg.de Design)
 ├── README.md           # Diese Dokumentation
 └── PROZESSMODELL.md    # Detailliertes Prozessmodell
@@ -92,10 +97,9 @@ JVA-Antragssystem/
 ### Single-Page Application (SPA)
 
 Das System ist als clientseitige SPA konzipiert:
-- **Keine Server-Komponente** erforderlich
-- **Vollständig im Browser** lauffähig
-- **Offline-fähig** nach initialem Laden
-- **Datenisolation** pro Browser/Gerät
+- **Ohne Backend**: Vollständig im Browser lauffähig, Daten im localStorage
+- **Mit Backend** (optional): Daten persistent und geräteübergreifend, Login über API
+- **Offline-fähig** (ohne Backend) nach initialem Laden
 
 ---
 
@@ -252,18 +256,75 @@ Voraussetzung: Antrag wurde geprüft
 ### Voraussetzungen
 
 - Moderner Webbrowser (Chrome, Firefox, Edge, Safari)
-- Webserver (optional, kann auch lokal geöffnet werden)
+- Optional für Backend-Betrieb: Node.js (z. B. 18.x oder 20.x)
 
-### Schnellstart
+### Schnellstart (nur Browser)
 
 1. Repository klonen oder Dateien herunterladen
-2. `index.html` im Browser öffnen
+2. `index.html` im Browser öffnen (oder über einen beliebigen Webserver ausliefern)
 3. Portal auswählen (Admin / Mitarbeiter / Insassen)
-4. Mit vorhandenen Testdaten anmelden
+4. Mit vorhandenen Testdaten anmelden (nach erstem Aufruf werden Standardbenutzer angelegt)
 
 ### Standard-Testbenutzer
 
-Die Anwendung enthält vordefinierte Testbenutzer, die über das Admin-Portal verwaltet werden können.
+Die Anwendung legt beim ersten Start (ohne Backend) Standardbenutzer an; Anmeldedaten erscheinen in der Browser-Konsole. Mit Backend werden die in `server.js` / `database.json` hinterlegten Demo-Benutzer verwendet.
+
+---
+
+## Betrieb mit Backend (optional)
+
+Für **persistente, geräteübergreifende Daten** und **internetfähigen Zugriff** kann ein kleines Backend betrieben werden.
+
+### Architektur
+
+- **Express** (Node.js) liefert die statischen Dateien und eine REST-API.
+- **Persistenz**: JSON-Datei (`database.json`) oder optional SQLite/Neon DB.
+- **Frontend**: Lädt beim Start Daten vom Server in den localStorage und synchronisiert Änderungen zurück (data-sync.js). Login erfolgt über die API.
+
+### Lokaler Start mit Backend
+
+1. Im Projektverzeichnis: `npm install` (einmalig)
+2. `npm start` oder `node server.js`
+3. Im Browser aufrufen: **http://localhost:3000**
+4. Portale wie gewohnt nutzen; Daten bleiben in `database.json` erhalten
+
+### API-Übersicht
+
+| Methode | Endpunkt | Beschreibung |
+|--------|----------|--------------|
+| POST | `/api/login` | Anmeldung (username, password, portalTyp) |
+| GET/POST | `/api/users` | Benutzer lesen / anlegen |
+| GET/PUT/DELETE | `/api/users/:id` | Benutzer bearbeiten / löschen |
+| GET/POST | `/api/antraege` | Anträge |
+| GET/POST | `/api/aufgaben` | Aufgaben |
+| GET/POST | `/api/notifications` | Benachrichtigungen |
+| GET/POST | `/api/aktivitaeten` | Bearbeitungsverlauf |
+| GET/POST | `/api/termine` | Termine |
+
+Die Portalseiten (admin, mitarbeiter, insassen) binden `data-sync.js` ein; sobald der Server erreichbar ist, werden Daten vom Server geladen und der Login über die API durchgeführt.
+
+### Hinweise Backend
+
+- Prototyp-/Demo-Betrieb: Keine TLS, keine erweiterte Absicherung.
+- Für Produktion: HTTPS, sichere Authentifizierung und Absicherung der API empfohlen.
+
+### Lokaler Test vor dem Deploy
+
+So können Sie die Umstrukturierung (Backend + data-sync) lokal prüfen, bevor Sie deployen:
+
+1. **Voraussetzung**: Node.js (z. B. 18 oder 20) installiert.
+2. **Im Projektordner**:
+   - `npm install` (falls noch nicht geschehen)
+   - `npm start`
+3. **Browser**: http://localhost:3000 öffnen (nicht `file://`).
+4. **Login testen**:
+   - **Insassen-Portal**: `insasse1` / `insasse1` oder `insasse2` / `insasse2`
+   - **Mitarbeiter-Portal**: `avd1` / `avd1`, `avd2` / `avd2`, `val1` / `val1`, `kammer1` / `kammer1`
+   - **Admin-Portal**: `admin` / `admin`
+5. **Persistenz prüfen**: Einen Antrag anlegen oder eine Aktion ausführen, Seite neu laden – Daten sollten erhalten sein. In `database.json` im Projektordner erscheinen die Einträge.
+6. **Ohne Backend**: `index.html` direkt im Browser öffnen (oder über einen anderen Webserver) – dann läuft die App wie bisher nur mit localStorage, kein Server nötig.
+
+**Hinweis**: Beim ersten Aufruf unter http://localhost:3000 lädt das Frontend die Daten vom Server; in der Browser-Konsole erscheint „Alle Daten vom Server geladen …“, sobald der Sync fertig ist.
 
 ---
 
@@ -364,10 +425,9 @@ Drei Arten von Notizen mit unterschiedlicher Sichtbarkeit:
 
 ## Hinweise
 
-- **Datenspeicherung**: Alle Daten werden im localStorage gespeichert und sind browser- und gerätespezifisch
-- **Keine Server-Komponente**: Die Anwendung läuft vollständig clientseitig
-- **Demo-System**: Konzipiert als Prototyp/Demonstrator
-- **Datensicherung**: Regelmäßiger Export empfohlen (localStorage kann gelöscht werden)
+- **Ohne Backend**: Daten liegen im localStorage und sind browser- bzw. gerätespezifisch.
+- **Mit Backend**: Daten sind in `database.json` (oder konfigurierter DB) persistent und geräteübergreifend nutzbar.
+- **Demo-System**: Konzipiert als Prototyp/Demonstrator; für Produktion sind Absicherung und Datensicherung zu ergänzen.
 
 ---
 

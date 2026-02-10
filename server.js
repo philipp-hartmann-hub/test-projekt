@@ -1,0 +1,467 @@
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
+const dbLayer = require('./db-layer');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json({ limit: '50mb' })); // Fuer PDF-Uploads
+app.use(express.static(path.join(__dirname)));
+
+// ============================================
+// DATENBANK-INITIALISIERUNG
+// ============================================
+
+const DB_FILE = path.join(__dirname, 'database.json');
+
+// PostgreSQL initialisieren (falls DATABASE_URL gesetzt)
+if (process.env.DATABASE_URL) {
+  dbLayer.initPostgres().catch(err => {
+    console.error('⚠️  PostgreSQL-Initialisierung fehlgeschlagen, verwende JSON-Fallback:', err.message);
+  });
+}
+
+// ============================================
+// HILFSFUNKTIONEN
+// ============================================
+
+function generateId(prefix = 'ID') {
+  return prefix + '-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2, 4).toUpperCase();
+}
+
+// ============================================
+// API ROUTEN - AUTHENTIFIZIERUNG
+// ============================================
+
+app.post('/api/login', async (req, res) => {
+  try {
+    const { username, password, portalTyp } = req.body;
+    
+    const user = await dbLayer.findOne('users', u => u.username === username && u.password === password);
+    
+    if (!user) {
+      return res.json({ success: false, message: 'Ungueltige Anmeldedaten' });
+    }
+    
+    // Portal-Typ pruefen
+    if (portalTyp === 'insasse' && user.rolle !== 'insasse') {
+      return res.json({ success: false, message: 'Kein Zugang zum Insassen-Portal' });
+    }
+    if (portalTyp === 'mitarbeiter' && user.rolle === 'insasse') {
+      return res.json({ success: false, message: 'Kein Zugang zum Mitarbeiter-Portal' });
+    }
+    
+    // User-Objekt fuer Frontend aufbereiten
+    const userData = {
+      ...user,
+      userId: user.id
+    };
+    
+    res.json({ success: true, user: userData });
+  } catch (error) {
+    console.error('Login-Fehler:', error);
+    res.status(500).json({ success: false, message: 'Server-Fehler bei der Anmeldung' });
+  }
+});
+
+// ============================================
+// API ROUTEN - BENUTZER
+// ============================================
+
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await dbLayer.getAll('users');
+    res.json(users);
+  } catch (error) {
+    console.error('Fehler beim Laden der Benutzer:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Laden der Benutzer' });
+  }
+});
+
+app.post('/api/users', async (req, res) => {
+  try {
+    const user = req.body;
+    user.id = user.id || generateId('USR');
+    user.jvas = user.jvas || [];
+    
+    // Pruefen ob Username bereits existiert
+    const existing = await dbLayer.findOne('users', u => u.username === user.username);
+    if (existing) {
+      return res.status(400).json({ success: false, error: 'Benutzername existiert bereits' });
+    }
+    
+    await dbLayer.create('users', user);
+    res.json({ success: true, id: user.id });
+  } catch (error) {
+    console.error('Fehler beim Erstellen des Benutzers:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Erstellen des Benutzers' });
+  }
+});
+
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userData = req.body;
+    
+    const updated = await dbLayer.update('users', id, userData);
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Benutzer nicht gefunden' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Fehler beim Aktualisieren des Benutzers:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Aktualisieren des Benutzers' });
+  }
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await dbLayer.remove('users', id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Benutzer nicht gefunden' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Fehler beim Löschen des Benutzers:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Löschen des Benutzers' });
+  }
+});
+
+// ============================================
+// API ROUTEN - ANTRAEGE
+// ============================================
+
+app.get('/api/antraege', async (req, res) => {
+  try {
+    const antraege = await dbLayer.getAll('antraege');
+    res.json(antraege);
+  } catch (error) {
+    console.error('Fehler beim Laden der Anträge:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Laden der Anträge' });
+  }
+});
+
+app.post('/api/antraege', async (req, res) => {
+  try {
+    const antrag = req.body;
+    antrag.id = antrag.id || generateId('ANT');
+    antrag.antragsNummer = antrag.antragsNummer || 'A-' + Date.now().toString().slice(-6);
+    antrag.erstelltAm = antrag.erstelltAm || new Date().toISOString();
+    antrag.kommentare = antrag.kommentare || [];
+    antrag.dokumente = antrag.dokumente || [];
+    
+    await dbLayer.create('antraege', antrag);
+    res.json({ success: true, id: antrag.id, antragsNummer: antrag.antragsNummer });
+  } catch (error) {
+    console.error('Fehler beim Erstellen des Antrags:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Erstellen des Antrags' });
+  }
+});
+
+app.put('/api/antraege/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const antragData = req.body;
+    
+    const updated = await dbLayer.update('antraege', id, antragData);
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Antrag nicht gefunden' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Fehler beim Aktualisieren des Antrags:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Aktualisieren des Antrags' });
+  }
+});
+
+app.delete('/api/antraege/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await dbLayer.remove('antraege', id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Antrag nicht gefunden' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Fehler beim Löschen des Antrags:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Löschen des Antrags' });
+  }
+});
+
+// ============================================
+// API ROUTEN - AUFGABEN
+// ============================================
+
+app.get('/api/aufgaben', async (req, res) => {
+  try {
+    const aufgaben = await dbLayer.getAll('aufgaben');
+    res.json(aufgaben);
+  } catch (error) {
+    console.error('Fehler beim Laden der Aufgaben:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Laden der Aufgaben' });
+  }
+});
+
+app.post('/api/aufgaben', async (req, res) => {
+  try {
+    const aufgabe = req.body;
+    aufgabe.id = aufgabe.id || generateId('AUF');
+    aufgabe.erstelltAm = aufgabe.erstelltAm || new Date().toISOString();
+    aufgabe.status = aufgabe.status || 'offen';
+    aufgabe.anhangPdfs = aufgabe.anhangPdfs || [];
+    aufgabe.antwortPdfs = aufgabe.antwortPdfs || [];
+    
+    await dbLayer.create('aufgaben', aufgabe);
+    res.json({ success: true, id: aufgabe.id });
+  } catch (error) {
+    console.error('Fehler beim Erstellen der Aufgabe:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Erstellen der Aufgabe' });
+  }
+});
+
+app.put('/api/aufgaben/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const aufgabeData = req.body;
+    
+    const updated = await dbLayer.update('aufgaben', id, aufgabeData);
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Aufgabe nicht gefunden' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Fehler beim Aktualisieren der Aufgabe:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Aktualisieren der Aufgabe' });
+  }
+});
+
+app.delete('/api/aufgaben/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await dbLayer.remove('aufgaben', id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Aufgabe nicht gefunden' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Fehler beim Löschen der Aufgabe:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Löschen der Aufgabe' });
+  }
+});
+
+// ============================================
+// API ROUTEN - BENACHRICHTIGUNGEN
+// ============================================
+
+app.get('/api/notifications', async (req, res) => {
+  try {
+    const notifications = await dbLayer.getAll('notifications');
+    res.json(notifications);
+  } catch (error) {
+    console.error('Fehler beim Laden der Benachrichtigungen:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Laden der Benachrichtigungen' });
+  }
+});
+
+app.post('/api/notifications', async (req, res) => {
+  try {
+    const notification = req.body;
+    notification.id = notification.id || generateId('NOT');
+    notification.erstelltAm = notification.erstelltAm || new Date().toISOString();
+    notification.gelesen = notification.gelesen || false;
+    
+    await dbLayer.create('notifications', notification);
+    res.json({ success: true, id: notification.id });
+  } catch (error) {
+    console.error('Fehler beim Erstellen der Benachrichtigung:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Erstellen der Benachrichtigung' });
+  }
+});
+
+app.put('/api/notifications/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const notificationData = req.body;
+    
+    const updated = await dbLayer.update('notifications', id, notificationData);
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Benachrichtigung nicht gefunden' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Fehler beim Aktualisieren der Benachrichtigung:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Aktualisieren der Benachrichtigung' });
+  }
+});
+
+// ============================================
+// API ROUTEN - AKTIVITAETEN
+// ============================================
+
+app.get('/api/aktivitaeten', async (req, res) => {
+  try {
+    const { antragId } = req.query;
+    
+    let result;
+    if (antragId) {
+      result = await dbLayer.findMany('aktivitaeten', a => a.antragId === antragId);
+    } else {
+      result = await dbLayer.getAll('aktivitaeten');
+    }
+    
+    // Nach Erstellungsdatum sortieren (neueste zuerst)
+    result.sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Fehler beim Laden der Aktivitäten:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Laden der Aktivitäten' });
+  }
+});
+
+app.post('/api/aktivitaeten', async (req, res) => {
+  try {
+    const aktivitaet = req.body;
+    aktivitaet.id = aktivitaet.id || generateId('AKT');
+    aktivitaet.erstelltAm = aktivitaet.erstelltAm || new Date().toISOString();
+    
+    await dbLayer.create('aktivitaeten', aktivitaet);
+    res.json({ success: true, id: aktivitaet.id });
+  } catch (error) {
+    console.error('Fehler beim Erstellen der Aktivität:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Erstellen der Aktivität' });
+  }
+});
+
+// ============================================
+// API ROUTEN - TERMINE
+// ============================================
+
+app.get('/api/termine', async (req, res) => {
+  try {
+    const termine = await dbLayer.getAll('termine');
+    // Nach Datum sortieren
+    const sorted = [...termine].sort((a, b) => {
+      const dateA = new Date(a.datum + 'T' + (a.uhrzeit || '00:00'));
+      const dateB = new Date(b.datum + 'T' + (b.uhrzeit || '00:00'));
+      return dateA - dateB;
+    });
+    res.json(sorted);
+  } catch (error) {
+    console.error('Fehler beim Laden der Termine:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Laden der Termine' });
+  }
+});
+
+app.post('/api/termine', async (req, res) => {
+  try {
+    const termin = req.body;
+    termin.id = termin.id || generateId('TRM');
+    termin.erstelltAm = termin.erstelltAm || new Date().toISOString();
+    
+    await dbLayer.create('termine', termin);
+    res.json({ success: true, id: termin.id });
+  } catch (error) {
+    console.error('Fehler beim Erstellen des Termins:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Erstellen des Termins' });
+  }
+});
+
+app.put('/api/termine/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const terminData = req.body;
+    
+    const updated = await dbLayer.update('termine', id, terminData);
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Termin nicht gefunden' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Fehler beim Aktualisieren des Termins:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Aktualisieren des Termins' });
+  }
+});
+
+app.delete('/api/termine/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await dbLayer.remove('termine', id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Termin nicht gefunden' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Fehler beim Löschen des Termins:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Löschen des Termins' });
+  }
+});
+
+// ============================================
+// FALLBACK ROUTE - SPA SUPPORT
+// ============================================
+
+app.get('*', (req, res) => {
+  // Wenn keine API-Route, dann statische Datei oder index.html
+  const filePath = path.join(__dirname, req.path);
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+    res.sendFile(filePath);
+  } else {
+    res.sendFile(path.join(__dirname, 'index.html'));
+  }
+});
+
+// ============================================
+// SERVER STARTEN (nur lokal; auf Vercel wird die App als Serverless Function genutzt)
+// ============================================
+
+module.exports = { app };
+
+const LOCAL_URL = `http://localhost:${PORT}`;
+
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`
+======================================================
+    JVA Antragsbearbeitungssystem - Server
+======================================================
+  Im Browser oeffnen: ${LOCAL_URL}
+  
+  Direktlinks:
+  - Startseite:    ${LOCAL_URL}/
+  - Insassen:      ${LOCAL_URL}/insassen.html
+  - Mitarbeiter:   ${LOCAL_URL}/mitarbeiter.html
+  - Admin:         ${LOCAL_URL}/admin.html
+  
+  Demo-Zugaenge:
+  - Admin:              admin / admin
+  - VAL:                val1 / val1
+  - AVD:                avd1 / avd1  oder  avd2 / avd2
+  - Kammer:             kammer1 / kammer1
+  - Insasse:            insasse1 / insasse1  oder  insasse2 / insasse2
+  
+  Datenbank: ${process.env.DATABASE_URL ? 'PostgreSQL (Neon)' : DB_FILE}
+======================================================
+  `);
+    // Browser automatisch oeffnen (nur wenn nicht in CI/Produktion)
+    if (process.platform && !process.env.CI && process.env.NODE_ENV !== 'production') {
+      try {
+        const { exec } = require('child_process');
+        const url = LOCAL_URL;
+        if (process.platform === 'win32') exec('start "" "' + url + '"');
+        else if (process.platform === 'darwin') exec('open "' + url + '"');
+        else exec('xdg-open "' + url + '"');
+      } catch (e) { /* ignorieren */ }
+    }
+  });
+}

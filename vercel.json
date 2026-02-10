@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "buildCommand": null,
+  "outputDirectory": ".",
+  "rewrites": [
+    {
+      "source": "/((?!api/)(?!.*\\.).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "functions": {
+    "api/[[...path]].js": {
+      "maxDuration": 30
+    }
+  }
+}

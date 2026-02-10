@@ -762,6 +762,7 @@
     </div>
   </div>
 
+  <script src="data-sync.js"></script>
   <script src="app.js"></script>
   <script>
     let currentSession = null;
@@ -1118,18 +1119,29 @@
     // LOGIN
     // ============================================
     
-    function handleLogin(e) {
+    async function handleLogin(e) {
       e.preventDefault();
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
-      
+      const errEl = document.getElementById('loginError');
+      errEl.style.display = 'none';
+
+      if (window.DataSync) {
+        const res = await window.DataSync.serverLogin(username, password, 'mitarbeiter');
+        if (res.success) {
+          sessionManager.setSessionFromServer(res.user);
+          currentSession = sessionManager.getSession();
+          showPortal();
+          return;
+        }
+        // Server-Login fehlgeschlagen – Fallback auf lokale Zugangsdaten (z. B. im Admin angelegt)
+      }
       const result = sessionManager.login(username, password, 'mitarbeiter');
-      
       if (result.success) {
         currentSession = result.user;
         showPortal();
       } else {
-        document.getElementById('loginError').style.display = 'block';
+        errEl.style.display = 'block';
       }
     }
     
@@ -1159,6 +1171,10 @@
       renderNotifications();
       renderKalender();
       
+      window.addEventListener('dataSyncLoaded', () => {
+        if (currentSession) { renderAntraege(); renderNotifications(); renderKalender(); }
+      });
+
       // Benachrichtigungen und überfällige Aufgaben periodisch prüfen
       setInterval(() => {
         aufgabenSystem.pruefeUeberfaelligeAufgaben();

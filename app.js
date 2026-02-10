@@ -1185,10 +1185,10 @@ function createTranslatableText(text) {
   };
 }
 
-// Admin-Zugangsdaten (in echter Anwendung sicher speichern!)
+// Admin-Zugangsdaten (Fallback ohne Backend – identisch mit server.js: admin/admin)
 const ADMIN_CREDENTIALS = {
   username: 'admin',
-  password: 'admin123'
+  password: 'admin'
 };
 
 // ============================================
@@ -1674,6 +1674,23 @@ class SessionManager {
   isMitarbeiter() {
     const session = this.getSession();
     return session && session.type === 'mitarbeiter';
+  }
+
+  // Session aus Server-Login-Antwort setzen (wenn data-sync.js mit Backend verwendet wird)
+  setSessionFromServer(serverUser) {
+    const type = serverUser.rolle === 'insasse' ? 'insasse' : 'mitarbeiter';
+    const session = {
+      userId: serverUser.id || serverUser.userId,
+      type: type,
+      username: serverUser.username,
+      name: serverUser.name || '',
+      jva: serverUser.jva,
+      station: serverUser.station,
+      rolle: serverUser.rolle || null,
+      jvas: serverUser.jvas || null,
+      loginTime: new Date().toISOString()
+    };
+    sessionStorage.setItem(this.sessionKey, JSON.stringify(session));
   }
 }
 
@@ -3767,6 +3784,27 @@ class AntragSystem {
 
 // Globale Instanz
 const antragSystem = new AntragSystem();
+
+// Nachladen aus localStorage (wird von data-sync.js nach Server-Sync aufgerufen)
+function reloadDataFromStorage() {
+  try {
+    const rawUsers = localStorage.getItem('gefaengnis_users');
+    if (rawUsers) userSystem.users = JSON.parse(rawUsers);
+    const rawNotifications = localStorage.getItem('gefaengnis_notifications');
+    if (rawNotifications) notificationSystem.notifications = JSON.parse(rawNotifications);
+    const rawAktivitaeten = localStorage.getItem('gefaengnis_aktivitaeten');
+    if (rawAktivitaeten) aktivitaetenSystem.aktivitaeten = JSON.parse(rawAktivitaeten);
+    const rawTermine = localStorage.getItem('gefaengnis_termine');
+    if (rawTermine) terminSystem.termine = JSON.parse(rawTermine);
+    const rawAufgaben = localStorage.getItem('gefaengnis_aufgaben');
+    if (rawAufgaben) aufgabenSystem.aufgaben = JSON.parse(rawAufgaben);
+    const rawAntraege = localStorage.getItem('gefaengnis_antraege');
+    if (rawAntraege) antragSystem.antraege = JSON.parse(rawAntraege);
+  } catch (e) {
+    console.warn('reloadDataFromStorage:', e);
+  }
+}
+if (typeof window !== 'undefined') window.reloadDataFromStorage = reloadDataFromStorage;
 
 // REPARATUR: Öffne fälschlicherweise geschlossene Gruppenaufgaben
 // Aufgaben für NICHT veraktete Anträge sollen offen bleiben
