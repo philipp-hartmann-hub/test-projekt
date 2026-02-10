@@ -2,10 +2,15 @@
   "version": 2,
   "buildCommand": null,
   "outputDirectory": ".",
+  "public": "public",
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "/api/[[...path]]"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/public/index.html"
     }
   ],
   "functions": {

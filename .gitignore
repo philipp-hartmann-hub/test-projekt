@@ -32,3 +32,5 @@ Thumbs.db
 # Temporäre Dateien
 *.tmp
 *.temp
+
+.vercel
