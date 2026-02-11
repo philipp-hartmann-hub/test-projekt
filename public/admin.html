@@ -142,8 +142,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal('newInsasseModal')">Abbrechen</button>
-        <button class="btn btn-primary" onclick="createInsasse()">Anlegen</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('newInsasseModal')">Abbrechen</button>
+        <button type="button" class="btn btn-primary" onclick="createInsasse()">Anlegen</button>
       </div>
     </div>
   </div>
@@ -270,8 +270,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal('newMitarbeiterModal')">Abbrechen</button>
-        <button class="btn btn-primary" onclick="createMitarbeiter()">Anlegen</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('newMitarbeiterModal')">Abbrechen</button>
+        <button type="button" class="btn btn-primary" onclick="createMitarbeiter()">Anlegen</button>
       </div>
     </div>
   </div>
@@ -540,11 +540,17 @@
       stationSelect.disabled = false;
     }
     
-    async function createInsasse() {
+    async function createInsasse(event) {
+      if (event) event.preventDefault();
+      console.log('createInsasse() aufgerufen');
       try {
         if (typeof userSystem === 'undefined') {
           console.error('userSystem nicht verfügbar');
-          await showAlert('Fehler: Benutzersystem nicht geladen. Bitte Seite neu laden.');
+          if (typeof showAlert === 'function') {
+            await showAlert('Fehler: Benutzersystem nicht geladen. Bitte Seite neu laden.');
+          } else {
+            alert('Fehler: Benutzersystem nicht geladen. Bitte Seite neu laden.');
+          }
           return;
         }
         
@@ -746,11 +752,17 @@
       stationSelect.disabled = false;
     }
     
-    async function createMitarbeiter() {
+    async function createMitarbeiter(event) {
+      if (event) event.preventDefault();
+      console.log('createMitarbeiter() aufgerufen');
       try {
         if (typeof userSystem === 'undefined') {
           console.error('userSystem nicht verfügbar');
-          await showAlert('Fehler: Benutzersystem nicht geladen. Bitte Seite neu laden.');
+          if (typeof showAlert === 'function') {
+            await showAlert('Fehler: Benutzersystem nicht geladen. Bitte Seite neu laden.');
+          } else {
+            alert('Fehler: Benutzersystem nicht geladen. Bitte Seite neu laden.');
+          }
           return;
         }
         
@@ -1277,6 +1289,10 @@
     if (sessionStorage.getItem('adminLoggedIn') === 'true') {
       renderUsers();
     }
+
+    // Funktionen global verfügbar machen (für onclick-Handler)
+    window.createInsasse = createInsasse;
+    window.createMitarbeiter = createMitarbeiter;
   </script>
 </body>
 </html>
