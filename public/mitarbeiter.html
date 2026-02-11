@@ -4177,7 +4177,7 @@ ${t('action.archive')}
           // Nur Gruppe ausgewählt - Antrag geht an die Gruppe
           const gruppe = {
             typ: gruppeTyp,
-            hausId: gruppeHaus,
+            hausId: gruppeTyp === 'kammer' ? null : (gruppeHaus || null),
             station: gruppeStation || null
           };
           

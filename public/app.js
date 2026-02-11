@@ -1695,11 +1695,24 @@ class SessionManager {
   // Session aus Server-Login-Antwort setzen (wenn data-sync.js mit Backend verwendet wird)
   setSessionFromServer(serverUser) {
     const type = serverUser.rolle === 'insasse' ? 'insasse' : 'mitarbeiter';
+    
+    // Name aus verschiedenen Quellen zusammenstellen
+    let name = '';
+    if (serverUser.name) {
+      name = serverUser.name;
+    } else if (serverUser.vorname && serverUser.nachname) {
+      name = `${serverUser.vorname} ${serverUser.nachname}`;
+    } else if (serverUser.vorname) {
+      name = serverUser.vorname;
+    } else {
+      name = serverUser.username || '';
+    }
+    
     const session = {
       userId: serverUser.id || serverUser.userId,
       type: type,
       username: serverUser.username,
-      name: serverUser.name || '',
+      name: name,
       jva: serverUser.jva,
       station: serverUser.station,
       rolle: serverUser.rolle || null,
@@ -3309,11 +3322,13 @@ class AntragSystem {
     // Kammer ist hausunabhängig - Prüfung VOR der Haus-Prüfung
     if (gruppe.typ === 'kammer') {
       const istKammer = mitarbeiter.rolle === 'kammer';
-      console.log('[Debug] Kammer-Prüfung:', { mitarbeiterRolle: mitarbeiter.rolle, istKammer: istKammer });
+      console.log('[Debug] Kammer-Prüfung:', { mitarbeiterRolle: mitarbeiter.rolle, istKammer: istKammer, gruppeHausId: gruppe.hausId });
       return istKammer;
     }
     
-    if (!imSelbenHaus) return false;
+    // Für alle anderen Gruppen muss der Mitarbeiter im selben Haus sein
+    // Aber nur wenn hausId gesetzt ist (Kammer hat hausId: null)
+    if (gruppe.hausId && !imSelbenHaus) return false;
     
     if (gruppe.typ === 'hausleitung') {
       // Nur Hausleitungen dieses Hauses
