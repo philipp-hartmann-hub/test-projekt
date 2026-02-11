@@ -1039,15 +1039,17 @@
           console.warn('editMitStation Element nicht gefunden');
           return;
         }
-      const userId = document.getElementById('editMitId').value;
-      const hausWarning = document.getElementById('editMitJvaWarning');
-      const stationWarning = document.getElementById('editMitStationWarning');
-      
-      hausWarning.style.display = 'none';
-      stationWarning.style.display = 'none';
+        
+        const userIdEl = document.getElementById('editMitId');
+        const userId = userIdEl ? userIdEl.value : null;
+        const hausWarning = document.getElementById('editMitJvaWarning');
+        const stationWarning = document.getElementById('editMitStationWarning');
+        
+        if (hausWarning) hausWarning.style.display = 'none';
+        if (stationWarning) stationWarning.style.display = 'none';
       
         // Prüfen auf bereits existierende Hausleitung (nur bei Hausleitung Rolle)
-        if (rolle === 'haus-leitung' || rolle === 'jva-leitung' && hausWarning) {
+        if ((rolle === 'haus-leitung' || rolle === 'jva-leitung') && hausWarning) {
           for (const haus of selectedHaeuser) {
             const existing = getUserSystem()?.getJvaLeitung(haus, userId);
             if (existing) {
