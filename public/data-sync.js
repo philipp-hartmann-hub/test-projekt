@@ -199,6 +199,65 @@ async function syncUsersNow() {
 }
 
 // ============================================
+// DATEN VOM SERVER NEU LADEN (für andere Geräte)
+// ============================================
+
+async function reloadDataFromServer() {
+  if (!serverConnected) {
+    console.warn('Server nicht verbunden, kann Daten nicht neu laden');
+    return false;
+  }
+  
+  try {
+    console.log('Lade aktuelle Daten vom Server...');
+    
+    // Alle Daten parallel laden
+    const [users, antraege, aufgaben, notifications, aktivitaeten, termine] = await Promise.all([
+      apiCall('/users'),
+      apiCall('/antraege'),
+      apiCall('/aufgaben'),
+      apiCall('/notifications'),
+      apiCall('/aktivitaeten'),
+      apiCall('/termine')
+    ]);
+
+    // Server-User auf Frontend-Format mappen
+    const usersFrontend = users.map(u => {
+      if (u.type !== undefined && u.vorname !== undefined) return u;
+      return {
+        ...u,
+        type: u.rolle === 'insasse' ? 'insasse' : 'mitarbeiter',
+        vorname: (u.name && u.name.split(' ')[0]) || '',
+        nachname: (u.name && u.name.split(' ').slice(1).join(' ')) || ''
+      };
+    });
+    
+    // Daten in localStorage speichern (ohne Sync-Loop zu triggern)
+    originalSetItem('gefaengnis_users', JSON.stringify(usersFrontend));
+    originalSetItem('gefaengnis_antraege', JSON.stringify(antraege));
+    originalSetItem('gefaengnis_aufgaben', JSON.stringify(aufgaben));
+    originalSetItem('gefaengnis_notifications', JSON.stringify(notifications));
+    originalSetItem('gefaengnis_aktivitaeten', JSON.stringify(aktivitaeten));
+    originalSetItem('gefaengnis_termine', JSON.stringify(termine));
+
+    console.log('Daten vom Server neu geladen');
+    
+    // reloadDataFromStorage aufrufen, damit die Systeme die neuen Daten verwenden
+    if (typeof window.reloadDataFromStorage === 'function') {
+      window.reloadDataFromStorage();
+    }
+    
+    // Event feuern, damit UI aktualisiert wird
+    window.dispatchEvent(new CustomEvent('dataReloaded'));
+    
+    return true;
+  } catch (error) {
+    console.warn('Fehler beim Neuladen der Daten:', error.message);
+    return false;
+  }
+}
+
+// ============================================
 // GLOBALE API OBJEKTE
 // ============================================
 
@@ -206,6 +265,7 @@ window.DataSync = {
   loadInitialData,
   serverLogin,
   syncUsersNow,
+  reloadDataFromServer,
   isConnected: () => serverConnected,
   isLoaded: () => initialDataLoaded
 };

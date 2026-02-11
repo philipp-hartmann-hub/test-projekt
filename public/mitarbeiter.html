@@ -1174,6 +1174,15 @@
       window.addEventListener('dataSyncLoaded', () => {
         if (currentSession) { renderAntraege(); renderNotifications(); renderKalender(); }
       });
+      
+      // Event-Listener für Daten-Reload vom Server
+      window.addEventListener('dataReloaded', () => {
+        if (currentSession) {
+          renderAntraege();
+          renderNotifications();
+          renderKalender();
+        }
+      });
 
       // Benachrichtigungen und überfällige Aufgaben periodisch prüfen
       setInterval(() => {
@@ -1181,6 +1190,15 @@
         renderNotifications();
         renderAntraege();
       }, 60000); // Jede Minute prüfen
+      
+      // Daten vom Server regelmäßig neu laden (für Anträge von anderen Geräten)
+      if (window.DataSync && window.DataSync.reloadDataFromServer) {
+        setInterval(async () => {
+          if (window.DataSync.isConnected()) {
+            await window.DataSync.reloadDataFromServer();
+          }
+        }, 30000); // Alle 30 Sekunden
+      }
     }
 
     // ============================================

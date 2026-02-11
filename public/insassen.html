@@ -536,12 +536,30 @@
         if (currentSession) { renderAntraege(); renderNotifications(); updateNotificationBadge(); }
       });
       
+      // Event-Listener für Daten-Reload vom Server
+      window.addEventListener('dataReloaded', () => {
+        if (currentSession) {
+          renderAntraege();
+          renderNotifications();
+          updateNotificationBadge();
+        }
+      });
+      
       // Benachrichtigungen und Aufgaben periodisch prüfen
       setInterval(() => {
         renderNotifications();
         renderAntraege();
         updateNotificationBadge();
       }, 10000); // Alle 10 Sekunden
+      
+      // Daten vom Server regelmäßig neu laden (für Anträge von anderen Geräten)
+      if (window.DataSync && window.DataSync.reloadDataFromServer) {
+        setInterval(async () => {
+          if (window.DataSync.isConnected()) {
+            await window.DataSync.reloadDataFromServer();
+          }
+        }, 30000); // Alle 30 Sekunden
+      }
     }
     
     // Check if already logged in
