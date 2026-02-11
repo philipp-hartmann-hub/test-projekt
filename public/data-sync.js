@@ -248,6 +248,9 @@ async function reloadDataFromServer() {
     originalSetItem('gefaengnis_aktivitaeten', JSON.stringify(aktivitaeten));
     originalSetItem('gefaengnis_termine', JSON.stringify(termine));
 
+    const vorherAntraege = antragSystem ? antragSystem.antraege.length : 0;
+    const vorherAufgaben = aufgabenSystem ? aufgabenSystem.aufgaben.length : 0;
+    
     console.log('Daten vom Server neu geladen:', {
       users: users.length,
       antraege: antraege.length,
@@ -259,13 +262,33 @@ async function reloadDataFromServer() {
     if (typeof window.reloadDataFromStorage === 'function') {
       console.log('Rufe reloadDataFromStorage auf...');
       window.reloadDataFromStorage();
+      
+      // Prüfen ob sich die Anzahl geändert hat
+      const nachherAntraege = antragSystem ? antragSystem.antraege.length : 0;
+      const nachherAufgaben = aufgabenSystem ? aufgabenSystem.aufgaben.length : 0;
+      
+      if (nachherAntraege !== vorherAntraege) {
+        console.log(`Anträge-Änderung: ${vorherAntraege} → ${nachherAntraege}`);
+      }
+      if (nachherAufgaben !== vorherAufgaben) {
+        console.log(`Aufgaben-Änderung: ${vorherAufgaben} → ${nachherAufgaben}`);
+        // Prüfe ob Aufgaben-Status sich geändert hat
+        const erledigteAufgaben = aufgabenSystem ? aufgabenSystem.aufgaben.filter(a => a.status === 'erledigt').length : 0;
+        console.log(`Erledigte Aufgaben: ${erledigteAufgaben}`);
+      }
     } else {
       console.warn('reloadDataFromStorage Funktion nicht verfügbar');
     }
     
     // Event feuern, damit UI aktualisiert wird
     console.log('Feuere dataReloaded Event...');
-    window.dispatchEvent(new CustomEvent('dataReloaded', { detail: { antraege: antraege.length } }));
+    window.dispatchEvent(new CustomEvent('dataReloaded', { 
+      detail: { 
+        antraege: antraege.length,
+        aufgaben: aufgaben.length,
+        aufgabenErledigt: aufgaben.filter(a => a.status === 'erledigt').length
+      } 
+    }));
     
     return true;
   } catch (error) {

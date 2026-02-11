@@ -1315,7 +1315,7 @@
       }
     }
     
-    function erledigeInsassenAufgabe() {
+    async function erledigeInsassenAufgabe() {
       const aufgabeId = document.getElementById('aufgabeInsasseId').value;
       const erledigungsTyp = document.querySelector('input[name="aufgabeInsasseTyp"]:checked').value;
       const antwortText = document.getElementById('aufgabeInsasseAntwort').value.trim();
@@ -1327,6 +1327,39 @@
       }
       
       const aufgabe = aufgabenSystem.erledigeAufgabe(aufgabeId, antwortText, erledigungsTyp);
+      console.log('Aufgabe erledigt:', aufgabe.id, 'Status:', aufgabe.status);
+      
+      // Warten kurz, damit localStorage.setItem Zeit hat zu syncen
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Explizit synchronisieren, falls automatischer Sync fehlgeschlagen ist
+      if (window.DataSync && window.DataSync.isConnected()) {
+        console.log('Synchronisiere Aufgaben explizit...');
+        try {
+          const aufgabenData = localStorage.getItem('gefaengnis_aufgaben');
+          if (aufgabenData) {
+            const base = window.location.origin + '/api';
+            const currentServerData = await fetch(base + '/aufgaben').then(r => r.json());
+            const localData = JSON.parse(aufgabenData);
+            
+            // Prüfen ob unsere erledigte Aufgabe schon auf dem Server ist
+            const serverAufgabe = currentServerData.find(s => s.id === aufgabe.id);
+            if (!serverAufgabe || serverAufgabe.status !== 'erledigt') {
+              console.log('Aufgabe noch nicht als erledigt auf Server, sende PUT...');
+              await fetch(base + '/aufgaben/' + aufgabe.id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(aufgabe)
+              });
+              console.log('Aufgabe erfolgreich an Server gesendet');
+            } else {
+              console.log('Aufgabe bereits als erledigt auf Server');
+            }
+          }
+        } catch (e) {
+          console.warn('Explizite Synchronisation fehlgeschlagen:', e);
+        }
+      }
       
       // Benachrichtigung an den Ersteller
       const nachrichtText = erledigungsTyp === 'kenntnisnahme'
