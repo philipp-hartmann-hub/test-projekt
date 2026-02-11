@@ -3724,31 +3724,22 @@ ${t('action.archive')}
         antragSystem.uebernehmBearbeitung(aufgabe.antragId, currentSession.userId, currentSession.name, aufgabe.erstelltVonId);
         
         // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
-        if (window.DataSync && window.DataSync.isConnected()) {
+        if (window.DataSync && window.DataSync.syncAntragToServer) {
           console.log('[Debug] Synchronisiere Hauptbearbeitungsübergabe nach Aufgabe mit Server...');
-          try {
-            const base = window.location.origin + '/api';
-            const antragData = localStorage.getItem('gefaengnis_antraege');
-            if (antragData) {
-              const localAntraege = JSON.parse(antragData);
-              const updatedAntrag = localAntraege.find(a => a.id === aufgabe.antragId);
-              if (updatedAntrag) {
-                const response = await fetch(base + '/antraege/' + aufgabe.antragId, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(updatedAntrag)
-                });
-                if (!response.ok) {
-                  throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                const serverAntrag = await response.json();
-                console.log('[Debug] Hauptbearbeitungsübergabe erfolgreich an Server gesendet:', serverAntrag.id);
-                // Kurze Verzögerung, damit der Server die Änderung verarbeitet hat
-                await new Promise(resolve => setTimeout(resolve, 500));
-              }
+          if (typeof showSyncStatus === 'function') {
+            showSyncStatus('Synchronisiere mit Server...', 'info');
+          }
+          const syncSuccess = await window.DataSync.syncAntragToServer(aufgabe.antragId);
+          if (syncSuccess) {
+            console.log('[Debug] Hauptbearbeitungsübergabe erfolgreich synchronisiert:', aufgabe.antragId);
+            if (typeof showSyncStatus === 'function') {
+              showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
             }
-          } catch (e) {
-            console.warn('Explizite Synchronisation der Hauptbearbeitungsübergabe fehlgeschlagen:', e);
+          } else {
+            console.warn('[Debug] Hauptbearbeitungsübergabe Synchronisation fehlgeschlagen');
+            if (typeof showSyncStatus === 'function') {
+              showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
+            }
           }
         }
         
