@@ -923,40 +923,75 @@
     }
     
     function openEditMitarbeiterModal(id) {
-      const us = getUserSystem();
-      if (!us) return;
-      const user = us.getUser(id);
-      if (!user) return;
-      
-      document.getElementById('editMitId').value = id;
-      document.getElementById('editMitVorname').value = user.vorname;
-      document.getElementById('editMitNachname').value = user.nachname;
-      document.getElementById('editMitGeburtsdatum').value = user.geburtsdatum;
-      document.querySelector(`input[name="editMitRolle"][value="${user.rolle}"]`).checked = true;
-      
-      // JVAs setzen
-      document.querySelectorAll('input[name="editMitJva"]').forEach(cb => {
-        cb.checked = user.jvas && user.jvas.includes(cb.value);
-      });
-      
-      document.getElementById('editMitJvaWarning').style.display = 'none';
-      document.getElementById('editMitStationWarning').style.display = 'none';
-      
-      updateEditMitarbeiterFields();
-      
-      // Station setzen (falls vorhanden)
-      if (user.rolle === 'stationsleitung' && user.station && user.jvas) {
-        setTimeout(() => {
-          const stationValue = `${user.jvas[0]}-${user.station}`;
-          document.getElementById('editMitStation').value = stationValue;
-        }, 50);
+      try {
+        const us = getUserSystem();
+        if (!us) {
+          console.error('userSystem nicht verfügbar');
+          return;
+        }
+        const user = us.getUser(id);
+        if (!user) {
+          console.error('Benutzer nicht gefunden:', id);
+          return;
+        }
+        
+        document.getElementById('editMitId').value = id;
+        document.getElementById('editMitVorname').value = user.vorname || '';
+        document.getElementById('editMitNachname').value = user.nachname || '';
+        document.getElementById('editMitGeburtsdatum').value = user.geburtsdatum || '';
+        
+        // Rolle setzen - mit Null-Prüfung
+        const rolleRadio = document.querySelector(`input[name="editMitRolle"][value="${user.rolle}"]`);
+        if (rolleRadio) {
+          rolleRadio.checked = true;
+        } else {
+          console.warn('Rolle nicht gefunden:', user.rolle, 'Verfügbare Rollen:', Array.from(document.querySelectorAll('input[name="editMitRolle"]')).map(r => r.value));
+          // Fallback: Erste Rolle auswählen
+          const firstRolle = document.querySelector('input[name="editMitRolle"]');
+          if (firstRolle) firstRolle.checked = true;
+        }
+        
+        // JVAs setzen - normalisieren falls Objekte
+        const jvas = user.jvas || [];
+        const jvaIds = jvas.map(j => typeof j === 'string' ? j : (j.id || j));
+        document.querySelectorAll('input[name="editMitJva"]').forEach(cb => {
+          cb.checked = jvaIds.includes(cb.value);
+        });
+        
+        const jvaWarning = document.getElementById('editMitJvaWarning');
+        const stationWarning = document.getElementById('editMitStationWarning');
+        if (jvaWarning) jvaWarning.style.display = 'none';
+        if (stationWarning) stationWarning.style.display = 'none';
+        
+        updateEditMitarbeiterFields();
+        
+        // Station setzen (falls vorhanden)
+        if (user.rolle === 'stationsleitung' && user.station && jvaIds.length > 0) {
+          setTimeout(() => {
+            const stationValue = `${jvaIds[0]}-${user.station}`;
+            const stationEl = document.getElementById('editMitStation');
+            if (stationEl) stationEl.value = stationValue;
+          }, 50);
+        }
+        
+        if (typeof openModal === 'function') {
+          openModal('editMitarbeiterModal');
+        } else {
+          console.error('openModal nicht verfügbar');
+        }
+      } catch (error) {
+        console.error('Fehler in openEditMitarbeiterModal:', error);
+        showAlert('Fehler beim Öffnen des Bearbeitungsmodals: ' + error.message);
       }
-      
-      openModal('editMitarbeiterModal');
     }
     
     function updateEditMitarbeiterFields() {
-      const rolle = document.querySelector('input[name="editMitRolle"]:checked').value;
+      const rolleEl = document.querySelector('input[name="editMitRolle"]:checked');
+      if (!rolleEl) {
+        console.warn('Keine Rolle ausgewählt');
+        return;
+      }
+      const rolle = rolleEl.value;
       const stationGroup = document.getElementById('editMitStationGroup');
       const hausGroup = document.getElementById('editMitJvaGroup');
       const hausHint = document.getElementById('editMitJvaHint');
@@ -984,7 +1019,9 @@
     }
     
     function updateEditMitarbeiterStationen() {
-      const rolle = document.querySelector('input[name="editMitRolle"]:checked').value;
+      const rolleEl = document.querySelector('input[name="editMitRolle"]:checked');
+      if (!rolleEl) return;
+      const rolle = rolleEl.value;
       const selectedHaeuser = Array.from(document.querySelectorAll('input[name="editMitJva"]:checked')).map(cb => cb.value);
       const stationSelect = document.getElementById('editMitStation');
       const userId = document.getElementById('editMitId').value;
@@ -1042,7 +1079,9 @@
       const vorname = document.getElementById('editMitVorname').value.trim();
       const nachname = document.getElementById('editMitNachname').value.trim();
       const geburtsdatum = document.getElementById('editMitGeburtsdatum').value;
-      const rolle = document.querySelector('input[name="editMitRolle"]:checked').value;
+      const rolleEl = document.querySelector('input[name="editMitRolle"]:checked');
+      if (!rolleEl) return;
+      const rolle = rolleEl.value;
       const selectedHaeuser = Array.from(document.querySelectorAll('input[name="editMitJva"]:checked')).map(cb => cb.value);
       const stationValue = document.getElementById('editMitStation').value;
       
