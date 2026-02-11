@@ -408,7 +408,8 @@
     
     function waitForAppJS() {
       return new Promise((resolve) => {
-        if (typeof userSystem !== 'undefined' && typeof showAlert === 'function') {
+        // Prüfe window.userSystem statt userSystem direkt (vermeidet ReferenceError)
+        if (typeof window !== 'undefined' && window.userSystem && typeof showAlert === 'function') {
           resolve();
           return;
         }
@@ -416,7 +417,7 @@
         let attempts = 0;
         const checkInterval = setInterval(() => {
           attempts++;
-          if (typeof userSystem !== 'undefined' && typeof showAlert === 'function') {
+          if (typeof window !== 'undefined' && window.userSystem && typeof showAlert === 'function') {
             clearInterval(checkInterval);
             resolve();
           } else if (attempts > 50) { // Max 5 Sekunden warten
@@ -426,6 +427,11 @@
           }
         }, 100);
       });
+    }
+    
+    // Helper: userSystem sicher abrufen
+    function getUserSystem() {
+      return window.userSystem || (typeof userSystem !== 'undefined' ? userSystem : null);
     }
     
     // ============================================
@@ -577,7 +583,8 @@
       await waitForAppJS();
       
       try {
-        if (typeof userSystem === 'undefined') {
+        const us = getUserSystem();
+        if (!us) {
           console.error('userSystem nicht verfügbar');
           if (typeof showAlert === 'function') {
             await showAlert('Fehler: Benutzersystem nicht geladen. Bitte Seite neu laden.');
@@ -606,7 +613,7 @@
           return;
         }
         
-        userSystem.createInsasse({ vorname, nachname, geburtsdatum, jva, station });
+        us.createInsasse({ vorname, nachname, geburtsdatum, jva, station });
         closeModal('newInsasseModal');
         renderUsers();
         if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
@@ -617,7 +624,9 @@
     }
     
     function openEditInsasseModal(id) {
-      const user = userSystem.getUser(id);
+      const us = getUserSystem();
+      if (!us) return;
+      const user = us.getUser(id);
       if (!user) return;
       
       document.getElementById('editInsId').value = id;
@@ -671,7 +680,7 @@
         return;
       }
       
-      userSystem.updateUser(id, { vorname, nachname, geburtsdatum, jva, station });
+        getUserSystem()?.updateUser(id, { vorname, nachname, geburtsdatum, jva, station });
       closeModal('editInsasseModal');
       renderUsers();
       if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
@@ -681,7 +690,7 @@
       const confirmed = await showConfirm(`Sind Sie sicher, dass Sie den Insassen "${name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`);
       if (!confirmed) return;
       
-      userSystem.deleteUser(id);
+      getUserSystem()?.deleteUser(id);
       renderUsers();
       if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
     }
@@ -748,7 +757,7 @@
       // Prüfen auf bereits existierende Hausleitung (nur bei Hausleitung Rolle)
       if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
         for (const haus of selectedHaeuser) {
-          if (userSystem.hasJvaLeitung(haus)) {
+          if (getUserSystem()?.hasJvaLeitung(haus)) {
             hausWarning.textContent = `Für ${getHausName(haus)} existiert bereits eine VAL.`;
             hausWarning.style.display = 'block';
             break;
@@ -793,7 +802,8 @@
       await waitForAppJS();
       
       try {
-        if (typeof userSystem === 'undefined') {
+        const us = getUserSystem();
+        if (!us) {
           console.error('userSystem nicht verfügbar');
           if (typeof showAlert === 'function') {
             await showAlert('Fehler: Benutzersystem nicht geladen. Bitte Seite neu laden.');
@@ -825,7 +835,7 @@
         }
         // Kammer braucht kein Haus (hausunabhängig)
         if (rolle === 'kammer') {
-          userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
+          us.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
           closeModal('newMitarbeiterModal');
           renderUsers();
           if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
@@ -843,14 +853,14 @@
             await showAlert('Eine VAL kann nur einem Haus zugeordnet werden.');
             return;
           }
-          if (userSystem.hasJvaLeitung(selectedHaeuser[0])) {
+          if (us.hasJvaLeitung(selectedHaeuser[0])) {
             await showAlert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine VAL.`);
             return;
           }
-          userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
+          us.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
         } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
           // Zahlstelle und Arbeitskoordination - keine Station erforderlich
-          userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
+          us.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
         } else if (rolle === 'stationsleitung') {
           // Stationsleitung - Einschränkungen prüfen
           if (!stationValue) {
@@ -858,11 +868,11 @@
             return;
           }
           const [haus, station] = stationValue.split('-');
-          if (userSystem.hasStationsleitung(haus, station)) {
+          if (us.hasStationsleitung(haus, station)) {
             await showAlert(`Für ${getHausName(haus)} Station ${station} existiert bereits eine Stationsleitung.`);
             return;
           }
-          userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
+          us.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
         } else {
           // Normaler Mitarbeiter - keine Einschränkungen
           if (!stationValue) {
@@ -870,7 +880,7 @@
             return;
           }
           const [haus, station] = stationValue.split('-');
-          userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
+          us.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
         }
         
         closeModal('newMitarbeiterModal');
@@ -883,7 +893,9 @@
     }
     
     function openEditMitarbeiterModal(id) {
-      const user = userSystem.getUser(id);
+      const us = getUserSystem();
+      if (!us) return;
+      const user = us.getUser(id);
       if (!user) return;
       
       document.getElementById('editMitId').value = id;
@@ -955,7 +967,7 @@
       // Prüfen auf bereits existierende Hausleitung (nur bei Hausleitung Rolle)
       if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
         for (const haus of selectedHaeuser) {
-          const existing = userSystem.getJvaLeitung(haus, userId);
+          const existing = getUserSystem()?.getJvaLeitung(haus, userId);
           if (existing) {
             hausWarning.textContent = `Für ${getHausName(haus)} existiert bereits eine VAL (${existing.vorname} ${existing.nachname}).`;
             hausWarning.style.display = 'block';
@@ -1015,7 +1027,7 @@
       
       // Kammer braucht kein Haus (hausunabhängig)
       if (rolle === 'kammer') {
-        userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
+        getUserSystem()?.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
         closeModal('editMitarbeiterModal');
         renderUsers();
         if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
@@ -1032,15 +1044,15 @@
           showAlert('Eine VAL kann nur einem Haus zugeordnet werden.');
           return;
         }
-        const existing = userSystem.getJvaLeitung(selectedHaeuser[0], id);
+        const existing = getUserSystem()?.getJvaLeitung(selectedHaeuser[0], id);
         if (existing) {
           showAlert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine VAL.`);
           return;
         }
-        userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
+        getUserSystem()?.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
       } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
         // Zahlstelle und Arbeitskoordination - keine Station erforderlich
-        userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
+        getUserSystem()?.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
       } else if (rolle === 'stationsleitung') {
         // Stationsleitung - Einschränkungen prüfen
         if (!stationValue) {
@@ -1048,12 +1060,12 @@
           return;
         }
         const [haus, station] = stationValue.split('-');
-        const existing = userSystem.getStationsleitung(haus, station, id);
+        const existing = getUserSystem()?.getStationsleitung(haus, station, id);
         if (existing) {
           showAlert(`Für ${getHausName(haus)} Station ${station} existiert bereits eine Stationsleitung.`);
           return;
         }
-        userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
+        getUserSystem()?.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
       } else {
         // Normaler Mitarbeiter - keine Einschränkungen
         if (!stationValue) {
@@ -1061,7 +1073,7 @@
           return;
         }
         const [haus, station] = stationValue.split('-');
-        userSystem.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
+        getUserSystem()?.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
       }
       
       closeModal('editMitarbeiterModal');
@@ -1073,7 +1085,7 @@
       const confirmed = await showConfirm(`Sind Sie sicher, dass Sie den Mitarbeiter "${name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`);
       if (!confirmed) return;
       
-      userSystem.deleteUser(id);
+      getUserSystem()?.deleteUser(id);
       renderUsers();
       if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
     }
@@ -1086,7 +1098,7 @@
       const confirmed = await showConfirm('Sind Sie sicher, dass Sie das Passwort zurücksetzen möchten?');
       if (!confirmed) return;
       
-      const newPassword = userSystem.resetPassword(id);
+      const newPassword = getUserSystem()?.resetPassword(id);
       if (newPassword) {
         showAlert(`Neues Passwort: ${newPassword}`);
         renderUsers();
@@ -1111,7 +1123,8 @@
     // ============================================
     
     function renderUsers() {
-      if (typeof userSystem === 'undefined') {
+      const us = getUserSystem();
+      if (!us) {
         console.warn('renderUsers: userSystem noch nicht verfügbar');
         return;
       }
@@ -1119,8 +1132,8 @@
       const insassenList = document.getElementById('insassenList');
       const mitarbeiterList = document.getElementById('mitarbeiterList');
       
-      const insassen = userSystem.getInsassen();
-      const mitarbeiter = userSystem.getMitarbeiter();
+      const insassen = us.getInsassen();
+      const mitarbeiter = us.getMitarbeiter();
       
       document.getElementById('insassenCount').textContent = insassen.length;
       document.getElementById('mitarbeiterCount').textContent = mitarbeiter.length;

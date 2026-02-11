@@ -1290,7 +1290,15 @@ class UserSystem {
       }
       // JVA -> Haus Migration für Mitarbeiter
       if (user.type === 'mitarbeiter' && user.jvas) {
-        const neuJvas = user.jvas.map(j => j.startsWith('jva') ? j.replace('jva', 'haus') : j);
+        const neuJvas = user.jvas.map(j => {
+          // j kann ein String sein ('haus1') oder ein Objekt ({id: 'haus1', name: 'Haus 1'})
+          const jvaId = typeof j === 'string' ? j : (j.id || j);
+          if (typeof jvaId === 'string' && jvaId.startsWith('jva')) {
+            const newId = jvaId.replace('jva', 'haus');
+            return typeof j === 'string' ? newId : { ...j, id: newId };
+          }
+          return j;
+        });
         if (JSON.stringify(neuJvas) !== JSON.stringify(user.jvas)) {
           user.jvas = neuJvas;
           changed = true;
@@ -1532,6 +1540,14 @@ class UserSystem {
 
 // Globale User-Instanz
 const userSystem = new UserSystem();
+// Auch auf window setzen für globale Verfügbarkeit
+if (typeof window !== 'undefined') {
+  window.userSystem = userSystem;
+}
+// Auch auf window setzen für globale Verfügbarkeit
+if (typeof window !== 'undefined') {
+  window.userSystem = userSystem;
+}
 
 // ============================================
 // BENACHRICHTIGUNGSSYSTEM
@@ -3789,7 +3805,9 @@ const antragSystem = new AntragSystem();
 function reloadDataFromStorage() {
   try {
     const rawUsers = localStorage.getItem('gefaengnis_users');
-    if (rawUsers) userSystem.users = JSON.parse(rawUsers);
+    if (rawUsers && typeof userSystem !== 'undefined') {
+      userSystem.users = JSON.parse(rawUsers);
+    }
     const rawNotifications = localStorage.getItem('gefaengnis_notifications');
     if (rawNotifications) notificationSystem.notifications = JSON.parse(rawNotifications);
     const rawAktivitaeten = localStorage.getItem('gefaengnis_aktivitaeten');
