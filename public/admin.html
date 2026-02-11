@@ -482,13 +482,43 @@
         if (!res.ok) return;
         const users = await res.json();
         const mapped = (users || []).map(u => {
-          if (u.type !== undefined && u.vorname !== undefined) return u;
-          return {
+          // Wenn bereits im Frontend-Format, unverändert zurückgeben
+          if (u.type !== undefined && u.vorname !== undefined && u.nachname !== undefined) {
+            return u;
+          }
+          
+          // Mapping vom Server-Format (name/rolle) zum Frontend-Format (vorname/nachname/type)
+          const mappedUser = {
             ...u,
-            type: u.rolle === 'insasse' ? 'insasse' : 'mitarbeiter',
-            vorname: (u.name && u.name.split(' ')[0]) || '',
-            nachname: (u.name && u.name.split(' ').slice(1).join(' ')) || ''
+            type: u.rolle === 'insasse' ? 'insasse' : 'mitarbeiter'
           };
+          
+          // Name aufteilen
+          if (u.name) {
+            const nameParts = u.name.trim().split(/\s+/);
+            mappedUser.vorname = nameParts[0] || '';
+            mappedUser.nachname = nameParts.slice(1).join(' ') || '';
+          } else if (!u.vorname || !u.nachname) {
+            // Fallback falls name fehlt
+            mappedUser.vorname = u.vorname || '';
+            mappedUser.nachname = u.nachname || '';
+          }
+          
+          // jvas normalisieren: Falls Objekte, zu Strings konvertieren
+          if (mappedUser.jvas && Array.isArray(mappedUser.jvas)) {
+            mappedUser.jvas = mappedUser.jvas.map(j => {
+              if (typeof j === 'string') return j;
+              if (j && typeof j === 'object' && j.id) return j.id;
+              return j;
+            });
+          }
+          
+          // jva normalisieren (für Insassen)
+          if (mappedUser.jva && typeof mappedUser.jva === 'object' && mappedUser.jva.id) {
+            mappedUser.jva = mappedUser.jva.id;
+          }
+          
+          return mappedUser;
         });
         localStorage.setItem('gefaengnis_users', JSON.stringify(mapped));
         if (typeof window.reloadDataFromStorage === 'function') window.reloadDataFromStorage();
@@ -1163,11 +1193,11 @@
               <div class="user-info">
                 <div class="user-name">
                   ${user.insassenNummer ? `<span class="insassen-nummer">${user.insassenNummer}</span>` : ''}
-                  ${escapeHtml(user.vorname)} ${escapeHtml(user.nachname)}
+                  ${escapeHtml(user.vorname || '')} ${escapeHtml(user.nachname || '')}
                 </div>
                 <div class="user-meta">
-                  <span>${formatDateOnly(user.geburtsdatum)}</span>
-                  <span>${getHausName(user.jva)} - Station ${user.station}</span>
+                  <span>${user.geburtsdatum ? formatDateOnly(user.geburtsdatum) : '-'}</span>
+                  <span>${user.jva ? getHausName(user.jva) : '-'}${user.station ? ` - Station ${user.station}` : ''}</span>
                 </div>
                 <div class="user-credentials">
                   <span class="credential-inline">
