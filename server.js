@@ -173,7 +173,8 @@ app.put('/api/antraege/:id', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Antrag nicht gefunden' });
     }
     
-    res.json({ success: true });
+    // Aktualisierten Antrag zurückgeben, damit Frontend die Änderungen bestätigen kann
+    res.json(updated);
   } catch (error) {
     console.error('Fehler beim Aktualisieren des Antrags:', error);
     res.status(500).json({ success: false, error: 'Fehler beim Aktualisieren des Antrags' });

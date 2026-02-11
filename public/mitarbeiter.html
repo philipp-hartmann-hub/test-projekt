@@ -4510,7 +4510,22 @@ ${t('action.archive')}
                   throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 const serverAntrag = await response.json();
-                console.log('[Debug] Antrag-Übernahme erfolgreich an Server gesendet:', serverAntrag.id);
+                console.log('[Debug] Antrag-Übernahme erfolgreich an Server gesendet:', serverAntrag.id || antragId, 'Bearbeiter:', serverAntrag.bearbeiterId);
+                // Aktualisiere lokale Daten mit Server-Daten, um sicherzustellen, dass alles synchron ist
+                if (serverAntrag.id) {
+                  const antragData = localStorage.getItem('gefaengnis_antraege');
+                  if (antragData) {
+                    const localAntraege = JSON.parse(antragData);
+                    const index = localAntraege.findIndex(a => a.id === serverAntrag.id);
+                    if (index !== -1) {
+                      localAntraege[index] = serverAntrag;
+                      localStorage.setItem('gefaengnis_antraege', JSON.stringify(localAntraege));
+                      if (typeof window.reloadDataFromStorage === 'function') {
+                        window.reloadDataFromStorage();
+                      }
+                    }
+                  }
+                }
                 // Kurze Verzögerung, damit der Server die Änderung verarbeitet hat
                 await new Promise(resolve => setTimeout(resolve, 500));
               }
@@ -4580,7 +4595,22 @@ ${t('action.archive')}
                   throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 const serverAntrag = await response.json();
-                console.log('[Debug] Antrag-Übernahme erfolgreich an Server gesendet:', serverAntrag.id);
+                console.log('[Debug] Antrag-Übernahme erfolgreich an Server gesendet:', serverAntrag.id || antragId, 'Bearbeiter:', serverAntrag.bearbeiterId);
+                // Aktualisiere lokale Daten mit Server-Daten, um sicherzustellen, dass alles synchron ist
+                if (serverAntrag.id) {
+                  const antragData = localStorage.getItem('gefaengnis_antraege');
+                  if (antragData) {
+                    const localAntraege = JSON.parse(antragData);
+                    const index = localAntraege.findIndex(a => a.id === serverAntrag.id);
+                    if (index !== -1) {
+                      localAntraege[index] = serverAntrag;
+                      localStorage.setItem('gefaengnis_antraege', JSON.stringify(localAntraege));
+                      if (typeof window.reloadDataFromStorage === 'function') {
+                        window.reloadDataFromStorage();
+                      }
+                    }
+                  }
+                }
                 // Kurze Verzögerung, damit der Server die Änderung verarbeitet hat
                 await new Promise(resolve => setTimeout(resolve, 500));
               }

@@ -3161,10 +3161,12 @@ class AntragSystem {
     console.log('[Debug] getOffeneAntraegeMitarbeiter:', {
       mitarbeiterId: mitarbeiter.userId,
       istHausleitung: istHausleitung,
-      antragsIdsMitGruppenaufgaben: antragsIdsMitGruppenaufgaben
+      jvas: mitarbeiter.jvas,
+      antragsIdsMitGruppenaufgaben: antragsIdsMitGruppenaufgaben,
+      gesamtAntraege: this.antraege.length
     });
     
-    return this.antraege.filter(a => {
+    const gefilterteAntraege = this.antraege.filter(a => {
       // 1. Offene Anträge (noch kein Bearbeiter)
       if (a.status === 'offen') {
         // VAL sieht IMMER alle Anträge ihres Hauses, auch wenn sie einer Gruppe zugewiesen sind
@@ -3230,7 +3232,22 @@ class AntragSystem {
       }
       
       return false;
-    }).sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
+    });
+    
+    console.log('[Debug] getOffeneAntraegeMitarbeiter Ergebnis:', {
+      gefiltert: gefilterteAntraege.length,
+      antraege: gefilterteAntraege.map(a => ({
+        id: a.id,
+        status: a.status,
+        bearbeiterId: a.bearbeiterId,
+        insasseJva: a.insasseJva,
+        zugewiesenAnGruppe: a.zugewiesenAnGruppe,
+        hauptbearbeitungWartetAufUebernahme: a.hauptbearbeitungWartetAufUebernahme,
+        veraktet: a.veraktet
+      }))
+    });
+    
+    return gefilterteAntraege.sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
   }
   
   // Prüft ob ein Mitarbeiter zu einer Gruppe gehört
