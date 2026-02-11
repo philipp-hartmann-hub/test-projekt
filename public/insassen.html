@@ -537,8 +537,10 @@
       });
       
       // Event-Listener für Daten-Reload vom Server
-      window.addEventListener('dataReloaded', () => {
+      window.addEventListener('dataReloaded', (event) => {
+        console.log('dataReloaded Event empfangen:', event.detail);
         if (currentSession) {
+          console.log('Aktualisiere UI nach dataReloaded...');
           renderAntraege();
           renderNotifications();
           updateNotificationBadge();
@@ -554,11 +556,18 @@
       
       // Daten vom Server regelmäßig neu laden (für Anträge von anderen Geräten)
       if (window.DataSync && window.DataSync.reloadDataFromServer) {
+        console.log('Starte automatisches Polling für Server-Daten...');
         setInterval(async () => {
-          if (window.DataSync.isConnected()) {
-            await window.DataSync.reloadDataFromServer();
+          if (window.DataSync && window.DataSync.isConnected()) {
+            console.log('Polling: Lade Daten vom Server...');
+            const success = await window.DataSync.reloadDataFromServer();
+            console.log('Polling: Ergebnis:', success ? 'Erfolg' : 'Fehler');
+          } else {
+            console.log('Polling: Server nicht verbunden, überspringe...');
           }
         }, 30000); // Alle 30 Sekunden
+      } else {
+        console.warn('DataSync.reloadDataFromServer nicht verfügbar');
       }
     }
     

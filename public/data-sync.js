@@ -240,15 +240,24 @@ async function reloadDataFromServer() {
     originalSetItem('gefaengnis_aktivitaeten', JSON.stringify(aktivitaeten));
     originalSetItem('gefaengnis_termine', JSON.stringify(termine));
 
-    console.log('Daten vom Server neu geladen');
+    console.log('Daten vom Server neu geladen:', {
+      users: users.length,
+      antraege: antraege.length,
+      aufgaben: aufgaben.length,
+      notifications: notifications.length
+    });
     
     // reloadDataFromStorage aufrufen, damit die Systeme die neuen Daten verwenden
     if (typeof window.reloadDataFromStorage === 'function') {
+      console.log('Rufe reloadDataFromStorage auf...');
       window.reloadDataFromStorage();
+    } else {
+      console.warn('reloadDataFromStorage Funktion nicht verfügbar');
     }
     
     // Event feuern, damit UI aktualisiert wird
-    window.dispatchEvent(new CustomEvent('dataReloaded'));
+    console.log('Feuere dataReloaded Event...');
+    window.dispatchEvent(new CustomEvent('dataReloaded', { detail: { antraege: antraege.length } }));
     
     return true;
   } catch (error) {
