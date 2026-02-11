@@ -4501,12 +4501,18 @@ ${t('action.archive')}
               const localAntraege = JSON.parse(antragData);
               const updatedAntrag = localAntraege.find(a => a.id === antragId);
               if (updatedAntrag) {
-                await fetch(base + '/antraege/' + antragId, {
+                const response = await fetch(base + '/antraege/' + antragId, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(updatedAntrag)
                 });
-                console.log('[Debug] Antrag-Übernahme erfolgreich an Server gesendet');
+                if (!response.ok) {
+                  throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const serverAntrag = await response.json();
+                console.log('[Debug] Antrag-Übernahme erfolgreich an Server gesendet:', serverAntrag.id);
+                // Kurze Verzögerung, damit der Server die Änderung verarbeitet hat
+                await new Promise(resolve => setTimeout(resolve, 500));
               }
             }
           } catch (e) {
