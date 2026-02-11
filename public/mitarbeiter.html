@@ -4461,27 +4461,59 @@ ${t('action.archive')}
     // ============================================
     
     function openHausleitungUebernahmeModal(antragId) {
-      const antrag = antragSystem.getAntrag(antragId);
-      if (!antrag) return;
-      
-      document.getElementById('hausleitungUebernahmeAntragId').value = antragId;
-      document.getElementById('hausleitungUebernahmeBegruendung').value = '';
-      
-      // Info über den Antrag anzeigen
-      const bearbeiterInfo = antrag.bearbeiterName ? 
-        `<p><strong>Aktueller Bearbeiter:</strong> ${antrag.bearbeiterName}</p>` : 
-        '<p><strong>Status:</strong> Noch kein Bearbeiter zugewiesen</p>';
-      
-      document.getElementById('hausleitungUebernahmeInfo').innerHTML = `
-        <div class="detail-box" style="margin-bottom: 1rem;">
-          <p><strong>Antrag:</strong> ${antrag.antragsNummer || antrag.id}</p>
-          <p><strong>Antragsteller:</strong> ${antrag.insasseName}</p>
-          <p><strong>Antragstyp:</strong> ${antrag.type === 'teilhabegeld' ? 'Teilhabegeld' : 'Eigentum in der Kammer'}</p>
-          ${bearbeiterInfo}
-        </div>
-      `;
-      
-      openModal('hausleitungUebernahmeModal');
+      try {
+        console.log('openHausleitungUebernahmeModal aufgerufen für:', antragId);
+        
+        if (typeof antragSystem === 'undefined') {
+          console.error('antragSystem nicht verfügbar');
+          showAlert('Fehler: Antragssystem nicht geladen. Bitte Seite neu laden.');
+          return;
+        }
+        
+        const antrag = antragSystem.getAntrag(antragId);
+        if (!antrag) {
+          console.error('Antrag nicht gefunden:', antragId);
+          showAlert('Antrag nicht gefunden.');
+          return;
+        }
+        
+        const antragIdEl = document.getElementById('hausleitungUebernahmeAntragId');
+        const begruendungEl = document.getElementById('hausleitungUebernahmeBegruendung');
+        const infoEl = document.getElementById('hausleitungUebernahmeInfo');
+        
+        if (!antragIdEl || !begruendungEl || !infoEl) {
+          console.error('Modal-Elemente nicht gefunden');
+          showAlert('Fehler: Modal-Elemente nicht gefunden.');
+          return;
+        }
+        
+        antragIdEl.value = antragId;
+        begruendungEl.value = '';
+        
+        // Info über den Antrag anzeigen
+        const bearbeiterInfo = antrag.bearbeiterName ? 
+          `<p><strong>Aktueller Bearbeiter:</strong> ${antrag.bearbeiterName}</p>` : 
+          '<p><strong>Status:</strong> Noch kein Bearbeiter zugewiesen</p>';
+        
+        infoEl.innerHTML = `
+          <div class="detail-box" style="margin-bottom: 1rem;">
+            <p><strong>Antrag:</strong> ${antrag.antragsNummer || antrag.id}</p>
+            <p><strong>Antragsteller:</strong> ${antrag.insasseName || 'Unbekannt'}</p>
+            <p><strong>Antragstyp:</strong> ${antrag.type === 'teilhabegeld' ? 'Teilhabegeld' : antrag.type === 'eigentum' ? 'Eigentum in der Kammer' : 'Sonstiges'}</p>
+            ${bearbeiterInfo}
+          </div>
+        `;
+        
+        if (typeof openModal === 'function') {
+          openModal('hausleitungUebernahmeModal');
+        } else {
+          console.error('openModal Funktion nicht verfügbar');
+          showAlert('Fehler: Modal-Funktion nicht verfügbar. Bitte Seite neu laden.');
+        }
+      } catch (error) {
+        console.error('Fehler in openHausleitungUebernahmeModal:', error);
+        showAlert('Fehler beim Öffnen des Modals: ' + error.message);
+      }
     }
     
     function bestaeigeHausleitungUebernahme() {
