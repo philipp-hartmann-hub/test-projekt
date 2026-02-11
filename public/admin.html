@@ -986,44 +986,59 @@
     }
     
     function updateEditMitarbeiterFields() {
-      const rolleEl = document.querySelector('input[name="editMitRolle"]:checked');
-      if (!rolleEl) {
-        console.warn('Keine Rolle ausgewählt');
-        return;
+      try {
+        const rolleEl = document.querySelector('input[name="editMitRolle"]:checked');
+        if (!rolleEl) {
+          console.warn('Keine Rolle ausgewählt');
+          return;
+        }
+        const rolle = rolleEl.value;
+        const stationGroup = document.getElementById('editMitStationGroup');
+        const hausGroup = document.getElementById('editMitJvaGroup');
+        const hausHint = document.getElementById('editMitJvaHint');
+        
+        if (!stationGroup || !hausGroup) {
+          console.warn('Modal-Elemente nicht gefunden (stationGroup oder hausGroup)');
+          return;
+        }
+        
+        if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
+          stationGroup.style.display = 'none';
+          hausGroup.style.display = 'block';
+          if (hausHint) hausHint.textContent = '(Ein Haus auswählen)';
+        } else if (rolle === 'kammer') {
+          // Kammer ist hausunabhängig
+          stationGroup.style.display = 'none';
+          hausGroup.style.display = 'none';
+        } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
+          // Zahlstelle und Arbeitskoordination sind keiner Station zugeordnet
+          stationGroup.style.display = 'none';
+          hausGroup.style.display = 'block';
+          if (hausHint) hausHint.textContent = '(Mehrfachauswahl möglich)';
+        } else {
+          stationGroup.style.display = 'block';
+          hausGroup.style.display = 'block';
+          if (hausHint) hausHint.textContent = '(Mehrfachauswahl möglich)';
+        }
+        
+        updateEditMitarbeiterStationen();
+      } catch (error) {
+        console.error('Fehler in updateEditMitarbeiterFields:', error);
       }
-      const rolle = rolleEl.value;
-      const stationGroup = document.getElementById('editMitStationGroup');
-      const hausGroup = document.getElementById('editMitJvaGroup');
-      const hausHint = document.getElementById('editMitJvaHint');
-      
-      if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
-        stationGroup.style.display = 'none';
-        hausGroup.style.display = 'block';
-        hausHint.textContent = '(Ein Haus auswählen)';
-      } else if (rolle === 'kammer') {
-        // Kammer ist hausunabhängig
-        stationGroup.style.display = 'none';
-        hausGroup.style.display = 'none';
-      } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
-        // Zahlstelle und Arbeitskoordination sind keiner Station zugeordnet
-        stationGroup.style.display = 'none';
-        hausGroup.style.display = 'block';
-        hausHint.textContent = '(Mehrfachauswahl möglich)';
-      } else {
-        stationGroup.style.display = 'block';
-        hausGroup.style.display = 'block';
-        hausHint.textContent = '(Mehrfachauswahl möglich)';
-      }
-      
-      updateEditMitarbeiterStationen();
     }
     
     function updateEditMitarbeiterStationen() {
-      const rolleEl = document.querySelector('input[name="editMitRolle"]:checked');
-      if (!rolleEl) return;
-      const rolle = rolleEl.value;
-      const selectedHaeuser = Array.from(document.querySelectorAll('input[name="editMitJva"]:checked')).map(cb => cb.value);
-      const stationSelect = document.getElementById('editMitStation');
+      try {
+        const rolleEl = document.querySelector('input[name="editMitRolle"]:checked');
+        if (!rolleEl) return;
+        const rolle = rolleEl.value;
+        const selectedHaeuser = Array.from(document.querySelectorAll('input[name="editMitJva"]:checked')).map(cb => cb.value);
+        const stationSelect = document.getElementById('editMitStation');
+        
+        if (!stationSelect) {
+          console.warn('editMitStation Element nicht gefunden');
+          return;
+        }
       const userId = document.getElementById('editMitId').value;
       const hausWarning = document.getElementById('editMitJvaWarning');
       const stationWarning = document.getElementById('editMitStationWarning');
@@ -1031,44 +1046,49 @@
       hausWarning.style.display = 'none';
       stationWarning.style.display = 'none';
       
-      // Prüfen auf bereits existierende Hausleitung (nur bei Hausleitung Rolle)
-      if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
-        for (const haus of selectedHaeuser) {
-          const existing = getUserSystem()?.getJvaLeitung(haus, userId);
-          if (existing) {
-            hausWarning.textContent = `Für ${getHausName(haus)} existiert bereits eine VAL (${existing.vorname} ${existing.nachname}).`;
-            hausWarning.style.display = 'block';
-            break;
+        // Prüfen auf bereits existierende Hausleitung (nur bei Hausleitung Rolle)
+        if (rolle === 'haus-leitung' || rolle === 'jva-leitung' && hausWarning) {
+          for (const haus of selectedHaeuser) {
+            const existing = getUserSystem()?.getJvaLeitung(haus, userId);
+            if (existing) {
+              hausWarning.textContent = `Für ${getHausName(haus)} existiert bereits eine VAL (${existing.vorname} ${existing.nachname}).`;
+              hausWarning.style.display = 'block';
+              break;
+            }
           }
         }
-      }
-      
-      // Bei Hausleitung, Zahlstelle, Arbeitskoordination und Kammer keine Station nötig
-      if (rolle === 'haus-leitung' || rolle === 'jva-leitung' || rolle === 'zahlstelle' || rolle === 'arbeitskoordination' || rolle === 'kammer') {
-        stationSelect.innerHTML = '<option value="">Nicht erforderlich</option>';
-        stationSelect.disabled = true;
-        return;
-      }
-      
-      if (selectedHaeuser.length === 0) {
-        stationSelect.innerHTML = '<option value="">Erst Haus wählen...</option>';
-        stationSelect.disabled = true;
-        return;
-      }
-      
-      let allStationen = [];
-      selectedHaeuser.forEach(haus => {
-        HAUS_CONFIG[haus].stationen.forEach(s => {
-          const key = `${haus}-${s}`;
-          if (!allStationen.find(st => st.key === key)) {
-            allStationen.push({ key, haus, station: s, label: `${getHausName(haus)} - Station ${s}` });
+        
+        // Bei Hausleitung, Zahlstelle, Arbeitskoordination und Kammer keine Station nötig
+        if (rolle === 'haus-leitung' || rolle === 'jva-leitung' || rolle === 'zahlstelle' || rolle === 'arbeitskoordination' || rolle === 'kammer') {
+          stationSelect.innerHTML = '<option value="">Nicht erforderlich</option>';
+          stationSelect.disabled = true;
+          return;
+        }
+        
+        if (selectedHaeuser.length === 0) {
+          stationSelect.innerHTML = '<option value="">Erst Haus wählen...</option>';
+          stationSelect.disabled = true;
+          return;
+        }
+        
+        let allStationen = [];
+        selectedHaeuser.forEach(haus => {
+          if (HAUS_CONFIG[haus] && HAUS_CONFIG[haus].stationen) {
+            HAUS_CONFIG[haus].stationen.forEach(s => {
+              const key = `${haus}-${s}`;
+              if (!allStationen.find(st => st.key === key)) {
+                allStationen.push({ key, haus, station: s, label: `${getHausName(haus)} - Station ${s}` });
+              }
+            });
           }
         });
-      });
-      
-      stationSelect.innerHTML = '<option value="">Bitte wählen...</option>' +
-        allStationen.map(s => `<option value="${s.key}">${s.label}</option>`).join('');
-      stationSelect.disabled = false;
+        
+        stationSelect.innerHTML = '<option value="">Bitte wählen...</option>' +
+          allStationen.map(s => `<option value="${s.key}">${s.label}</option>`).join('');
+        stationSelect.disabled = false;
+      } catch (error) {
+        console.error('Fehler in updateEditMitarbeiterStationen:', error);
+      }
     }
     
     async function saveMitarbeiter() {
