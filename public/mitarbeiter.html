@@ -1154,11 +1154,35 @@
     function showPortal() {
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('portalSection').style.display = 'block';
-      document.getElementById('userName').textContent = currentSession.name;
+      
+      // Name aus Session holen oder aus userSystem falls nicht vorhanden
+      let displayName = currentSession.name;
+      if (!displayName || displayName.trim() === '' || displayName === 'Kammer mitarbeiter' || displayName === 'kammer mitarbeiter') {
+        // Versuche Name aus userSystem zu holen
+        const user = userSystem.users.find(u => u.id === currentSession.userId);
+        if (user) {
+          if (user.vorname && user.nachname) {
+            displayName = `${user.vorname} ${user.nachname}`;
+          } else if (user.vorname) {
+            displayName = user.vorname;
+          } else if (user.name) {
+            displayName = user.name;
+          } else {
+            displayName = currentSession.username || 'Mitarbeiter';
+          }
+        } else {
+          displayName = currentSession.username || 'Mitarbeiter';
+        }
+        // Aktualisiere Session mit korrektem Namen
+        currentSession.name = displayName;
+        sessionManager.setSession(currentSession);
+      }
+      
+      document.getElementById('userName').textContent = displayName;
       document.getElementById('userRole').textContent = getRolleText(currentSession.rolle);
       
       // Moin-Begrüßung setzen
-      document.getElementById('welcomeGreeting').textContent = 'Moin, ' + currentSession.name + '!';
+      document.getElementById('welcomeGreeting').textContent = 'Moin, ' + displayName + '!';
       document.getElementById('welcomeMessage').textContent = 'Willkommen im Mitarbeiter-Portal.';
       
       // Zuständigkeitsbereich anzeigen

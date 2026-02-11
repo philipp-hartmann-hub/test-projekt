@@ -1678,6 +1678,10 @@ class SessionManager {
     return data ? JSON.parse(data) : null;
   }
 
+  setSession(session) {
+    sessionStorage.setItem(this.sessionKey, JSON.stringify(session));
+  }
+
   isLoggedIn() {
     return this.getSession() !== null;
   }
@@ -3295,8 +3299,20 @@ class AntragSystem {
                            mitarbeiter.rolle === 'haus-leitung' || 
                            mitarbeiter.rolle === 'hausleitung';
     
-    // Normalisiere Haus-ID der Gruppe
-    const normHausId = gruppe.hausId?.replace('jva', 'haus');
+    // Kammer ist hausunabhängig - Prüfung VOR der Haus-Prüfung
+    if (gruppe.typ === 'kammer') {
+      const istKammer = mitarbeiter.rolle === 'kammer';
+      console.log('[Debug] Kammer-Prüfung:', { 
+        mitarbeiterRolle: mitarbeiter.rolle, 
+        istKammer: istKammer, 
+        gruppeHausId: gruppe.hausId,
+        gruppe: gruppe
+      });
+      return istKammer;
+    }
+    
+    // Normalisiere Haus-ID der Gruppe (nur für nicht-Kammer Gruppen)
+    const normHausId = gruppe.hausId ? gruppe.hausId.replace('jva', 'haus') : null;
     
     // Mitarbeiter-Häuser: Berücksichtige sowohl jvas (Array) als auch jva (String, Legacy)
     let mitarbeiterHaeuser = [];
@@ -3307,7 +3323,7 @@ class AntragSystem {
       mitarbeiterHaeuser = [mitarbeiter.jva.replace('jva', 'haus')];
     }
     
-    const imSelbenHaus = mitarbeiterHaeuser.includes(normHausId);
+    const imSelbenHaus = normHausId ? mitarbeiterHaeuser.includes(normHausId) : false;
     
     console.log('[Debug] _mitarbeiterGehoertZuGruppe:', {
       mitarbeiterRolle: mitarbeiter.rolle,
@@ -3319,16 +3335,8 @@ class AntragSystem {
       istHausleitung: istHausleitung
     });
     
-    // Kammer ist hausunabhängig - Prüfung VOR der Haus-Prüfung
-    if (gruppe.typ === 'kammer') {
-      const istKammer = mitarbeiter.rolle === 'kammer';
-      console.log('[Debug] Kammer-Prüfung:', { mitarbeiterRolle: mitarbeiter.rolle, istKammer: istKammer, gruppeHausId: gruppe.hausId });
-      return istKammer;
-    }
-    
     // Für alle anderen Gruppen muss der Mitarbeiter im selben Haus sein
-    // Aber nur wenn hausId gesetzt ist (Kammer hat hausId: null)
-    if (gruppe.hausId && !imSelbenHaus) return false;
+    if (!normHausId || !imSelbenHaus) return false;
     
     if (gruppe.typ === 'hausleitung') {
       // Nur Hausleitungen dieses Hauses
