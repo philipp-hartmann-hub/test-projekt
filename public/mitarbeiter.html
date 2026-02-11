@@ -4492,13 +4492,19 @@ ${t('action.archive')}
       
       if (result) {
         // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
+        let syncStatus = '';
         if (window.DataSync && window.DataSync.syncAntragToServer) {
           console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
+          showSyncStatus('Synchronisiere mit Server...');
           const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
           if (syncSuccess) {
             console.log('[Debug] Antrag-Übernahme erfolgreich synchronisiert:', antragId);
+            syncStatus = '✓ Synchronisiert';
+            showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
           } else {
             console.warn('[Debug] Antrag-Übernahme Synchronisation fehlgeschlagen');
+            syncStatus = '✗ Synchronisation fehlgeschlagen';
+            showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
           }
         }
         
@@ -4506,9 +4512,9 @@ ${t('action.archive')}
         // Automatisch zum "Meine Anträge und Aufgaben" Tab wechseln
         switchTab('bearbeitung');
         
-        // Erfolgsmeldung
-        const msg = currentLanguage === 'de' ? 'Erfolgreich übernommen!' : 
-                    currentLanguage === 'en' ? 'Successfully taken!' : 'Repris avec succès!';
+        // Erfolgsmeldung mit Sync-Status
+        const msg = currentLanguage === 'de' ? `Erfolgreich übernommen! ${syncStatus}` : 
+                    currentLanguage === 'en' ? `Successfully taken! ${syncStatus}` : `Repris avec succès! ${syncStatus}`;
         alert(msg);
       } else {
         // Fehlermeldung mit Debug-Info
@@ -4546,11 +4552,14 @@ ${t('action.archive')}
         // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
         if (window.DataSync && window.DataSync.syncAntragToServer) {
           console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
+          showSyncStatus('Synchronisiere mit Server...');
           const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
           if (syncSuccess) {
             console.log('[Debug] Antrag-Übernahme erfolgreich synchronisiert:', antragId);
+            showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
           } else {
             console.warn('[Debug] Antrag-Übernahme Synchronisation fehlgeschlagen');
+            showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
           }
         }
         
@@ -4716,6 +4725,11 @@ ${t('action.archive')}
         jva: currentSession.jva,
         station: currentSession.station
       });
+      
+      // VAL Debug-Info anzeigen
+      if (typeof showVALDebugInfo === 'function') {
+        showVALDebugInfo();
+      }
       
       // KAMMER DEBUG: Alle offenen Gruppenaufgaben anzeigen
       const alleAufgaben = aufgabenSystem.aufgaben;
@@ -5347,6 +5361,70 @@ ${t('action.archive')}
     // Funktionen global verfügbar machen (für onclick-Handler)
     window.openHausleitungUebernahmeModal = openHausleitungUebernahmeModal;
     window.bestaeigeHausleitungUebernahme = bestaeigeHausleitungUebernahme;
+    // Visuelle Debug-Anzeige für Synchronisation (für Tablet ohne Console)
+    function showSyncStatus(message, type = 'info') {
+      // Entferne bestehende Status-Anzeige
+      const existingStatus = document.getElementById('syncStatusDisplay');
+      if (existingStatus) {
+        existingStatus.remove();
+      }
+      
+      // Erstelle neue Status-Anzeige
+      const statusDiv = document.createElement('div');
+      statusDiv.id = 'syncStatusDisplay';
+      statusDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
+        color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
+        border: 2px solid ${type === 'success' ? '#c3e6cb' : type === 'error' ? '#f5c6cb' : '#bee5eb'};
+        border-radius: 8px;
+        padding: 15px 20px;
+        font-size: 14px;
+        font-weight: bold;
+        z-index: 10000;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        max-width: 300px;
+        word-wrap: break-word;
+      `;
+      statusDiv.textContent = message;
+      document.body.appendChild(statusDiv);
+      
+      // Entferne nach 5 Sekunden (oder 10 Sekunden bei Fehler)
+      setTimeout(() => {
+        if (statusDiv.parentNode) {
+          statusDiv.style.transition = 'opacity 0.5s';
+          statusDiv.style.opacity = '0';
+          setTimeout(() => statusDiv.remove(), 500);
+        }
+      }, type === 'error' ? 10000 : 5000);
+    }
+    
+    // Debug-Info für VAL: Zeige alle Anträge im UI
+    function showVALDebugInfo() {
+      if (!currentSession) return;
+      const istHausleitung = currentSession.rolle === 'hausleitung' || 
+                            currentSession.rolle === 'jva-leitung' || 
+                            currentSession.rolle === 'haus-leitung';
+      if (!istHausleitung) return;
+      
+      const offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(currentSession);
+      const alleAntraege = antragSystem.antraege;
+      const antraegeImHaus = alleAntraege.filter(a => {
+        if (a.veraktet) return false;
+        if (a.bearbeiterId === currentSession.userId) return false;
+        return antragSystem._matchesHaus(currentSession.jvas, a.insasseJva);
+      });
+      
+      console.log('[VAL Debug] Alle Anträge im Haus:', antraegeImHaus.length);
+      console.log('[VAL Debug] Gefilterte Anträge:', offeneAntraege.length);
+      console.log('[VAL Debug] Nicht gefilterte Anträge:', antraegeImHaus.length - offeneAntraege.length);
+      
+      // Zeige Debug-Info im UI
+      const debugInfo = `VAL Debug:\nAnträge im Haus: ${antraegeImHaus.length}\nGefiltert: ${offeneAntraege.length}\nNicht gefiltert: ${antraegeImHaus.length - offeneAntraege.length}`;
+      console.log(debugInfo);
+    }
   </script>
 </body>
 </html>

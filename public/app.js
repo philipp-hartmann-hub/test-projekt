@@ -3163,7 +3163,16 @@ class AntragSystem {
       istHausleitung: istHausleitung,
       jvas: mitarbeiter.jvas,
       antragsIdsMitGruppenaufgaben: antragsIdsMitGruppenaufgaben,
-      gesamtAntraege: this.antraege.length
+      gesamtAntraege: this.antraege.length,
+      alleAntraege: this.antraege.map(a => ({
+        id: a.id,
+        status: a.status,
+        bearbeiterId: a.bearbeiterId,
+        insasseJva: a.insasseJva,
+        veraktet: a.veraktet,
+        zugewiesenAnGruppe: a.zugewiesenAnGruppe,
+        hauptbearbeitungWartetAufUebernahme: a.hauptbearbeitungWartetAufUebernahme
+      }))
     });
     
     const gefilterteAntraege = this.antraege.filter(a => {
@@ -3234,9 +3243,12 @@ class AntragSystem {
       return false;
     });
     
+    // Debug: Prüfe welche Anträge NICHT gefiltert wurden
+    const nichtGefilterteAntraege = this.antraege.filter(a => !gefilterteAntraege.includes(a));
     console.log('[Debug] getOffeneAntraegeMitarbeiter Ergebnis:', {
       gefiltert: gefilterteAntraege.length,
-      antraege: gefilterteAntraege.map(a => ({
+      nichtGefiltert: nichtGefilterteAntraege.length,
+      gefilterteAntraege: gefilterteAntraege.map(a => ({
         id: a.id,
         status: a.status,
         bearbeiterId: a.bearbeiterId,
@@ -3244,6 +3256,15 @@ class AntragSystem {
         zugewiesenAnGruppe: a.zugewiesenAnGruppe,
         hauptbearbeitungWartetAufUebernahme: a.hauptbearbeitungWartetAufUebernahme,
         veraktet: a.veraktet
+      })),
+      nichtGefilterteAntraege: nichtGefilterteAntraege.map(a => ({
+        id: a.id,
+        status: a.status,
+        bearbeiterId: a.bearbeiterId,
+        insasseJva: a.insasseJva,
+        veraktet: a.veraktet,
+        matchesHaus: istHausleitung ? this._matchesHaus(mitarbeiter.jvas, a.insasseJva) : false,
+        istEigenerBearbeiter: a.bearbeiterId === mitarbeiter.userId
       }))
     });
     
