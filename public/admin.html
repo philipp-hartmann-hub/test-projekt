@@ -1123,20 +1123,29 @@
     // ============================================
     
     function renderUsers() {
-      const us = getUserSystem();
-      if (!us) {
-        console.warn('renderUsers: userSystem noch nicht verfügbar');
-        return;
-      }
-      
-      const insassenList = document.getElementById('insassenList');
-      const mitarbeiterList = document.getElementById('mitarbeiterList');
-      
-      const insassen = us.getInsassen();
-      const mitarbeiter = us.getMitarbeiter();
-      
-      document.getElementById('insassenCount').textContent = insassen.length;
-      document.getElementById('mitarbeiterCount').textContent = mitarbeiter.length;
+      try {
+        const us = getUserSystem();
+        if (!us) {
+          console.warn('renderUsers: userSystem noch nicht verfügbar');
+          return;
+        }
+        
+        const insassenList = document.getElementById('insassenList');
+        const mitarbeiterList = document.getElementById('mitarbeiterList');
+        
+        if (!insassenList || !mitarbeiterList) {
+          console.error('renderUsers: Container-Elemente nicht gefunden');
+          return;
+        }
+        
+        const insassen = us.getInsassen();
+        const mitarbeiter = us.getMitarbeiter();
+        
+        console.log('renderUsers: Insassen:', insassen.length, 'Mitarbeiter:', mitarbeiter.length);
+        console.log('renderUsers: Mitarbeiter-Daten:', mitarbeiter);
+        
+        document.getElementById('insassenCount').textContent = insassen.length;
+        document.getElementById('mitarbeiterCount').textContent = mitarbeiter.length;
       
       // Insassen rendern
       if (insassen.length === 0) {
@@ -1196,7 +1205,13 @@
         `;
       } else {
         mitarbeiterList.innerHTML = mitarbeiter.map(user => {
-          const hausNames = user.jvas ? user.jvas.map(j => getHausName(j)).join(', ') : '-';
+          // jvas kann Strings ('haus1') oder Objekte ({id: 'haus1', name: 'Haus 1'}) enthalten
+          const hausNames = user.jvas && user.jvas.length > 0 
+            ? user.jvas.map(j => {
+                const hausId = typeof j === 'string' ? j : (j.id || j);
+                return getHausName(hausId);
+              }).join(', ')
+            : '-';
           const stationInfo = (user.rolle === 'stationsleitung' || user.rolle === 'mitarbeiter') && user.station ? ` - Station ${user.station}` : '';
           
           // Icon basierend auf Rolle
@@ -1240,6 +1255,17 @@
             </div>
           `;
         }).join('');
+      }
+      } catch (error) {
+        console.error('Fehler beim Rendern der Benutzer:', error);
+        const mitarbeiterList = document.getElementById('mitarbeiterList');
+        const insassenList = document.getElementById('insassenList');
+        if (mitarbeiterList) {
+          mitarbeiterList.innerHTML = `<div class="error-state">Fehler beim Laden: ${error.message}</div>`;
+        }
+        if (insassenList) {
+          insassenList.innerHTML = `<div class="error-state">Fehler beim Laden: ${error.message}</div>`;
+        }
       }
     }
 
