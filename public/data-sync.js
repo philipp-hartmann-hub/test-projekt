@@ -161,9 +161,17 @@ localStorage.setItem = function(key, value) {
 
   // Dann an Server senden (asynchron, nicht blockierend)
   if (SYNC_KEYS[key] && serverConnected && initialDataLoaded) {
+    console.log(`Sync: ${key} → Server (${key === 'gefaengnis_antraege' ? JSON.parse(value).length + ' Anträge' : 'Daten'})`);
     syncToServer(key, value).catch(err => {
       console.warn('Hintergrund-Sync fehlgeschlagen:', err.message);
     });
+  } else {
+    if (SYNC_KEYS[key]) {
+      console.log(`Sync übersprungen für ${key}:`, {
+        serverConnected,
+        initialDataLoaded
+      });
+    }
   }
 };
 

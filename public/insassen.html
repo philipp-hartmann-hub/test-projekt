@@ -759,7 +759,7 @@
       }
     }
 
-    function submitNewAntrag() {
+    async function submitNewAntrag() {
       if (!currentSession) return;
       
       const { type, data, valid, error } = getNewAntragData();
@@ -769,7 +769,41 @@
         return;
       }
       
-      antragSystem.createAntrag(type, data, currentSession, false);
+      const antrag = antragSystem.createAntrag(type, data, currentSession, false);
+      console.log('Antrag erstellt:', antrag.id, antrag.antragsNummer);
+      
+      // Warten kurz, damit localStorage.setItem Zeit hat zu syncen
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Explizit synchronisieren, falls automatischer Sync fehlgeschlagen ist
+      if (window.DataSync && window.DataSync.isConnected()) {
+        console.log('Synchronisiere Anträge explizit...');
+        try {
+          const antraegeData = localStorage.getItem('gefaengnis_antraege');
+          if (antraegeData) {
+            // Verwende syncToServer direkt (intern)
+            const base = window.location.origin + '/api';
+            const currentServerData = await fetch(base + '/antraege').then(r => r.json());
+            const localData = JSON.parse(antraegeData);
+            
+            // Prüfen ob unser neuer Antrag schon auf dem Server ist
+            const existsOnServer = currentServerData.find(s => s.id === antrag.id);
+            if (!existsOnServer) {
+              console.log('Antrag noch nicht auf Server, sende POST...');
+              await fetch(base + '/antraege', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(antrag)
+              });
+              console.log('Antrag erfolgreich an Server gesendet');
+            } else {
+              console.log('Antrag bereits auf Server vorhanden');
+            }
+          }
+        } catch (e) {
+          console.warn('Explizite Synchronisation fehlgeschlagen:', e);
+        }
+      }
       
       closeModal('newAntragModal');
       renderAntraege();
