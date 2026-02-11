@@ -541,29 +541,40 @@
     }
     
     async function createInsasse() {
-      const vorname = document.getElementById('insVorname').value.trim();
-      const nachname = document.getElementById('insNachname').value.trim();
-      const geburtsdatum = document.getElementById('insGeburtsdatum').value;
-      const jva = document.getElementById('insJva').value;
-      const station = document.getElementById('insStation').value;
-      
-      if (!vorname || !nachname) {
-        showAlert('Bitte Vor- und Nachname eingeben.');
-        return;
+      try {
+        if (typeof userSystem === 'undefined') {
+          console.error('userSystem nicht verfügbar');
+          await showAlert('Fehler: Benutzersystem nicht geladen. Bitte Seite neu laden.');
+          return;
+        }
+        
+        const vorname = document.getElementById('insVorname').value.trim();
+        const nachname = document.getElementById('insNachname').value.trim();
+        const geburtsdatum = document.getElementById('insGeburtsdatum').value;
+        const jva = document.getElementById('insJva').value;
+        const station = document.getElementById('insStation').value;
+        
+        if (!vorname || !nachname) {
+          await showAlert('Bitte Vor- und Nachname eingeben.');
+          return;
+        }
+        if (!geburtsdatum) {
+          await showAlert('Bitte Geburtsdatum eingeben.');
+          return;
+        }
+        if (!jva || !station) {
+          await showAlert('Bitte Haus und Station auswählen.');
+          return;
+        }
+        
+        userSystem.createInsasse({ vorname, nachname, geburtsdatum, jva, station });
+        closeModal('newInsasseModal');
+        renderUsers();
+        if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
+      } catch (error) {
+        console.error('Fehler beim Anlegen des Insassen:', error);
+        await showAlert('Fehler beim Anlegen: ' + error.message);
       }
-      if (!geburtsdatum) {
-        showAlert('Bitte Geburtsdatum eingeben.');
-        return;
-      }
-      if (!jva || !station) {
-        showAlert('Bitte Haus und Station auswählen.');
-        return;
-      }
-      
-      userSystem.createInsasse({ vorname, nachname, geburtsdatum, jva, station });
-      closeModal('newInsasseModal');
-      renderUsers();
-      if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
     }
     
     function openEditInsasseModal(id) {
@@ -736,74 +747,90 @@
     }
     
     async function createMitarbeiter() {
-      const vorname = document.getElementById('mitVorname').value.trim();
-      const nachname = document.getElementById('mitNachname').value.trim();
-      const geburtsdatum = document.getElementById('mitGeburtsdatum').value;
-      const rolle = document.querySelector('input[name="mitRolle"]:checked').value;
-      const selectedHaeuser = Array.from(document.querySelectorAll('input[name="mitJva"]:checked')).map(cb => cb.value);
-      const stationValue = document.getElementById('mitStation').value;
-      
-      if (!vorname || !nachname) {
-        showAlert('Bitte Vor- und Nachname eingeben.');
-        return;
-      }
-      if (!geburtsdatum) {
-        showAlert('Bitte Geburtsdatum eingeben.');
-        return;
-      }
-      // Kammer braucht kein Haus (hausunabhängig)
-      if (rolle === 'kammer') {
-        userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
+      try {
+        if (typeof userSystem === 'undefined') {
+          console.error('userSystem nicht verfügbar');
+          await showAlert('Fehler: Benutzersystem nicht geladen. Bitte Seite neu laden.');
+          return;
+        }
+        
+        const vorname = document.getElementById('mitVorname').value.trim();
+        const nachname = document.getElementById('mitNachname').value.trim();
+        const geburtsdatum = document.getElementById('mitGeburtsdatum').value;
+        const rolleEl = document.querySelector('input[name="mitRolle"]:checked');
+        if (!rolleEl) {
+          await showAlert('Bitte eine Rolle auswählen.');
+          return;
+        }
+        const rolle = rolleEl.value;
+        const selectedHaeuser = Array.from(document.querySelectorAll('input[name="mitJva"]:checked')).map(cb => cb.value);
+        const stationValue = document.getElementById('mitStation').value;
+        
+        if (!vorname || !nachname) {
+          await showAlert('Bitte Vor- und Nachname eingeben.');
+          return;
+        }
+        if (!geburtsdatum) {
+          await showAlert('Bitte Geburtsdatum eingeben.');
+          return;
+        }
+        // Kammer braucht kein Haus (hausunabhängig)
+        if (rolle === 'kammer') {
+          userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
+          closeModal('newMitarbeiterModal');
+          renderUsers();
+          if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
+          return;
+        }
+        
+        if (selectedHaeuser.length === 0) {
+          await showAlert('Bitte mindestens ein Haus auswählen.');
+          return;
+        }
+        
+        // Validierungen für Hausleitung
+        if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
+          if (selectedHaeuser.length > 1) {
+            await showAlert('Eine VAL kann nur einem Haus zugeordnet werden.');
+            return;
+          }
+          if (userSystem.hasJvaLeitung(selectedHaeuser[0])) {
+            await showAlert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine VAL.`);
+            return;
+          }
+          userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
+        } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
+          // Zahlstelle und Arbeitskoordination - keine Station erforderlich
+          userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
+        } else if (rolle === 'stationsleitung') {
+          // Stationsleitung - Einschränkungen prüfen
+          if (!stationValue) {
+            await showAlert('Bitte eine Station auswählen.');
+            return;
+          }
+          const [haus, station] = stationValue.split('-');
+          if (userSystem.hasStationsleitung(haus, station)) {
+            await showAlert(`Für ${getHausName(haus)} Station ${station} existiert bereits eine Stationsleitung.`);
+            return;
+          }
+          userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
+        } else {
+          // Normaler Mitarbeiter - keine Einschränkungen
+          if (!stationValue) {
+            await showAlert('Bitte eine Station auswählen.');
+            return;
+          }
+          const [haus, station] = stationValue.split('-');
+          userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
+        }
+        
         closeModal('newMitarbeiterModal');
         renderUsers();
         if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
-        return;
+      } catch (error) {
+        console.error('Fehler beim Anlegen des Mitarbeiters:', error);
+        await showAlert('Fehler beim Anlegen: ' + error.message);
       }
-      
-      if (selectedHaeuser.length === 0) {
-        showAlert('Bitte mindestens ein Haus auswählen.');
-        return;
-      }
-      
-      // Validierungen für Hausleitung
-      if (rolle === 'haus-leitung' || rolle === 'jva-leitung') {
-        if (selectedHaeuser.length > 1) {
-          showAlert('Eine VAL kann nur einem Haus zugeordnet werden.');
-          return;
-        }
-        if (userSystem.hasJvaLeitung(selectedHaeuser[0])) {
-          showAlert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine VAL.`);
-          return;
-        }
-        userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
-      } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
-        // Zahlstelle und Arbeitskoordination - keine Station erforderlich
-        userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
-      } else if (rolle === 'stationsleitung') {
-        // Stationsleitung - Einschränkungen prüfen
-        if (!stationValue) {
-          showAlert('Bitte eine Station auswählen.');
-          return;
-        }
-        const [haus, station] = stationValue.split('-');
-        if (userSystem.hasStationsleitung(haus, station)) {
-          showAlert(`Für ${getHausName(haus)} Station ${station} existiert bereits eine Stationsleitung.`);
-          return;
-        }
-        userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
-      } else {
-        // Normaler Mitarbeiter - keine Einschränkungen
-        if (!stationValue) {
-          showAlert('Bitte eine Station auswählen.');
-          return;
-        }
-        const [haus, station] = stationValue.split('-');
-        userSystem.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station });
-      }
-      
-      closeModal('newMitarbeiterModal');
-      renderUsers();
-      if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
     }
     
     function openEditMitarbeiterModal(id) {
