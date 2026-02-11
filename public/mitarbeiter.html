@@ -4492,46 +4492,13 @@ ${t('action.archive')}
       
       if (result) {
         // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
-        if (window.DataSync && window.DataSync.isConnected()) {
+        if (window.DataSync && window.DataSync.syncAntragToServer) {
           console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
-          try {
-            const base = window.location.origin + '/api';
-            const antragData = localStorage.getItem('gefaengnis_antraege');
-            if (antragData) {
-              const localAntraege = JSON.parse(antragData);
-              const updatedAntrag = localAntraege.find(a => a.id === antragId);
-              if (updatedAntrag) {
-                const response = await fetch(base + '/antraege/' + antragId, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(updatedAntrag)
-                });
-                if (!response.ok) {
-                  throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                const serverAntrag = await response.json();
-                console.log('[Debug] Antrag-Übernahme erfolgreich an Server gesendet:', serverAntrag.id || antragId, 'Bearbeiter:', serverAntrag.bearbeiterId);
-                // Aktualisiere lokale Daten mit Server-Daten, um sicherzustellen, dass alles synchron ist
-                if (serverAntrag.id) {
-                  const antragData = localStorage.getItem('gefaengnis_antraege');
-                  if (antragData) {
-                    const localAntraege = JSON.parse(antragData);
-                    const index = localAntraege.findIndex(a => a.id === serverAntrag.id);
-                    if (index !== -1) {
-                      localAntraege[index] = serverAntrag;
-                      localStorage.setItem('gefaengnis_antraege', JSON.stringify(localAntraege));
-                      if (typeof window.reloadDataFromStorage === 'function') {
-                        window.reloadDataFromStorage();
-                      }
-                    }
-                  }
-                }
-                // Kurze Verzögerung, damit der Server die Änderung verarbeitet hat
-                await new Promise(resolve => setTimeout(resolve, 500));
-              }
-            }
-          } catch (e) {
-            console.warn('Explizite Synchronisation der Antrag-Übernahme fehlgeschlagen:', e);
+          const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
+          if (syncSuccess) {
+            console.log('[Debug] Antrag-Übernahme erfolgreich synchronisiert:', antragId);
+          } else {
+            console.warn('[Debug] Antrag-Übernahme Synchronisation fehlgeschlagen');
           }
         }
         
@@ -4577,46 +4544,13 @@ ${t('action.archive')}
       
       if (result) {
         // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
-        if (window.DataSync && window.DataSync.isConnected()) {
+        if (window.DataSync && window.DataSync.syncAntragToServer) {
           console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
-          try {
-            const base = window.location.origin + '/api';
-            const antragData = localStorage.getItem('gefaengnis_antraege');
-            if (antragData) {
-              const localAntraege = JSON.parse(antragData);
-              const updatedAntrag = localAntraege.find(a => a.id === antragId);
-              if (updatedAntrag) {
-                const response = await fetch(base + '/antraege/' + antragId, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(updatedAntrag)
-                });
-                if (!response.ok) {
-                  throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                const serverAntrag = await response.json();
-                console.log('[Debug] Antrag-Übernahme erfolgreich an Server gesendet:', serverAntrag.id || antragId, 'Bearbeiter:', serverAntrag.bearbeiterId);
-                // Aktualisiere lokale Daten mit Server-Daten, um sicherzustellen, dass alles synchron ist
-                if (serverAntrag.id) {
-                  const antragData = localStorage.getItem('gefaengnis_antraege');
-                  if (antragData) {
-                    const localAntraege = JSON.parse(antragData);
-                    const index = localAntraege.findIndex(a => a.id === serverAntrag.id);
-                    if (index !== -1) {
-                      localAntraege[index] = serverAntrag;
-                      localStorage.setItem('gefaengnis_antraege', JSON.stringify(localAntraege));
-                      if (typeof window.reloadDataFromStorage === 'function') {
-                        window.reloadDataFromStorage();
-                      }
-                    }
-                  }
-                }
-                // Kurze Verzögerung, damit der Server die Änderung verarbeitet hat
-                await new Promise(resolve => setTimeout(resolve, 500));
-              }
-            }
-          } catch (e) {
-            console.warn('Explizite Synchronisation der Antrag-Übernahme fehlgeschlagen:', e);
+          const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
+          if (syncSuccess) {
+            console.log('[Debug] Antrag-Übernahme erfolgreich synchronisiert:', antragId);
+          } else {
+            console.warn('[Debug] Antrag-Übernahme Synchronisation fehlgeschlagen');
           }
         }
         

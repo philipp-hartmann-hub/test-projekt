@@ -127,10 +127,17 @@ async function syncToServer(key, data) {
         const serverStr = JSON.stringify(serverItem);
 
         if (localStr !== serverStr) {
-          await apiCall(`${endpoint}/${localItem.id}`, {
+          const response = await apiCall(`${endpoint}/${localItem.id}`, {
             method: 'PUT',
             body: JSON.stringify(localItem)
           });
+          // Wenn Server den aktualisierten Eintrag zurückgibt, verwende diesen
+          if (response && response.id) {
+            const index = localData.findIndex(l => l.id === response.id);
+            if (index !== -1) {
+              localData[index] = response;
+            }
+          }
         }
       }
     }
@@ -146,6 +153,50 @@ async function syncToServer(key, data) {
     }
   } catch (error) {
     console.warn(`Sync-Fehler fuer ${key}:`, error.message);
+  }
+}
+
+// Explizite Synchronisation eines einzelnen Antrags
+async function syncAntragToServer(antragId) {
+  if (!serverConnected) return false;
+  
+  try {
+    const antragData = localStorage.getItem('gefaengnis_antraege');
+    if (!antragData) return false;
+    
+    const localAntraege = JSON.parse(antragData);
+    const antrag = localAntraege.find(a => a.id === antragId);
+    if (!antrag) return false;
+    
+    const base = window.location.origin + '/api';
+    const response = await fetch(base + '/antraege/' + antragId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(antrag)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const serverAntrag = await response.json();
+    
+    // Aktualisiere lokale Daten mit Server-Daten
+    if (serverAntrag.id) {
+      const index = localAntraege.findIndex(a => a.id === serverAntrag.id);
+      if (index !== -1) {
+        localAntraege[index] = serverAntrag;
+        originalSetItem('gefaengnis_antraege', JSON.stringify(localAntraege));
+        if (typeof window.reloadDataFromStorage === 'function') {
+          window.reloadDataFromStorage();
+        }
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.warn('Explizite Antrag-Synchronisation fehlgeschlagen:', error);
+    return false;
   }
 }
 
