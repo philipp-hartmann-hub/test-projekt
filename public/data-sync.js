@@ -357,6 +357,7 @@ window.DataSync = {
   serverLogin,
   syncUsersNow,
   reloadDataFromServer,
+  syncAntragToServer,
   isConnected: () => serverConnected,
   isLoaded: () => initialDataLoaded
 };
