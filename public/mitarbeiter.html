@@ -5221,6 +5221,10 @@ ${t('action.archive')}
     console.log('- debugSession() - Zeigt Session-Daten');
     console.log('- debugGruppenZugehoerigkeit(typ, hausId, station) - Testet Gruppenzugehörigkeit');
     console.log('- testGruppenaufgabe(antragId, gruppeTyp, hausId) - Erstellt Test-Gruppenaufgabe');
+    
+    // Funktionen global verfügbar machen (für onclick-Handler)
+    window.openHausleitungUebernahmeModal = openHausleitungUebernahmeModal;
+    window.bestaeigeHausleitungUebernahme = bestaeigeHausleitungUebernahme;
   </script>
 </body>
 </html>
