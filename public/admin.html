@@ -1254,10 +1254,10 @@
               <div class="user-card-main">
                 <div class="user-avatar">${roleIcon}</div>
                 <div class="user-info">
-                  <div class="user-name">${escapeHtml(user.vorname)} ${escapeHtml(user.nachname)}</div>
-                  <div class="user-role-badge ${user.rolle}">${getRolleText(user.rolle)}</div>
+                  <div class="user-name">${escapeHtml(user.vorname || '')} ${escapeHtml(user.nachname || '')}</div>
+                  <div class="user-role-badge ${user.rolle || ''}">${getRolleText(user.rolle || '')}</div>
                   <div class="user-meta">
-                    <span>${formatDateOnly(user.geburtsdatum)}</span>
+                    <span>${user.geburtsdatum ? formatDateOnly(user.geburtsdatum) : '-'}</span>
                     <span>${hausNames}${stationInfo}</span>
                   </div>
                   <div class="user-credentials">
@@ -1266,7 +1266,7 @@
                     </span>
                     <span class="credential-inline">
                       <strong>Passwort:</strong> <code>${user.password || '-'}</code>
-                      <button class="btn-copy-inline" onclick="copyText('${user.password}')" title="Kopieren">Kopieren</button>
+                      ${user.password ? `<button class="btn-copy-inline" onclick="copyText('${user.password}')" title="Kopieren">Kopieren</button>` : ''}
                     </span>
                   </div>
                 </div>
