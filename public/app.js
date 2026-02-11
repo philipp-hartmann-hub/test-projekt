@@ -3214,23 +3214,18 @@ class AntragSystem {
         return true;
       }
       
-      // 4. VAL sieht alle Anträge des Hauses in "Anträge und Aufgaben meiner Gruppe"
+      // 4. VAL sieht ALLE Anträge des Hauses in "Anträge und Aufgaben meiner Gruppe"
+      // VAL kann alle Anträge sehen und jederzeit übernehmen, auch wenn sie bereits einem anderen Bearbeiter zugewiesen sind
       // (außer eigene Anträge und offene Anträge - die werden oben schon behandelt)
       if (istHausleitung && a.status !== 'offen' && !a.veraktet) {
         // Muss im selben Haus sein
         if (!this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) return false;
         
-        // Nicht anzeigen wenn VAL bereits der Bearbeiter ist
+        // Nicht anzeigen wenn VAL bereits der Bearbeiter ist (erscheint dann in "Meine Anträge")
         if (a.bearbeiterId === mitarbeiter.userId) return false;
         
-        // Nicht anzeigen wenn VAL persönlichen Aufgabenbezug hat (erscheint dann in "Meine Anträge")
-        const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(a.id);
-        const hatPersoenlicheAufgabe = aufgabenZuAntrag.some(auf => auf.zugewiesenAnId === mitarbeiter.userId);
-        const hatAufgabeErstellt = aufgabenZuAntrag.some(auf => auf.erstelltVonId === mitarbeiter.userId);
-        const hatAmAntragGearbeitet = aktivitaetenSystem.istMitarbeiterBeteiligt(a.id, mitarbeiter.userId);
-        
-        if (hatPersoenlicheAufgabe || hatAufgabeErstellt || hatAmAntragGearbeitet) return false;
-        
+        // VAL sieht alle anderen Anträge, unabhängig davon ob sie bereits einem Bearbeiter zugewiesen sind
+        // oder ob VAL persönlichen Aufgabenbezug hat - VAL kann sich jederzeit die Hauptbearbeitung nehmen
         return true;
       }
       
