@@ -441,10 +441,36 @@
       sessionStorage.removeItem('adminLoggedIn');
       location.reload();
     }
+
+    // Benutzer von der API laden und in die App (localStorage + userSystem) übernehmen
+    async function loadUsersForAdmin() {
+      try {
+        const base = window.location.origin + '/api';
+        const res = await fetch(base + '/users', { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) return;
+        const users = await res.json();
+        const mapped = (users || []).map(u => {
+          if (u.type !== undefined && u.vorname !== undefined) return u;
+          return {
+            ...u,
+            type: u.rolle === 'insasse' ? 'insasse' : 'mitarbeiter',
+            vorname: (u.name && u.name.split(' ')[0]) || '',
+            nachname: (u.name && u.name.split(' ').slice(1).join(' ')) || ''
+          };
+        });
+        localStorage.setItem('gefaengnis_users', JSON.stringify(mapped));
+        if (typeof window.reloadDataFromStorage === 'function') window.reloadDataFromStorage();
+        return true;
+      } catch (e) {
+        console.warn('Admin: Benutzer von API laden fehlgeschlagen:', e);
+        return false;
+      }
+    }
     
-    function showAdminSection() {
+    async function showAdminSection() {
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('adminSection').style.display = 'block';
+      await loadUsersForAdmin();
       renderUsers();
     }
     
@@ -454,7 +480,9 @@
     }
 
     window.addEventListener('dataSyncLoaded', () => {
-      if (document.getElementById('adminSection').style.display !== 'none') renderUsers();
+      if (document.getElementById('adminSection').style.display !== 'none') {
+        loadUsersForAdmin().then(() => renderUsers());
+      }
     });
 
     // ============================================
