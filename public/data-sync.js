@@ -156,32 +156,62 @@ async function syncToServer(key, data) {
   }
 }
 
-// Explizite Synchronisation eines einzelnen Antrags
+// Flag um zu verhindern, dass reloadDataFromServer während der Synchronisation läuft
+let isSyncing = false;
+
+// Explizite Synchronisation eines einzelnen Antrags UND aller Aufgaben
 async function syncAntragToServer(antragId) {
   if (!serverConnected) return false;
+  if (isSyncing) {
+    console.log('[Sync] Synchronisation bereits im Gange, warte...');
+    // Warte bis die aktuelle Synchronisation abgeschlossen ist
+    while (isSyncing) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    return true;
+  }
   
+  isSyncing = true;
   try {
+    const base = window.location.origin + '/api';
+    
+    // 1. Antrag synchronisieren
     const antragData = localStorage.getItem('gefaengnis_antraege');
-    if (!antragData) return false;
+    if (!antragData) {
+      isSyncing = false;
+      return false;
+    }
     
     const localAntraege = JSON.parse(antragData);
     const antrag = localAntraege.find(a => a.id === antragId);
-    if (!antrag) return false;
+    if (!antrag) {
+      isSyncing = false;
+      return false;
+    }
     
-    const base = window.location.origin + '/api';
-    const response = await fetch(base + '/antraege/' + antragId, {
+    console.log('[Sync] Synchronisiere Antrag:', antragId, 'Bearbeiter:', antrag.bearbeiterId);
+    const antragResponse = await fetch(base + '/antraege/' + antragId, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(antrag)
     });
     
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    if (!antragResponse.ok) {
+      throw new Error(`HTTP ${antragResponse.status}: ${antragResponse.statusText}`);
     }
     
-    const serverAntrag = await response.json();
+    const serverAntrag = await antragResponse.json();
+    console.log('[Sync] Antrag synchronisiert:', serverAntrag.id, 'Bearbeiter:', serverAntrag.bearbeiterId);
     
-    // Aktualisiere lokale Daten mit Server-Daten
+    // 2. Aufgaben synchronisieren (wichtig: Aufgaben können sich geändert haben)
+    const aufgabenData = localStorage.getItem('gefaengnis_aufgaben');
+    if (aufgabenData) {
+      console.log('[Sync] Synchronisiere Aufgaben...');
+      await syncToServer('gefaengnis_aufgaben', aufgabenData);
+      console.log('[Sync] Aufgaben synchronisiert');
+    }
+    
+    // 3. Aktualisiere lokale Daten mit Server-Daten
     if (serverAntrag.id) {
       const index = localAntraege.findIndex(a => a.id === serverAntrag.id);
       if (index !== -1) {
@@ -193,9 +223,14 @@ async function syncAntragToServer(antragId) {
       }
     }
     
+    // 4. Kurze Verzögerung, damit der Server die Änderungen verarbeitet hat
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    isSyncing = false;
     return true;
   } catch (error) {
     console.warn('Explizite Antrag-Synchronisation fehlgeschlagen:', error);
+    isSyncing = false;
     return false;
   }
 }
@@ -264,6 +299,12 @@ async function syncUsersNow() {
 async function reloadDataFromServer() {
   if (!serverConnected) {
     console.warn('Server nicht verbunden, kann Daten nicht neu laden');
+    return false;
+  }
+  
+  // Warte bis Synchronisation abgeschlossen ist
+  if (isSyncing) {
+    console.log('[Reload] Synchronisation läuft, überspringe reloadDataFromServer');
     return false;
   }
   
