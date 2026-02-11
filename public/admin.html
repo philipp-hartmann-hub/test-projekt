@@ -403,6 +403,32 @@
   <script src="app.js"></script>
   <script>
     // ============================================
+    // WARTEN BIS APP.JS GELADEN IST
+    // ============================================
+    
+    function waitForAppJS() {
+      return new Promise((resolve) => {
+        if (typeof userSystem !== 'undefined' && typeof showAlert === 'function') {
+          resolve();
+          return;
+        }
+        
+        let attempts = 0;
+        const checkInterval = setInterval(() => {
+          attempts++;
+          if (typeof userSystem !== 'undefined' && typeof showAlert === 'function') {
+            clearInterval(checkInterval);
+            resolve();
+          } else if (attempts > 50) { // Max 5 Sekunden warten
+            clearInterval(checkInterval);
+            console.error('Timeout: app.js konnte nicht geladen werden');
+            resolve(); // Trotzdem fortfahren
+          }
+        }, 100);
+      });
+    }
+    
+    // ============================================
     // LOGIN
     // ============================================
     
@@ -470,14 +496,17 @@
     async function showAdminSection() {
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('adminSection').style.display = 'block';
+      await waitForAppJS();
       await loadUsersForAdmin();
       renderUsers();
     }
     
-    // Check if already logged in
-    if (sessionStorage.getItem('adminLoggedIn') === 'true') {
-      showAdminSection();
-    }
+    // Check if already logged in (nach app.js laden)
+    waitForAppJS().then(() => {
+      if (sessionStorage.getItem('adminLoggedIn') === 'true') {
+        showAdminSection();
+      }
+    });
 
     window.addEventListener('dataSyncLoaded', () => {
       if (document.getElementById('adminSection').style.display !== 'none') {
@@ -543,6 +572,10 @@
     async function createInsasse(event) {
       if (event) event.preventDefault();
       console.log('createInsasse() aufgerufen');
+      
+      // Warten bis app.js geladen ist
+      await waitForAppJS();
+      
       try {
         if (typeof userSystem === 'undefined') {
           console.error('userSystem nicht verfügbar');
@@ -755,6 +788,10 @@
     async function createMitarbeiter(event) {
       if (event) event.preventDefault();
       console.log('createMitarbeiter() aufgerufen');
+      
+      // Warten bis app.js geladen ist
+      await waitForAppJS();
+      
       try {
         if (typeof userSystem === 'undefined') {
           console.error('userSystem nicht verfügbar');
@@ -1074,6 +1111,11 @@
     // ============================================
     
     function renderUsers() {
+      if (typeof userSystem === 'undefined') {
+        console.warn('renderUsers: userSystem noch nicht verfügbar');
+        return;
+      }
+      
       const insassenList = document.getElementById('insassenList');
       const mitarbeiterList = document.getElementById('mitarbeiterList');
       
@@ -1285,14 +1327,17 @@
       renderAdminTermine();
     }
 
-    // Initial rendern falls eingeloggt
-    if (sessionStorage.getItem('adminLoggedIn') === 'true') {
-      renderUsers();
-    }
+    // Initial rendern falls eingeloggt (nach app.js laden)
+    waitForAppJS().then(() => {
+      if (sessionStorage.getItem('adminLoggedIn') === 'true') {
+        renderUsers();
+      }
+    });
 
     // Funktionen global verfügbar machen (für onclick-Handler)
     window.createInsasse = createInsasse;
     window.createMitarbeiter = createMitarbeiter;
+    window.waitForAppJS = waitForAppJS;
   </script>
 </body>
 </html>
