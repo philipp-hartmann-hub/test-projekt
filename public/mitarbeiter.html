@@ -3723,6 +3723,29 @@ ${t('action.archive')}
         // (Nur wenn der Aufgabensteller dies bei der Aufgabenerstellung so festgelegt hat)
         antragSystem.uebernehmBearbeitung(aufgabe.antragId, currentSession.userId, currentSession.name, aufgabe.erstelltVonId);
         
+        // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
+        if (window.DataSync && window.DataSync.isConnected()) {
+          console.log('[Debug] Synchronisiere Hauptbearbeitungsübergabe nach Aufgabe mit Server...');
+          try {
+            const base = window.location.origin + '/api';
+            const antragData = localStorage.getItem('gefaengnis_antraege');
+            if (antragData) {
+              const localAntraege = JSON.parse(antragData);
+              const updatedAntrag = localAntraege.find(a => a.id === aufgabe.antragId);
+              if (updatedAntrag) {
+                await fetch(base + '/antraege/' + aufgabe.antragId, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(updatedAntrag)
+                });
+                console.log('[Debug] Hauptbearbeitungsübergabe erfolgreich an Server gesendet');
+              }
+            }
+          } catch (e) {
+            console.warn('Explizite Synchronisation der Hauptbearbeitungsübergabe fehlgeschlagen:', e);
+          }
+        }
+        
         // Benachrichtigung an den ehemaligen Bearbeiter (Aufgabensteller)
         const nachrichtUebernahme = currentLanguage === 'en' ? `Application processing taken over (ID: ${aufgabe.antragsNummer || aufgabe.antragId})`
                                   : currentLanguage === 'fr' ? `Traitement de la demande repris (ID: ${aufgabe.antragsNummer || aufgabe.antragId})`
@@ -4450,7 +4473,7 @@ ${t('action.archive')}
       return status;
     }
 
-    function nehmeAntrag(antragId) {
+    async function nehmeAntrag(antragId) {
       if (!currentSession) {
         alert('Fehler: Keine Session vorhanden');
         return;
@@ -4462,6 +4485,29 @@ ${t('action.archive')}
       console.log('[Debug Frontend] nehmeAntrag Ergebnis:', result);
       
       if (result) {
+        // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
+        if (window.DataSync && window.DataSync.isConnected()) {
+          console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
+          try {
+            const base = window.location.origin + '/api';
+            const antragData = localStorage.getItem('gefaengnis_antraege');
+            if (antragData) {
+              const localAntraege = JSON.parse(antragData);
+              const updatedAntrag = localAntraege.find(a => a.id === antragId);
+              if (updatedAntrag) {
+                await fetch(base + '/antraege/' + antragId, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(updatedAntrag)
+                });
+                console.log('[Debug] Antrag-Übernahme erfolgreich an Server gesendet');
+              }
+            }
+          } catch (e) {
+            console.warn('Explizite Synchronisation der Antrag-Übernahme fehlgeschlagen:', e);
+          }
+        }
+        
         renderAntraege();
         // Automatisch zum "Meine Anträge und Aufgaben" Tab wechseln
         switchTab('bearbeitung');
@@ -4491,7 +4537,7 @@ ${t('action.archive')}
       }
     }
     
-    function nehmeAntragUndBleibeInDetail(antragId) {
+    async function nehmeAntragUndBleibeInDetail(antragId) {
       if (!currentSession) {
         alert('Fehler: Keine Session vorhanden');
         return;
@@ -4503,6 +4549,29 @@ ${t('action.archive')}
       console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail Ergebnis:', result);
       
       if (result) {
+        // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
+        if (window.DataSync && window.DataSync.isConnected()) {
+          console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
+          try {
+            const base = window.location.origin + '/api';
+            const antragData = localStorage.getItem('gefaengnis_antraege');
+            if (antragData) {
+              const localAntraege = JSON.parse(antragData);
+              const updatedAntrag = localAntraege.find(a => a.id === antragId);
+              if (updatedAntrag) {
+                await fetch(base + '/antraege/' + antragId, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(updatedAntrag)
+                });
+                console.log('[Debug] Antrag-Übernahme erfolgreich an Server gesendet');
+              }
+            }
+          } catch (e) {
+            console.warn('Explizite Synchronisation der Antrag-Übernahme fehlgeschlagen:', e);
+          }
+        }
+        
         renderAntraege();
         // Direkt in der Detailansicht weiterarbeiten (keine Weiterleitungs-Abfrage)
         openAntragDetail(antragId);

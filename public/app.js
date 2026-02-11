@@ -3191,6 +3191,10 @@ class AntragSystem {
         if (a.bearbeiterId === mitarbeiter.userId) {
           return false;
         }
+        // VAL sieht alle Anträge ihres Hauses, auch mit wartender Hauptbearbeitungsübergabe
+        if (istHausleitung && this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) {
+          return true;
+        }
         // Nur Mitglieder der zugewiesenen Gruppe sehen den Antrag
         return this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
       }
