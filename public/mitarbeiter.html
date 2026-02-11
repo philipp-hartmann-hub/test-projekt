@@ -1611,7 +1611,9 @@
       let bearbeiterInfo = '';
       
       if (mode === 'offen') {
-        // VAL bekommt "Antrag übernehmen" mit Begründungspflicht (wie in Meine Anträge)
+        // VAL kann alle Anträge ihres Hauses übernehmen
+        // Für offene Anträge: Standard-Button (nehmeAntrag funktioniert auch für VAL)
+        // Für Anträge in Bearbeitung: Übernahme mit Begründungspflicht
         if (istHausleitung() && antrag.status !== 'offen') {
           // Für Anträge die bereits in Bearbeitung sind: Übernahme mit Begründung
           actionsHtml = `
@@ -1626,6 +1628,7 @@
           `;
         } else {
           // Für andere Rollen oder offene Anträge: Standard-Verhalten
+          // VAL kann auch offene Anträge mit Gruppenzuweisung übernehmen
           let buttonText = t('button.takeApplication');
           if (hatWartendeUebergabe) {
             buttonText = currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande';
@@ -1896,8 +1899,15 @@ Persönlich eröffnet
                                     antrag.zugewiesenAnGruppe && 
                                     antragSystem._mitarbeiterGehoertZuGruppe(currentSession, antrag.zugewiesenAnGruppe);
       
+      // VAL kann alle Anträge ihres Hauses übernehmen
+      const istHausleitung = currentSession.rolle === 'jva-leitung' || 
+                            currentSession.rolle === 'haus-leitung' || 
+                            currentSession.rolle === 'hausleitung';
+      const istImSelbenHaus = antragSystem._matchesHaus(currentSession.jvas, antrag.insasseJva);
+      const kannValUebernehmen = istHausleitung && istImSelbenHaus && antrag.bearbeiterId !== currentSession.userId && !antrag.veraktet;
+      
       // Kann der Mitarbeiter diesen Antrag/Aufgabe übernehmen?
-      const kannUebernehmen = istOffen || hatGruppenaufgaben || hatWartendeUebergabe;
+      const kannUebernehmen = istOffen || hatGruppenaufgaben || hatWartendeUebergabe || kannValUebernehmen;
       
       // Prüfen ob der aktuelle Benutzer berechtigt ist
       const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(antragId);

@@ -3167,6 +3167,11 @@ class AntragSystem {
     return this.antraege.filter(a => {
       // 1. Offene Anträge (noch kein Bearbeiter)
       if (a.status === 'offen') {
+        // VAL sieht IMMER alle Anträge ihres Hauses, auch wenn sie einer Gruppe zugewiesen sind
+        if (istHausleitung && this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) {
+          return true;
+        }
+        
         // Prüfen ob der Antrag einer Gruppe zugewiesen wurde
         if (a.zugewiesenAnGruppe) {
           // Nur Mitglieder der zugewiesenen Gruppe sehen den Antrag
@@ -3174,10 +3179,6 @@ class AntragSystem {
         }
         
         // Normale offene Anträge (ohne Gruppenzuweisung)
-        // Hausleitung sieht alle Anträge ihres Hauses
-        if (istHausleitung) {
-          return this._matchesHaus(mitarbeiter.jvas, a.insasseJva);
-        }
         // Mitarbeiter und Stationsleitung sehen nur ihre Station
         return this._matchesHaus(mitarbeiter.jvas, a.insasseJva) && 
                a.insasseStation === mitarbeiter.station;
