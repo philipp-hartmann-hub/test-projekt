@@ -770,44 +770,121 @@
       }
       
       const antrag = antragSystem.createAntrag(type, data, currentSession, false);
-      console.log('Antrag erstellt:', antrag.id, antrag.antragsNummer);
+      console.log('[Insassen] Antrag erstellt:', antrag.id, antrag.antragsNummer);
       
       // Warten kurz, damit localStorage.setItem Zeit hat zu syncen
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Explizit synchronisieren, falls automatischer Sync fehlgeschlagen ist
+      // Explizit synchronisieren mit Verifikation
       if (window.DataSync && window.DataSync.isConnected()) {
-        console.log('Synchronisiere Anträge explizit...');
-        try {
-          const antraegeData = localStorage.getItem('gefaengnis_antraege');
-          if (antraegeData) {
-            // Verwende syncToServer direkt (intern)
-            const base = window.location.origin + '/api';
-            const currentServerData = await fetch(base + '/antraege').then(r => r.json());
-            const localData = JSON.parse(antraegeData);
+        console.log('[Insassen] Synchronisiere Antrag explizit mit Server...');
+        const base = window.location.origin + '/api';
+        let synchronisiert = false;
+        let retries = 0;
+        const maxRetries = 5;
+        
+        while (!synchronisiert && retries < maxRetries) {
+          try {
+            // 1. Prüfe ob Antrag bereits auf Server existiert
+            const currentServerData = await fetch(base + '/antraege', {
+              headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+            }).then(r => {
+              if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+              return r.json();
+            });
             
-            // Prüfen ob unser neuer Antrag schon auf dem Server ist
             const existsOnServer = currentServerData.find(s => s.id === antrag.id);
+            
             if (!existsOnServer) {
-              console.log('Antrag noch nicht auf Server, sende POST...');
-              await fetch(base + '/antraege', {
+              console.log('[Insassen] Antrag noch nicht auf Server, sende POST...');
+              
+              // 2. POST-Anfrage senden
+              const postResponse = await fetch(base + '/antraege', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                  'Content-Type': 'application/json',
+                  'Cache-Control': 'no-cache',
+                  'Pragma': 'no-cache'
+                },
                 body: JSON.stringify(antrag)
               });
-              console.log('Antrag erfolgreich an Server gesendet');
+              
+              if (!postResponse.ok) {
+                throw new Error(`HTTP ${postResponse.status}: ${postResponse.statusText}`);
+              }
+              
+              const serverAntrag = await postResponse.json();
+              console.log('[Insassen] POST erfolgreich, Server-Antrag:', serverAntrag.id);
+              
+              // 3. Verifikation: Prüfe ob Antrag wirklich auf Server gespeichert wurde
+              await new Promise(resolve => setTimeout(resolve, 500 + (retries * 200))); // Zunehmende Verzögerung
+              
+              const verifyResponse = await fetch(base + '/antraege/' + antrag.id, {
+                headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+              });
+              
+              if (verifyResponse.ok) {
+                const verifyAntrag = await verifyResponse.json();
+                if (verifyAntrag.id === antrag.id) {
+                  synchronisiert = true;
+                  console.log('[Insassen] ✓ Antrag erfolgreich synchronisiert und verifiziert');
+                  
+                  // Aktualisiere lokale Daten mit Server-Daten (falls Server Änderungen gemacht hat)
+                  const index = antragSystem.antraege.findIndex(a => a.id === antrag.id);
+                  if (index !== -1) {
+                    Object.assign(antragSystem.antraege[index], verifyAntrag);
+                    antragSystem.saveAntraege();
+                    if (typeof window.reloadDataFromStorage === 'function') {
+                      window.reloadDataFromStorage();
+                    }
+                  }
+                } else {
+                  retries++;
+                  console.warn('[Insassen] Verifikation fehlgeschlagen, versuche erneut...', retries);
+                }
+              } else {
+                retries++;
+                console.warn('[Insassen] Verifikations-Request fehlgeschlagen, versuche erneut...', retries);
+              }
             } else {
-              console.log('Antrag bereits auf Server vorhanden');
+              console.log('[Insassen] Antrag bereits auf Server vorhanden');
+              synchronisiert = true;
+              
+              // Aktualisiere lokale Daten mit Server-Daten
+              const serverAntrag = existsOnServer;
+              const index = antragSystem.antraege.findIndex(a => a.id === antrag.id);
+              if (index !== -1) {
+                Object.assign(antragSystem.antraege[index], serverAntrag);
+                antragSystem.saveAntraege();
+                if (typeof window.reloadDataFromStorage === 'function') {
+                  window.reloadDataFromStorage();
+                }
+              }
+            }
+          } catch (e) {
+            retries++;
+            console.warn(`[Insassen] Synchronisations-Fehler (Versuch ${retries}/${maxRetries}):`, e.message);
+            if (retries >= maxRetries) {
+              console.error('[Insassen] ✗ Antrag konnte nicht synchronisiert werden nach', maxRetries, 'Versuchen');
+              showAlert('Warnung: Der Antrag wurde lokal gespeichert, konnte aber nicht mit dem Server synchronisiert werden. Bitte versuchen Sie es später erneut.');
+            } else {
+              // Warte vor dem nächsten Versuch
+              await new Promise(resolve => setTimeout(resolve, 1000 * retries));
             }
           }
-        } catch (e) {
-          console.warn('Explizite Synchronisation fehlgeschlagen:', e);
         }
+      } else {
+        console.warn('[Insassen] Server nicht verbunden, Antrag nur lokal gespeichert');
       }
       
       closeModal('newAntragModal');
       renderAntraege();
       resetNewAntragForm();
+      
+      // Erfolgsmeldung
+      if (synchronisiert) {
+        showAlert('Antrag erfolgreich eingereicht und synchronisiert!');
+      }
     }
 
     function saveAsEntwurf() {

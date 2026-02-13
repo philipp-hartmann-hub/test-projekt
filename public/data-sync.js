@@ -9,6 +9,34 @@ const API_BASE = window.location.origin + '/api';
 let serverConnected = false;
 let initialDataLoaded = false;
 
+// Hilfsfunktion um die aktuelle Benutzer-ID zu erhalten
+function getCurrentUserId() {
+  try {
+    // Versuche Session aus sessionStorage zu holen
+    const sessionData = sessionStorage.getItem('currentSession');
+    if (sessionData) {
+      const session = JSON.parse(sessionData);
+      if (session && session.userId) {
+        return session.userId;
+      }
+    }
+    
+    // Fallback: Versuche aus localStorage (falls SessionManager dort speichert)
+    const userData = localStorage.getItem('currentUser');
+    if (userData) {
+      const user = JSON.parse(userData);
+      if (user && user.userId) {
+        return user.userId;
+      }
+    }
+    
+    return null;
+  } catch (e) {
+    console.warn('[Reload] Fehler beim Abrufen der aktuellen Benutzer-ID:', e);
+    return null;
+  }
+}
+
 // Storage Keys die synchronisiert werden sollen
 const SYNC_KEYS = {
   'gefaengnis_users': '/users',
@@ -192,6 +220,47 @@ async function syncAntragToServer(antragId) {
       return false;
     }
     
+    // WICHTIG: Prüfe ob der aktuelle Benutzer noch der Bearbeiter ist
+    const currentUserId = getCurrentUserId();
+    if (antrag.bearbeiterId && antrag.bearbeiterId !== currentUserId) {
+      console.warn('[Sync] Benutzer ist nicht mehr Bearbeiter, Synchronisation abgebrochen:', {
+        antragId,
+        lokalerBearbeiter: antrag.bearbeiterId,
+        aktuellerBenutzer: currentUserId
+      });
+      isSyncing = false;
+      return false;
+    }
+    
+    // Prüfe auch auf dem Server, ob der Antrag noch dem Benutzer zugewiesen ist
+    try {
+      const serverCheck = await fetch(base + '/antraege/' + antragId, {
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+      }).then(r => r.json());
+      
+      if (serverCheck.bearbeiterId && serverCheck.bearbeiterId !== currentUserId) {
+        console.warn('[Sync] Antrag wurde auf dem Server anderem Bearbeiter zugewiesen, Synchronisation abgebrochen:', {
+          antragId,
+          serverBearbeiter: serverCheck.bearbeiterId,
+          aktuellerBenutzer: currentUserId
+        });
+        // Aktualisiere lokale Daten mit Server-Daten
+        const index = localAntraege.findIndex(a => a.id === antragId);
+        if (index !== -1) {
+          localAntraege[index] = serverCheck;
+          originalSetItem('gefaengnis_antraege', JSON.stringify(localAntraege));
+          if (typeof window.reloadDataFromStorage === 'function') {
+            window.reloadDataFromStorage();
+          }
+        }
+        isSyncing = false;
+        return false;
+      }
+    } catch (e) {
+      console.warn('[Sync] Fehler beim Prüfen des Server-Status:', e);
+      // Bei Fehler trotzdem synchronisieren
+    }
+    
     console.log('[Sync] Synchronisiere Antrag:', antragId, 'Bearbeiter:', antrag.bearbeiterId);
     const antragResponse = await fetch(base + '/antraege/' + antragId, {
       method: 'PUT',
@@ -259,10 +328,56 @@ async function syncAntragToServer(antragId) {
     }
     
     // 4. Aktualisiere lokale Daten mit Server-Daten
+    // WICHTIG: Nur aktualisieren, wenn der lokale Benutzer noch der Bearbeiter ist
+    // oder wenn der Antrag noch keinem Bearbeiter zugewiesen ist
     if (serverAntrag.id) {
       const index = localAntraege.findIndex(a => a.id === serverAntrag.id);
       if (index !== -1) {
-        localAntraege[index] = serverAntrag;
+        const localAntrag = localAntraege[index];
+        
+        // Prüfe ob der lokale Benutzer noch der Bearbeiter ist
+        const currentUserId = getCurrentUserId();
+        const istNochBearbeiter = !localAntrag.bearbeiterId || localAntrag.bearbeiterId === currentUserId;
+        const serverBearbeiterId = serverAntrag.bearbeiterId;
+        
+        // Nur aktualisieren wenn:
+        // 1. Der lokale Benutzer noch der Bearbeiter ist ODER
+        // 2. Der Antrag noch keinem Bearbeiter zugewiesen ist ODER
+        // 3. Der Server-Bearbeiter ist derselbe wie der lokale Bearbeiter
+        if (istNochBearbeiter && (!serverBearbeiterId || serverBearbeiterId === currentUserId || serverBearbeiterId === localAntrag.bearbeiterId)) {
+          // Merge: Behalte lokale Änderungen für Felder, die der Bearbeiter ändern kann
+          // WICHTIG: Phasenfelder IMMER vom Server nehmen (für korrekte Schaltflächen-Anzeige)
+          const mergedAntrag = {
+            ...serverAntrag,
+            // Behalte lokale Änderungen für Bearbeitungsfelder (nur wenn noch nicht auf Server gespeichert)
+            kommentare: localAntrag.kommentare && localAntrag.kommentare.length > (serverAntrag.kommentare?.length || 0) 
+              ? localAntrag.kommentare 
+              : serverAntrag.kommentare,
+            dokumente: localAntrag.dokumente && localAntrag.dokumente.length > (serverAntrag.dokumente?.length || 0)
+              ? localAntrag.dokumente
+              : serverAntrag.dokumente,
+            // WICHTIG: Phasenfelder IMMER vom Server nehmen
+            sachlichGeprueft: serverAntrag.sachlichGeprueft !== undefined ? serverAntrag.sachlichGeprueft : localAntrag.sachlichGeprueft,
+            sachlichGeprueftAm: serverAntrag.sachlichGeprueftAm || localAntrag.sachlichGeprueftAm,
+            sachlichGeprueftVon: serverAntrag.sachlichGeprueftVon || localAntrag.sachlichGeprueftVon,
+            sachlichGeprueftVonId: serverAntrag.sachlichGeprueftVonId || localAntrag.sachlichGeprueftVonId,
+            pruefungsKommentar: serverAntrag.pruefungsKommentar || localAntrag.pruefungsKommentar,
+            entscheidungGetroffen: serverAntrag.entscheidungGetroffen !== undefined ? serverAntrag.entscheidungGetroffen : localAntrag.entscheidungGetroffen,
+            erledigt: serverAntrag.erledigt !== undefined ? serverAntrag.erledigt : localAntrag.erledigt,
+            vollzogen: serverAntrag.vollzogen !== undefined ? serverAntrag.vollzogen : localAntrag.vollzogen,
+            veraktet: serverAntrag.veraktet !== undefined ? serverAntrag.veraktet : localAntrag.veraktet,
+            wartetAufEroeffnung: serverAntrag.wartetAufEroeffnung !== undefined ? serverAntrag.wartetAufEroeffnung : localAntrag.wartetAufEroeffnung,
+            wartetAufVollzug: serverAntrag.wartetAufVollzug !== undefined ? serverAntrag.wartetAufVollzug : localAntrag.wartetAufVollzug
+          };
+          
+          localAntraege[index] = mergedAntrag;
+          console.log('[Sync] Lokale Daten aktualisiert (Bearbeiter behält Änderungen)');
+        } else {
+          // Benutzer ist nicht mehr Bearbeiter - vollständig mit Server-Daten aktualisieren
+          localAntraege[index] = serverAntrag;
+          console.log('[Sync] Lokale Daten mit Server-Daten überschrieben (Benutzer nicht mehr Bearbeiter)');
+        }
+        
         originalSetItem('gefaengnis_antraege', JSON.stringify(localAntraege));
         if (typeof window.reloadDataFromStorage === 'function') {
           window.reloadDataFromStorage();
@@ -379,9 +494,125 @@ async function reloadDataFromServer() {
       };
     });
     
+    // WICHTIG: Anträge schützen - Anträge die dem aktuellen Benutzer gehören nicht überschreiben
+    const currentUserId = getCurrentUserId();
+    let localAntraege = [];
+    try {
+      const localAntraegeData = localStorage.getItem('gefaengnis_antraege');
+      if (localAntraegeData) {
+        localAntraege = JSON.parse(localAntraegeData);
+      }
+    } catch (e) {
+      console.warn('[Reload] Fehler beim Lesen lokaler Anträge:', e);
+    }
+    
+    // Merge-Strategie: Anträge die dem aktuellen Benutzer gehören behalten lokale Änderungen
+    const mergedAntraege = antraege.map(serverAntrag => {
+      const localAntrag = localAntraege.find(a => a.id === serverAntrag.id);
+      
+      // Wenn kein lokaler Antrag existiert, verwende Server-Daten
+      if (!localAntrag) {
+        return serverAntrag;
+      }
+      
+      // WICHTIG: Prüfe zuerst ob der lokale Benutzer noch der Bearbeiter ist
+      // Wenn nicht, verwende IMMER Server-Daten (verhindert parallele Bearbeitung)
+      if (serverAntrag.bearbeiterId && serverAntrag.bearbeiterId !== currentUserId) {
+        console.log('[Reload] Antrag wurde anderem Bearbeiter zugewiesen, lokale Änderungen werden verworfen:', {
+          antragId: serverAntrag.id,
+          lokalerBearbeiter: localAntrag.bearbeiterId,
+          serverBearbeiter: serverAntrag.bearbeiterId,
+          aktuellerBenutzer: currentUserId
+        });
+        // Verwende Server-Daten komplett - lokale Änderungen werden verworfen
+        return serverAntrag;
+      }
+      
+      // Wenn der lokale Benutzer der Bearbeiter ist, behalte lokale Änderungen
+      if (localAntrag.bearbeiterId === currentUserId && serverAntrag.bearbeiterId === currentUserId) {
+        // Merge: Behalte lokale Änderungen für Bearbeitungsfelder, aber aktualisiere Phasenfelder vom Server
+        return {
+          ...serverAntrag,
+          // Behalte lokale Änderungen für Bearbeitungsfelder (nur wenn noch nicht auf Server gespeichert)
+          kommentare: localAntrag.kommentare && localAntrag.kommentare.length > (serverAntrag.kommentare?.length || 0) 
+            ? localAntrag.kommentare 
+            : serverAntrag.kommentare,
+          dokumente: localAntrag.dokumente && localAntrag.dokumente.length > (serverAntrag.dokumente?.length || 0)
+            ? localAntrag.dokumente
+            : serverAntrag.dokumente,
+          // WICHTIG: Phasenfelder IMMER vom Server nehmen (für korrekte Schaltflächen-Anzeige)
+          sachlichGeprueft: serverAntrag.sachlichGeprueft !== undefined ? serverAntrag.sachlichGeprueft : localAntrag.sachlichGeprueft,
+          sachlichGeprueftAm: serverAntrag.sachlichGeprueftAm || localAntrag.sachlichGeprueftAm,
+          sachlichGeprueftVon: serverAntrag.sachlichGeprueftVon || localAntrag.sachlichGeprueftVon,
+          sachlichGeprueftVonId: serverAntrag.sachlichGeprueftVonId || localAntrag.sachlichGeprueftVonId,
+          pruefungsKommentar: serverAntrag.pruefungsKommentar || localAntrag.pruefungsKommentar,
+          entscheidungGetroffen: serverAntrag.entscheidungGetroffen !== undefined ? serverAntrag.entscheidungGetroffen : localAntrag.entscheidungGetroffen,
+          erledigt: serverAntrag.erledigt !== undefined ? serverAntrag.erledigt : localAntrag.erledigt,
+          vollzogen: serverAntrag.vollzogen !== undefined ? serverAntrag.vollzogen : localAntrag.vollzogen,
+          veraktet: serverAntrag.veraktet !== undefined ? serverAntrag.veraktet : localAntrag.veraktet,
+          wartetAufEroeffnung: serverAntrag.wartetAufEroeffnung !== undefined ? serverAntrag.wartetAufEroeffnung : localAntrag.wartetAufEroeffnung,
+          wartetAufVollzug: serverAntrag.wartetAufVollzug !== undefined ? serverAntrag.wartetAufVollzug : localAntrag.wartetAufVollzug,
+          // Aktualisiere Metadaten vom Server
+          bearbeiterId: serverAntrag.bearbeiterId,
+          bearbeiterName: serverAntrag.bearbeiterName,
+          status: serverAntrag.status,
+          zugewiesenAnGruppe: serverAntrag.zugewiesenAnGruppe,
+          zugewiesenAnGruppeName: serverAntrag.zugewiesenAnGruppeName
+        };
+      }
+      
+      // WICHTIG: Wenn der lokale Benutzer der Insasse ist, der den Antrag erstellt hat,
+      // und der Antrag noch keinem Bearbeiter zugewiesen ist, behalte lokale Änderungen
+      // (z.B. Entwürfe die noch nicht eingereicht wurden)
+      if (localAntrag.insasseId === currentUserId && 
+          (!localAntrag.bearbeiterId || localAntrag.bearbeiterId === null) &&
+          (!serverAntrag.bearbeiterId || serverAntrag.bearbeiterId === null)) {
+        // Merge: Behalte lokale Änderungen für Insassen-Anträge ohne Bearbeiter
+        return {
+          ...serverAntrag,
+          // Behalte lokale Änderungen für Insassen-Felder
+          begruendung: localAntrag.begruendung || serverAntrag.begruendung,
+          // Aktualisiere Metadaten vom Server
+          status: serverAntrag.status,
+          erstelltAm: serverAntrag.erstelltAm || localAntrag.erstelltAm
+        };
+      }
+      
+      // Wenn der Antrag einem anderen Bearbeiter zugewiesen wurde, verwende Server-Daten
+      if (serverAntrag.bearbeiterId && serverAntrag.bearbeiterId !== currentUserId) {
+        console.log('[Reload] Antrag wurde anderem Bearbeiter zugewiesen:', serverAntrag.id, serverAntrag.bearbeiterId);
+        return serverAntrag;
+      }
+      
+      // WICHTIG: Phasenfelder IMMER vom Server nehmen, um sicherzustellen dass Phasenübergänge nicht verloren gehen
+      // Auch wenn der Benutzer nicht der Bearbeiter ist, müssen Phasenfelder aktualisiert werden
+      const mergedAntrag = {
+        ...serverAntrag,
+        // Behalte lokale Kommentare/Dokumente nur wenn sie neuer sind
+        kommentare: localAntrag.kommentare && localAntrag.kommentare.length > (serverAntrag.kommentare?.length || 0) 
+          ? localAntrag.kommentare 
+          : serverAntrag.kommentare,
+        dokumente: localAntrag.dokumente && localAntrag.dokumente.length > (serverAntrag.dokumente?.length || 0)
+          ? localAntrag.dokumente
+          : serverAntrag.dokumente,
+        // Phasenfelder IMMER vom Server (verhindert Rücksprung zu früheren Phasen)
+        sachlichGeprueft: serverAntrag.sachlichGeprueft !== undefined ? serverAntrag.sachlichGeprueft : localAntrag.sachlichGeprueft,
+        sachlichGeprueftAm: serverAntrag.sachlichGeprueftAm || localAntrag.sachlichGeprueftAm,
+        entscheidungGetroffen: serverAntrag.entscheidungGetroffen !== undefined ? serverAntrag.entscheidungGetroffen : localAntrag.entscheidungGetroffen,
+        erledigt: serverAntrag.erledigt !== undefined ? serverAntrag.erledigt : localAntrag.erledigt,
+        vollzogen: serverAntrag.vollzogen !== undefined ? serverAntrag.vollzogen : localAntrag.vollzogen,
+        veraktet: serverAntrag.veraktet !== undefined ? serverAntrag.veraktet : localAntrag.veraktet,
+        status: serverAntrag.status || localAntrag.status, // Status IMMER vom Server
+        bearbeiterId: serverAntrag.bearbeiterId || localAntrag.bearbeiterId,
+        bearbeiterName: serverAntrag.bearbeiterName || localAntrag.bearbeiterName
+      };
+      
+      return mergedAntrag;
+    });
+    
     // Daten in localStorage speichern (ohne Sync-Loop zu triggern)
     originalSetItem('gefaengnis_users', JSON.stringify(usersFrontend));
-    originalSetItem('gefaengnis_antraege', JSON.stringify(antraege));
+    originalSetItem('gefaengnis_antraege', JSON.stringify(mergedAntraege));
     originalSetItem('gefaengnis_aufgaben', JSON.stringify(aufgaben));
     originalSetItem('gefaengnis_notifications', JSON.stringify(notifications));
     originalSetItem('gefaengnis_aktivitaeten', JSON.stringify(aktivitaeten));

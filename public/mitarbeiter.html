@@ -1204,6 +1204,17 @@
         console.log('dataReloaded Event empfangen:', event.detail);
         if (currentSession) {
           console.log('Aktualisiere UI nach dataReloaded...');
+          
+          // WICHTIG: Wenn Detailansicht geöffnet ist, prüfe ob der Benutzer noch Bearbeiter ist
+          if (currentAntragId) {
+            const antrag = antragSystem.getAntrag(currentAntragId);
+            if (antrag && antrag.bearbeiterId && antrag.bearbeiterId !== currentSession.userId) {
+              // Benutzer ist nicht mehr Bearbeiter - Detailansicht aktualisieren
+              console.log('[UI] Benutzer ist nicht mehr Bearbeiter, aktualisiere Detailansicht:', currentAntragId);
+              openAntragDetail(currentAntragId);
+            }
+          }
+          
           renderAntraege();
           renderNotifications();
           renderKalender();
@@ -1440,7 +1451,7 @@
     }
     
     // Notiz mit ausgewähltem Typ speichern
-    function confirmNotizTyp() {
+    async function confirmNotizTyp() {
       const antragId = document.getElementById('notizTypAntragId').value;
       const text = document.getElementById('notizTypText').value;
       const selectedTyp = document.querySelector('input[name="notizTyp"]:checked');
@@ -1456,7 +1467,32 @@
       const typ = selectedTyp.value;
       
       // Kommentar mit Typ speichern
-      antragSystem.addKommentar(antragId, text, currentSession.userId, currentSession.name, typ);
+      const result = await antragSystem.addKommentar(antragId, text, currentSession.userId, currentSession.name, typ);
+      
+      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
+      if (result && result.error === 'nicht_mehr_bearbeiter') {
+        const msg = currentLanguage === 'de' 
+          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Änderungen wurden nicht gespeichert.`
+          : currentLanguage === 'en'
+          ? `The application has already been taken by ${result.bearbeiterName}. Your changes were not saved.`
+          : `La demande a déjà été prise par ${result.bearbeiterName}. Vos modifications n'ont pas été enregistrées.`;
+        
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+        }
+        
+        // Daten vom Server neu laden
+        if (window.DataSync && window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
+        }
+        
+        closeModal('notizTypModal');
+        document.getElementById('neuerKommentar').value = '';
+        renderAntraege();
+        openAntragDetail(antragId);
+        alert(msg);
+        return;
+      }
       
       // Modal schließen, Eingabefeld leeren und Ansicht aktualisieren
       closeModal('notizTypModal');
@@ -2399,9 +2435,15 @@ ${t('task.create')}
                   </button>
                 ` : ''}
                 ${!antrag.veraktet && istBearbeiter && prozessStatus.abschluss === 'aktiv' ? `
-                  <button class="btn btn-secondary btn-large" onclick="veraktenAntrag('${antrag.id}')">
+                  ${(antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') && !antrag.vollzogen ? `
+                    <button class="btn btn-secondary btn-large disabled" onclick="showExecutionRequiredAlert()" title="${t('hint.executionRequired') || 'Bitte markieren Sie zunächst den Antrag als vollzogen.'}">
 ${t('action.archive')}
-                  </button>
+                    </button>
+                  ` : `
+                    <button class="btn btn-secondary btn-large" onclick="veraktenAntrag('${antrag.id}')">
+${t('action.archive')}
+                    </button>
+                  `}
                 ` : ''}
               </div>
             </div>
@@ -2498,7 +2540,7 @@ ${t('action.archive')}
       openModal('pruefungModal');
     }
     
-    function confirmPruefung() {
+    async function confirmPruefung() {
       const antragId = document.getElementById('pruefungAntragId').value;
       const kommentar = document.getElementById('pruefungKommentar').value.trim();
       
@@ -2511,7 +2553,31 @@ ${t('action.archive')}
       }
       
       // Antrag als geprüft markieren mit Kommentar
-      antragSystem.markiereAlsGeprueft(antragId, currentSession.userId, currentSession.name, kommentar);
+      const result = await antragSystem.markiereAlsGeprueft(antragId, currentSession.userId, currentSession.name, kommentar);
+      
+      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
+      if (result && result.error === 'nicht_mehr_bearbeiter') {
+        const msg = currentLanguage === 'de' 
+          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Änderungen wurden nicht gespeichert.`
+          : currentLanguage === 'en'
+          ? `The application has already been taken by ${result.bearbeiterName}. Your changes were not saved.`
+          : `La demande a déjà été prise par ${result.bearbeiterName}. Vos modifications n'ont pas été enregistrées.`;
+        
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+        }
+        
+        // Daten vom Server neu laden
+        if (window.DataSync && window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
+        }
+        
+        closeModal('pruefungModal');
+        renderAntraege();
+        openAntragDetail(antragId);
+        alert(msg);
+        return;
+      }
       
       closeModal('pruefungModal');
       
@@ -2536,7 +2602,7 @@ ${t('action.archive')}
       openModal('entscheidenModal');
     }
     
-    function handleEntscheidung(status) {
+    async function handleEntscheidung(status) {
       const antragId = document.getElementById('entscheidenAntragId').value;
       const begruendungText = document.getElementById('entscheidungBegruendung').value.trim();
       const persoenlichEroeffnen = document.getElementById('entscheidungPersoenlichEroeffnen').checked;
@@ -2555,7 +2621,32 @@ ${t('action.archive')}
       const bescheidPdf = generateBescheidPdf(antragId, status, begruendungText);
       
       // Antrag abschließen - die beiden Optionen werden jetzt separat behandelt
-      antragSystem.abschliessenAntrag(antragId, status, begruendung, persoenlichEroeffnen, bescheidPdf, vollzugVorBekanntgabe);
+      const result = await antragSystem.abschliessenAntrag(antragId, status, begruendung, persoenlichEroeffnen, bescheidPdf, vollzugVorBekanntgabe);
+      
+      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
+      if (result && result.error === 'nicht_mehr_bearbeiter') {
+        const msg = currentLanguage === 'de' 
+          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Entscheidung wurde nicht gespeichert.`
+          : currentLanguage === 'en'
+          ? `The application has already been taken by ${result.bearbeiterName}. Your decision was not saved.`
+          : `La demande a déjà été prise par ${result.bearbeiterName}. Votre décision n'a pas été enregistrée.`;
+        
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+        }
+        
+        // Daten vom Server neu laden
+        if (window.DataSync && window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
+        }
+        
+        closeModal('entscheidenModal');
+        renderAntraege();
+        openAntragDetail(antragId);
+        alert(msg);
+        return;
+      }
+      
       closeModal('entscheidenModal');
       
       // Prüfen ob persönliche Eröffnung oder Vollzug vor Bekanntgabe gewählt wurde
@@ -2592,7 +2683,7 @@ ${t('action.archive')}
     }
     
     // Vollzug bestätigen
-    function confirmVollzugBestaetigung() {
+    async function confirmVollzugBestaetigung() {
       const antragId = document.getElementById('vollzugBestaetigenAntragId').value;
       const kommentar = document.getElementById('vollzugKommentar').value.trim();
       
@@ -2607,7 +2698,32 @@ ${t('action.archive')}
       // Kommentar mit Sprachinfo speichern
       const vollzugKommentar = createTranslatableText(kommentar);
       
-      antragSystem.bestaetigeVollzugVorBekanntgabe(antragId, vollzugKommentar, currentSession.userId, currentSession.name);
+      const result = await antragSystem.bestaetigeVollzugVorBekanntgabe(antragId, vollzugKommentar, currentSession.userId, currentSession.name);
+      
+      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
+      if (result && result.error === 'nicht_mehr_bearbeiter') {
+        const msg = currentLanguage === 'de' 
+          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Änderungen wurden nicht gespeichert.`
+          : currentLanguage === 'en'
+          ? `The application has already been taken by ${result.bearbeiterName}. Your changes were not saved.`
+          : `La demande a déjà été prise par ${result.bearbeiterName}. Vos modifications n'ont pas été enregistrées.`;
+        
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+        }
+        
+        // Daten vom Server neu laden
+        if (window.DataSync && window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
+        }
+        
+        closeModal('vollzugBestaetigenModal');
+        renderAntraege();
+        openAntragDetail(antragId);
+        alert(msg);
+        return;
+      }
+      
       closeModal('vollzugBestaetigenModal');
       
       // Bekanntgabe erfolgt jetzt: Dokumentenfreigabe-Modal anzeigen
@@ -3074,7 +3190,7 @@ ${t('action.archive')}
     // ANTRAGS-DOKUMENTE UPLOAD
     // ============================================
     
-    function handleAntragDokumentUpload(input, antragId) {
+    async function handleAntragDokumentUpload(input, antragId) {
       const antrag = antragSystem.getAntrag(antragId);
       const files = input.files;
       
@@ -3082,7 +3198,7 @@ ${t('action.archive')}
         const file = files[i];
         if (file && file.type === 'application/pdf') {
           const reader = new FileReader();
-          reader.onload = function(e) {
+          reader.onload = async function(e) {
             const dokument = {
               name: file.name,
               data: e.target.result,
@@ -3091,12 +3207,35 @@ ${t('action.archive')}
               hochgeladenAm: new Date().toISOString(),
               fuerInsasseFreigegeben: false // Standardmäßig nicht freigegeben
             };
-            const neuesDokument = antragSystem.addDokument(antragId, dokument, currentSession.userId, currentSession.name);
+            const result = await antragSystem.addDokument(antragId, dokument, currentSession.userId, currentSession.name);
+            
+            // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
+            if (result && result.error === 'nicht_mehr_bearbeiter') {
+              const msg = currentLanguage === 'de' 
+                ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Das Dokument wurde nicht hochgeladen.`
+                : currentLanguage === 'en'
+                ? `The application has already been taken by ${result.bearbeiterName}. The document was not uploaded.`
+                : `La demande a déjà été prise par ${result.bearbeiterName}. Le document n'a pas été téléchargé.`;
+              
+              if (typeof showSyncStatus === 'function') {
+                showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+              }
+              
+              // Daten vom Server neu laden
+              if (window.DataSync && window.DataSync.reloadDataFromServer) {
+                await window.DataSync.reloadDataFromServer();
+              }
+              
+              renderAntraege();
+              openAntragDetail(antragId);
+              alert(msg);
+              return;
+            }
             
             // Prüfen ob Bekanntgabe bereits erfolgt ist (Insasse wurde informiert)
             const bekanntgabeErfolgt = antrag.erledigt && !antrag.wartetAufEroeffnung && !antrag.wartetAufVollzug;
             
-            if (bekanntgabeErfolgt && neuesDokument) {
+            if (bekanntgabeErfolgt && result) {
               // Modal für nachträgliche Freigabe öffnen
               const dokIndex = (antrag.dokumente || []).length - 1;
               openNachtraeglichFreigebenModal(antragId, dokIndex, file.name);
@@ -3797,9 +3936,37 @@ ${t('action.archive')}
     // ANTRAG VOLLZOGEN (Kontrollkästchen)
     // ============================================
     
-    function toggleVollzogen(antragId, checked) {
+    async function toggleVollzogen(antragId, checked) {
       if (checked) {
-        antragSystem.markiereAlsVollzogen(antragId, currentSession.userId, currentSession.name);
+        const result = await antragSystem.markiereAlsVollzogen(antragId, currentSession.userId, currentSession.name);
+        
+        // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
+        if (result && result.error === 'nicht_mehr_bearbeiter') {
+          const msg = currentLanguage === 'de' 
+            ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Änderungen wurden nicht gespeichert.`
+            : currentLanguage === 'en'
+            ? `The application has already been taken by ${result.bearbeiterName}. Your changes were not saved.`
+            : `La demande a déjà été prise par ${result.bearbeiterName}. Vos modifications n'ont pas été enregistrées.`;
+          
+          if (typeof showSyncStatus === 'function') {
+            showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+          }
+          
+          // Daten vom Server neu laden
+          if (window.DataSync && window.DataSync.reloadDataFromServer) {
+            await window.DataSync.reloadDataFromServer();
+          }
+          
+          // Checkbox zurücksetzen
+          const checkbox = document.getElementById('vollzogenCheckbox');
+          if (checkbox) checkbox.checked = false;
+          
+          renderAntraege();
+          openAntragDetail(antragId);
+          alert(msg);
+          return;
+        }
+        
         // Nach Vollzug: Weiterleitung anbieten
         openWeiterleitenModal(antragId, 'vollzug');
       }
@@ -4252,8 +4419,41 @@ ${t('action.archive')}
       const antrag = antragSystem.getAntrag(antragId);
       if (!antrag) return;
       
+    async function veraktenAntrag(antragId) {
+      const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag) return;
+      
+      // WICHTIG: Bei genehmigt/teilweise-genehmigt muss Vollzug bestätigt sein
+      if ((antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') && !antrag.vollzogen) {
+        showExecutionRequiredAlert();
+        return;
+      }
+      
       // Antrag als veraktet markieren
-      antragSystem.verakteAntrag(antragId, currentSession.userId, currentSession.name);
+      const result = await antragSystem.verakteAntrag(antragId, currentSession.userId, currentSession.name);
+      
+      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
+      if (result && result.error === 'nicht_mehr_bearbeiter') {
+        const msg = currentLanguage === 'de' 
+          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Die Veraktung wurde nicht gespeichert.`
+          : currentLanguage === 'en'
+          ? `The application has already been taken by ${result.bearbeiterName}. Archiving was not saved.`
+          : `La demande a déjà été prise par ${result.bearbeiterName}. L'archivage n'a pas été enregistré.`;
+        
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+        }
+        
+        // Daten vom Server neu laden
+        if (window.DataSync && window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
+        }
+        
+        renderAntraege();
+        openAntragDetail(antragId);
+        alert(msg);
+        return;
+      }
       
       // PDF generieren und herunterladen
       generateAntragPdf(antrag);
@@ -4503,10 +4703,32 @@ ${t('action.archive')}
       
       console.log('[Debug Frontend] nehmeAntrag wird aufgerufen für:', antragId);
       
-      const result = antragSystem.nehmeAntrag(antragId, currentSession);
+      const result = await antragSystem.nehmeAntrag(antragId, currentSession);
       console.log('[Debug Frontend] nehmeAntrag Ergebnis:', result);
       
-      if (result) {
+      // Prüfe auf Fehler (z.B. Antrag bereits vergeben)
+      if (result && result.error === 'bereits_vergeben') {
+        const msg = currentLanguage === 'de' 
+          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Die Bearbeitung wurde abgebrochen.`
+          : currentLanguage === 'en'
+          ? `The application has already been taken by ${result.bearbeiterName}. Processing has been cancelled.`
+          : `La demande a déjà été prise par ${result.bearbeiterName}. Le traitement a été annulé.`;
+        
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+        }
+        
+        // Daten vom Server neu laden
+        if (window.DataSync && window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
+        }
+        
+        renderAntraege();
+        alert(msg);
+        return;
+      }
+      
+      if (result && !result.error) {
         // Explizite Synchronisation mit dem Server, damit die Änderung sofort gespeichert wird
         let syncStatus = '';
         if (window.DataSync && window.DataSync.syncAntragToServer) {
@@ -4568,10 +4790,32 @@ ${t('action.archive')}
       
       console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail wird aufgerufen für:', antragId);
       
-      const result = antragSystem.nehmeAntrag(antragId, currentSession);
+      const result = await antragSystem.nehmeAntrag(antragId, currentSession);
       console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail Ergebnis:', result);
       
-      if (result) {
+      // Prüfe auf Fehler (z.B. Antrag bereits vergeben)
+      if (result && result.error === 'bereits_vergeben') {
+        const msg = currentLanguage === 'de' 
+          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Die Bearbeitung wurde abgebrochen.`
+          : currentLanguage === 'en'
+          ? `The application has already been taken by ${result.bearbeiterName}. Processing has been cancelled.`
+          : `La demande a déjà été prise par ${result.bearbeiterName}. Le traitement a été annulé.`;
+        
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+        }
+        
+        // Daten vom Server neu laden
+        if (window.DataSync && window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
+        }
+        
+        renderAntraege();
+        alert(msg);
+        return;
+      }
+      
+      if (result && !result.error) {
         // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
         if (window.DataSync && window.DataSync.syncAntragToServer) {
           console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');

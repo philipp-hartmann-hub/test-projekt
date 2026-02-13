@@ -2362,8 +2362,10 @@ class AntragSystem {
   migrateAntraege() {
     let changed = false;
     this.antraege.forEach(antrag => {
-      // Status-Migration: 'in-bearbeitung' ohne Bearbeiter wird zu 'offen'
-      if (antrag.status === 'in-bearbeitung' && !antrag.bearbeiterId) {
+      // WICHTIG: Status-Migration nur für wirklich verwaiste Anträge
+      // Nicht für Anträge die bereits Phasen durchlaufen haben!
+      // Nur wenn Antrag wirklich noch in Bearbeitung ist UND keinen Bearbeiter hat UND noch nicht geprüft wurde
+      if (antrag.status === 'in-bearbeitung' && !antrag.bearbeiterId && !antrag.sachlichGeprueft && !antrag.entscheidungGetroffen && !antrag.erledigt) {
         antrag.status = 'offen';
         changed = true;
       }
@@ -2508,14 +2510,150 @@ class AntragSystem {
     return null;
   }
 
+  // Prüft ob der Antrag noch verfügbar ist (nicht von anderem Bearbeiter genommen)
+  async pruefeAntragVerfuegbar(antragId, erwarteterBearbeiterId = null) {
+    if (!window.DataSync || !window.DataSync.isConnected()) {
+      return { verfuegbar: true, antrag: this.antraege.find(a => a.id === antragId) };
+    }
+    
+    try {
+      const base = window.location.origin + '/api';
+      const serverAntrag = await fetch(base + '/antraege/' + antragId, {
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+      }).then(r => r.json());
+      
+      const localAntrag = this.antraege.find(a => a.id === antragId);
+      
+      // Prüfe ob Antrag bereits einem anderen Bearbeiter zugewiesen ist
+      if (serverAntrag.bearbeiterId && serverAntrag.bearbeiterId !== erwarteterBearbeiterId) {
+        return {
+          verfuegbar: false,
+          antrag: serverAntrag,
+          lokalerAntrag: localAntrag,
+          grund: 'bereits_vergeben',
+          bearbeiterName: serverAntrag.bearbeiterName || 'unbekannt'
+        };
+      }
+      
+      return { verfuegbar: true, antrag: serverAntrag };
+    } catch (error) {
+      console.warn('[Prüfung] Fehler beim Prüfen der Verfügbarkeit:', error);
+      return { verfuegbar: true, antrag: this.antraege.find(a => a.id === antragId) };
+    }
+  }
+
+  // Prüft ob der Benutzer noch der Bearbeiter des Antrags ist
+  // WICHTIG: Diese Funktion prüft IMMER zuerst auf dem Server, um Race Conditions zu vermeiden
+  async pruefeIstNochBearbeiter(antragId, benutzerId) {
+    const localAntrag = this.antraege.find(a => a.id === antragId);
+    if (!localAntrag) return { istBearbeiter: false, grund: 'antrag_nicht_gefunden' };
+    
+    // WICHTIG: Prüfe IMMER zuerst auf dem Server, um sicherzustellen dass wir die aktuellsten Daten haben
+    if (window.DataSync && window.DataSync.isConnected()) {
+      try {
+        const base = window.location.origin + '/api';
+        const serverAntrag = await fetch(base + '/antraege/' + antragId, {
+          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+        }).then(r => r.json());
+        
+        // Wenn kein Bearbeiter auf dem Server gesetzt ist, ist der Antrag verfügbar
+        if (!serverAntrag.bearbeiterId) {
+          // Aktualisiere lokale Daten mit Server-Daten
+          const index = this.antraege.findIndex(a => a.id === antragId);
+          if (index !== -1) {
+            Object.assign(this.antraege[index], serverAntrag);
+            this.saveAntraege();
+          }
+          return { istBearbeiter: true, antrag: serverAntrag };
+        }
+        
+        // Prüfe ob der Benutzer noch der Bearbeiter ist
+        if (serverAntrag.bearbeiterId !== benutzerId) {
+          // WICHTIG: Aktualisiere lokale Daten mit Server-Daten, damit der Benutzer sieht dass er nicht mehr Bearbeiter ist
+          const index = this.antraege.findIndex(a => a.id === antragId);
+          if (index !== -1) {
+            this.antraege[index] = serverAntrag;
+            this.saveAntraege();
+            if (typeof window.reloadDataFromStorage === 'function') {
+              window.reloadDataFromStorage();
+            }
+          }
+          
+          return {
+            istBearbeiter: false,
+            grund: 'nicht_mehr_bearbeiter_server',
+            bearbeiterName: serverAntrag.bearbeiterName || 'unbekannt',
+            antrag: serverAntrag
+          };
+        }
+        
+        // Benutzer ist noch Bearbeiter - aktualisiere lokale Daten mit Server-Daten für Konsistenz
+        const index = this.antraege.findIndex(a => a.id === antragId);
+        if (index !== -1) {
+          Object.assign(this.antraege[index], serverAntrag);
+        }
+        
+        return { istBearbeiter: true, antrag: serverAntrag };
+      } catch (error) {
+        console.warn('[Prüfung] Fehler beim Prüfen auf Server:', error);
+        // Bei Fehler lokal prüfen (Fallback)
+        if (!localAntrag.bearbeiterId) return { istBearbeiter: true, antrag: localAntrag };
+        return { istBearbeiter: localAntrag.bearbeiterId === benutzerId, antrag: localAntrag };
+      }
+    }
+    
+    // Fallback: Wenn kein Server verfügbar, lokal prüfen
+    if (!localAntrag.bearbeiterId) return { istBearbeiter: true, antrag: localAntrag };
+    if (localAntrag.bearbeiterId !== benutzerId) {
+      return {
+        istBearbeiter: false,
+        grund: 'nicht_mehr_bearbeiter',
+        bearbeiterName: localAntrag.bearbeiterName || 'unbekannt',
+        antrag: localAntrag
+      };
+    }
+    
+    return { istBearbeiter: true, antrag: localAntrag };
+  }
+
   // Antrag "nehmen" - einem Mitarbeiter zuweisen
-  nehmeAntrag(antragId, mitarbeiter) {
+  async nehmeAntrag(antragId, mitarbeiter) {
     console.log('[Debug] nehmeAntrag aufgerufen:', { antragId, mitarbeiterId: mitarbeiter.userId });
     
     const antrag = this.antraege.find(a => a.id === antragId);
     if (!antrag) {
       console.log('[Debug] nehmeAntrag: Antrag nicht gefunden');
       return null;
+    }
+    
+    // WICHTIG: Prüfe zuerst ob der Antrag noch verfügbar ist
+    const verfuegbarkeitsPruefung = await this.pruefeAntragVerfuegbar(antragId, mitarbeiter.userId);
+    if (!verfuegbarkeitsPruefung.verfuegbar) {
+      console.warn('[Debug] Antrag bereits vergeben:', verfuegbarkeitsPruefung);
+      // Aktualisiere lokale Daten mit Server-Daten
+      if (verfuegbarkeitsPruefung.antrag) {
+        const index = this.antraege.findIndex(a => a.id === antragId);
+        if (index !== -1) {
+          this.antraege[index] = verfuegbarkeitsPruefung.antrag;
+          this.saveAntraege();
+          if (typeof window.reloadDataFromStorage === 'function') {
+            window.reloadDataFromStorage();
+          }
+        }
+      }
+      return {
+        error: 'bereits_vergeben',
+        bearbeiterName: verfuegbarkeitsPruefung.bearbeiterName,
+        serverAntrag: verfuegbarkeitsPruefung.antrag
+      };
+    }
+    
+    // Aktualisiere lokalen Antrag mit Server-Daten falls vorhanden
+    if (verfuegbarkeitsPruefung.antrag) {
+      const index = this.antraege.findIndex(a => a.id === antragId);
+      if (index !== -1) {
+        Object.assign(this.antraege[index], verfuegbarkeitsPruefung.antrag);
+      }
     }
     
     console.log('[Debug] nehmeAntrag - Antrag gefunden:', {
@@ -2698,7 +2836,22 @@ class AntragSystem {
   }
 
   // Antrag übernehmen (von anderem Bearbeiter zurückholen)
-  uebernehmeAntrag(antragId, mitarbeiter, grund = null) {
+  async uebernehmeAntrag(antragId, mitarbeiter, grund = null) {
+    // WICHTIG: Prüfe ob der Antrag noch verfügbar ist BEVOR Änderungen gemacht werden
+    const verfuegbarkeitsPruefung = await this.pruefeAntragVerfuegbar(antragId, mitarbeiter.userId);
+    if (!verfuegbarkeitsPruefung.verfuegbar) {
+      console.warn('[Bearbeitung] Antrag bereits vergeben, Übernahme wird nicht gespeichert:', {
+        antragId: antragId,
+        mitarbeiterId: mitarbeiter.userId,
+        aktuellerBearbeiter: verfuegbarkeitsPruefung.bearbeiterName
+      });
+      return {
+        error: 'bereits_vergeben',
+        bearbeiterName: verfuegbarkeitsPruefung.bearbeiterName,
+        antrag: verfuegbarkeitsPruefung.antrag
+      };
+    }
+    
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag && antrag.status === 'in-bearbeitung') {
       const alterBearbeiter = antrag.bearbeiterName;
@@ -2775,7 +2928,17 @@ class AntragSystem {
   }
 
   // Antrag als sachlich/fachlich geprüft markieren
-  markiereAlsGeprueft(antragId, mitarbeiterId, mitarbeiterName, pruefungsKommentar = '') {
+  async markiereAlsGeprueft(antragId, mitarbeiterId, mitarbeiterName, pruefungsKommentar = '') {
+    // Prüfe ob der Benutzer noch der Bearbeiter ist
+    const bearbeiterPruefung = await this.pruefeIstNochBearbeiter(antragId, mitarbeiterId);
+    if (!bearbeiterPruefung.istBearbeiter) {
+      return {
+        error: 'nicht_mehr_bearbeiter',
+        bearbeiterName: bearbeiterPruefung.bearbeiterName,
+        antrag: bearbeiterPruefung.antrag
+      };
+    }
+    
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag && antrag.status === 'in-bearbeitung') {
       antrag.sachlichGeprueft = true;
@@ -2802,11 +2965,34 @@ class AntragSystem {
   }
 
   // Antrag abschließen (genehmigen, ablehnen, teilweise genehmigen)
-  abschliessenAntrag(id, status, begruendung = null, persoenlichEroeffnen = false, bescheidPdf = null, vollzugVorBekanntgabe = false) {
+  async abschliessenAntrag(id, status, begruendung = null, persoenlichEroeffnen = false, bescheidPdf = null, vollzugVorBekanntgabe = false) {
     const antrag = this.antraege.find(a => a.id === id);
-    if (antrag) {
-      const bearbeiterId = antrag.bearbeiterId;
-      const bearbeiterName = antrag.bearbeiterName;
+    if (!antrag) return null;
+    
+    const bearbeiterId = antrag.bearbeiterId;
+    const bearbeiterName = antrag.bearbeiterName;
+    
+    // WICHTIG: Prüfe ob der Benutzer noch der Bearbeiter ist BEVOR Änderungen gemacht werden
+    const bearbeiterPruefung = await this.pruefeIstNochBearbeiter(id, bearbeiterId);
+    if (!bearbeiterPruefung.istBearbeiter) {
+      console.warn('[Bearbeitung] Benutzer ist nicht mehr Bearbeiter, Entscheidung wird nicht gespeichert:', {
+        antragId: id,
+        bearbeiterId: bearbeiterId,
+        aktuellerBearbeiter: bearbeiterPruefung.bearbeiterName
+      });
+      return {
+        error: 'nicht_mehr_bearbeiter',
+        bearbeiterName: bearbeiterPruefung.bearbeiterName,
+        antrag: bearbeiterPruefung.antrag
+      };
+    }
+    
+    // WICHTIG: Sicherstellen dass Status nicht zurückgesetzt wird
+    // Wenn Antrag bereits erledigt oder veraktet ist, nicht ändern
+    if (antrag.veraktet) {
+      console.warn('[Phasenübergang] Antrag bereits veraktet, keine Änderung möglich:', id);
+      return antrag;
+    }
       
       // Gruppenzuweisung für "Antrag nehmen" löschen (Antrag ist nicht mehr "zu nehmen")
       // HINWEIS: Gruppenaufgaben werden NICHT automatisch geschlossen
@@ -2915,7 +3101,22 @@ class AntragSystem {
   }
   
   // Vollzug vor Bekanntgabe bestätigen
-  bestaetigeVollzugVorBekanntgabe(id, vollzugKommentar, mitarbeiterId, mitarbeiterName) {
+  async bestaetigeVollzugVorBekanntgabe(id, vollzugKommentar, mitarbeiterId, mitarbeiterName) {
+    // WICHTIG: Prüfe ob der Benutzer noch der Bearbeiter ist BEVOR Änderungen gemacht werden
+    const bearbeiterPruefung = await this.pruefeIstNochBearbeiter(id, mitarbeiterId);
+    if (!bearbeiterPruefung.istBearbeiter) {
+      console.warn('[Bearbeitung] Benutzer ist nicht mehr Bearbeiter, Vollzug-Bestätigung wird nicht gespeichert:', {
+        antragId: id,
+        mitarbeiterId: mitarbeiterId,
+        aktuellerBearbeiter: bearbeiterPruefung.bearbeiterName
+      });
+      return {
+        error: 'nicht_mehr_bearbeiter',
+        bearbeiterName: bearbeiterPruefung.bearbeiterName,
+        antrag: bearbeiterPruefung.antrag
+      };
+    }
+    
     const antrag = this.antraege.find(a => a.id === id && a.wartetAufVollzug);
     if (antrag) {
       const status = antrag.geplantesErgebnis;
@@ -2926,6 +3127,11 @@ class AntragSystem {
       antrag.erledigt = true;
       antrag.wartetAufVollzug = false;
       antrag.vollzugBestaetigt = true;
+      // WICHTIG: Auch vollzogen setzen, damit Abschluss-Phase aktiviert wird
+      antrag.vollzogen = true;
+      antrag.vollzogenAm = new Date().toISOString();
+      antrag.vollzogenVon = mitarbeiterName;
+      antrag.vollzogenVonId = mitarbeiterId;
       antrag.vollzugKommentar = vollzugKommentar; // Dieser Kommentar ist für den Insassen sichtbar
       antrag.vollzugBestaetigtAm = new Date().toISOString();
       antrag.vollzugBestaetigtVon = mitarbeiterName;
@@ -3471,9 +3677,28 @@ class AntragSystem {
   }
 
   // Antrag verakten
-  verakteAntrag(antragId, mitarbeiterId, mitarbeiterName) {
+  async verakteAntrag(antragId, mitarbeiterId, mitarbeiterName) {
+    // WICHTIG: Prüfe ob der Benutzer noch der Bearbeiter ist BEVOR Änderungen gemacht werden
+    const bearbeiterPruefung = await this.pruefeIstNochBearbeiter(antragId, mitarbeiterId);
+    if (!bearbeiterPruefung.istBearbeiter) {
+      console.warn('[Bearbeitung] Benutzer ist nicht mehr Bearbeiter, Veraktung wird nicht gespeichert:', {
+        antragId: antragId,
+        mitarbeiterId: mitarbeiterId,
+        aktuellerBearbeiter: bearbeiterPruefung.bearbeiterName
+      });
+      return {
+        error: 'nicht_mehr_bearbeiter',
+        bearbeiterName: bearbeiterPruefung.bearbeiterName,
+        antrag: bearbeiterPruefung.antrag
+      };
+    }
+    
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag) {
+      // WICHTIG: Status darf nicht zurückgesetzt werden!
+      // Veraktete Anträge behalten ihren Status (genehmigt/abgelehnt/teilweise-genehmigt)
+      // und kommen in die Historie-Liste
+      
       // PHASENÜBERGANG: Alle offenen Aufgaben für diesen Antrag schließen
       aufgabenSystem.schliesseAlleGruppenAufgabenFuerAntrag(antragId);
       
@@ -3481,6 +3706,10 @@ class AntragSystem {
       antrag.veraktetAm = new Date().toISOString();
       antrag.veraktetVon = mitarbeiterName;
       antrag.veraktetVonId = mitarbeiterId;
+      
+      // WICHTIG: Status NICHT ändern! Antrag behält seinen aktuellen Status
+      // (genehmigt/abgelehnt/teilweise-genehmigt) und wird in Historie angezeigt
+      
       this.saveAntraege();
       
       // Aktivität protokollieren
@@ -3499,7 +3728,22 @@ class AntragSystem {
   }
 
   // Antrag als vollzogen markieren
-  markiereAlsVollzogen(antragId, mitarbeiterId, mitarbeiterName) {
+  async markiereAlsVollzogen(antragId, mitarbeiterId, mitarbeiterName) {
+    // WICHTIG: Prüfe ob der Benutzer noch der Bearbeiter ist BEVOR Änderungen gemacht werden
+    const bearbeiterPruefung = await this.pruefeIstNochBearbeiter(antragId, mitarbeiterId);
+    if (!bearbeiterPruefung.istBearbeiter) {
+      console.warn('[Bearbeitung] Benutzer ist nicht mehr Bearbeiter, Vollzug-Markierung wird nicht gespeichert:', {
+        antragId: antragId,
+        mitarbeiterId: mitarbeiterId,
+        aktuellerBearbeiter: bearbeiterPruefung.bearbeiterName
+      });
+      return {
+        error: 'nicht_mehr_bearbeiter',
+        bearbeiterName: bearbeiterPruefung.bearbeiterName,
+        antrag: bearbeiterPruefung.antrag
+      };
+    }
+    
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag && antrag.erledigt) {
       antrag.vollzogen = true;
@@ -3607,8 +3851,30 @@ class AntragSystem {
 
   // Kommentar zu einem Antrag hinzufügen
   // typ: 'privat' (nur Ersteller), 'alle' (alle Mitarbeiter), 'akte' (alle + in Veraktungs-PDF)
-  addKommentar(antragId, kommentarText, benutzerId, benutzerName, typ = 'alle') {
+  async addKommentar(antragId, kommentarText, benutzerId, benutzerName, typ = 'alle') {
+    // Prüfe ob der Benutzer noch der Bearbeiter ist (nur für Mitarbeiter-Kommentare)
+    // Insassen können immer Kommentare hinzufügen
     const antrag = this.antraege.find(a => a.id === antragId);
+    if (!antrag) {
+      return { error: 'antrag_nicht_gefunden' };
+    }
+    
+    // Prüfe nur für Mitarbeiter-Kommentare, ob der Benutzer noch der Bearbeiter ist
+    const userSystem = typeof window !== 'undefined' && window.userSystem;
+    if (userSystem) {
+      const benutzer = userSystem.getUser(benutzerId);
+      if (benutzer && benutzer.type === 'mitarbeiter' && antrag.bearbeiterId) {
+        const bearbeiterPruefung = await this.pruefeIstNochBearbeiter(antragId, benutzerId);
+        if (!bearbeiterPruefung.istBearbeiter) {
+          return {
+            error: 'nicht_mehr_bearbeiter',
+            bearbeiterName: bearbeiterPruefung.bearbeiterName,
+            antrag: bearbeiterPruefung.antrag
+          };
+        }
+      }
+    }
+    
     if (antrag) {
       if (!antrag.kommentare) {
         antrag.kommentare = [];
@@ -3667,7 +3933,17 @@ class AntragSystem {
   }
 
   // Dokument zu einem Antrag hinzufügen
-  addDokument(antragId, dokument, benutzerId, benutzerName) {
+  async addDokument(antragId, dokument, benutzerId, benutzerName) {
+    // Prüfe ob der Benutzer noch der Bearbeiter ist
+    const bearbeiterPruefung = await this.pruefeIstNochBearbeiter(antragId, benutzerId);
+    if (!bearbeiterPruefung.istBearbeiter) {
+      return {
+        error: 'nicht_mehr_bearbeiter',
+        bearbeiterName: bearbeiterPruefung.bearbeiterName,
+        antrag: bearbeiterPruefung.antrag
+      };
+    }
+    
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag) {
       if (!antrag.dokumente) {
