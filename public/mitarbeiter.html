@@ -1218,6 +1218,7 @@
       }, 60000); // Jede Minute prüfen
       
       // Daten vom Server regelmäßig neu laden (für Anträge von anderen Geräten)
+      // Häufigeres Polling für bessere Synchronisation zwischen Geräten
       if (window.DataSync && window.DataSync.reloadDataFromServer) {
         console.log('Starte automatisches Polling für Server-Daten...');
         setInterval(async () => {
@@ -1228,7 +1229,7 @@
           } else {
             console.log('Polling: Server nicht verbunden, überspringe...');
           }
-        }, 30000); // Alle 30 Sekunden
+        }, 10000); // Alle 10 Sekunden (statt 30) für schnellere Synchronisation
       } else {
         console.warn('DataSync.reloadDataFromServer nicht verfügbar');
       }
@@ -4506,23 +4507,30 @@ ${t('action.archive')}
       console.log('[Debug Frontend] nehmeAntrag Ergebnis:', result);
       
       if (result) {
-        // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
+        // Explizite Synchronisation mit dem Server, damit die Änderung sofort gespeichert wird
         let syncStatus = '';
         if (window.DataSync && window.DataSync.syncAntragToServer) {
           console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
-          showSyncStatus('Synchronisiere mit Server...');
+          if (typeof showSyncStatus === 'function') {
+            showSyncStatus('Synchronisiere mit Server...', 'info');
+          }
           const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
           if (syncSuccess) {
             console.log('[Debug] Antrag-Übernahme erfolgreich synchronisiert:', antragId);
             syncStatus = '✓ Synchronisiert';
-            showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
+            if (typeof showSyncStatus === 'function') {
+              showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
+            }
           } else {
             console.warn('[Debug] Antrag-Übernahme Synchronisation fehlgeschlagen');
-            syncStatus = '✗ Synchronisation fehlgeschlagen';
-            showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
+            syncStatus = '✗ Fehler';
+            if (typeof showSyncStatus === 'function') {
+              showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
+            }
           }
         }
         
+        // UI aktualisieren
         renderAntraege();
         // Automatisch zum "Meine Anträge und Aufgaben" Tab wechseln
         switchTab('bearbeitung');

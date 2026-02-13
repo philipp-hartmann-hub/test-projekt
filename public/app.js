@@ -3193,6 +3193,19 @@ class AntragSystem {
     });
     
     const gefilterteAntraege = this.antraege.filter(a => {
+      // WICHTIG: Anträge die bereits einem anderen Bearbeiter zugewiesen sind, nicht anzeigen
+      // (außer wenn es Gruppenaufgaben gibt oder Hauptbearbeitung wartet)
+      if (a.bearbeiterId && a.bearbeiterId !== mitarbeiter.userId) {
+        // Prüfe ob es Gruppenaufgaben gibt oder Hauptbearbeitung wartet
+        const hatGruppenaufgaben = antragsIdsMitGruppenaufgaben.includes(a.id);
+        const hatWartendeHauptbearbeitung = a.status === 'in-bearbeitung' && a.zugewiesenAnGruppe && a.hauptbearbeitungWartetAufUebernahme;
+        
+        // Nur anzeigen wenn Gruppenaufgaben vorhanden oder Hauptbearbeitung wartet
+        if (!hatGruppenaufgaben && !hatWartendeHauptbearbeitung) {
+          return false; // Antrag bereits einem anderen Bearbeiter zugewiesen
+        }
+      }
+      
       // 1. Offene Anträge (noch kein Bearbeiter)
       if (a.status === 'offen') {
         // VAL sieht IMMER alle Anträge ihres Hauses, auch wenn sie einer Gruppe zugewiesen sind
@@ -3202,8 +3215,21 @@ class AntragSystem {
         
         // Prüfen ob der Antrag einer Gruppe zugewiesen wurde
         if (a.zugewiesenAnGruppe) {
+          // Debug für Kammer-Anträge
+          if (a.zugewiesenAnGruppe.typ === 'kammer') {
+            console.log('[Debug] Offener Antrag mit Kammer-Zuweisung:', {
+              antragId: a.id,
+              gruppe: a.zugewiesenAnGruppe,
+              mitarbeiterRolle: mitarbeiter.rolle,
+              istKammer: mitarbeiter.rolle === 'kammer'
+            });
+          }
           // Nur Mitglieder der zugewiesenen Gruppe sehen den Antrag
-          return this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
+          const gehoertZuGruppe = this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
+          if (a.zugewiesenAnGruppe.typ === 'kammer') {
+            console.log('[Debug] Kammer-Antrag Filter-Ergebnis:', gehoertZuGruppe);
+          }
+          return gehoertZuGruppe;
         }
         
         // Normale offene Anträge (ohne Gruppenzuweisung)
@@ -3219,12 +3245,25 @@ class AntragSystem {
         if (a.bearbeiterId === mitarbeiter.userId) {
           return false;
         }
+        // Debug für Kammer-Anträge
+        if (a.zugewiesenAnGruppe.typ === 'kammer') {
+          console.log('[Debug] Antrag in Bearbeitung mit Kammer-Zuweisung:', {
+            antragId: a.id,
+            gruppe: a.zugewiesenAnGruppe,
+            mitarbeiterRolle: mitarbeiter.rolle,
+            istKammer: mitarbeiter.rolle === 'kammer'
+          });
+        }
         // VAL sieht alle Anträge ihres Hauses, auch mit wartender Hauptbearbeitungsübergabe
         if (istHausleitung && this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) {
           return true;
         }
         // Nur Mitglieder der zugewiesenen Gruppe sehen den Antrag
-        return this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
+        const gehoertZuGruppe = this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
+        if (a.zugewiesenAnGruppe.typ === 'kammer') {
+          console.log('[Debug] Kammer-Antrag in Bearbeitung Filter-Ergebnis:', gehoertZuGruppe);
+        }
+        return gehoertZuGruppe;
       }
       
       // 3. Anträge mit NEUEN/OFFENEN Gruppenaufgaben für diesen Mitarbeiter
@@ -3791,6 +3830,15 @@ class AntragSystem {
   weiterleitenAnGruppe(antragId, gruppe, gruppeName, altBearbeiterId, altBearbeiterName, notiz = '', hauptbearbeitungUebertragen = true) {
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag) {
+      // Debug für Kammer-Weiterleitung
+      if (gruppe.typ === 'kammer') {
+        console.log('[Debug] Weiterleitung an Kammer:', {
+          antragId: antragId,
+          gruppe: gruppe,
+          gruppeName: gruppeName,
+          hausId: gruppe.hausId
+        });
+      }
       // Gruppenzuweisung speichern
       antrag.zugewiesenAnGruppe = gruppe;
       antrag.zugewiesenAnGruppeName = gruppeName;
