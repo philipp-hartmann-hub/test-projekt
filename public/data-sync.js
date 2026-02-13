@@ -28,8 +28,11 @@ async function apiCall(endpoint, options = {}) {
     const response = await fetch(`${API_BASE}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
         ...options.headers
       },
+      cache: 'no-store', // Verhindere Browser-Caching
       ...options
     });
 
@@ -211,7 +214,51 @@ async function syncAntragToServer(antragId) {
       console.log('[Sync] Aufgaben synchronisiert');
     }
     
-    // 3. Aktualisiere lokale Daten mit Server-Daten
+    // 3. Verifiziere dass die Änderung wirklich auf dem Server gespeichert wurde
+    // Wichtig bei Netzwerk-Latenz: Mehrfach prüfen mit Retry
+    let verifiziert = false;
+    let retries = 0;
+    const maxRetries = 5;
+    
+    while (!verifiziert && retries < maxRetries) {
+      await new Promise(resolve => setTimeout(resolve, 500 + (retries * 200))); // Zunehmende Verzögerung
+      
+      try {
+        const verifyResponse = await fetch(base + '/antraege/' + antragId, {
+          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+        });
+        if (verifyResponse.ok) {
+          const verifyAntrag = await verifyResponse.json();
+          console.log('[Sync] Verifikation:', verifyAntrag.id, 'Bearbeiter:', verifyAntrag.bearbeiterId, 'Erwartet:', antrag.bearbeiterId);
+          
+          // Prüfe ob Bearbeiter übereinstimmt
+          if (verifyAntrag.bearbeiterId === antrag.bearbeiterId) {
+            verifiziert = true;
+            console.log('[Sync] Änderung erfolgreich verifiziert nach', retries + 1, 'Versuchen');
+            // Verwende die verifizierten Server-Daten
+            serverAntrag.bearbeiterId = verifyAntrag.bearbeiterId;
+            serverAntrag.bearbeiterName = verifyAntrag.bearbeiterName;
+            serverAntrag.status = verifyAntrag.status;
+            serverAntrag.zugewiesenAnGruppe = verifyAntrag.zugewiesenAnGruppe;
+          } else {
+            retries++;
+            console.log('[Sync] Verifikation fehlgeschlagen, versuche erneut...', retries);
+          }
+        } else {
+          retries++;
+          console.log('[Sync] Verifikations-Request fehlgeschlagen, versuche erneut...', retries);
+        }
+      } catch (e) {
+        retries++;
+        console.log('[Sync] Verifikations-Fehler, versuche erneut...', retries, e.message);
+      }
+    }
+    
+    if (!verifiziert) {
+      console.warn('[Sync] WARNUNG: Änderung konnte nicht verifiziert werden nach', maxRetries, 'Versuchen');
+    }
+    
+    // 4. Aktualisiere lokale Daten mit Server-Daten
     if (serverAntrag.id) {
       const index = localAntraege.findIndex(a => a.id === serverAntrag.id);
       if (index !== -1) {
@@ -223,8 +270,8 @@ async function syncAntragToServer(antragId) {
       }
     }
     
-    // 4. Kurze Verzögerung, damit der Server die Änderungen verarbeitet hat
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // 5. Zusätzliche Verzögerung für Netzwerk-Latenz
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     isSyncing = false;
     return true;
@@ -311,14 +358,14 @@ async function reloadDataFromServer() {
   try {
     console.log('Lade aktuelle Daten vom Server...');
     
-    // Alle Daten parallel laden
+    // Alle Daten parallel laden mit Cache-Control Headers für frische Daten
     const [users, antraege, aufgaben, notifications, aktivitaeten, termine] = await Promise.all([
-      apiCall('/users'),
-      apiCall('/antraege'),
-      apiCall('/aufgaben'),
-      apiCall('/notifications'),
-      apiCall('/aktivitaeten'),
-      apiCall('/termine')
+      apiCall('/users', { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } }),
+      apiCall('/antraege', { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } }),
+      apiCall('/aufgaben', { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } }),
+      apiCall('/notifications', { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } }),
+      apiCall('/aktivitaeten', { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } }),
+      apiCall('/termine', { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } })
     ]);
 
     // Server-User auf Frontend-Format mappen
