@@ -149,17 +149,26 @@ app.get('/api/antraege', async (req, res) => {
 app.post('/api/antraege', async (req, res) => {
   try {
     const antrag = req.body;
+    if (!antrag || typeof antrag !== 'object') {
+      return res.status(400).json({ success: false, error: 'Ungültiger Antrag (kein Objekt)' });
+    }
     antrag.id = antrag.id || generateId('ANT');
     antrag.antragsNummer = antrag.antragsNummer || 'A-' + Date.now().toString().slice(-6);
     antrag.erstelltAm = antrag.erstelltAm || new Date().toISOString();
     antrag.kommentare = antrag.kommentare || [];
     antrag.dokumente = antrag.dokumente || [];
-    
+    // Sicherstellen, dass id ein String ist (PostgreSQL TEXT)
+    antrag.id = String(antrag.id);
+
     await dbLayer.create('antraege', antrag);
     res.json({ success: true, id: antrag.id, antragsNummer: antrag.antragsNummer });
   } catch (error) {
-    console.error('Fehler beim Erstellen des Antrags:', error);
-    res.status(500).json({ success: false, error: 'Fehler beim Erstellen des Antrags' });
+    console.error('Fehler beim Erstellen des Antrags:', error.message || error);
+    res.status(500).json({
+      success: false,
+      error: 'Fehler beim Erstellen des Antrags',
+      detail: error.message || String(error)
+    });
   }
 });
 

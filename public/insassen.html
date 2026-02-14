@@ -769,6 +769,8 @@
         return;
       }
       
+      let synchronisiert = false; // über gesamte Funktion gültig (für Erfolgsmeldung)
+      
       const antrag = antragSystem.createAntrag(type, data, currentSession, false);
       console.log('[Insassen] Antrag erstellt:', antrag.id, antrag.antragsNummer);
       
@@ -779,7 +781,6 @@
       if (window.DataSync && window.DataSync.isConnected()) {
         console.log('[Insassen] Synchronisiere Antrag explizit mit Server...');
         const base = window.location.origin + '/api';
-        let synchronisiert = false;
         let retries = 0;
         const maxRetries = 5;
         
@@ -810,7 +811,9 @@
               });
               
               if (!postResponse.ok) {
-                throw new Error(`HTTP ${postResponse.status}: ${postResponse.statusText}`);
+                const errBody = await postResponse.json().catch(function() { return {}; });
+                const detail = errBody.detail || errBody.error || postResponse.statusText;
+                throw new Error('HTTP ' + postResponse.status + ': ' + detail);
               }
               
               const serverAntrag = await postResponse.json();
@@ -884,6 +887,8 @@
       // Erfolgsmeldung
       if (synchronisiert) {
         showAlert('Antrag erfolgreich eingereicht und synchronisiert!');
+      } else {
+        showAlert('Antrag wurde eingereicht und lokal gespeichert. Die Synchronisation mit dem Server steht noch aus oder ist fehlgeschlagen.');
       }
     }
 
