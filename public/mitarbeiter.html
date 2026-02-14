@@ -1158,11 +1158,18 @@
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('portalSection').style.display = 'block';
       
+      // Debug-Balken sofort anzeigen (falls renderAntraege später fehlschlägt)
+      var debugBarEl = document.getElementById('antraegeDebugBar');
+      if (debugBarEl) {
+        debugBarEl.style.display = 'block';
+        debugBarEl.innerHTML = '<strong>Debug:</strong> Portal geladen. Lade Anträge…';
+      }
+      
       // Name aus Session holen oder aus userSystem falls nicht vorhanden
       let displayName = currentSession.name;
       if (!displayName || displayName.trim() === '' || displayName === 'Kammer mitarbeiter' || displayName === 'kammer mitarbeiter') {
-        // Versuche Name aus userSystem zu holen
-        const user = userSystem.users.find(u => u.id === currentSession.userId);
+        // Versuche Name aus userSystem zu holen (vorsichtig: userSystem/users kann fehlen bei API-Fehler)
+        var user = (typeof userSystem !== 'undefined' && userSystem && Array.isArray(userSystem.users)) ? userSystem.users.find(function(u){ return u.id === currentSession.userId; }) : null;
         if (user) {
           if (user.vorname && user.nachname) {
             displayName = `${user.vorname} ${user.nachname}`;
@@ -1181,30 +1188,31 @@
         sessionManager.setSession(currentSession);
       }
       
-      document.getElementById('userName').textContent = displayName;
-      document.getElementById('userRole').textContent = getRolleText(currentSession.rolle);
-      
-      // Moin-Begrüßung setzen
-      document.getElementById('welcomeGreeting').textContent = 'Moin, ' + displayName + '!';
-      document.getElementById('welcomeMessage').textContent = 'Willkommen im Mitarbeiter-Portal.';
-      
-      // Zuständigkeitsbereich anzeigen
-      updateZustaendigkeitInfo();
-      
-      // Überfällige Aufgaben prüfen (sendet Erinnerungen)
-      aufgabenSystem.pruefeUeberfaelligeAufgaben();
-      
-      if (window.renderAntraege) window.renderAntraege();
-      if (window.renderNotifications) window.renderNotifications();
-      if (window.renderKalender) window.renderKalender();
-      
-      window.addEventListener('dataSyncLoaded', () => {
-        if (currentSession) {
-          if (window.renderAntraege) window.renderAntraege();
-          if (window.renderNotifications) window.renderNotifications();
-          if (window.renderKalender) window.renderKalender();
-        }
-      });
+      try {
+        document.getElementById('userName').textContent = displayName;
+        document.getElementById('userRole').textContent = typeof getRolleText === 'function' ? getRolleText(currentSession.rolle) : (currentSession.rolle || '');
+        
+        document.getElementById('welcomeGreeting').textContent = 'Moin, ' + displayName + '!';
+        document.getElementById('welcomeMessage').textContent = 'Willkommen im Mitarbeiter-Portal.';
+        
+        if (typeof updateZustaendigkeitInfo === 'function') updateZustaendigkeitInfo();
+        if (typeof aufgabenSystem !== 'undefined' && aufgabenSystem && typeof aufgabenSystem.pruefeUeberfaelligeAufgaben === 'function') aufgabenSystem.pruefeUeberfaelligeAufgaben();
+        
+        if (window.renderAntraege) window.renderAntraege();
+        if (window.renderNotifications) window.renderNotifications();
+        if (window.renderKalender) window.renderKalender();
+        
+        window.addEventListener('dataSyncLoaded', function() {
+          if (currentSession) {
+            if (window.renderAntraege) window.renderAntraege();
+            if (window.renderNotifications) window.renderNotifications();
+            if (window.renderKalender) window.renderKalender();
+          }
+        });
+      } catch (err) {
+        console.error('showPortal Fehler:', err);
+        if (debugBarEl) debugBarEl.innerHTML = '<strong>Debug Fehler:</strong> ' + (err && err.message ? err.message : String(err));
+      }
       
       // Event-Listener für Daten-Reload vom Server
       window.addEventListener('dataReloaded', (event) => {
