@@ -35,15 +35,19 @@ function generateId(prefix = 'ID') {
 // ============================================
 // API ROUTEN - DB-SETUP (Neon-Schema ausführen)
 // ============================================
-// Aufruf: GET /api/setup-db?key=DEIN_SETUP_SECRET
-// In Vercel: Umgebungsvariable SETUP_SECRET setzen, dann einmal aufrufen.
+// Aufruf: GET /api/setup-db?key=setup  (ohne Vercel-Konfiguration)
+// Oder mit SETUP_SECRET in Vercel: ?key=DEIN_SETUP_SECRET
 
 app.get('/api/setup-db', async (req, res) => {
   try {
-    const key = req.query.key || req.headers['x-setup-key'] || '';
+    const key = (req.query.key || req.headers['x-setup-key'] || '').trim();
     const secret = process.env.SETUP_SECRET || '';
-    if (!secret || key !== secret) {
-      return res.status(401).json({ success: false, error: 'Ungültiger oder fehlender Key. Setze SETUP_SECRET in Vercel und rufe mit ?key=SETUP_SECRET auf.' });
+    const ok = secret ? (key === secret) : (key === 'setup');
+    if (!ok) {
+      return res.status(401).json({
+        success: false,
+        error: secret ? 'Ungültiger Key.' : 'Rufe mit ?key=setup auf, um das Schema auszuführen (ohne Vercel-Konfiguration).'
+      });
     }
     const result = await dbLayer.runSchema();
     res.json({ success: true, message: 'Schema ausgeführt.', tables: result.tables });
