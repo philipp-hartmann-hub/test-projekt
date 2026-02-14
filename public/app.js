@@ -1213,13 +1213,13 @@ class UserSystem {
     if (this.users.length === 0) {
       console.log('Keine Benutzer gefunden - erstelle Standardbenutzer...');
       
-      // Standard-Insasse erstellen
+      // Standard-Insasse erstellen (Stationen wie HAUS_CONFIG: haus1 = ['1','2'])
       this.createInsasse({
         vorname: 'Max',
         nachname: 'Mustermann',
         geburtsdatum: '1990-05-15',
         jva: 'haus1',
-        station: 'A'
+        station: '1'
       });
       
       this.createInsasse({
@@ -1227,16 +1227,16 @@ class UserSystem {
         nachname: 'Schmidt',
         geburtsdatum: '1985-08-22',
         jva: 'haus1',
-        station: 'B'
+        station: '2'
       });
       
-      // Standard-Mitarbeiter erstellen (Stationsleitung)
+      // Standard-Mitarbeiter erstellen (Stationsleitung, gleiche Stationen wie Admin)
       this.createMitarbeiter({
         vorname: 'Thomas',
         nachname: 'Müller',
         rolle: 'stationsleitung',
         jvas: ['haus1'],
-        station: 'A'
+        station: '1'
       });
       
       this.createMitarbeiter({
@@ -1244,7 +1244,7 @@ class UserSystem {
         nachname: 'Weber',
         rolle: 'stationsleitung',
         jvas: ['haus1'],
-        station: 'B'
+        station: '2'
       });
       
       // Hausleitung erstellen
@@ -1712,15 +1712,28 @@ class SessionManager {
       name = serverUser.username || '';
     }
     
+    // Einheitliches Format wie Admin/HAUS_CONFIG: jva/jvas als String(s), jva->haus
+    let jva = serverUser.jva;
+    if (jva != null && typeof jva === 'object') jva = (jva.id || jva.name || '');
+    if (typeof jva === 'string' && jva.toLowerCase().indexOf('jva') !== -1) jva = jva.replace(/jva/gi, 'haus');
+    let jvas = serverUser.jvas;
+    if (jvas && Array.isArray(jvas)) {
+      jvas = jvas.map(j => {
+        const id = typeof j === 'string' ? j : (j && (j.id || j.name));
+        if (typeof id === 'string' && id.toLowerCase().indexOf('jva') !== -1) return id.replace(/jva/gi, 'haus');
+        return id;
+      }).filter(Boolean);
+    }
+    
     const session = {
       userId: serverUser.id || serverUser.userId,
       type: type,
       username: serverUser.username,
       name: name,
-      jva: serverUser.jva,
+      jva: jva,
       station: serverUser.station,
       rolle: serverUser.rolle || null,
-      jvas: serverUser.jvas || null,
+      jvas: jvas || null,
       loginTime: new Date().toISOString()
     };
     sessionStorage.setItem(this.sessionKey, JSON.stringify(session));
@@ -2432,22 +2445,28 @@ class AntragSystem {
 
   // Antrag erstellen (mit Insassen-Daten)
   createAntrag(type, data, insasse, alsEntwurf = false) {
-    // Insassen-Daten aus dem User-System holen
-    const insasseUser = userSystem.getUser(insasse.userId);
-    const insassenNummer = insasseUser ? insasseUser.insassenNummer : null;
-    const insasseGeburtsdatum = insasseUser ? insasseUser.geburtsdatum : null;
+    // Insassen-Daten aus dem User-System holen (Fallback wenn Session unvollständig)
+    const insasseUser = userSystem.getUser(insasse.userId || insasse.id);
+    const insassenNummer = insasseUser ? insasseUser.insassenNummer : (insasse.insassenNummer || null);
+    const insasseGeburtsdatum = insasseUser ? insasseUser.geburtsdatum : (insasse.geburtsdatum || null);
+    // Haus/Station: einheitliches Format (String), gleiche Zuordnung wie Admin/Insassenportal
+    let insasseJva = insasse.jva != null ? insasse.jva : (insasseUser && insasseUser.jva != null ? insasseUser.jva : null);
+    let insasseStation = insasse.station != null && insasse.station !== '' ? insasse.station : (insasseUser && insasseUser.station != null && insasseUser.station !== '' ? insasseUser.station : null);
+    if (insasseJva != null && typeof insasseJva === 'object') insasseJva = (insasseJva.id || insasseJva.name || '');
+    if (typeof insasseJva === 'string' && insasseJva.toLowerCase().indexOf('jva') !== -1) insasseJva = insasseJva.replace(/jva/gi, 'haus');
+    // Station nur normalisieren für Anzeige; Vergleich nutzt _normalisiereStation („Station 1“ und „1“ sind gleich)
     
     const antrag = {
       id: this.generateId(),
       antragsNummer: this.generateAntragsNummer(),
       type: type,
       status: alsEntwurf ? 'entwurf' : 'offen',
-      insasseId: insasse.userId,
+      insasseId: insasse.userId || insasse.id,
       insassenNummer: insassenNummer,
       insasseName: insasse.name,
       insasseGeburtsdatum: insasseGeburtsdatum,
-      insasseJva: insasse.jva,
-      insasseStation: insasse.station,
+      insasseJva: insasseJva,
+      insasseStation: insasseStation,
       bearbeiterId: null,
       bearbeiterName: null,
       erstelltAm: new Date().toISOString(),
