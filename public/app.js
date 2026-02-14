@@ -3554,6 +3554,15 @@ class AntragSystem {
       })
     });
     
+    // Notfall-Fallback: AVD/Stationsleitung sieht 0, es gibt aber offene Anträge → alle offenen anzeigen
+    if (gefilterteAntraege.length === 0 && !istHausleitung) {
+      const offene = this.antraege.filter(a => a.status === 'offen' && !a.veraktet);
+      if (offene.length > 0 && (m.rolle === 'mitarbeiter' || m.rolle === 'stationsleitung' || String(m.rolle || '').toLowerCase() === 'avd')) {
+        console.warn('[Fallback] Filter lieferte 0 – zeige alle', offene.length, 'offenen Anträge.');
+        gefilterteAntraege = offene;
+      }
+    }
+    
     return gefilterteAntraege.sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
   }
   
