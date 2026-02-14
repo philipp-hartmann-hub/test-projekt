@@ -3357,51 +3357,77 @@ class AntragSystem {
 
   // ====== MITARBEITER-FUNKTIONEN ======
 
-  // Hilfsfunktion: Prüft ob Haus/JVA übereinstimmt (kompatibel mit beiden Formaten)
+  // Hilfsfunktion: Prüft ob Haus/JVA übereinstimmt (kompatibel mit beiden Formaten, auch Objekt {id,name})
   _matchesHaus(mitarbeiterJvas, antragJva) {
     if (!mitarbeiterJvas || !antragJva) return false;
-    
-    // Normalisiere beide Werte (jva1 <-> haus1)
-    const normalisiereHaus = (val) => {
-      if (!val) return val;
-      return val.replace('jva', 'haus');
+    const toStr = (val) => {
+      if (val == null) return '';
+      const id = typeof val === 'object' && (val.id || val.name) ? (val.id || val.name) : val;
+      return String(id || '').replace(/jva/gi, 'haus');
     };
-    
-    const antragHausNormalisiert = normalisiereHaus(antragJva);
-    return mitarbeiterJvas.some(j => normalisiereHaus(j) === antragHausNormalisiert);
+    const antragStr = toStr(antragJva);
+    return mitarbeiterJvas.some(j => toStr(j) === antragStr);
+  }
+
+  _normalisiereStation(s) {
+    if (s == null || s === '') return '';
+    return String(s).trim().replace(/^Station\s+/i, '');
+  }
+  _matchesStation(mitarbeiterStation, antragStation) {
+    if (antragStation == null && mitarbeiterStation == null) return true;
+    return this._normalisiereStation(antragStation) === this._normalisiereStation(mitarbeiterStation);
+  }
+
+  // Haus/Station eines Antrags; fehlende Werte aus Insassen-User ergänzen (für AVD-Filter)
+  _getAntragInsasseOrt(antrag) {
+    let jva = antrag.insasseJva;
+    let station = antrag.insasseStation;
+    if ((jva == null || jva === '' || station == null || station === '') && antrag.insasseId && typeof userSystem !== 'undefined') {
+      const insasse = userSystem.getUser(antrag.insasseId) ||
+        (userSystem.users && userSystem.users.find(u => u.type === 'insasse' && (u.insassenNummer === antrag.insassenNummer || u.id === antrag.insasseId)));
+      if (insasse) {
+        if (station == null || station === '') station = insasse.station != null ? insasse.station : station;
+        if (jva == null || jva === '') {
+          const raw = insasse.jva != null ? (typeof insasse.jva === 'string' ? insasse.jva : (insasse.jva && (insasse.jva.id || insasse.jva.name))) : null;
+          if (raw) jva = typeof raw === 'string' && raw.indexOf('jva') !== -1 ? raw.replace(/jva/gi, 'haus') : raw;
+        }
+      }
+    }
+    return { jva, station };
   }
 
   // Anträge und Aufgaben der Gruppe für Mitarbeiter (basierend auf Haus/Station)
   getOffeneAntraegeMitarbeiter(mitarbeiter) {
-    // Prüfen ob Mitarbeiter Hausleitung ist
-    const istHausleitung = mitarbeiter.rolle === 'jva-leitung' || 
-                           mitarbeiter.rolle === 'haus-leitung' || 
-                           mitarbeiter.rolle === 'hausleitung';
-    
-    // Vorab alle Antrags-IDs mit Gruppenaufgaben für diesen Mitarbeiter ermitteln
-    const antragsIdsMitGruppenaufgaben = aufgabenSystem.getAntragsIdsMitGruppenaufgaben(mitarbeiter);
+    const m = { ...mitarbeiter };
+    if (!m.userId && m.id) m.userId = m.id;
+    let fullUser = userSystem.getUser(m.userId || m.id);
+    if (!fullUser && m.username && userSystem.users)
+      fullUser = userSystem.users.find(u => u.username === m.username) || null;
+    if (fullUser) {
+      if (!m.jvas || (Array.isArray(m.jvas) && m.jvas.length === 0))
+        m.jvas = (fullUser.jvas && fullUser.jvas.length) ? fullUser.jvas : (fullUser.jva ? [fullUser.jva] : []);
+      if (m.station === undefined || m.station === null) m.station = fullUser.station;
+      if (m.rolle === undefined || m.rolle === null) m.rolle = fullUser.rolle;
+    }
+    if (!m.jvas || (Array.isArray(m.jvas) && m.jvas.length === 0)) m.jvas = m.jva ? [m.jva] : [];
+
+    const istHausleitung = m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung' || m.rolle === 'hausleitung';
+    const antragsIdsMitGruppenaufgaben = aufgabenSystem.getAntragsIdsMitGruppenaufgaben(m);
     
     console.log('[Debug] getOffeneAntraegeMitarbeiter:', {
-      mitarbeiterId: mitarbeiter.userId,
+      mitarbeiterId: m.userId,
       istHausleitung: istHausleitung,
-      jvas: mitarbeiter.jvas,
+      jvas: m.jvas,
+      station: m.station,
       antragsIdsMitGruppenaufgaben: antragsIdsMitGruppenaufgaben,
-      gesamtAntraege: this.antraege.length,
-      alleAntraege: this.antraege.map(a => ({
-        id: a.id,
-        status: a.status,
-        bearbeiterId: a.bearbeiterId,
-        insasseJva: a.insasseJva,
-        veraktet: a.veraktet,
-        zugewiesenAnGruppe: a.zugewiesenAnGruppe,
-        hauptbearbeitungWartetAufUebernahme: a.hauptbearbeitungWartetAufUebernahme
-      }))
+      gesamtAntraege: this.antraege.length
     });
     
     const gefilterteAntraege = this.antraege.filter(a => {
+      const ort = this._getAntragInsasseOrt(a);
       // WICHTIG: Anträge die bereits einem anderen Bearbeiter zugewiesen sind, nicht anzeigen
       // (außer wenn es Gruppenaufgaben gibt oder Hauptbearbeitung wartet)
-      if (a.bearbeiterId && a.bearbeiterId !== mitarbeiter.userId) {
+      if (a.bearbeiterId && a.bearbeiterId !== m.userId) {
         // Prüfe ob es Gruppenaufgaben gibt oder Hauptbearbeitung wartet
         const hatGruppenaufgaben = antragsIdsMitGruppenaufgaben.includes(a.id);
         const hatWartendeHauptbearbeitung = a.status === 'in-bearbeitung' && a.zugewiesenAnGruppe && a.hauptbearbeitungWartetAufUebernahme;
@@ -3415,71 +3441,30 @@ class AntragSystem {
       // 1. Offene Anträge (noch kein Bearbeiter)
       if (a.status === 'offen') {
         // VAL sieht IMMER alle Anträge ihres Hauses, auch wenn sie einer Gruppe zugewiesen sind
-        if (istHausleitung && this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) {
+        if (istHausleitung && this._matchesHaus(m.jvas, ort.jva)) {
           return true;
         }
         
         // Prüfen ob der Antrag einer Gruppe zugewiesen wurde
         if (a.zugewiesenAnGruppe) {
-          // Debug für Kammer-Anträge
-          if (a.zugewiesenAnGruppe.typ === 'kammer') {
-            console.log('[Debug] Offener Antrag mit Kammer-Zuweisung:', {
-              antragId: a.id,
-              gruppe: a.zugewiesenAnGruppe,
-              mitarbeiterRolle: mitarbeiter.rolle,
-              istKammer: mitarbeiter.rolle === 'kammer'
-            });
-          }
-          // Nur Mitglieder der zugewiesenen Gruppe sehen den Antrag
-          const gehoertZuGruppe = this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
-          if (a.zugewiesenAnGruppe.typ === 'kammer') {
-            console.log('[Debug] Kammer-Antrag Filter-Ergebnis:', gehoertZuGruppe);
-          }
+          const gehoertZuGruppe = this._mitarbeiterGehoertZuGruppe(m, a.zugewiesenAnGruppe);
           return gehoertZuGruppe;
         }
         
-        // Normale offene Anträge (ohne Gruppenzuweisung)
-        // Mitarbeiter und Stationsleitung sehen nur ihre Station
-        return this._matchesHaus(mitarbeiter.jvas, a.insasseJva) && 
-               a.insasseStation === mitarbeiter.station;
+        // Normale offene Anträge (ohne Gruppenzuweisung): Haus + Station müssen passen
+        return this._matchesHaus(m.jvas, ort.jva) && this._matchesStation(m.station, ort.station);
       }
       
       // 2. Anträge in Bearbeitung mit Gruppenzuweisung (Hauptbearbeitung wartet auf Übernahme)
-      // Der aktuelle Bearbeiter bleibt noch Hauptbearbeiter, aber der Antrag erscheint für die Gruppe
       if (a.status === 'in-bearbeitung' && a.zugewiesenAnGruppe && a.hauptbearbeitungWartetAufUebernahme) {
-        // Nicht für den aktuellen Hauptbearbeiter anzeigen (der sieht ihn in "Meine Anträge")
-        if (a.bearbeiterId === mitarbeiter.userId) {
-          return false;
-        }
-        // Debug für Kammer-Anträge
-        if (a.zugewiesenAnGruppe.typ === 'kammer') {
-          console.log('[Debug] Antrag in Bearbeitung mit Kammer-Zuweisung:', {
-            antragId: a.id,
-            gruppe: a.zugewiesenAnGruppe,
-            mitarbeiterRolle: mitarbeiter.rolle,
-            istKammer: mitarbeiter.rolle === 'kammer'
-          });
-        }
-        // VAL sieht alle Anträge ihres Hauses, auch mit wartender Hauptbearbeitungsübergabe
-        if (istHausleitung && this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) {
-          return true;
-        }
-        // Nur Mitglieder der zugewiesenen Gruppe sehen den Antrag
-        const gehoertZuGruppe = this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
-        if (a.zugewiesenAnGruppe.typ === 'kammer') {
-          console.log('[Debug] Kammer-Antrag in Bearbeitung Filter-Ergebnis:', gehoertZuGruppe);
-        }
-        return gehoertZuGruppe;
+        if (a.bearbeiterId === m.userId) return false;
+        if (istHausleitung && this._matchesHaus(m.jvas, ort.jva)) return true;
+        return this._mitarbeiterGehoertZuGruppe(m, a.zugewiesenAnGruppe);
       }
       
       // 3. Anträge mit NEUEN/OFFENEN Gruppenaufgaben für diesen Mitarbeiter
-      // Wenn eine neue Aufgabe an die Gruppe zugewiesen wird (auch nach Entscheidung),
-      // soll die Gruppe den Antrag sehen und bearbeiten können
       if (antragsIdsMitGruppenaufgaben.includes(a.id)) {
-        // Nicht für den aktuellen Bearbeiter anzeigen (der sieht den Antrag sowieso)
-        if (a.bearbeiterId === mitarbeiter.userId) {
-          return false;
-        }
+        if (a.bearbeiterId === m.userId) return false;
         // Nicht für veraktete Anträge
         if (a.veraktet) {
           return false;
@@ -3488,14 +3473,9 @@ class AntragSystem {
       }
       
       // 4. VAL sieht ALLE Anträge des Hauses in "Anträge und Aufgaben meiner Gruppe"
-      // VAL kann alle Anträge sehen und jederzeit übernehmen, auch wenn sie bereits einem anderen Bearbeiter zugewiesen sind
-      // WICHTIG: VAL sieht auch Anträge die bereits einem Bearbeiter zugewiesen sind (z.B. AVD)
       if (istHausleitung && !a.veraktet) {
-        // Muss im selben Haus sein
-        if (!this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) return false;
-        
-        // Nicht anzeigen wenn VAL bereits der Bearbeiter ist (erscheint dann in "Meine Anträge")
-        if (a.bearbeiterId === mitarbeiter.userId) return false;
+        if (!this._matchesHaus(m.jvas, ort.jva)) return false;
+        if (a.bearbeiterId === m.userId) return false;
         
         // VAL sieht ALLE anderen Anträge, unabhängig vom Status oder Bearbeiter
         // Auch Anträge die bereits einem AVD oder anderen Mitarbeiter zugewiesen sind
@@ -3519,15 +3499,21 @@ class AntragSystem {
         hauptbearbeitungWartetAufUebernahme: a.hauptbearbeitungWartetAufUebernahme,
         veraktet: a.veraktet
       })),
-      nichtGefilterteAntraege: nichtGefilterteAntraege.map(a => ({
-        id: a.id,
-        status: a.status,
-        bearbeiterId: a.bearbeiterId,
-        insasseJva: a.insasseJva,
-        veraktet: a.veraktet,
-        matchesHaus: istHausleitung ? this._matchesHaus(mitarbeiter.jvas, a.insasseJva) : false,
-        istEigenerBearbeiter: a.bearbeiterId === mitarbeiter.userId
-      }))
+      nichtGefilterteAntraege: nichtGefilterteAntraege.map(a => {
+        const o = this._getAntragInsasseOrt(a);
+        return {
+          id: a.id,
+          status: a.status,
+          bearbeiterId: a.bearbeiterId,
+          insasseJva: a.insasseJva,
+          ortJva: o.jva,
+          ortStation: o.station,
+          veraktet: a.veraktet,
+          matchesHaus: this._matchesHaus(m.jvas, o.jva),
+          matchesStation: this._matchesStation(m.station, o.station),
+          istEigenerBearbeiter: a.bearbeiterId === m.userId
+        };
+      })
     });
     
     return gefilterteAntraege.sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));

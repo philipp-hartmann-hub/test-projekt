@@ -614,10 +614,26 @@ async function reloadDataFromServer() {
       
       return mergedAntrag;
     });
-    
+
+    // Anträge: fehlende insasseJva/insasseStation aus Insassen nachziehen (für AVD-Filter)
+    const antraegeMitOrt = mergedAntraege.map(a => {
+      if (a.insasseJva != null && a.insasseJva !== '' && a.insasseStation != null && a.insasseStation !== '') return a;
+      if (!a.insasseId) return a;
+      const insasse = usersFrontend.find(u => u.type === 'insasse' && (u.id === a.insasseId || u.insassenNummer === a.insassenNummer));
+      if (!insasse) return a;
+      let jva = a.insasseJva;
+      let station = a.insasseStation;
+      if (station == null || station === '') station = insasse.station != null ? insasse.station : station;
+      if (jva == null || jva === '') {
+        const raw = insasse.jva != null ? (typeof insasse.jva === 'string' ? insasse.jva : (insasse.jva && (insasse.jva.id || insasse.jva.name))) : null;
+        if (raw) jva = typeof raw === 'string' && raw.indexOf('jva') !== -1 ? raw.replace(/jva/gi, 'haus') : raw;
+      }
+      return { ...a, insasseJva: jva, insasseStation: station };
+    });
+
     // Daten in localStorage speichern (ohne Sync-Loop zu triggern)
     originalSetItem('gefaengnis_users', JSON.stringify(usersFrontend));
-    originalSetItem('gefaengnis_antraege', JSON.stringify(mergedAntraege));
+    originalSetItem('gefaengnis_antraege', JSON.stringify(antraegeMitOrt));
     originalSetItem('gefaengnis_aufgaben', JSON.stringify(aufgaben));
     originalSetItem('gefaengnis_notifications', JSON.stringify(notifications));
     originalSetItem('gefaengnis_aktivitaeten', JSON.stringify(aktivitaeten));
