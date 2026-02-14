@@ -35,10 +35,8 @@ function generateId(prefix = 'ID') {
 // ============================================
 // API ROUTEN - DB-SETUP (Neon-Schema ausführen)
 // ============================================
-// Aufruf: GET /api/setup-db?key=setup  (ohne Vercel-Konfiguration)
-// Oder mit SETUP_SECRET in Vercel: ?key=DEIN_SETUP_SECRET
-
-app.get('/api/setup-db', async (req, res) => {
+// Aufruf: GET /api/setup-db?key=setup  (Vercel leitet an /api/[[...path]] weiter)
+const handleSetupDb = async (req, res) => {
   try {
     const key = (req.query.key || req.headers['x-setup-key'] || '').trim();
     const secret = process.env.SETUP_SECRET || '';
@@ -55,7 +53,9 @@ app.get('/api/setup-db', async (req, res) => {
     console.error('Setup-DB Fehler:', error);
     res.status(500).json({ success: false, error: error.message || String(error) });
   }
-});
+};
+app.get('/api/setup-db', handleSetupDb);
+app.get('/setup-db', handleSetupDb); // Falls Vercel Pfad ohne /api übergibt
 
 // ============================================
 // API ROUTEN - AUTHENTIFIZIERUNG
