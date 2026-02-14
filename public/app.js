@@ -3096,8 +3096,8 @@ class AntragSystem {
       if (title && antrag.insasseId) {
         notificationSystem.createNotification(antrag.insasseId, status, title, message, antrag.id);
       }
-    }
-    return antrag;
+
+      return antrag;
   }
   
   // Vollzug vor Bekanntgabe bestätigen

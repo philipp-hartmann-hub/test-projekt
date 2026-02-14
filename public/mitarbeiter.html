@@ -1191,12 +1191,16 @@
       // Überfällige Aufgaben prüfen (sendet Erinnerungen)
       aufgabenSystem.pruefeUeberfaelligeAufgaben();
       
-      renderAntraege();
-      renderNotifications();
-      renderKalender();
+      if (window.renderAntraege) window.renderAntraege();
+      if (window.renderNotifications) window.renderNotifications();
+      if (window.renderKalender) window.renderKalender();
       
       window.addEventListener('dataSyncLoaded', () => {
-        if (currentSession) { renderAntraege(); renderNotifications(); renderKalender(); }
+        if (currentSession) {
+          if (window.renderAntraege) window.renderAntraege();
+          if (window.renderNotifications) window.renderNotifications();
+          if (window.renderKalender) window.renderKalender();
+        }
       });
       
       // Event-Listener für Daten-Reload vom Server
@@ -1215,17 +1219,17 @@
             }
           }
           
-          renderAntraege();
-          renderNotifications();
-          renderKalender();
+          if (window.renderAntraege) window.renderAntraege();
+          if (window.renderNotifications) window.renderNotifications();
+          if (window.renderKalender) window.renderKalender();
         }
       });
 
       // Benachrichtigungen und überfällige Aufgaben periodisch prüfen
       setInterval(() => {
         aufgabenSystem.pruefeUeberfaelligeAufgaben();
-        renderNotifications();
-        renderAntraege();
+        if (window.renderNotifications) window.renderNotifications();
+        if (window.renderAntraege) window.renderAntraege();
       }, 60000); // Jede Minute prüfen
       
       // Daten vom Server regelmäßig neu laden (für Anträge von anderen Geräten)
@@ -1353,6 +1357,7 @@
         `;
       }).join('');
     }
+    window.renderNotifications = renderNotifications;
     
     function getNotificationIcon(type) {
       return ''; // Icons entfernt
@@ -5113,6 +5118,7 @@ ${t('action.archive')}
         historieList.innerHTML = historieAntraege.map(a => renderAntragCard(a, 'historie')).join('');
       }
     }
+    window.renderAntraege = renderAntraege;
 
     // ============================================
     // KALENDER-FUNKTIONEN
@@ -5184,6 +5190,7 @@ ${t('action.archive')}
         }
       }
     }
+    window.renderKalender = renderKalender;
     
     function updateKalenderAnzeige() {
       const anzeige = document.getElementById('kalenderAnzeige');
@@ -5691,6 +5698,7 @@ ${t('action.archive')}
       // Zeige Debug-Info im UI
       const debugInfo = `VAL Debug:\nAnträge im Haus: ${antraegeImHaus.length}\nGefiltert: ${offeneAntraege.length}\nNicht gefiltert: ${antraegeImHaus.length - offeneAntraege.length}`;
       console.log(debugInfo);
+    }
     }
   </script>
 </body>
