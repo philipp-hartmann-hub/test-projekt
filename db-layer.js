@@ -196,6 +196,32 @@ async function exists(tableName, predicate) {
   return found !== null;
 }
 
+// Schema für Neon/PostgreSQL ausführen (Tabellen anlegen)
+async function runSchema() {
+  if (!USE_POSTGRES) {
+    throw new Error('PostgreSQL nicht konfiguriert (DATABASE_URL fehlt)');
+  }
+  await initPostgres();
+  if (!pgClient) {
+    throw new Error('PostgreSQL-Verbindung fehlgeschlagen');
+  }
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS users ( id TEXT PRIMARY KEY, data JSONB NOT NULL )`,
+    `CREATE INDEX IF NOT EXISTS idx_users_username ON users ((data->>'username'))`,
+    `CREATE TABLE IF NOT EXISTS antraege ( id TEXT PRIMARY KEY, data JSONB NOT NULL )`,
+    `CREATE TABLE IF NOT EXISTS aufgaben ( id TEXT PRIMARY KEY, data JSONB NOT NULL )`,
+    `CREATE TABLE IF NOT EXISTS notifications ( id TEXT PRIMARY KEY, data JSONB NOT NULL )`,
+    `CREATE TABLE IF NOT EXISTS aktivitaeten ( id TEXT PRIMARY KEY, data JSONB NOT NULL )`,
+    `CREATE INDEX IF NOT EXISTS idx_aktivitaeten_antragid ON aktivitaeten ((data->>'antragId'))`,
+    `CREATE TABLE IF NOT EXISTS termine ( id TEXT PRIMARY KEY, data JSONB NOT NULL )`,
+    `CREATE INDEX IF NOT EXISTS idx_termine_datum ON termine ((data->>'datum'))`
+  ];
+  for (const sql of statements) {
+    await pgClient.query(sql);
+  }
+  return { ok: true, tables: ['users', 'antraege', 'aufgaben', 'notifications', 'aktivitaeten', 'termine'] };
+}
+
 module.exports = {
   getAll,
   getById,
@@ -205,5 +231,6 @@ module.exports = {
   update,
   remove,
   exists,
-  initPostgres
+  initPostgres,
+  runSchema
 };
