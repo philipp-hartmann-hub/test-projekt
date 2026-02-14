@@ -103,8 +103,23 @@ async function loadInitialData() {
         nachname: (u.name && u.name.split(' ').slice(1).join(' ')) || ''
       };
     });
+    // Anträge: fehlende insasseJva/insasseStation aus Insassen füllen (für AVD-Anzeige)
+    const antraegeMitOrt = antraege.map(a => {
+      if (a.insasseJva != null && a.insasseJva !== '' && a.insasseStation != null && a.insasseStation !== '') return a;
+      if (!a.insasseId) return a;
+      const insasse = usersFrontend.find(u => u.type === 'insasse' && (u.id === a.insasseId || String(u.id) === String(a.insasseId) || u.insassenNummer === a.insassenNummer));
+      if (!insasse) return a;
+      let jva = a.insasseJva;
+      let station = a.insasseStation;
+      if (station == null || station === '') station = insasse.station != null ? insasse.station : station;
+      if (jva == null || jva === '') {
+        const raw = insasse.jva != null ? (typeof insasse.jva === 'string' ? insasse.jva : (insasse.jva && (insasse.jva.id || insasse.jva.name))) : null;
+        if (raw) jva = typeof raw === 'string' && raw.indexOf('jva') !== -1 ? raw.replace(/jva/gi, 'haus') : raw;
+      }
+      return { ...a, insasseJva: jva, insasseStation: station };
+    });
     localStorage.setItem('gefaengnis_users', JSON.stringify(usersFrontend));
-    localStorage.setItem('gefaengnis_antraege', JSON.stringify(antraege));
+    localStorage.setItem('gefaengnis_antraege', JSON.stringify(antraegeMitOrt));
     localStorage.setItem('gefaengnis_aufgaben', JSON.stringify(aufgaben));
     localStorage.setItem('gefaengnis_notifications', JSON.stringify(notifications));
     localStorage.setItem('gefaengnis_aktivitaeten', JSON.stringify(aktivitaeten));
@@ -619,7 +634,7 @@ async function reloadDataFromServer() {
     const antraegeMitOrt = mergedAntraege.map(a => {
       if (a.insasseJva != null && a.insasseJva !== '' && a.insasseStation != null && a.insasseStation !== '') return a;
       if (!a.insasseId) return a;
-      const insasse = usersFrontend.find(u => u.type === 'insasse' && (u.id === a.insasseId || u.insassenNummer === a.insassenNummer));
+      const insasse = usersFrontend.find(u => u.type === 'insasse' && (u.id === a.insasseId || String(u.id) === String(a.insasseId) || u.insassenNummer === a.insassenNummer));
       if (!insasse) return a;
       let jva = a.insasseJva;
       let station = a.insasseStation;

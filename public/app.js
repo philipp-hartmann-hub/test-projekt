@@ -3384,7 +3384,7 @@ class AntragSystem {
     let station = antrag.insasseStation;
     if ((jva == null || jva === '' || station == null || station === '') && antrag.insasseId && typeof userSystem !== 'undefined') {
       const insasse = userSystem.getUser(antrag.insasseId) ||
-        (userSystem.users && userSystem.users.find(u => u.type === 'insasse' && (u.insassenNummer === antrag.insassenNummer || u.id === antrag.insasseId)));
+        (userSystem.users && userSystem.users.find(u => u.type === 'insasse' && (u.insassenNummer === antrag.insassenNummer || u.id === antrag.insasseId || String(u.id) === String(antrag.insasseId))));
       if (insasse) {
         if (station == null || station === '') station = insasse.station != null ? insasse.station : station;
         if (jva == null || jva === '') {
