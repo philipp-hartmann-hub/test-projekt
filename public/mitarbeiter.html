@@ -4998,8 +4998,16 @@ ${t('action.archive')}
     }
 
     function renderAntraege() {
-      if (!currentSession) return;
-      
+      var debugBar = document.getElementById('antraegeDebugBar');
+      function setDebug(msg) {
+        if (debugBar) { debugBar.innerHTML = '<strong>Debug:</strong> ' + msg; debugBar.style.display = 'block'; }
+      }
+      if (!currentSession) {
+        setDebug('Keine Session – bitte erneut anmelden.');
+        return;
+      }
+      setDebug('renderAntraege läuft…');
+      try {
       // Debug-Ausgabe
       console.log('[Debug] renderAntraege - currentSession:', {
         userId: currentSession.userId,
@@ -5015,7 +5023,7 @@ ${t('action.archive')}
       }
       
       // KAMMER DEBUG: Alle offenen Gruppenaufgaben anzeigen
-      const alleAufgaben = aufgabenSystem.aufgaben;
+      const alleAufgaben = (typeof aufgabenSystem !== 'undefined' && aufgabenSystem) ? aufgabenSystem.aufgaben : [];
       const gruppenAufgaben = alleAufgaben.filter(a => a.zugewiesenAnTyp === 'gruppe' && a.status === 'offen');
       const kammerAufgaben = gruppenAufgaben.filter(a => a.zugewiesenAnGruppe?.typ === 'kammer');
       
@@ -5051,13 +5059,12 @@ ${t('action.archive')}
         console.error('renderAntraege Fehler:', e);
       }
       
-      // Debug-Balken immer anzeigen (direkt unter den Tabs, damit garantiert sichtbar)
-      const debugBar = document.getElementById('antraegeDebugBar');
-      if (debugBar) {
+      // Debug-Balken immer anzeigen
+      if (debugBar && typeof antragSystem !== 'undefined' && antragSystem) {
         const total = antragSystem.antraege ? antragSystem.antraege.length : 0;
         const offen = total ? antragSystem.antraege.filter(function(a){ return a.status === 'offen'; }).length : 0;
         const jvas = currentSession.jvas && currentSession.jvas.length ? currentSession.jvas.join(', ') : (currentSession.jva || '-');
-        debugBar.innerHTML = '<strong>Debug:</strong> Anträge im System: <strong>' + total + '</strong> (davon offen: ' + offen + ') &nbsp;|&nbsp; Für deine Gruppe: <strong>' + offeneAntraege.length + '</strong> &nbsp;|&nbsp; Deine Zuordnung: Haus=' + jvas + ', Station=' + (currentSession.station ?? '-') + ', Rolle=' + (currentSession.rolle || '-');
+        debugBar.innerHTML = '<strong>Debug:</strong> Anträge im System: <strong>' + total + '</strong> (davon offen: ' + offen + ') &nbsp;|&nbsp; Für deine Gruppe: <strong>' + offeneAntraege.length + '</strong> &nbsp;|&nbsp; Haus=' + jvas + ', Station=' + (currentSession.station ?? '-') + ', Rolle=' + (currentSession.rolle || '-');
         debugBar.style.display = 'block';
       }
       
@@ -5169,6 +5176,10 @@ ${t('action.archive')}
         historieList.innerHTML = '<div class="empty-state"><p>Noch keine erledigten Anträge.</p></div>';
       } else {
         historieList.innerHTML = historieAntraege.map(a => renderAntragCard(a, 'historie')).join('');
+      }
+      } catch (err) {
+        console.error('renderAntraege Fehler:', err);
+        setDebug('Fehler: ' + (err && err.message ? err.message : String(err)));
       }
     }
     window.renderAntraege = renderAntraege;
