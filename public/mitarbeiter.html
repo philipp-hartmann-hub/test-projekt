@@ -147,6 +147,9 @@
           <button class="tab" onclick="switchTab('historie')">Erledigt</button>
         </div>
 
+        <!-- Debug-Balken (immer sichtbar wenn eingeloggt) -->
+        <div id="antraegeDebugBar" style="display: none; padding: 10px 12px; margin: 0 0 12px 0; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; font-size: 0.9rem; color: #856404;"></div>
+
         <!-- Anträge und Aufgaben meiner Gruppe -->
         <section class="section" id="offenSection">
           <div class="section-header">
@@ -5029,9 +5032,26 @@ ${t('action.archive')}
       const bearbeitungList = document.getElementById('bearbeitungList');
       const historieList = document.getElementById('historieList');
       
-      let offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(currentSession);
-      let inBearbeitungAntraege = antragSystem.getInBearbeitungAntraege(currentSession);
-      let historieAntraege = antragSystem.getHistorieMitarbeiter(currentSession);
+      let offeneAntraege = [];
+      let inBearbeitungAntraege = [];
+      let historieAntraege = [];
+      try {
+        offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(currentSession);
+        inBearbeitungAntraege = antragSystem.getInBearbeitungAntraege(currentSession);
+        historieAntraege = antragSystem.getHistorieMitarbeiter(currentSession);
+      } catch (e) {
+        console.error('renderAntraege Fehler:', e);
+      }
+      
+      // Debug-Balken immer anzeigen (direkt unter den Tabs, damit garantiert sichtbar)
+      const debugBar = document.getElementById('antraegeDebugBar');
+      if (debugBar) {
+        const total = antragSystem.antraege ? antragSystem.antraege.length : 0;
+        const offen = total ? antragSystem.antraege.filter(function(a){ return a.status === 'offen'; }).length : 0;
+        const jvas = currentSession.jvas && currentSession.jvas.length ? currentSession.jvas.join(', ') : (currentSession.jva || '-');
+        debugBar.innerHTML = '<strong>Debug:</strong> Anträge im System: <strong>' + total + '</strong> (davon offen: ' + offen + ') &nbsp;|&nbsp; Für deine Gruppe: <strong>' + offeneAntraege.length + '</strong> &nbsp;|&nbsp; Deine Zuordnung: Haus=' + jvas + ', Station=' + (currentSession.station ?? '-') + ', Rolle=' + (currentSession.rolle || '-');
+        debugBar.style.display = 'block';
+      }
       
       // Debug-Ausgabe
       console.log('[Debug] renderAntraege - offeneAntraege:', offeneAntraege.length, offeneAntraege.map(a => ({id: a.id, status: a.status, zugewiesenAnGruppe: a.zugewiesenAnGruppe})));
