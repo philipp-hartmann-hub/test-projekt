@@ -3401,9 +3401,9 @@ class AntragSystem {
   _getAntragInsasseOrt(antrag) {
     let jva = antrag.insasseJva;
     let station = antrag.insasseStation;
-    if ((jva == null || jva === '' || station == null || station === '') && antrag.insasseId && typeof userSystem !== 'undefined') {
+    if ((jva == null || jva === '' || station == null || station === '') && antrag.insasseId && typeof userSystem !== 'undefined' && userSystem.users) {
       const insasse = userSystem.getUser(antrag.insasseId) ||
-        (userSystem.users && userSystem.users.find(u => u.type === 'insasse' && (u.insassenNummer === antrag.insassenNummer || u.id === antrag.insasseId || String(u.id) === String(antrag.insasseId))));
+        userSystem.users.find(u => u.type === 'insasse' && (u.insassenNummer === antrag.insassenNummer || u.id === antrag.insasseId || String(u.id) === String(antrag.insasseId)));
       if (insasse) {
         if (station == null || station === '') station = insasse.station != null ? insasse.station : station;
         if (jva == null || jva === '') {
@@ -3411,6 +3411,13 @@ class AntragSystem {
           if (raw) jva = typeof raw === 'string' && raw.indexOf('jva') !== -1 ? raw.replace(/jva/gi, 'haus') : raw;
         }
       }
+    }
+    if ((jva == null || jva === '') && (station == null || station === '')) {
+      jva = 'haus1';
+      station = '1';
+    } else {
+      if (jva == null || jva === '') jva = 'haus1';
+      if (station == null || station === '') station = '1';
     }
     return { jva, station };
   }
@@ -3423,12 +3430,24 @@ class AntragSystem {
     if (!fullUser && m.username && userSystem.users)
       fullUser = userSystem.users.find(u => u.username === m.username) || null;
     if (fullUser) {
-      if (!m.jvas || (Array.isArray(m.jvas) && m.jvas.length === 0))
-        m.jvas = (fullUser.jvas && fullUser.jvas.length) ? fullUser.jvas : (fullUser.jva ? [fullUser.jva] : []);
+      if (!m.jvas || (Array.isArray(m.jvas) && m.jvas.length === 0)) {
+        const jvasRaw = (fullUser.jvas && fullUser.jvas.length) ? fullUser.jvas : (fullUser.jva ? [fullUser.jva] : []);
+        m.jvas = jvasRaw.map(j => (typeof j === 'string' ? j : (j && (j.id || j.name))) || '').filter(Boolean);
+        m.jvas = m.jvas.map(j => typeof j === 'string' && j.toLowerCase().indexOf('jva') !== -1 ? j.replace(/jva/gi, 'haus') : j);
+      }
       if (m.station === undefined || m.station === null) m.station = fullUser.station;
       if (m.rolle === undefined || m.rolle === null) m.rolle = fullUser.rolle;
     }
     if (!m.jvas || (Array.isArray(m.jvas) && m.jvas.length === 0)) m.jvas = m.jva ? [m.jva] : [];
+    if (Array.isArray(m.jvas) && m.jvas.length > 0) {
+      m.jvas = m.jvas.map(j => (typeof j === 'string' ? j : (j && (j.id || j.name))) || '').filter(Boolean);
+      m.jvas = m.jvas.map(j => typeof j === 'string' && j.toLowerCase().indexOf('jva') !== -1 ? j.replace(/jva/gi, 'haus') : j);
+    }
+    // Fallback: Wenn trotzdem keine Zuordnung (z. B. Session ohne jvas), Haus 1 / Station 1 annehmen
+    if ((!m.jvas || m.jvas.length === 0) && (m.rolle === 'mitarbeiter' || m.rolle === 'avd' || m.rolle === 'stationsleitung')) {
+      m.jvas = ['haus1'];
+      if (m.station === undefined || m.station === null) m.station = '1';
+    }
 
     const istHausleitung = m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung' || m.rolle === 'hausleitung';
     const antragsIdsMitGruppenaufgaben = aufgabenSystem.getAntragsIdsMitGruppenaufgaben(m);
