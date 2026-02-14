@@ -769,7 +769,7 @@
         return;
       }
       
-      let synchronisiert = false; // über gesamte Funktion gültig (für Erfolgsmeldung)
+      var syncState = { synchronisiert: false }; // Objekt, damit in allen Code-Pfaden und bei Cache gültig
       
       const antrag = antragSystem.createAntrag(type, data, currentSession, false);
       console.log('[Insassen] Antrag erstellt:', antrag.id, antrag.antragsNummer);
@@ -784,7 +784,7 @@
         let retries = 0;
         const maxRetries = 5;
         
-        while (!synchronisiert && retries < maxRetries) {
+        while (!syncState.synchronisiert && retries < maxRetries) {
           try {
             // 1. Prüfe ob Antrag bereits auf Server existiert
             const currentServerData = await fetch(base + '/antraege', {
@@ -811,8 +811,13 @@
               });
               
               if (!postResponse.ok) {
-                const errBody = await postResponse.json().catch(function() { return {}; });
-                const detail = errBody.detail || errBody.error || postResponse.statusText;
+                var errText = await postResponse.text();
+                var detail = '';
+                try {
+                  var errBody = JSON.parse(errText);
+                  detail = errBody.detail || errBody.error || '';
+                } catch (e) { detail = errText.slice(0, 200); }
+                if (!detail) detail = postResponse.statusText;
                 throw new Error('HTTP ' + postResponse.status + ': ' + detail);
               }
               
@@ -829,7 +834,7 @@
               if (verifyResponse.ok) {
                 const verifyAntrag = await verifyResponse.json();
                 if (verifyAntrag.id === antrag.id) {
-                  synchronisiert = true;
+                  syncState.synchronisiert = true;
                   console.log('[Insassen] ✓ Antrag erfolgreich synchronisiert und verifiziert');
                   
                   // Aktualisiere lokale Daten mit Server-Daten (falls Server Änderungen gemacht hat)
@@ -884,8 +889,8 @@
       renderAntraege();
       resetNewAntragForm();
       
-      // Erfolgsmeldung
-      if (synchronisiert) {
+      // Erfolgsmeldung (syncState verhindert ReferenceError bei gecachtem Alt-Code)
+      if (syncState && syncState.synchronisiert) {
         showAlert('Antrag erfolgreich eingereicht und synchronisiert!');
       } else {
         showAlert('Antrag wurde eingereicht und lokal gespeichert. Die Synchronisation mit dem Server steht noch aus oder ist fehlgeschlagen.');
