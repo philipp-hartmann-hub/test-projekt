@@ -856,7 +856,7 @@
               }
             } else {
               console.log('[Insassen] Antrag bereits auf Server vorhanden');
-              synchronisiert = true;
+              syncState.synchronisiert = true;
               
               // Aktualisiere lokale Daten mit Server-Daten
               const serverAntrag = existsOnServer;
