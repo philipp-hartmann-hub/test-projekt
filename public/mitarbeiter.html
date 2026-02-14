@@ -5086,14 +5086,16 @@ ${t('action.archive')}
       // Anträge und Aufgaben meiner Gruppe
       if (offeneAntraege.length === 0) {
         let debugHtml = '<div class="empty-state"><p>Keine offenen Anträge vorhanden.</p>';
-        // Debug: Warum werden Anträge nicht angezeigt? (wenn es Anträge gibt)
-        if (antragSystem.antraege.length > 0 && typeof antragSystem._getAntragInsasseOrt === 'function') {
-          const m = { ...currentSession };
-          if (!m.jvas || (Array.isArray(m.jvas) && m.jvas.length === 0)) m.jvas = m.jva ? [m.jva] : [];
-          const jvasStr = Array.isArray(m.jvas) ? m.jvas.join(', ') : (m.jvas || '-');
-          debugHtml += '<div class="antraege-debug" style="margin-top:1rem;padding:0.75rem;background:#f5f5f5;border:1px solid #ccc;border-radius:6px;font-size:0.85rem;text-align:left;">';
-          debugHtml += '<strong>Debug (warum werden ' + antragSystem.antraege.length + ' Anträge nicht angezeigt?)</strong><br>';
-          debugHtml += 'Deine Zuordnung: <strong>Haus</strong>=' + jvasStr + ', <strong>Station</strong>=' + (m.station ?? '-') + ', <strong>Rolle</strong>=' + (m.rolle || '-') + '<br>';
+        // Debug immer anzeigen wenn Liste leer (auch bei 0 geladenen Anträgen)
+        const totalAntraege = antragSystem.antraege ? antragSystem.antraege.length : 0;
+        const m = { ...currentSession };
+        if (!m.jvas || (Array.isArray(m.jvas) && m.jvas.length === 0)) m.jvas = m.jva ? [m.jva] : [];
+        const jvasStr = Array.isArray(m.jvas) ? m.jvas.join(', ') : (m.jvas || '-');
+        debugHtml += '<div class="antraege-debug" style="margin-top:1rem;padding:0.75rem;background:#f5f5f5;border:1px solid #ccc;border-radius:6px;font-size:0.85rem;text-align:left;">';
+        debugHtml += '<strong>Debug – Anträge meiner Gruppe</strong><br>';
+        debugHtml += 'Anträge im System: <strong>' + totalAntraege + '</strong><br>';
+        debugHtml += 'Deine Zuordnung: <strong>Haus</strong>=' + jvasStr + ', <strong>Station</strong>=' + (m.station ?? '-') + ', <strong>Rolle</strong>=' + (m.rolle || '-') + '<br>';
+        if (totalAntraege > 0 && typeof antragSystem._getAntragInsasseOrt === 'function') {
           const offen = antragSystem.antraege.filter(a => a.status === 'offen');
           debugHtml += 'Davon offen: ' + offen.length + '<br><br>';
           offen.slice(0, 5).forEach((a, i) => {
@@ -5104,9 +5106,10 @@ ${t('action.archive')}
             if (a.bearbeiterId) debugHtml += ', Bearbeiter=' + a.bearbeiterId;
             debugHtml += '<br>';
           });
-          debugHtml += '</div>';
+        } else if (totalAntraege === 0) {
+          debugHtml += '<br>Es sind keine Anträge geladen. Bitte Seite neu laden (F5) oder prüfen, ob die Daten vom Server ankommen.';
         }
-        debugHtml += '</div>';
+        debugHtml += '</div></div>';
         offenList.innerHTML = debugHtml;
       } else {
         offenList.innerHTML = offeneAntraege.map(a => renderAntragCard(a, 'offen')).join('');
