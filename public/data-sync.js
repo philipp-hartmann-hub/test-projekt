@@ -70,7 +70,7 @@ async function apiCall(endpoint, options = {}) {
 
     return await response.json();
   } catch (error) {
-    console.error(`API-Fehler bei ${endpoint}:`, error);
+    console.warn(`API-Fehler bei ${endpoint}:`, error.message || error);
     throw error;
   }
 }
@@ -121,6 +121,11 @@ async function loadInitialData() {
   } catch (error) {
     console.warn('Server nicht erreichbar, verwende lokale Daten:', error.message);
     serverConnected = false;
+    // Trotzdem lokale Daten laden, damit Login und App mit localStorage weiter funktionieren
+    if (typeof window.reloadDataFromStorage === 'function') {
+      window.reloadDataFromStorage();
+    }
+    window.dispatchEvent(new CustomEvent('dataSyncLoaded'));
     return false;
   }
 }
@@ -685,13 +690,21 @@ window.DataSync = {
 // AUTOMATISCH BEIM LADEN AUSFUEHREN
 // ============================================
 
-// Initiale Daten laden wenn DOM bereit
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    loadInitialData();
+// Initiale Daten laden wenn DOM bereit; Fehler abfangen damit Login auch bei API-Ausfall funktioniert
+function runLoadInitialData() {
+  loadInitialData().catch((err) => {
+    console.warn('Initialdaten konnten nicht geladen werden:', err);
+    serverConnected = false;
+    if (typeof window.reloadDataFromStorage === 'function') {
+      window.reloadDataFromStorage();
+    }
+    window.dispatchEvent(new CustomEvent('dataSyncLoaded'));
   });
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', runLoadInitialData);
 } else {
-  loadInitialData();
+  runLoadInitialData();
 }
 
 console.log('Data-Sync Modul geladen');
