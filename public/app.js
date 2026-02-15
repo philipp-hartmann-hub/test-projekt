@@ -3374,7 +3374,26 @@ class AntragSystem {
     }).sort((a, b) => new Date(b.bearbeitetAm || b.erstelltAm) - new Date(a.bearbeitetAm || a.erstelltAm));
   }
 
-  // ====== MITARBEITER-FUNKTIONEN ======
+  // ====== MITARBEITER-FUNKTIONEN (AVD, VAL, Insasse – Kammer/Zahlstelle/Arbeitskoordination später) ======
+  // Diese Logik gilt einheitlich (lokal und nach Deployment).
+  //
+  // ZUORDNUNG:
+  //   - AVD und Insasse: je 1 Haus + 1 Station (dieselbe Logik: gleiches Haus, gleiche Station).
+  //   - VAL: nur 1 Haus zugeordnet (keine Station).
+  //
+  // LISTE 1 „Anträge und Aufgaben meiner Gruppe“:
+  //   AVD (Gruppe = Haus + Station):
+  //     - Insasse gleiches Haus+Station hat Antrag gestellt, noch kein AVD der Gruppe und kein VAL des Hauses hat ihn genommen → anzeigen. AVD kann nehmen → Antrag wandert in „Meine Anträge“ und ist für andere AVDs nicht mehr in dieser Liste.
+  //     - Der Gruppe (Haus+Station) wurde Aufgabe zugewiesen oder nach Phasenübergang Antrag weitergeleitet → anzeigen, gleiches „nehmen“-Verhalten.
+  //   VAL (Gruppe = VALs des Hauses):
+  //     - Insasse gleiches Haus hat Antrag gestellt, noch niemand (VAL der Gruppe oder AVD des Hauses) hat ihn genommen → anzeigen, VAL kann nehmen.
+  //     - VAL sieht außerdem alle Anträge, die in seinem Haus in Bearbeitung sind (auch bei anderen in „Meine Anträge“), kann sie sich nehmen und Hauptbearbeitung übernehmen.
+  //     - Gruppe (VAL) bekommt Aufgabe / nach Phasenübergang Antrag zugewiesen → anzeigen, VAL kann nehmen.
+  //
+  // LISTE 2 „Meine Anträge und Aufgaben“ (private Sicht):
+  //   AVD/VAL: Anträge/Aufgaben, die der Nutzer aus der Gruppenliste genommen hat ODER die ihm als Person (nicht als Gruppe) zugewiesen wurden.
+  //
+  // LISTE 3 „Erledigt“: erledigte Anträge (Historie).
 
   // Hilfsfunktion: Prüft ob Haus/JVA übereinstimmt (kompatibel mit beiden Formaten, auch Objekt {id,name})
   _matchesHaus(mitarbeiterJvas, antragJva) {

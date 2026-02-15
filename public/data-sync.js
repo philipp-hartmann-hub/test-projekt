@@ -3,7 +3,10 @@
 // Diese Datei muss VOR app.js geladen werden!
 // ============================================
 
-const API_BASE = window.location.origin + '/api';
+// Bei file:// (Datei direkt geöffnet) funktionieren API-Aufrufe nicht – Fallback auf Vercel-URL
+const API_BASE = (window.location.protocol === 'file:' || window.location.protocol === 'null' || !window.location.origin || window.location.origin === 'null')
+  ? 'https://test-projekt-rose.vercel.app/api'
+  : (window.location.origin + '/api');
 
 // Flag ob wir mit dem Server verbunden sind
 let serverConnected = false;

@@ -8,6 +8,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
+  <!-- Hinweis bei Datei-Öffnung (file://) -->
+  <div id="fileOpenHint" style="display: none; padding: 10px 16px; background: #fff3cd; border-bottom: 1px solid #ffc107; text-align: center; font-size: 0.9rem;">
+    Sie haben die Seite als Datei geöffnet. Bitte nutzen Sie stattdessen: <strong><a href="https://test-projekt-rose.vercel.app/mitarbeiter.html">test-projekt-rose.vercel.app/mitarbeiter.html</a></strong> oder starten Sie lokal mit <code>node server.js</code> und öffnen Sie <code>http://localhost:3000/mitarbeiter.html</code>.
+  </div>
+  <script>
+    if (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null') {
+      document.getElementById('fileOpenHint').style.display = 'block';
+    }
+  </script>
   <!-- Login-Bereich -->
   <div class="start-page" id="loginSection">
     <div class="bg-decoration">
