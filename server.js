@@ -33,6 +33,31 @@ function generateId(prefix = 'ID') {
 }
 
 // ============================================
+// API ROUTEN - DB-SETUP (Neon-Schema ausführen)
+// ============================================
+// Aufruf: GET /api/setup-db?key=setup  (Vercel leitet an /api/[[...path]] weiter)
+const handleSetupDb = async (req, res) => {
+  try {
+    const key = (req.query.key || req.headers['x-setup-key'] || '').trim();
+    const secret = process.env.SETUP_SECRET || '';
+    const ok = secret ? (key === secret) : (key === 'setup');
+    if (!ok) {
+      return res.status(401).json({
+        success: false,
+        error: secret ? 'Ungültiger Key.' : 'Rufe mit ?key=setup auf, um das Schema auszuführen (ohne Vercel-Konfiguration).'
+      });
+    }
+    const result = await dbLayer.runSchema();
+    res.json({ success: true, message: 'Schema ausgeführt.', tables: result.tables });
+  } catch (error) {
+    console.error('Setup-DB Fehler:', error);
+    res.status(500).json({ success: false, error: error.message || String(error) });
+  }
+};
+app.get('/api/setup-db', handleSetupDb);
+app.get('/setup-db', handleSetupDb); // Falls Vercel Pfad ohne /api übergibt
+
+// ============================================
 // API ROUTEN - AUTHENTIFIZIERUNG
 // ============================================
 
@@ -149,17 +174,26 @@ app.get('/api/antraege', async (req, res) => {
 app.post('/api/antraege', async (req, res) => {
   try {
     const antrag = req.body;
+    if (!antrag || typeof antrag !== 'object') {
+      return res.status(400).json({ success: false, error: 'Ungültiger Antrag (kein Objekt)' });
+    }
     antrag.id = antrag.id || generateId('ANT');
     antrag.antragsNummer = antrag.antragsNummer || 'A-' + Date.now().toString().slice(-6);
     antrag.erstelltAm = antrag.erstelltAm || new Date().toISOString();
     antrag.kommentare = antrag.kommentare || [];
     antrag.dokumente = antrag.dokumente || [];
-    
+    // Sicherstellen, dass id ein String ist (PostgreSQL TEXT)
+    antrag.id = String(antrag.id);
+
     await dbLayer.create('antraege', antrag);
     res.json({ success: true, id: antrag.id, antragsNummer: antrag.antragsNummer });
   } catch (error) {
-    console.error('Fehler beim Erstellen des Antrags:', error);
-    res.status(500).json({ success: false, error: 'Fehler beim Erstellen des Antrags' });
+    console.error('Fehler beim Erstellen des Antrags:', error.message || error);
+    res.status(500).json({
+      success: false,
+      error: 'Fehler beim Erstellen des Antrags',
+      detail: error.message || String(error)
+    });
   }
 });
 

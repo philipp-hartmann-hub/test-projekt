@@ -1,4 +1,4 @@
-// Vercel Serverless: Alle /api/*-Anfragen an die Express-App weiterleiten
+// Vercel Serverless: Alle /api/*-Anfragen an die Express-App (außer /api/setup-db → eigene Datei)
 let app;
 try {
   const server = require('../server');

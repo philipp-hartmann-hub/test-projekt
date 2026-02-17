@@ -4,14 +4,11 @@
   "outputDirectory": ".",
   "public": "public",
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/[[...path]]"
-    }
+    { "source": "/api/setup-db", "destination": "/api/setup-db" },
+    { "source": "/api/(.*)", "destination": "/api/[[...path]]" }
   ],
   "functions": {
-    "api/[[...path]].js": {
-      "maxDuration": 30
-    }
+    "api/[[...path]].js": { "maxDuration": 30 },
+    "api/setup-db.js": { "maxDuration": 30 }
   }
 }
