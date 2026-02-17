@@ -211,7 +211,14 @@ async function syncAntragToServer(antragId) {
       console.log('[Sync] Aufgaben synchronisiert');
     }
     
-    // 3. Aktualisiere lokale Daten mit Server-Daten
+    // 3. Benachrichtigungen synchronisieren (damit Insasse die Entscheidungs-Nachricht erhält)
+    const notificationsData = localStorage.getItem('gefaengnis_notifications');
+    if (notificationsData) {
+      await syncToServer('gefaengnis_notifications', notificationsData);
+      console.log('[Sync] Benachrichtigungen synchronisiert');
+    }
+    
+    // 4. Aktualisiere lokale Daten mit Server-Daten
     if (serverAntrag.id) {
       const index = localAntraege.findIndex(a => a.id === serverAntrag.id);
       if (index !== -1) {
@@ -223,7 +230,7 @@ async function syncAntragToServer(antragId) {
       }
     }
     
-    // 4. Kurze Verzögerung, damit der Server die Änderungen verarbeitet hat
+    // 7. Kurze Verzögerung, damit der Server die Änderungen verarbeitet hat
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     isSyncing = false;

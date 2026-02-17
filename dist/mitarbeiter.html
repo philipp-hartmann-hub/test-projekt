@@ -8,6 +8,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
+  <!-- Hinweis bei Datei-Öffnung (file://) -->
+  <div id="fileOpenHint" style="display: none; padding: 10px 16px; background: #fff3cd; border-bottom: 1px solid #ffc107; text-align: center; font-size: 0.9rem;">
+    Sie haben die Seite als Datei geöffnet. Bitte nutzen Sie stattdessen: <strong><a href="https://test-projekt-rose.vercel.app/mitarbeiter.html">test-projekt-rose.vercel.app/mitarbeiter.html</a></strong> oder starten Sie lokal mit <code>node server.js</code> und öffnen Sie <code>http://localhost:3000/mitarbeiter.html</code>.
+  </div>
+  <script>
+    if (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null') {
+      document.getElementById('fileOpenHint').style.display = 'block';
+    }
+  </script>
   <!-- Login-Bereich -->
   <div class="start-page" id="loginSection">
     <div class="bg-decoration">
@@ -142,10 +151,13 @@
 
         <!-- Tabs -->
         <div class="tabs">
-          <button class="tab active" onclick="switchTab('offen')">Anträge und Aufgaben meiner Gruppe <span class="tab-count" id="offenTabCount">0</span></button>
+          <button class="tab active" onclick="switchTab('offen')">Anträge und Aufgaben meiner Gruppe</button>
           <button class="tab" onclick="switchTab('bearbeitung')">Meine Anträge und Aufgaben <span class="tab-count" id="bearbeitungTabCount">0</span></button>
           <button class="tab" onclick="switchTab('historie')">Erledigt</button>
         </div>
+
+        <!-- Debug-Balken (immer sichtbar wenn eingeloggt) -->
+        <div id="antraegeDebugBar" style="display: none; padding: 10px 12px; margin: 0 0 12px 0; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; font-size: 0.9rem; color: #856404;"></div>
 
         <!-- Anträge und Aufgaben meiner Gruppe -->
         <section class="section" id="offenSection">
@@ -153,7 +165,7 @@
             <h2>Anträge und Aufgaben meiner Gruppe <span class="count" id="offenCount">0</span></h2>
             <div class="sort-controls">
               <label for="sortierungOffen">Sortieren:</label>
-              <select id="sortierungOffen" onchange="renderAntraege()">
+              <select id="sortierungOffen" onchange="if(window.renderAntraege) window.renderAntraege()">
                 <option value="datum-neu">Neueste zuerst</option>
                 <option value="datum-alt">Älteste zuerst</option>
                 <option value="antragsteller-az">Antragsteller A-Z</option>
@@ -172,7 +184,7 @@
             <h2>Meine Anträge und Aufgaben <span class="count" id="bearbeitungCount">0</span></h2>
             <div class="sort-controls">
               <label for="sortierung">Sortieren:</label>
-              <select id="sortierung" onchange="renderAntraege()">
+              <select id="sortierung" onchange="if(window.renderAntraege) window.renderAntraege()">
                 <option value="datum-neu">Neueste zuerst</option>
                 <option value="datum-alt">Älteste zuerst</option>
                 <option value="antragsteller-az">Antragsteller A-Z</option>
@@ -192,7 +204,7 @@
             <h2>Erledigte Anträge <span class="count" id="historieCount">0</span></h2>
             <div class="sort-controls">
               <label for="sortierungHistorie">Sortieren:</label>
-              <select id="sortierungHistorie" onchange="renderAntraege()">
+              <select id="sortierungHistorie" onchange="if(window.renderAntraege) window.renderAntraege()">
                 <option value="datum-neu">Neueste zuerst</option>
                 <option value="datum-alt">Älteste zuerst</option>
                 <option value="antragsteller-az">Antragsteller A-Z</option>
@@ -799,7 +811,7 @@
       // Tabs aktualisieren
       const tabs = document.querySelectorAll('.tabs .tab');
       if (tabs.length >= 4) {
-        tabs[0].innerHTML = t('nav.openApplications') + ' <span class="tab-count" id="offenTabCount">0</span>';
+        tabs[0].innerHTML = t('nav.openApplications');
         tabs[1].innerHTML = t('nav.myApplicationsTasks') + ' <span class="tab-count" id="bearbeitungTabCount">0</span>';
         tabs[2].innerHTML = t('nav.personalOpening');
         tabs[3].innerHTML = t('nav.completed');
@@ -1155,11 +1167,18 @@
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('portalSection').style.display = 'block';
       
+      // Debug-Balken sofort anzeigen (falls renderAntraege später fehlschlägt)
+      var debugBarEl = document.getElementById('antraegeDebugBar');
+      if (debugBarEl) {
+        debugBarEl.style.display = 'block';
+        debugBarEl.innerHTML = '<strong>Debug:</strong> Portal geladen. Lade Anträge…';
+      }
+      
       // Name aus Session holen oder aus userSystem falls nicht vorhanden
       let displayName = currentSession.name;
       if (!displayName || displayName.trim() === '' || displayName === 'Kammer mitarbeiter' || displayName === 'kammer mitarbeiter') {
-        // Versuche Name aus userSystem zu holen
-        const user = userSystem.users.find(u => u.id === currentSession.userId);
+        // Versuche Name aus userSystem zu holen (vorsichtig: userSystem/users kann fehlen bei API-Fehler)
+        var user = (typeof userSystem !== 'undefined' && userSystem && Array.isArray(userSystem.users)) ? userSystem.users.find(function(u){ return u.id === currentSession.userId; }) : null;
         if (user) {
           if (user.vorname && user.nachname) {
             displayName = `${user.vorname} ${user.nachname}`;
@@ -1178,46 +1197,63 @@
         sessionManager.setSession(currentSession);
       }
       
-      document.getElementById('userName').textContent = displayName;
-      document.getElementById('userRole').textContent = getRolleText(currentSession.rolle);
-      
-      // Moin-Begrüßung setzen
-      document.getElementById('welcomeGreeting').textContent = 'Moin, ' + displayName + '!';
-      document.getElementById('welcomeMessage').textContent = 'Willkommen im Mitarbeiter-Portal.';
-      
-      // Zuständigkeitsbereich anzeigen
-      updateZustaendigkeitInfo();
-      
-      // Überfällige Aufgaben prüfen (sendet Erinnerungen)
-      aufgabenSystem.pruefeUeberfaelligeAufgaben();
-      
-      renderAntraege();
-      renderNotifications();
-      renderKalender();
-      
-      window.addEventListener('dataSyncLoaded', () => {
-        if (currentSession) { renderAntraege(); renderNotifications(); renderKalender(); }
-      });
+      try {
+        document.getElementById('userName').textContent = displayName;
+        document.getElementById('userRole').textContent = typeof getRolleText === 'function' ? getRolleText(currentSession.rolle) : (currentSession.rolle || '');
+        
+        document.getElementById('welcomeGreeting').textContent = 'Moin, ' + displayName + '!';
+        document.getElementById('welcomeMessage').textContent = 'Willkommen im Mitarbeiter-Portal.';
+        
+        if (typeof updateZustaendigkeitInfo === 'function') updateZustaendigkeitInfo();
+        if (typeof aufgabenSystem !== 'undefined' && aufgabenSystem && typeof aufgabenSystem.pruefeUeberfaelligeAufgaben === 'function') aufgabenSystem.pruefeUeberfaelligeAufgaben();
+        
+        if (window.renderAntraege) window.renderAntraege();
+        if (window.renderNotifications) window.renderNotifications();
+        if (window.renderKalender) window.renderKalender();
+        
+        window.addEventListener('dataSyncLoaded', function() {
+          if (currentSession) {
+            if (window.renderAntraege) window.renderAntraege();
+            if (window.renderNotifications) window.renderNotifications();
+            if (window.renderKalender) window.renderKalender();
+          }
+        });
+      } catch (err) {
+        console.error('showPortal Fehler:', err);
+        if (debugBarEl) debugBarEl.innerHTML = '<strong>Debug Fehler:</strong> ' + (err && err.message ? err.message : String(err));
+      }
       
       // Event-Listener für Daten-Reload vom Server
       window.addEventListener('dataReloaded', (event) => {
         console.log('dataReloaded Event empfangen:', event.detail);
         if (currentSession) {
           console.log('Aktualisiere UI nach dataReloaded...');
-          renderAntraege();
-          renderNotifications();
-          renderKalender();
+          
+          // WICHTIG: Wenn Detailansicht geöffnet ist, prüfe ob der Benutzer noch Bearbeiter ist
+          if (currentAntragId) {
+            const antrag = antragSystem.getAntrag(currentAntragId);
+            if (antrag && antrag.bearbeiterId && antrag.bearbeiterId !== currentSession.userId) {
+              // Benutzer ist nicht mehr Bearbeiter - Detailansicht aktualisieren
+              console.log('[UI] Benutzer ist nicht mehr Bearbeiter, aktualisiere Detailansicht:', currentAntragId);
+              openAntragDetail(currentAntragId);
+            }
+          }
+          
+          if (window.renderAntraege) window.renderAntraege();
+          if (window.renderNotifications) window.renderNotifications();
+          if (window.renderKalender) window.renderKalender();
         }
       });
 
       // Benachrichtigungen und überfällige Aufgaben periodisch prüfen
       setInterval(() => {
         aufgabenSystem.pruefeUeberfaelligeAufgaben();
-        renderNotifications();
-        renderAntraege();
+        if (window.renderNotifications) window.renderNotifications();
+        if (window.renderAntraege) window.renderAntraege();
       }, 60000); // Jede Minute prüfen
       
       // Daten vom Server regelmäßig neu laden (für Anträge von anderen Geräten)
+      // Häufigeres Polling für bessere Synchronisation zwischen Geräten
       if (window.DataSync && window.DataSync.reloadDataFromServer) {
         console.log('Starte automatisches Polling für Server-Daten...');
         setInterval(async () => {
@@ -1228,7 +1264,7 @@
           } else {
             console.log('Polling: Server nicht verbunden, überspringe...');
           }
-        }, 30000); // Alle 30 Sekunden
+        }, 10000); // Alle 10 Sekunden (statt 30) für schnellere Synchronisation
       } else {
         console.warn('DataSync.reloadDataFromServer nicht verfügbar');
       }
@@ -1341,6 +1377,7 @@
         `;
       }).join('');
     }
+    window.renderNotifications = renderNotifications;
     
     function getNotificationIcon(type) {
       return ''; // Icons entfernt
@@ -1439,7 +1476,7 @@
     }
     
     // Notiz mit ausgewähltem Typ speichern
-    function confirmNotizTyp() {
+    async function confirmNotizTyp() {
       const antragId = document.getElementById('notizTypAntragId').value;
       const text = document.getElementById('notizTypText').value;
       const selectedTyp = document.querySelector('input[name="notizTyp"]:checked');
@@ -1455,7 +1492,32 @@
       const typ = selectedTyp.value;
       
       // Kommentar mit Typ speichern
-      antragSystem.addKommentar(antragId, text, currentSession.userId, currentSession.name, typ);
+      const result = await antragSystem.addKommentar(antragId, text, currentSession.userId, currentSession.name, typ);
+      
+      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
+      if (result && result.error === 'nicht_mehr_bearbeiter') {
+        const msg = currentLanguage === 'de' 
+          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Änderungen wurden nicht gespeichert.`
+          : currentLanguage === 'en'
+          ? `The application has already been taken by ${result.bearbeiterName}. Your changes were not saved.`
+          : `La demande a déjà été prise par ${result.bearbeiterName}. Vos modifications n'ont pas été enregistrées.`;
+        
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+        }
+        
+        // Daten vom Server neu laden
+        if (window.DataSync && window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
+        }
+        
+        closeModal('notizTypModal');
+        document.getElementById('neuerKommentar').value = '';
+        renderAntraege();
+        openAntragDetail(antragId);
+        alert(msg);
+        return;
+      }
       
       // Modal schließen, Eingabefeld leeren und Ansicht aktualisieren
       closeModal('notizTypModal');
@@ -2362,7 +2424,7 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                       t('button.takeApplication')}
                   </button>
                 ` : ''}
-                ${!kannUebernehmen && !istBearbeiter && istHausleitung && antrag.status === 'in-bearbeitung' ? `
+                ${!kannUebernehmen && !istBearbeiter && istHausleitung() && antrag.status === 'in-bearbeitung' ? `
                   <button class="btn btn-warning btn-large" onclick="openHausleitungUebernahmeModal('${antrag.id}')">
                     Antrag übernehmen
                   </button>
@@ -2398,9 +2460,15 @@ ${t('task.create')}
                   </button>
                 ` : ''}
                 ${!antrag.veraktet && istBearbeiter && prozessStatus.abschluss === 'aktiv' ? `
-                  <button class="btn btn-secondary btn-large" onclick="veraktenAntrag('${antrag.id}')">
+                  ${(antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') && !antrag.vollzogen ? `
+                    <button class="btn btn-secondary btn-large disabled" onclick="showExecutionRequiredAlert()" title="${t('hint.executionRequired') || 'Bitte markieren Sie zunächst den Antrag als vollzogen.'}">
 ${t('action.archive')}
-                  </button>
+                    </button>
+                  ` : `
+                    <button class="btn btn-secondary btn-large" onclick="veraktenAntrag('${antrag.id}')">
+${t('action.archive')}
+                    </button>
+                  `}
                 ` : ''}
               </div>
             </div>
@@ -2510,22 +2578,30 @@ ${t('action.archive')}
       }
       
       // Antrag als geprüft markieren mit Kommentar
-      antragSystem.markiereAlsGeprueft(antragId, currentSession.userId, currentSession.name, kommentar);
+      const result = await antragSystem.markiereAlsGeprueft(antragId, currentSession.userId, currentSession.name, kommentar);
       
-      // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
-      if (window.DataSync && window.DataSync.syncAntragToServer) {
-        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-        const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
+      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
+      if (result && result.error === 'nicht_mehr_bearbeiter') {
+        const msg = currentLanguage === 'de' 
+          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Änderungen wurden nicht gespeichert.`
+          : currentLanguage === 'en'
+          ? `The application has already been taken by ${result.bearbeiterName}. Your changes were not saved.`
+          : `La demande a déjà été prise par ${result.bearbeiterName}. Vos modifications n'ont pas été enregistrées.`;
+        
         if (typeof showSyncStatus === 'function') {
-          showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
+          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
         }
-        if (!syncSuccess) {
-          const msg = currentLanguage === 'en' ? 'Synchronisation failed. Please check your connection and try again.'
-                    : currentLanguage === 'fr' ? 'Échec de la synchronisation. Vérifiez votre connexion et réessayez.'
-                    : 'Synchronisation fehlgeschlagen. Bitte Verbindung prüfen und erneut versuchen.';
-          showAlert(msg);
-          return;
+        
+        // Daten vom Server neu laden
+        if (window.DataSync && window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
         }
+        
+        closeModal('pruefungModal');
+        renderAntraege();
+        openAntragDetail(antragId);
+        alert(msg);
+        return;
       }
       
       closeModal('pruefungModal');
@@ -2570,19 +2646,30 @@ ${t('action.archive')}
       const bescheidPdf = generateBescheidPdf(antragId, status, begruendungText);
       
       // Antrag abschließen - die beiden Optionen werden jetzt separat behandelt
-      antragSystem.abschliessenAntrag(antragId, status, begruendung, persoenlichEroeffnen, bescheidPdf, vollzugVorBekanntgabe);
+      const result = await antragSystem.abschliessenAntrag(antragId, status, begruendung, persoenlichEroeffnen, bescheidPdf, vollzugVorBekanntgabe);
       
-      // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
-      if (window.DataSync && window.DataSync.syncAntragToServer) {
-        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-        const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
+      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
+      if (result && result.error === 'nicht_mehr_bearbeiter') {
+        const msg = currentLanguage === 'de' 
+          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Entscheidung wurde nicht gespeichert.`
+          : currentLanguage === 'en'
+          ? `The application has already been taken by ${result.bearbeiterName}. Your decision was not saved.`
+          : `La demande a déjà été prise par ${result.bearbeiterName}. Votre décision n'a pas été enregistrée.`;
+        
         if (typeof showSyncStatus === 'function') {
-          showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
+          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
         }
-        if (!syncSuccess) {
-          showAlert('Entscheidung lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen.');
-          return;
+        
+        // Daten vom Server neu laden
+        if (window.DataSync && window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
         }
+        
+        closeModal('entscheidenModal');
+        renderAntraege();
+        openAntragDetail(antragId);
+        alert(msg);
+        return;
       }
       
       closeModal('entscheidenModal');
@@ -2621,7 +2708,7 @@ ${t('action.archive')}
     }
     
     // Vollzug bestätigen
-    function confirmVollzugBestaetigung() {
+    async function confirmVollzugBestaetigung() {
       const antragId = document.getElementById('vollzugBestaetigenAntragId').value;
       const kommentar = document.getElementById('vollzugKommentar').value.trim();
       
@@ -2636,7 +2723,32 @@ ${t('action.archive')}
       // Kommentar mit Sprachinfo speichern
       const vollzugKommentar = createTranslatableText(kommentar);
       
-      antragSystem.bestaetigeVollzugVorBekanntgabe(antragId, vollzugKommentar, currentSession.userId, currentSession.name);
+      const result = await antragSystem.bestaetigeVollzugVorBekanntgabe(antragId, vollzugKommentar, currentSession.userId, currentSession.name);
+      
+      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
+      if (result && result.error === 'nicht_mehr_bearbeiter') {
+        const msg = currentLanguage === 'de' 
+          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Änderungen wurden nicht gespeichert.`
+          : currentLanguage === 'en'
+          ? `The application has already been taken by ${result.bearbeiterName}. Your changes were not saved.`
+          : `La demande a déjà été prise par ${result.bearbeiterName}. Vos modifications n'ont pas été enregistrées.`;
+        
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+        }
+        
+        // Daten vom Server neu laden
+        if (window.DataSync && window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
+        }
+        
+        closeModal('vollzugBestaetigenModal');
+        renderAntraege();
+        openAntragDetail(antragId);
+        alert(msg);
+        return;
+      }
+      
       closeModal('vollzugBestaetigenModal');
       
       // Bekanntgabe erfolgt jetzt: Dokumentenfreigabe-Modal anzeigen
@@ -3103,7 +3215,7 @@ ${t('action.archive')}
     // ANTRAGS-DOKUMENTE UPLOAD
     // ============================================
     
-    function handleAntragDokumentUpload(input, antragId) {
+    async function handleAntragDokumentUpload(input, antragId) {
       const antrag = antragSystem.getAntrag(antragId);
       const files = input.files;
       
@@ -3111,7 +3223,7 @@ ${t('action.archive')}
         const file = files[i];
         if (file && file.type === 'application/pdf') {
           const reader = new FileReader();
-          reader.onload = function(e) {
+          reader.onload = async function(e) {
             const dokument = {
               name: file.name,
               data: e.target.result,
@@ -3120,12 +3232,35 @@ ${t('action.archive')}
               hochgeladenAm: new Date().toISOString(),
               fuerInsasseFreigegeben: false // Standardmäßig nicht freigegeben
             };
-            const neuesDokument = antragSystem.addDokument(antragId, dokument, currentSession.userId, currentSession.name);
+            const result = await antragSystem.addDokument(antragId, dokument, currentSession.userId, currentSession.name);
+            
+            // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
+            if (result && result.error === 'nicht_mehr_bearbeiter') {
+              const msg = currentLanguage === 'de' 
+                ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Das Dokument wurde nicht hochgeladen.`
+                : currentLanguage === 'en'
+                ? `The application has already been taken by ${result.bearbeiterName}. The document was not uploaded.`
+                : `La demande a déjà été prise par ${result.bearbeiterName}. Le document n'a pas été téléchargé.`;
+              
+              if (typeof showSyncStatus === 'function') {
+                showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+              }
+              
+              // Daten vom Server neu laden
+              if (window.DataSync && window.DataSync.reloadDataFromServer) {
+                await window.DataSync.reloadDataFromServer();
+              }
+              
+              renderAntraege();
+              openAntragDetail(antragId);
+              alert(msg);
+              return;
+            }
             
             // Prüfen ob Bekanntgabe bereits erfolgt ist (Insasse wurde informiert)
             const bekanntgabeErfolgt = antrag.erledigt && !antrag.wartetAufEroeffnung && !antrag.wartetAufVollzug;
             
-            if (bekanntgabeErfolgt && neuesDokument) {
+            if (bekanntgabeErfolgt && result) {
               // Modal für nachträgliche Freigabe öffnen
               const dokIndex = (antrag.dokumente || []).length - 1;
               openNachtraeglichFreigebenModal(antragId, dokIndex, file.name);
@@ -3358,7 +3493,7 @@ ${t('action.archive')}
       renderAntwortPdfList();
     }
     
-    async function sendeAufgabe() {
+    function sendeAufgabe() {
       const antragId = document.getElementById('aufgabeAntragId').value;
       const antrag = antragSystem.getAntrag(antragId);
       const kurzbeschreibungText = document.getElementById('aufgabeKurzbeschreibung').value.trim();
@@ -3492,21 +3627,6 @@ ${t('action.archive')}
           `${kurzbeschreibungText} (${t('application.id')}: ${antrag.antragsNummer || antragId})`,
           antragId
         );
-      }
-      
-      // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
-      if (window.DataSync && window.DataSync.syncAntragToServer) {
-        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-        const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-        if (typeof showSyncStatus === 'function') {
-          showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
-        }
-        if (!syncSuccess) {
-          const msg = currentLanguage === 'en' ? 'Task saved locally but sync failed. Check your connection and refresh to retry.'
-                    : currentLanguage === 'fr' ? 'Tâche enregistrée localement mais la synchronisation a échoué. Vérifiez la connexion.'
-                    : 'Aufgabe lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen und Seite ggf. aktualisieren.';
-          showAlert(msg);
-        }
       }
       
       closeModal('aufgabeModal');
@@ -3776,18 +3896,6 @@ ${t('action.archive')}
           aufgabe.antragId
         );
         
-        // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
-        if (window.DataSync && window.DataSync.syncAntragToServer) {
-          if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-          const syncSuccess = await window.DataSync.syncAntragToServer(aufgabe.antragId);
-          if (typeof showSyncStatus === 'function') {
-            showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
-          }
-          if (!syncSuccess) {
-            showAlert('Änderung lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen.');
-          }
-        }
-        
         closeModal('aufgabeLoesungModal');
         
         // Zurück zur Übersicht (da kein Zugriff mehr)
@@ -3853,9 +3961,37 @@ ${t('action.archive')}
     // ANTRAG VOLLZOGEN (Kontrollkästchen)
     // ============================================
     
-    function toggleVollzogen(antragId, checked) {
+    async function toggleVollzogen(antragId, checked) {
       if (checked) {
-        antragSystem.markiereAlsVollzogen(antragId, currentSession.userId, currentSession.name);
+        const result = await antragSystem.markiereAlsVollzogen(antragId, currentSession.userId, currentSession.name);
+        
+        // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
+        if (result && result.error === 'nicht_mehr_bearbeiter') {
+          const msg = currentLanguage === 'de' 
+            ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Änderungen wurden nicht gespeichert.`
+            : currentLanguage === 'en'
+            ? `The application has already been taken by ${result.bearbeiterName}. Your changes were not saved.`
+            : `La demande a déjà été prise par ${result.bearbeiterName}. Vos modifications n'ont pas été enregistrées.`;
+          
+          if (typeof showSyncStatus === 'function') {
+            showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+          }
+          
+          // Daten vom Server neu laden
+          if (window.DataSync && window.DataSync.reloadDataFromServer) {
+            await window.DataSync.reloadDataFromServer();
+          }
+          
+          // Checkbox zurücksetzen
+          const checkbox = document.getElementById('vollzogenCheckbox');
+          if (checkbox) checkbox.checked = false;
+          
+          renderAntraege();
+          openAntragDetail(antragId);
+          alert(msg);
+          return;
+        }
+        
         // Nach Vollzug: Weiterleitung anbieten
         openWeiterleitenModal(antragId, 'vollzug');
       }
@@ -4205,7 +4341,7 @@ ${t('action.archive')}
       }
     }
     
-    async function confirmWeiterleiten() {
+    function confirmWeiterleiten() {
       const antragId = document.getElementById('weiterleitenAntragId').value;
       const phase = document.getElementById('weiterleitenPhase').value;
       const entscheidung = document.querySelector('input[name="weiterleitenEntscheidung"]:checked').value;
@@ -4249,19 +4385,6 @@ ${t('action.archive')}
             antragId
           );
           
-          // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
-          if (window.DataSync && window.DataSync.syncAntragToServer) {
-            if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-            const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-            if (typeof showSyncStatus === 'function') {
-              showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
-            }
-            if (!syncSuccess) {
-              showAlert('Weiterleitung lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen.');
-              return;
-            }
-          }
-          
           closeModal('weiterleitenModal');
           closeAntragDetail();
           renderAntraege();
@@ -4300,19 +4423,6 @@ ${t('action.archive')}
             notiz
           );
           
-          // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
-          if (window.DataSync && window.DataSync.syncAntragToServer) {
-            if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-            const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-            if (typeof showSyncStatus === 'function') {
-              showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
-            }
-            if (!syncSuccess) {
-              showAlert('Weiterleitung lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen.');
-              return;
-            }
-          }
-          
           closeModal('weiterleitenModal');
           closeAntragDetail();
           renderAntraege();
@@ -4330,23 +4440,44 @@ ${t('action.archive')}
     // VERAKTEN (PDF)
     // ============================================
     
+    function veraktenAntrag(antragId) {
+      const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag) return;
+      
     async function veraktenAntrag(antragId) {
       const antrag = antragSystem.getAntrag(antragId);
       if (!antrag) return;
       
-      // Antrag als veraktet markieren
-      antragSystem.verakteAntrag(antragId, currentSession.userId, currentSession.name);
+      // WICHTIG: Bei genehmigt/teilweise-genehmigt muss Vollzug bestätigt sein
+      if ((antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') && !antrag.vollzogen) {
+        showExecutionRequiredAlert();
+        return;
+      }
       
-      // Synchronisation mit Server abwarten (wichtig für Tablet – sonst bleibt Antrag nach Aktualisierung in "Meine Anträge")
-      if (window.DataSync && window.DataSync.syncAntragToServer) {
-        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-        const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
+      // Antrag als veraktet markieren
+      const result = await antragSystem.verakteAntrag(antragId, currentSession.userId, currentSession.name);
+      
+      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
+      if (result && result.error === 'nicht_mehr_bearbeiter') {
+        const msg = currentLanguage === 'de' 
+          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Die Veraktung wurde nicht gespeichert.`
+          : currentLanguage === 'en'
+          ? `The application has already been taken by ${result.bearbeiterName}. Archiving was not saved.`
+          : `La demande a déjà été prise par ${result.bearbeiterName}. L'archivage n'a pas été enregistré.`;
+        
         if (typeof showSyncStatus === 'function') {
-          showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
+          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
         }
-        if (!syncSuccess) {
-          showAlert('Antrag wurde veraktet, aber die Synchronisation ist fehlgeschlagen. Bitte Verbindung prüfen und erneut versuchen – sonst erscheint der Antrag nach Aktualisierung wieder in "Meine Anträge".');
+        
+        // Daten vom Server neu laden
+        if (window.DataSync && window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
         }
+        
+        renderAntraege();
+        openAntragDetail(antragId);
+        alert(msg);
+        return;
       }
       
       // PDF generieren und herunterladen
@@ -4354,7 +4485,6 @@ ${t('action.archive')}
       
       // Zurück zur Übersicht oder Detailansicht aktualisieren
       closeAntragDetail();
-      renderAntraege();
     }
     
     function generateAntragPdf(antrag) {
@@ -4598,27 +4728,56 @@ ${t('action.archive')}
       
       console.log('[Debug Frontend] nehmeAntrag wird aufgerufen für:', antragId);
       
-      const result = antragSystem.nehmeAntrag(antragId, currentSession);
+      const result = await antragSystem.nehmeAntrag(antragId, currentSession);
       console.log('[Debug Frontend] nehmeAntrag Ergebnis:', result);
       
-      if (result) {
-        // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
+      // Prüfe auf Fehler (z.B. Antrag bereits vergeben)
+      if (result && result.error === 'bereits_vergeben') {
+        const msg = currentLanguage === 'de' 
+          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Die Bearbeitung wurde abgebrochen.`
+          : currentLanguage === 'en'
+          ? `The application has already been taken by ${result.bearbeiterName}. Processing has been cancelled.`
+          : `La demande a déjà été prise par ${result.bearbeiterName}. Le traitement a été annulé.`;
+        
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+        }
+        
+        // Daten vom Server neu laden
+        if (window.DataSync && window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
+        }
+        
+        renderAntraege();
+        alert(msg);
+        return;
+      }
+      
+      if (result && !result.error) {
+        // Explizite Synchronisation mit dem Server, damit die Änderung sofort gespeichert wird
         let syncStatus = '';
         if (window.DataSync && window.DataSync.syncAntragToServer) {
           console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
-          showSyncStatus('Synchronisiere mit Server...');
+          if (typeof showSyncStatus === 'function') {
+            showSyncStatus('Synchronisiere mit Server...', 'info');
+          }
           const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
           if (syncSuccess) {
             console.log('[Debug] Antrag-Übernahme erfolgreich synchronisiert:', antragId);
             syncStatus = '✓ Synchronisiert';
-            showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
+            if (typeof showSyncStatus === 'function') {
+              showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
+            }
           } else {
             console.warn('[Debug] Antrag-Übernahme Synchronisation fehlgeschlagen');
-            syncStatus = '✗ Synchronisation fehlgeschlagen';
-            showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
+            syncStatus = '✗ Fehler';
+            if (typeof showSyncStatus === 'function') {
+              showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
+            }
           }
         }
         
+        // UI aktualisieren
         renderAntraege();
         // Automatisch zum "Meine Anträge und Aufgaben" Tab wechseln
         switchTab('bearbeitung');
@@ -4656,10 +4815,32 @@ ${t('action.archive')}
       
       console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail wird aufgerufen für:', antragId);
       
-      const result = antragSystem.nehmeAntrag(antragId, currentSession);
+      const result = await antragSystem.nehmeAntrag(antragId, currentSession);
       console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail Ergebnis:', result);
       
-      if (result) {
+      // Prüfe auf Fehler (z.B. Antrag bereits vergeben)
+      if (result && result.error === 'bereits_vergeben') {
+        const msg = currentLanguage === 'de' 
+          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Die Bearbeitung wurde abgebrochen.`
+          : currentLanguage === 'en'
+          ? `The application has already been taken by ${result.bearbeiterName}. Processing has been cancelled.`
+          : `La demande a déjà été prise par ${result.bearbeiterName}. Le traitement a été annulé.`;
+        
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+        }
+        
+        // Daten vom Server neu laden
+        if (window.DataSync && window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
+        }
+        
+        renderAntraege();
+        alert(msg);
+        return;
+      }
+      
+      if (result && !result.error) {
         // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
         if (window.DataSync && window.DataSync.syncAntragToServer) {
           console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
@@ -4826,8 +5007,16 @@ ${t('action.archive')}
     }
 
     function renderAntraege() {
-      if (!currentSession) return;
-      
+      var debugBar = document.getElementById('antraegeDebugBar');
+      function setDebug(msg) {
+        if (debugBar) { debugBar.innerHTML = '<strong>Debug:</strong> ' + msg; debugBar.style.display = 'block'; }
+      }
+      if (!currentSession) {
+        setDebug('Keine Session – bitte erneut anmelden.');
+        return;
+      }
+      setDebug('renderAntraege läuft…');
+      try {
       // Debug-Ausgabe
       console.log('[Debug] renderAntraege - currentSession:', {
         userId: currentSession.userId,
@@ -4843,7 +5032,7 @@ ${t('action.archive')}
       }
       
       // KAMMER DEBUG: Alle offenen Gruppenaufgaben anzeigen
-      const alleAufgaben = aufgabenSystem.aufgaben;
+      const alleAufgaben = (typeof aufgabenSystem !== 'undefined' && aufgabenSystem) ? aufgabenSystem.aufgaben : [];
       const gruppenAufgaben = alleAufgaben.filter(a => a.zugewiesenAnTyp === 'gruppe' && a.status === 'offen');
       const kammerAufgaben = gruppenAufgaben.filter(a => a.zugewiesenAnGruppe?.typ === 'kammer');
       
@@ -4868,9 +5057,25 @@ ${t('action.archive')}
       const bearbeitungList = document.getElementById('bearbeitungList');
       const historieList = document.getElementById('historieList');
       
-      let offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(currentSession);
-      let inBearbeitungAntraege = antragSystem.getInBearbeitungAntraege(currentSession);
-      let historieAntraege = antragSystem.getHistorieMitarbeiter(currentSession);
+      let offeneAntraege = [];
+      let inBearbeitungAntraege = [];
+      let historieAntraege = [];
+      try {
+        offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(currentSession);
+        inBearbeitungAntraege = antragSystem.getInBearbeitungAntraege(currentSession);
+        historieAntraege = antragSystem.getHistorieMitarbeiter(currentSession);
+      } catch (e) {
+        console.error('renderAntraege Fehler:', e);
+      }
+      
+      // Debug-Balken immer anzeigen
+      if (debugBar && typeof antragSystem !== 'undefined' && antragSystem) {
+        const total = antragSystem.antraege ? antragSystem.antraege.length : 0;
+        const offen = total ? antragSystem.antraege.filter(function(a){ return a.status === 'offen'; }).length : 0;
+        const jvas = currentSession.jvas && currentSession.jvas.length ? currentSession.jvas.join(', ') : (currentSession.jva || '-');
+        debugBar.innerHTML = '<strong>Debug:</strong> Anträge im System: <strong>' + total + '</strong> (davon offen: ' + offen + ') &nbsp;|&nbsp; Für deine Gruppe: <strong>' + offeneAntraege.length + '</strong> &nbsp;|&nbsp; Haus=' + jvas + ', Station=' + (currentSession.station ?? '-') + ', Rolle=' + (currentSession.rolle || '-');
+        debugBar.style.display = 'block';
+      }
       
       // Debug-Ausgabe
       console.log('[Debug] renderAntraege - offeneAntraege:', offeneAntraege.length, offeneAntraege.map(a => ({id: a.id, status: a.status, zugewiesenAnGruppe: a.zugewiesenAnGruppe})));
@@ -4905,15 +5110,7 @@ ${t('action.archive')}
       const sortierungBearbeitung = document.getElementById('sortierung')?.value || 'datum-neu';
       const sortierungHistorie = document.getElementById('sortierungHistorie')?.value || 'datum-neu';
       
-      // "Anträge und Aufgaben meiner Gruppe": Weitergeleitete Anträge immer oben, danach gewählte Sortierung
-      const sortOffen = erstelleSortierFunktion(sortierungOffen);
-      offeneAntraege = [...offeneAntraege].sort((a, b) => {
-        const aWeitergeleitet = !!(a.weiterleitungen && a.weiterleitungen.length > 0);
-        const bWeitergeleitet = !!(b.weiterleitungen && b.weiterleitungen.length > 0);
-        if (aWeitergeleitet && !bWeitergeleitet) return -1;
-        if (!aWeitergeleitet && bWeitergeleitet) return 1;
-        return sortOffen(a, b);
-      });
+      offeneAntraege = [...offeneAntraege].sort(erstelleSortierFunktion(sortierungOffen));
       inBearbeitungAntraege = [...inBearbeitungAntraege].sort(erstelleSortierFunktion(sortierungBearbeitung));
       meineAufgaben = [...meineAufgaben].sort(erstelleSortierFunktion(sortierungBearbeitung));
       historieAntraege = [...historieAntraege].sort(erstelleSortierFunktion(sortierungHistorie));
@@ -4923,12 +5120,6 @@ ${t('action.archive')}
       document.getElementById('bearbeitungCount').textContent = bearbeitungTotal;
       document.getElementById('historieCount').textContent = historieAntraege.length;
       
-      // Tab-Zähler für "Anträge und Aufgaben meiner Gruppe" aktualisieren
-      const offenTabCount = document.getElementById('offenTabCount');
-      if (offenTabCount) {
-        offenTabCount.textContent = offeneAntraege.length;
-        offenTabCount.style.display = offeneAntraege.length > 0 ? 'inline-block' : 'none';
-      }
       // Tab-Zähler für "Meine Anträge und Aufgaben" aktualisieren
       const tabCount = document.getElementById('bearbeitungTabCount');
       if (tabCount) {
@@ -4938,7 +5129,32 @@ ${t('action.archive')}
       
       // Anträge und Aufgaben meiner Gruppe
       if (offeneAntraege.length === 0) {
-        offenList.innerHTML = '<div class="empty-state"><p>Keine offenen Anträge vorhanden.</p></div>';
+        let debugHtml = '<div class="empty-state"><p>Keine offenen Anträge vorhanden.</p>';
+        // Debug immer anzeigen wenn Liste leer (auch bei 0 geladenen Anträgen)
+        const totalAntraege = antragSystem.antraege ? antragSystem.antraege.length : 0;
+        const m = { ...currentSession };
+        if (!m.jvas || (Array.isArray(m.jvas) && m.jvas.length === 0)) m.jvas = m.jva ? [m.jva] : [];
+        const jvasStr = Array.isArray(m.jvas) ? m.jvas.join(', ') : (m.jvas || '-');
+        debugHtml += '<div class="antraege-debug" style="margin-top:1rem;padding:0.75rem;background:#f5f5f5;border:1px solid #ccc;border-radius:6px;font-size:0.85rem;text-align:left;">';
+        debugHtml += '<strong>Debug – Anträge meiner Gruppe</strong><br>';
+        debugHtml += 'Anträge im System: <strong>' + totalAntraege + '</strong><br>';
+        debugHtml += 'Deine Zuordnung: <strong>Haus</strong>=' + jvasStr + ', <strong>Station</strong>=' + (m.station ?? '-') + ', <strong>Rolle</strong>=' + (m.rolle || '-') + '<br>';
+        if (totalAntraege > 0 && typeof antragSystem._getAntragInsasseOrt === 'function') {
+          const offen = antragSystem.antraege.filter(a => a.status === 'offen');
+          debugHtml += 'Davon offen: ' + offen.length + '<br><br>';
+          offen.slice(0, 5).forEach((a, i) => {
+            const ort = antragSystem._getAntragInsasseOrt(a);
+            const matchH = antragSystem._matchesHaus(m.jvas, ort.jva);
+            const matchS = antragSystem._matchesStation(m.station, ort.station);
+            debugHtml += 'Antrag ' + (i+1) + ': Haus=' + (ort.jva || '(leer)') + ', Station=' + (ort.station ?? '(leer)') + ' &rarr; Haus-Match=' + matchH + ', Station-Match=' + matchS;
+            if (a.bearbeiterId) debugHtml += ', Bearbeiter=' + a.bearbeiterId;
+            debugHtml += '<br>';
+          });
+        } else if (totalAntraege === 0) {
+          debugHtml += '<br>Es sind keine Anträge geladen. Bitte Seite neu laden (F5) oder prüfen, ob die Daten vom Server ankommen.';
+        }
+        debugHtml += '</div></div>';
+        offenList.innerHTML = debugHtml;
       } else {
         offenList.innerHTML = offeneAntraege.map(a => renderAntragCard(a, 'offen')).join('');
       }
@@ -4970,7 +5186,12 @@ ${t('action.archive')}
       } else {
         historieList.innerHTML = historieAntraege.map(a => renderAntragCard(a, 'historie')).join('');
       }
+      } catch (err) {
+        console.error('renderAntraege Fehler:', err);
+        setDebug('Fehler: ' + (err && err.message ? err.message : String(err)));
+      }
     }
+    window.renderAntraege = renderAntraege;
 
     // ============================================
     // KALENDER-FUNKTIONEN
@@ -5042,6 +5263,7 @@ ${t('action.archive')}
         }
       }
     }
+    window.renderKalender = renderKalender;
     
     function updateKalenderAnzeige() {
       const anzeige = document.getElementById('kalenderAnzeige');
@@ -5549,6 +5771,7 @@ ${t('action.archive')}
       // Zeige Debug-Info im UI
       const debugInfo = `VAL Debug:\nAnträge im Haus: ${antraegeImHaus.length}\nGefiltert: ${offeneAntraege.length}\nNicht gefiltert: ${antraegeImHaus.length - offeneAntraege.length}`;
       console.log(debugInfo);
+    }
     }
   </script>
 </body>
