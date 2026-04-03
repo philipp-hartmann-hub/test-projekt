@@ -60,10 +60,8 @@
           <div>
             <div class="role" id="userRole">Mitarbeiter</div>
             <div class="name" id="userName">-</div>
-            <div class="kontext-info" id="kontextInfo" style="font-size: 0.85em; color: #666; margin-top: 2px;"></div>
           </div>
         </div>
-        <button class="btn btn-secondary btn-sm" onclick="openKontextAuswahlModal()" id="changeKontextBtn" style="display: none;">Kontext ändern</button>
         <button class="btn btn-secondary btn-sm" onclick="logout()" data-i18n="app.logout">Abmelden</button>
       </div>
     </header>
@@ -754,37 +752,6 @@
     </div>
   </div>
 
-  <!-- Modal: Haus/Station-Auswahl nach Login (initial versteckt; openKontextAuswahlModal zeigt es) -->
-  <div class="modal-overlay" id="kontextAuswahlModal" style="display: none;">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Arbeitskontext wählen</h3>
-      </div>
-      <div class="modal-body">
-        <p class="modal-info">Bitte wählen Sie den Haus- und Stationskontext für Ihre heutige Arbeit.</p>
-        
-        <div class="form-group">
-          <label for="kontextHausSelect">Haus <span class="required">*</span></label>
-          <select id="kontextHausSelect" required onchange="onKontextHausChange()">
-            <option value="">-- Bitte Haus wählen --</option>
-            <!-- Wird dynamisch gefüllt -->
-          </select>
-        </div>
-        
-        <div class="form-group" id="kontextStationGroup" style="display: none;">
-          <label for="kontextStationSelect">Station <span class="required">*</span></label>
-          <select id="kontextStationSelect" required>
-            <option value="">-- Bitte Station wählen --</option>
-            <!-- Wird dynamisch gefüllt -->
-          </select>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-primary" onclick="confirmKontextAuswahl()">Bestätigen</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Modal: Antrag durch VAL übernehmen -->
   <div class="modal-overlay" id="hausleitungUebernahmeModal">
     <div class="modal">
@@ -1183,7 +1150,7 @@
           if (res && res.success) {
             sessionManager.setSessionFromServer(res.user);
             currentSession = sessionManager.getSession();
-            checkKontextAndShowPortal();
+            showPortal();
             return;
           }
         } catch (err) {
@@ -1203,127 +1170,10 @@
       }
       if (result.success) {
         currentSession = result.user;
-        checkKontextAndShowPortal();
+        showPortal();
       } else {
         errEl.style.display = 'block';
       }
-    }
-    
-    // Prüft ob Kontext gesetzt ist und zeigt Portal oder Kontext-Auswahl
-    function checkKontextAndShowPortal() {
-      const kontext = getMitarbeiterKontext();
-      const rolle = currentSession.rolle;
-      
-      // Kammer braucht keinen Kontext (hausunabhängig)
-      if (rolle === 'kammer') {
-        showPortal();
-        return;
-      }
-      
-      // Prüfe ob Kontext bereits gesetzt ist
-      if (kontext && kontext.haus) {
-        // Für AVD muss auch Station gesetzt sein
-        if (needsStation(rolle) && !kontext.station) {
-          openKontextAuswahlModal();
-        } else {
-          showPortal();
-        }
-      } else {
-        // Kontext noch nicht gesetzt - Modal zeigen
-        openKontextAuswahlModal();
-      }
-    }
-    
-    // Prüft ob Rolle Station benötigt
-    function needsStation(rolle) {
-      return rolle === 'stationsleitung' || rolle === 'avd' || 
-             (!rolle || (rolle !== 'hausleitung' && rolle !== 'jva-leitung' && rolle !== 'haus-leitung' && 
-                         rolle !== 'zahlstelle' && rolle !== 'arbeitskoordination' && rolle !== 'kammer'));
-    }
-    
-    // Kontext aus SessionStorage laden
-    function getMitarbeiterKontext() {
-      if (!currentSession || !currentSession.userId) return null;
-      const key = `mitarbeiterKontext_${currentSession.userId}`;
-      const stored = sessionStorage.getItem(key);
-      return stored ? JSON.parse(stored) : null;
-    }
-    
-    // Kontext in SessionStorage speichern
-    function setMitarbeiterKontext(haus, station) {
-      if (!currentSession || !currentSession.userId) return;
-      const key = `mitarbeiterKontext_${currentSession.userId}`;
-      const kontext = { haus: haus, station: station || null };
-      sessionStorage.setItem(key, JSON.stringify(kontext));
-    }
-    
-    // Kontext-Modal öffnen
-    function openKontextAuswahlModal() {
-      const rolle = currentSession.rolle;
-      const kontext = getMitarbeiterKontext();
-      
-      // Haus-Auswahl füllen
-      const hausSelect = document.getElementById('kontextHausSelect');
-      hausSelect.innerHTML = '<option value="">-- Bitte Haus wählen --</option>';
-      Object.keys(HAUS_CONFIG).forEach(hausKey => {
-        const hausName = HAUS_CONFIG[hausKey].name;
-        hausSelect.innerHTML += `<option value="${hausKey}" ${kontext && kontext.haus === hausKey ? 'selected' : ''}>${hausName}</option>`;
-      });
-      
-      // Station-Auswahl anzeigen/verstecken je nach Rolle
-      const stationGroup = document.getElementById('kontextStationGroup');
-      const stationSelect = document.getElementById('kontextStationSelect');
-      
-      if (needsStation(rolle)) {
-        stationGroup.style.display = 'block';
-        stationSelect.required = true;
-        updateStationOptions(kontext ? kontext.haus : null, kontext ? kontext.station : null);
-      } else {
-        stationGroup.style.display = 'none';
-        stationSelect.required = false;
-        stationSelect.innerHTML = '<option value="">-- Bitte Station wählen --</option>';
-      }
-      
-      document.getElementById('kontextAuswahlModal').style.display = 'flex';
-    }
-    
-    // Station-Optionen aktualisieren wenn Haus geändert wird
-    function onKontextHausChange() {
-      const haus = document.getElementById('kontextHausSelect').value;
-      const kontext = getMitarbeiterKontext();
-      updateStationOptions(haus, kontext && kontext.haus === haus ? kontext.station : null);
-    }
-    
-    function updateStationOptions(haus, selectedStation) {
-      const stationSelect = document.getElementById('kontextStationSelect');
-      stationSelect.innerHTML = '<option value="">-- Bitte Station wählen --</option>';
-      
-      if (haus && HAUS_CONFIG[haus]) {
-        HAUS_CONFIG[haus].stationen.forEach(station => {
-          stationSelect.innerHTML += `<option value="${station}" ${selectedStation === station ? 'selected' : ''}>Station ${station}</option>`;
-        });
-      }
-    }
-    
-    // Kontext-Auswahl bestätigen
-    function confirmKontextAuswahl() {
-      const haus = document.getElementById('kontextHausSelect').value;
-      const stationSelect = document.getElementById('kontextStationSelect');
-      const station = stationSelect.style.display !== 'none' ? stationSelect.value : null;
-      
-      if (!haus) {
-        alert('Bitte wählen Sie ein Haus aus.');
-        return;
-      }
-      
-      if (needsStation(currentSession.rolle) && !station) {
-        alert('Bitte wählen Sie eine Station aus.');
-        return;
-      }
-      
-      setMitarbeiterKontext(haus, station);
-      document.getElementById('kontextAuswahlModal').style.display = 'none';
-      showPortal();
     }
     
     function logout() {
@@ -1361,9 +1211,6 @@
       
       document.getElementById('userName').textContent = displayName;
       document.getElementById('userRole').textContent = getRolleText(currentSession.rolle);
-      
-      // Kontext-Info und Button anzeigen
-      updateKontextInfo();
       
       // Moin-Begrüßung setzen
       document.getElementById('welcomeGreeting').textContent = 'Moin, ' + displayName + '!';
@@ -1666,52 +1513,25 @@
       renderNotifications();
     }
     
-    // Effektiven Mitarbeiter mit gewähltem Kontext erstellen
     function getEffektiverMitarbeiter() {
-      const kontext = getMitarbeiterKontext();
-      if (!kontext || !kontext.haus) {
-        // Fallback auf ursprüngliche Zuordnung wenn kein Kontext gesetzt
-        return currentSession;
-      }
-      
-      // Erstelle Kopie mit gewähltem Kontext
-      const effektiv = { ...currentSession };
-      effektiv.jvas = [kontext.haus];
-      if (kontext.station) {
-        effektiv.station = kontext.station;
-      } else {
-        effektiv.station = null;
-      }
-      return effektiv;
+      return currentSession;
     }
     
-    // Kontext-Info im Header aktualisieren
-    function updateKontextInfo() {
-      const kontext = getMitarbeiterKontext();
-      const kontextInfo = document.getElementById('kontextInfo');
-      const changeBtn = document.getElementById('changeKontextBtn');
-      
-      if (kontext && kontext.haus) {
-        const hausName = HAUS_CONFIG[kontext.haus]?.name || kontext.haus;
-        let kontextText = hausName;
-        if (kontext.station) {
-          kontextText += ` - Station ${kontext.station}`;
-        }
-        kontextInfo.textContent = kontextText;
-        changeBtn.style.display = 'inline-block';
-      } else {
-        kontextInfo.textContent = '';
-        changeBtn.style.display = 'none';
+    function getMitarbeiterHausUndStationAusSession() {
+      if (!currentSession) return { hausName: '-', station: null };
+      let hausKey = currentSession.jva || null;
+      if (!hausKey && Array.isArray(currentSession.jvas) && currentSession.jvas.length) {
+        const j0 = currentSession.jvas[0];
+        hausKey = typeof j0 === 'object' && j0 !== null ? (j0.id || j0.hausId) : j0;
       }
+      const hausName = hausKey ? (HAUS_CONFIG[hausKey]?.name || hausKey) : '-';
+      const station = currentSession.station != null && currentSession.station !== '' ? String(currentSession.station) : null;
+      return { hausName, station };
     }
     
     function updateZustaendigkeitInfo() {
       const info = document.getElementById('zustaendigkeitInfo');
-      const kontext = getMitarbeiterKontext();
-      
-      // Verwende gewählten Kontext statt feste Zuordnung
-      const hausName = kontext && kontext.haus ? (HAUS_CONFIG[kontext.haus]?.name || kontext.haus) : '-';
-      const station = kontext ? kontext.station : null;
+      const { hausName, station } = getMitarbeiterHausUndStationAusSession();
       
       if (currentSession.rolle === 'jva-leitung' || currentSession.rolle === 'haus-leitung' || currentSession.rolle === 'hausleitung') {
         info.innerHTML = `
@@ -1762,7 +1582,7 @@
     const existingSession = sessionManager.getSession();
     if (existingSession && existingSession.type === 'mitarbeiter') {
       currentSession = existingSession;
-      checkKontextAndShowPortal();
+      showPortal();
     }
 
     // ============================================
@@ -5069,7 +4889,6 @@ ${t('action.archive')}
       const bearbeitungList = document.getElementById('bearbeitungList');
       const historieList = document.getElementById('historieList');
       
-      // Effektiven Mitarbeiter mit gewähltem Kontext erstellen
       const effektiverMitarbeiter = getEffektiverMitarbeiter();
       
       let offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(effektiverMitarbeiter);
