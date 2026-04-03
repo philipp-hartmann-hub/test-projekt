@@ -89,6 +89,71 @@ app.get('/api/setup-db', handleSetupDb);
 app.get('/setup-db', handleSetupDb); // Falls Vercel Pfad ohne /api übergibt
 
 // ============================================
+// DEPLOYMENT AUSLÖSEN (Vercel Deploy Hook)
+// Löst ein neues Deployment vom verbundenen Git-Branch aus – ersetzt kein git push.
+// Vercel: Projekt → Settings → Git → Deploy Hooks → Hook anlegen, URL als VERCEL_DEPLOY_HOOK_URL speichern.
+// ============================================
+
+async function handleTriggerDeployment(req, res) {
+  const hookUrl = (process.env.VERCEL_DEPLOY_HOOK_URL || '').trim();
+  if (!hookUrl) {
+    return res.status(503).json({
+      success: false,
+      error:
+        'VERCEL_DEPLOY_HOOK_URL fehlt. In Vercel unter Settings → Git einen Deploy Hook anlegen und die URL als Umgebungsvariable setzen.'
+    });
+  }
+  const secret = (process.env.DEPLOY_TRIGGER_SECRET || '').trim();
+  const provided =
+    String(req.query.key || '').trim() ||
+    String(req.headers['x-deploy-key'] || '').trim() ||
+    (() => {
+      const a = String(req.headers.authorization || '');
+      const m = /^Bearer\s+(.+)$/i.exec(a);
+      return m ? m[1].trim() : '';
+    })();
+  if (!secret) {
+    return res.status(503).json({
+      success: false,
+      error:
+        'DEPLOY_TRIGGER_SECRET muss gesetzt sein (Vercel → Environment Variables), damit die Deploy-API nicht öffentlich missbraucht werden kann.'
+    });
+  }
+  if (provided !== secret) {
+    return res.status(401).json({ success: false, error: 'Ungültiger Key.' });
+  }
+  try {
+    const r = await fetch(hookUrl, { method: 'POST' });
+    const text = await r.text();
+    let vercelBody;
+    try {
+      vercelBody = text ? JSON.parse(text) : null;
+    } catch {
+      vercelBody = { raw: text.slice(0, 300) };
+    }
+    if (!r.ok) {
+      return res.status(502).json({
+        success: false,
+        error: 'Vercel Deploy Hook hat einen Fehler zurückgegeben.',
+        status: r.status,
+        detail: vercelBody
+      });
+    }
+    res.json({
+      success: true,
+      message: 'Deployment wurde bei Vercel angestoßen (Stand entspricht dem letzten Push auf GitHub).',
+      vercel: vercelBody
+    });
+  } catch (error) {
+    console.error('trigger-deployment:', error);
+    res.status(500).json({ success: false, error: error.message || String(error) });
+  }
+}
+
+app.post('/api/trigger-deployment', handleTriggerDeployment);
+app.get('/api/trigger-deployment', handleTriggerDeployment);
+
+// ============================================
 // API ROUTEN - AUTHENTIFIZIERUNG
 // ============================================
 
