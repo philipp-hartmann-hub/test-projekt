@@ -1204,62 +1204,46 @@ class UserSystem {
   }
 
   loadUsers() {
-    const data = localStorage.getItem(this.storageKey);
-    return data ? JSON.parse(data) : [];
+    try {
+      const data = localStorage.getItem(this.storageKey);
+      const parsed = data ? JSON.parse(data) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
   }
   
-  // Standardbenutzer erstellen wenn keine vorhanden
+  // Standardbenutzer: gleiche Logins wie Server/db-layer, damit Anmeldung immer funktioniert
+  _getDefaultUsersList() {
+    return [
+      { id: 'admin-1', type: 'mitarbeiter', username: 'admin', password: 'admin', vorname: 'Admin', nachname: '', rolle: 'admin', jvas: [], station: null },
+      { id: 'val-1', type: 'mitarbeiter', username: 'val1', password: 'val1', vorname: 'Max', nachname: 'Mustermann (VAL)', rolle: 'hausleitung', jvas: ['haus1', 'haus2'], station: null },
+      { id: 'avd-1', type: 'mitarbeiter', username: 'avd1', password: 'avd1', vorname: 'Anna', nachname: 'Schmidt (AVD)', rolle: 'mitarbeiter', jvas: ['haus1'], station: '1' },
+      { id: 'avd-2', type: 'mitarbeiter', username: 'avd2', password: 'avd2', vorname: 'Peter', nachname: 'Weber (AVD)', rolle: 'mitarbeiter', jvas: ['haus2'], station: '2' },
+      { id: 'kammer-1', type: 'mitarbeiter', username: 'kammer1', password: 'kammer1', vorname: 'Kammer', nachname: 'Mitarbeiter', rolle: 'kammer', jvas: [], station: null },
+      { id: 'zahlstelle-1', type: 'mitarbeiter', username: 'zahlstelle1', password: 'zahlstelle1', vorname: 'Zahlstelle', nachname: 'Mitarbeiter', rolle: 'zahlstelle', jvas: ['haus1'], station: null },
+      { id: 'arbeit-1', type: 'mitarbeiter', username: 'arbeit1', password: 'arbeit1', vorname: 'Arbeitskoordination', nachname: '', rolle: 'arbeitskoordination', jvas: ['haus1'], station: null },
+      { id: 'insasse-1', type: 'insasse', username: 'insasse1', password: 'insasse1', vorname: 'Hans', nachname: 'Mueller', rolle: 'insasse', jvas: [], station: '1', jva: 'haus1', insassenNummer: 'INS-001', geburtsdatum: '1985-03-15' },
+      { id: 'insasse-2', type: 'insasse', username: 'insasse2', password: 'insasse2', vorname: 'Klaus', nachname: 'Fischer', rolle: 'insasse', jvas: [], station: '2', jva: 'haus2', insassenNummer: 'INS-002', geburtsdatum: '1990-07-22' }
+    ];
+  }
+
   ensureDefaultUsers() {
-    if (this.users.length === 0) {
-      console.log('Keine Benutzer gefunden - erstelle Standardbenutzer...');
-      
-      // Standard-Insasse erstellen
-      this.createInsasse({
-        vorname: 'Max',
-        nachname: 'Mustermann',
-        geburtsdatum: '1990-05-15',
-        jva: 'haus1',
-        station: 'A'
-      });
-      
-      this.createInsasse({
-        vorname: 'Anna',
-        nachname: 'Schmidt',
-        geburtsdatum: '1985-08-22',
-        jva: 'haus1',
-        station: 'B'
-      });
-      
-      // Standard-Mitarbeiter erstellen (Stationsleitung)
-      this.createMitarbeiter({
-        vorname: 'Thomas',
-        nachname: 'Müller',
-        rolle: 'stationsleitung',
-        jvas: ['haus1'],
-        station: 'A'
-      });
-      
-      this.createMitarbeiter({
-        vorname: 'Sarah',
-        nachname: 'Weber',
-        rolle: 'stationsleitung',
-        jvas: ['haus1'],
-        station: 'B'
-      });
-      
-      // Hausleitung erstellen
-      this.createMitarbeiter({
-        vorname: 'Peter',
-        nachname: 'Schneider',
-        rolle: 'hausleitung',
-        jvas: ['haus1'],
-        station: null
-      });
-      
-      console.log('Standardbenutzer erstellt. Anmeldedaten in der Konsole:');
-      this.users.forEach(u => {
-        console.log(`${u.type}: ${u.vorname} ${u.nachname} - Username: ${u.username}, Passwort: ${u.password}`);
-      });
+    if (!Array.isArray(this.users)) this.users = [];
+    const hasAdmin = this.users.some(u => u && u.username === 'admin');
+    if (this.users.length === 0 || !hasAdmin) {
+      if (this.users.length === 0) console.log('Keine Benutzer gefunden - erstelle Standardbenutzer...');
+      else console.log('Admin-Benutzer fehlt - ergänze Standardbenutzer...');
+      const defaults = this._getDefaultUsersList();
+      if (this.users.length === 0) {
+        defaults.forEach(u => this.users.push(u));
+      } else {
+        defaults.forEach(du => {
+          if (!this.users.some(u => u && u.username === du.username)) this.users.push(du);
+        });
+      }
+      this.saveUsers();
+      console.log('Anmeldung z.B. mit admin/admin, val1/val1, avd1/avd1, insasse1/insasse1');
     }
   }
 

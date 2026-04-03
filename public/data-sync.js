@@ -98,31 +98,43 @@ async function loadInitialData() {
 // DATEN AN SERVER SENDEN
 // ============================================
 
-async function syncToServer(key, data) {
+// Pro Key eine Warteschlange: verhindert, dass ein älterer setItem-Sync nach einem neueren fertig wird
+// und den Server mit veraltetem Snapshot überschreibt (lokal höhere Latenz = auf Vercel häufiger).
+const syncKeyChains = {};
+
+function enqueueSyncJob(key, job) {
+  if (!SYNC_KEYS[key]) return Promise.resolve();
+  const prev = syncKeyChains[key] || Promise.resolve();
+  const next = prev.then(() => job());
+  syncKeyChains[key] = next.catch((err) => {
+    console.warn(`Sync queue ${key}:`, err?.message || err);
+  });
+  return next;
+}
+
+// Liest localStorage erst beim Ausführen des Jobs (nicht den Wert vom setItem-Zeitpunkt).
+async function syncToServerImpl(key) {
   if (!serverConnected) return;
 
   const endpoint = SYNC_KEYS[key];
   if (!endpoint) return;
 
-  try {
-    // Komplette Daten neu laden und dann einzelne Aenderungen synchen
-    // Fuer Prototyp: Einfache Loesung - ganzes Array ersetzen
+  const data = localStorage.getItem(key);
+  if (!data) return;
 
+  try {
     const currentServerData = await apiCall(endpoint);
     const localData = JSON.parse(data);
 
-    // Neue Items hinzufuegen
     for (const localItem of localData) {
       const serverItem = currentServerData.find(s => s.id === localItem.id);
 
       if (!serverItem) {
-        // Neues Item - POST
         await apiCall(endpoint, {
           method: 'POST',
           body: JSON.stringify(localItem)
         });
       } else {
-        // Bestehendes Item - Pruefen ob Update noetig
         const localStr = JSON.stringify(localItem);
         const serverStr = JSON.stringify(serverItem);
 
@@ -131,7 +143,6 @@ async function syncToServer(key, data) {
             method: 'PUT',
             body: JSON.stringify(localItem)
           });
-          // Wenn Server den aktualisierten Eintrag zurückgibt, verwende diesen
           if (response && response.id) {
             const index = localData.findIndex(l => l.id === response.id);
             if (index !== -1) {
@@ -142,7 +153,6 @@ async function syncToServer(key, data) {
       }
     }
 
-    // Geloeschte Items entfernen
     for (const serverItem of currentServerData) {
       const stillExists = localData.find(l => l.id === serverItem.id);
       if (!stillExists) {
@@ -156,90 +166,79 @@ async function syncToServer(key, data) {
   }
 }
 
+function scheduleSyncToServer(key) {
+  if (!serverConnected || !initialDataLoaded) return Promise.resolve();
+  return enqueueSyncJob(key, () => syncToServerImpl(key));
+}
+
 // Flag um zu verhindern, dass reloadDataFromServer während der Synchronisation läuft
 let isSyncing = false;
 
 // Explizite Synchronisation eines einzelnen Antrags UND aller Aufgaben
+// Läuft in derselben Warteschlange wie Hintergrund-Syncs für gefaengnis_antraege (kein Überschreiben durch veraltete Jobs).
 async function syncAntragToServer(antragId) {
   if (!serverConnected) return false;
-  if (isSyncing) {
-    console.log('[Sync] Synchronisation bereits im Gange, warte...');
-    // Warte bis die aktuelle Synchronisation abgeschlossen ist
-    while (isSyncing) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    return true;
-  }
-  
-  isSyncing = true;
-  try {
-    const base = window.location.origin + '/api';
-    
-    // 1. Antrag synchronisieren
-    const antragData = localStorage.getItem('gefaengnis_antraege');
-    if (!antragData) {
-      isSyncing = false;
-      return false;
-    }
-    
-    const localAntraege = JSON.parse(antragData);
-    const antrag = localAntraege.find(a => a.id === antragId);
-    if (!antrag) {
-      isSyncing = false;
-      return false;
-    }
-    
-    console.log('[Sync] Synchronisiere Antrag:', antragId, 'Bearbeiter:', antrag.bearbeiterId);
-    const antragResponse = await fetch(base + '/antraege/' + antragId, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(antrag)
-    });
-    
-    if (!antragResponse.ok) {
-      throw new Error(`HTTP ${antragResponse.status}: ${antragResponse.statusText}`);
-    }
-    
-    const serverAntrag = await antragResponse.json();
-    console.log('[Sync] Antrag synchronisiert:', serverAntrag.id, 'Bearbeiter:', serverAntrag.bearbeiterId);
-    
-    // 2. Aufgaben synchronisieren (wichtig: Aufgaben können sich geändert haben)
-    const aufgabenData = localStorage.getItem('gefaengnis_aufgaben');
-    if (aufgabenData) {
-      console.log('[Sync] Synchronisiere Aufgaben...');
-      await syncToServer('gefaengnis_aufgaben', aufgabenData);
-      console.log('[Sync] Aufgaben synchronisiert');
-    }
-    
-    // 3. Benachrichtigungen synchronisieren (damit Insasse die Entscheidungs-Nachricht erhält)
-    const notificationsData = localStorage.getItem('gefaengnis_notifications');
-    if (notificationsData) {
-      await syncToServer('gefaengnis_notifications', notificationsData);
-      console.log('[Sync] Benachrichtigungen synchronisiert');
-    }
-    
-    // 4. Aktualisiere lokale Daten mit Server-Daten
-    if (serverAntrag.id) {
-      const index = localAntraege.findIndex(a => a.id === serverAntrag.id);
-      if (index !== -1) {
-        localAntraege[index] = serverAntrag;
-        originalSetItem('gefaengnis_antraege', JSON.stringify(localAntraege));
-        if (typeof window.reloadDataFromStorage === 'function') {
-          window.reloadDataFromStorage();
+  return enqueueSyncJob('gefaengnis_antraege', async () => {
+    isSyncing = true;
+    try {
+      const base = window.location.origin + '/api';
+
+      const antragData = localStorage.getItem('gefaengnis_antraege');
+      if (!antragData) return false;
+
+      const localAntraege = JSON.parse(antragData);
+      const antrag = localAntraege.find(a => a.id === antragId);
+      if (!antrag) return false;
+
+      console.log('[Sync] Synchronisiere Antrag:', antragId, 'Bearbeiter:', antrag.bearbeiterId);
+      const antragResponse = await fetch(base + '/antraege/' + antragId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(antrag)
+      });
+
+      if (!antragResponse.ok) {
+        throw new Error(`HTTP ${antragResponse.status}: ${antragResponse.statusText}`);
+      }
+
+      const serverAntrag = await antragResponse.json();
+      console.log('[Sync] Antrag synchronisiert:', serverAntrag.id, 'Bearbeiter:', serverAntrag.bearbeiterId);
+
+      if (localStorage.getItem('gefaengnis_aufgaben')) {
+        console.log('[Sync] Synchronisiere Aufgaben...');
+        await enqueueSyncJob('gefaengnis_aufgaben', () => syncToServerImpl('gefaengnis_aufgaben'));
+        console.log('[Sync] Aufgaben synchronisiert');
+      }
+
+      if (localStorage.getItem('gefaengnis_notifications')) {
+        await enqueueSyncJob('gefaengnis_notifications', () => syncToServerImpl('gefaengnis_notifications'));
+        console.log('[Sync] Benachrichtigungen synchronisiert');
+      }
+
+      if (serverAntrag.id) {
+        const fresh = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
+        const index = fresh.findIndex(a => a.id === serverAntrag.id);
+        if (index !== -1) {
+          fresh[index] = serverAntrag;
+          originalSetItem('gefaengnis_antraege', JSON.stringify(fresh));
+          if (typeof window.reloadDataFromStorage === 'function') {
+            window.reloadDataFromStorage();
+          }
         }
       }
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return true;
+    } catch (error) {
+      console.warn('Explizite Antrag-Synchronisation fehlgeschlagen:', error);
+      return false;
+    } finally {
+      isSyncing = false;
     }
-    
-    // 7. Kurze Verzögerung, damit der Server die Änderungen verarbeitet hat
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    isSyncing = false;
-    return true;
-  } catch (error) {
-    console.warn('Explizite Antrag-Synchronisation fehlgeschlagen:', error);
-    isSyncing = false;
-    return false;
-  }
+  }).then(
+    (ok) => ok === true,
+    () => false
+  );
 }
 
 // ============================================
@@ -255,7 +254,7 @@ localStorage.setItem = function(key, value) {
   // Dann an Server senden (asynchron, nicht blockierend)
   if (SYNC_KEYS[key] && serverConnected && initialDataLoaded) {
     console.log(`Sync: ${key} → Server (${key === 'gefaengnis_antraege' ? JSON.parse(value).length + ' Anträge' : 'Daten'})`);
-    syncToServer(key, value).catch(err => {
+    scheduleSyncToServer(key).catch(err => {
       console.warn('Hintergrund-Sync fehlgeschlagen:', err.message);
     });
   } else {
@@ -293,7 +292,7 @@ async function serverLogin(username, password, portalTyp) {
 async function syncUsersNow() {
   if (!serverConnected) return;
   try {
-    await syncToServer('gefaengnis_users', localStorage.getItem('gefaengnis_users'));
+    await enqueueSyncJob('gefaengnis_users', () => syncToServerImpl('gefaengnis_users'));
   } catch (e) {
     console.warn('syncUsersNow:', e.message);
   }

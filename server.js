@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Fuer PDF-Uploads
 // Statische Dateien nur lokal servieren; auf Vercel macht das Vercel selbst
 if (!process.env.VERCEL) {
-  app.use(express.static(path.join(__dirname)));
+  app.use(express.static(path.join(__dirname, 'public')));
 }
 
 // ============================================
@@ -30,6 +30,37 @@ const DB_FILE = path.join(__dirname, 'database.json');
 
 function generateId(prefix = 'ID') {
   return prefix + '-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2, 4).toUpperCase();
+}
+
+// Verhindert Datenverlust bei verzögerten oder veralteten PUTs (z. B. parallele Sync-Jobs):
+// Wenn der Client kürzere Arrays sendet als in der DB, fehlende Einträge mit id werden wieder angehängt.
+function mergeAntragPutPayload(existing, incoming) {
+  if (!incoming || typeof incoming !== 'object') return incoming;
+  if (!existing || typeof existing !== 'object') return incoming;
+  const base = { ...existing, ...incoming };
+  const arrayFields = ['dokumente', 'kommentare', 'weiterleitungen'];
+  const idOf = (x) => (x && typeof x === 'object' && x.id != null) ? String(x.id) : null;
+  for (const f of arrayFields) {
+    const exArr = existing[f];
+    const incArr = incoming[f];
+    if (!Array.isArray(exArr) || exArr.length === 0) continue;
+    if (!Array.isArray(incArr)) {
+      base[f] = exArr;
+      continue;
+    }
+    if (incArr.length >= exArr.length) continue;
+    const seen = new Set(incArr.map(idOf).filter(Boolean));
+    const merged = [...incArr];
+    for (const item of exArr) {
+      const id = idOf(item);
+      if (id && !seen.has(id)) {
+        merged.push(item);
+        seen.add(id);
+      }
+    }
+    base[f] = merged;
+  }
+  return base;
 }
 
 // ============================================
@@ -201,8 +232,10 @@ app.put('/api/antraege/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const antragData = req.body;
-    
-    const updated = await dbLayer.update('antraege', id, antragData);
+    const existing = await dbLayer.getById('antraege', id);
+    const payload = mergeAntragPutPayload(existing, antragData);
+
+    const updated = await dbLayer.update('antraege', id, payload);
     if (!updated) {
       return res.status(404).json({ success: false, error: 'Antrag nicht gefunden' });
     }
@@ -446,13 +479,14 @@ app.delete('/api/termine/:id', async (req, res) => {
 // ============================================
 
 if (!process.env.VERCEL) {
+  const publicDir = path.join(__dirname, 'public');
   app.get('*', (req, res) => {
-    // Wenn keine API-Route, dann statische Datei oder index.html
-    const filePath = path.join(__dirname, req.path);
+    // Wenn keine API-Route, dann statische Datei oder index.html (aus public/)
+    const filePath = path.join(publicDir, req.path);
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
       res.sendFile(filePath);
     } else {
-      res.sendFile(path.join(__dirname, 'index.html'));
+      res.sendFile(path.join(publicDir, 'index.html'));
     }
   });
 }

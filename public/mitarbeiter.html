@@ -60,8 +60,10 @@
           <div>
             <div class="role" id="userRole">Mitarbeiter</div>
             <div class="name" id="userName">-</div>
+            <div class="kontext-info" id="kontextInfo" style="font-size: 0.85em; color: #666; margin-top: 2px;"></div>
           </div>
         </div>
+        <button class="btn btn-secondary btn-sm" onclick="openKontextAuswahlModal()" id="changeKontextBtn" style="display: none;">Kontext ändern</button>
         <button class="btn btn-secondary btn-sm" onclick="logout()" data-i18n="app.logout">Abmelden</button>
       </div>
     </header>
@@ -424,34 +426,43 @@
         
         <!-- Mitarbeiter-Auswahl -->
         <div id="mitarbeiterAuswahl" style="display: none;">
-          <!-- Schritt 1: Gruppe auswählen -->
+          <!-- Schritt 1: Gruppe ODER Person wählen -->
           <div class="form-group">
-            <label>Gruppe auswählen: *</label>
-            <select id="aufgabeGruppeSelect" onchange="onAufgabeGruppeChange()">
-              <option value="">-- Bitte Gruppe wählen --</option>
-              <!-- Wird dynamisch gefüllt -->
-            </select>
-            <input type="hidden" id="aufgabeGruppeTyp">
-            <input type="hidden" id="aufgabeGruppeHaus">
-            <input type="hidden" id="aufgabeGruppeStation">
+            <label>Zuweisung an: *</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="aufgabeZuweisungTyp" value="gruppe" checked onchange="toggleAufgabeZuweisungTyp()">
+                <span class="radio-label">Gruppe</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="aufgabeZuweisungTyp" value="person" onchange="toggleAufgabeZuweisungTyp()">
+                <span class="radio-label">Konkrete Person</span>
+              </label>
+            </div>
           </div>
           
-          <!-- Schritt 2: Optional konkrete Person auswählen -->
-          <div class="form-group" id="aufgabePersonAuswahlContainer" style="display: none;">
-            <label>
-              <input type="checkbox" id="aufgabeKonkretePersonCheckbox" onchange="toggleAufgabeKonkretePerson()">
-              Konkrete Person auswählen (optional)
-            </label>
-            <p class="field-hint">Ohne Auswahl wird die Aufgabe der gesamten Gruppe zugewiesen</p>
+          <!-- Gruppe auswählen -->
+          <div id="aufgabeGruppeContainer">
+            <div class="form-group">
+              <label>Gruppe auswählen: *</label>
+              <select id="aufgabeGruppeSelect" onchange="onAufgabeGruppeChange()">
+                <option value="">-- Bitte Gruppe wählen --</option>
+                <!-- Wird dynamisch gefüllt -->
+              </select>
+              <input type="hidden" id="aufgabeGruppeTyp">
+              <input type="hidden" id="aufgabeGruppeHaus">
+              <input type="hidden" id="aufgabeGruppeStation">
+            </div>
           </div>
           
-          <div id="aufgabePersonSuche" style="display: none;">
+          <!-- Person auswählen -->
+          <div id="aufgabePersonContainer" style="display: none;">
             <div class="form-group">
               <label for="aufgabeMitarbeiterSuche">Mitarbeiter suchen</label>
               <input type="text" id="aufgabeMitarbeiterSuche" placeholder="Name eingeben..." oninput="filterMitarbeiterListe()">
             </div>
             <div class="form-group">
-              <label>Mitarbeiter auswählen:</label>
+              <label>Mitarbeiter auswählen: *</label>
               <div class="mitarbeiter-liste" id="aufgabeMitarbeiterListe">
                 <!-- Wird dynamisch gefüllt -->
               </div>
@@ -604,41 +615,50 @@
         </div>
         
         <div id="weiterleitenFelder" style="display: none;">
-          <!-- Schritt 1: Gruppe auswählen -->
+          <!-- Schritt 1: Gruppe ODER Person wählen -->
           <div class="form-group">
-            <label>Gruppe auswählen: *</label>
-            <select id="weiterleitenGruppeSelect" onchange="onWeiterleitenGruppeChange()">
-              <option value="">-- Bitte Gruppe wählen --</option>
-              <!-- Wird dynamisch gefüllt -->
-            </select>
-            <input type="hidden" id="weiterleitenGruppeTyp">
-            <input type="hidden" id="weiterleitenGruppeHaus">
-            <input type="hidden" id="weiterleitenGruppeStation">
+            <label>Weiterleitung an: *</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="weiterleitenZuweisungTyp" value="gruppe" checked onchange="toggleWeiterleitenZuweisungTyp()">
+                <span class="radio-label">Gruppe</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="weiterleitenZuweisungTyp" value="person" onchange="toggleWeiterleitenZuweisungTyp()">
+                <span class="radio-label">Konkrete Person</span>
+              </label>
+            </div>
           </div>
           
-          <!-- Schritt 2: Optional konkrete Person auswählen -->
-          <div class="form-group" id="weiterleitenPersonAuswahlContainer" style="display: none;">
-            <label>
-              <input type="checkbox" id="weiterleitenKonkretePersonCheckbox" onchange="toggleWeiterleitenKonkretePerson()">
-              Konkrete Person auswählen (optional)
-            </label>
-            <p class="field-hint">Ohne Auswahl wird der Antrag der gesamten Gruppe zugewiesen</p>
+          <!-- Gruppe auswählen -->
+          <div id="weiterleitenGruppeContainer">
+            <div class="form-group">
+              <label>Gruppe auswählen: *</label>
+              <select id="weiterleitenGruppeSelect" onchange="onWeiterleitenGruppeChange()">
+                <option value="">-- Bitte Gruppe wählen --</option>
+                <!-- Wird dynamisch gefüllt -->
+              </select>
+              <input type="hidden" id="weiterleitenGruppeTyp">
+              <input type="hidden" id="weiterleitenGruppeHaus">
+              <input type="hidden" id="weiterleitenGruppeStation">
+            </div>
           </div>
           
-          <div id="weiterleitenPersonSuche" style="display: none;">
+          <!-- Person auswählen -->
+          <div id="weiterleitenPersonContainer" style="display: none;">
             <div class="form-group">
               <label for="weiterleitenMitarbeiterSuche">Mitarbeiter suchen</label>
               <input type="text" id="weiterleitenMitarbeiterSuche" placeholder="Name eingeben..." oninput="filterWeiterleitenMitarbeiter()">
             </div>
             <div class="form-group">
-              <label>Mitarbeiter auswählen:</label>
+              <label>Mitarbeiter auswählen: *</label>
               <div class="mitarbeiter-liste" id="weiterleitenMitarbeiterListe" style="max-height: 250px; overflow-y: auto;">
                 <!-- Wird dynamisch gefüllt -->
               </div>
             </div>
             <div class="form-group" id="weiterleitenSelectedContainer" style="display: none;">
               <div class="selected-person-box">
-                <span class="selected-label">Ausgewaehlt:</span>
+                <span class="selected-label">Ausgewählt:</span>
                 <span class="selected-name" id="weiterleitenSelectedPersonName"></span>
                 <button type="button" class="btn-clear-small" onclick="clearWeiterleitenSelection()">×</button>
               </div>
@@ -730,6 +750,37 @@
       </div>
       <div class="modal-footer" id="terminDetailFooter">
         <button class="btn btn-secondary" onclick="closeModal('terminDetailModal')">Schließen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Haus/Station-Auswahl nach Login -->
+  <div class="modal-overlay" id="kontextAuswahlModal" style="display: flex;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Arbeitskontext wählen</h3>
+      </div>
+      <div class="modal-body">
+        <p class="modal-info">Bitte wählen Sie den Haus- und Stationskontext für Ihre heutige Arbeit.</p>
+        
+        <div class="form-group">
+          <label for="kontextHausSelect">Haus <span class="required">*</span></label>
+          <select id="kontextHausSelect" required onchange="onKontextHausChange()">
+            <option value="">-- Bitte Haus wählen --</option>
+            <!-- Wird dynamisch gefüllt -->
+          </select>
+        </div>
+        
+        <div class="form-group" id="kontextStationGroup" style="display: none;">
+          <label for="kontextStationSelect">Station <span class="required">*</span></label>
+          <select id="kontextStationSelect" required>
+            <option value="">-- Bitte Station wählen --</option>
+            <!-- Wird dynamisch gefüllt -->
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="confirmKontextAuswahl()">Bestätigen</button>
       </div>
     </div>
   </div>
@@ -1127,22 +1178,152 @@
       errEl.style.display = 'none';
 
       if (window.DataSync) {
-        const res = await window.DataSync.serverLogin(username, password, 'mitarbeiter');
-        if (res.success) {
-          sessionManager.setSessionFromServer(res.user);
-          currentSession = sessionManager.getSession();
-          showPortal();
-          return;
+        try {
+          const res = await window.DataSync.serverLogin(username, password, 'mitarbeiter');
+          if (res && res.success) {
+            sessionManager.setSessionFromServer(res.user);
+            currentSession = sessionManager.getSession();
+            checkKontextAndShowPortal();
+            return;
+          }
+        } catch (err) {
+          console.warn('Server-Login fehlgeschlagen, versuche lokale Anmeldung:', err);
         }
-        // Server-Login fehlgeschlagen – Fallback auf lokale Zugangsdaten (z. B. im Admin angelegt)
+        // Nach Server-Login-Fehler: Benutzer aus localStorage neu laden (falls DataSync sie geladen hat)
+        if (typeof window.reloadDataFromStorage === 'function') {
+          window.reloadDataFromStorage();
+        }
       }
-      const result = sessionManager.login(username, password, 'mitarbeiter');
+      let result = sessionManager.login(username, password, 'mitarbeiter');
+      if (!result.success && typeof userSystem !== 'undefined') {
+        // Einmal Standard-Benutzer erzwingen und erneut versuchen (falls localStorage leer/korrupt war)
+        userSystem.ensureDefaultUsers();
+        if (typeof window.reloadDataFromStorage === 'function') window.reloadDataFromStorage();
+        result = sessionManager.login(username, password, 'mitarbeiter');
+      }
       if (result.success) {
         currentSession = result.user;
-        showPortal();
+        checkKontextAndShowPortal();
       } else {
         errEl.style.display = 'block';
       }
+    }
+    
+    // Prüft ob Kontext gesetzt ist und zeigt Portal oder Kontext-Auswahl
+    function checkKontextAndShowPortal() {
+      const kontext = getMitarbeiterKontext();
+      const rolle = currentSession.rolle;
+      
+      // Kammer braucht keinen Kontext (hausunabhängig)
+      if (rolle === 'kammer') {
+        showPortal();
+        return;
+      }
+      
+      // Prüfe ob Kontext bereits gesetzt ist
+      if (kontext && kontext.haus) {
+        // Für AVD muss auch Station gesetzt sein
+        if (needsStation(rolle) && !kontext.station) {
+          openKontextAuswahlModal();
+        } else {
+          showPortal();
+        }
+      } else {
+        // Kontext noch nicht gesetzt - Modal zeigen
+        openKontextAuswahlModal();
+      }
+    }
+    
+    // Prüft ob Rolle Station benötigt
+    function needsStation(rolle) {
+      return rolle === 'stationsleitung' || rolle === 'avd' || 
+             (!rolle || (rolle !== 'hausleitung' && rolle !== 'jva-leitung' && rolle !== 'haus-leitung' && 
+                         rolle !== 'zahlstelle' && rolle !== 'arbeitskoordination' && rolle !== 'kammer'));
+    }
+    
+    // Kontext aus SessionStorage laden
+    function getMitarbeiterKontext() {
+      if (!currentSession || !currentSession.userId) return null;
+      const key = `mitarbeiterKontext_${currentSession.userId}`;
+      const stored = sessionStorage.getItem(key);
+      return stored ? JSON.parse(stored) : null;
+    }
+    
+    // Kontext in SessionStorage speichern
+    function setMitarbeiterKontext(haus, station) {
+      if (!currentSession || !currentSession.userId) return;
+      const key = `mitarbeiterKontext_${currentSession.userId}`;
+      const kontext = { haus: haus, station: station || null };
+      sessionStorage.setItem(key, JSON.stringify(kontext));
+    }
+    
+    // Kontext-Modal öffnen
+    function openKontextAuswahlModal() {
+      const rolle = currentSession.rolle;
+      const kontext = getMitarbeiterKontext();
+      
+      // Haus-Auswahl füllen
+      const hausSelect = document.getElementById('kontextHausSelect');
+      hausSelect.innerHTML = '<option value="">-- Bitte Haus wählen --</option>';
+      Object.keys(HAUS_CONFIG).forEach(hausKey => {
+        const hausName = HAUS_CONFIG[hausKey].name;
+        hausSelect.innerHTML += `<option value="${hausKey}" ${kontext && kontext.haus === hausKey ? 'selected' : ''}>${hausName}</option>`;
+      });
+      
+      // Station-Auswahl anzeigen/verstecken je nach Rolle
+      const stationGroup = document.getElementById('kontextStationGroup');
+      const stationSelect = document.getElementById('kontextStationSelect');
+      
+      if (needsStation(rolle)) {
+        stationGroup.style.display = 'block';
+        stationSelect.required = true;
+        updateStationOptions(kontext ? kontext.haus : null, kontext ? kontext.station : null);
+      } else {
+        stationGroup.style.display = 'none';
+        stationSelect.required = false;
+        stationSelect.innerHTML = '<option value="">-- Bitte Station wählen --</option>';
+      }
+      
+      document.getElementById('kontextAuswahlModal').style.display = 'flex';
+    }
+    
+    // Station-Optionen aktualisieren wenn Haus geändert wird
+    function onKontextHausChange() {
+      const haus = document.getElementById('kontextHausSelect').value;
+      const kontext = getMitarbeiterKontext();
+      updateStationOptions(haus, kontext && kontext.haus === haus ? kontext.station : null);
+    }
+    
+    function updateStationOptions(haus, selectedStation) {
+      const stationSelect = document.getElementById('kontextStationSelect');
+      stationSelect.innerHTML = '<option value="">-- Bitte Station wählen --</option>';
+      
+      if (haus && HAUS_CONFIG[haus]) {
+        HAUS_CONFIG[haus].stationen.forEach(station => {
+          stationSelect.innerHTML += `<option value="${station}" ${selectedStation === station ? 'selected' : ''}>Station ${station}</option>`;
+        });
+      }
+    }
+    
+    // Kontext-Auswahl bestätigen
+    function confirmKontextAuswahl() {
+      const haus = document.getElementById('kontextHausSelect').value;
+      const stationSelect = document.getElementById('kontextStationSelect');
+      const station = stationSelect.style.display !== 'none' ? stationSelect.value : null;
+      
+      if (!haus) {
+        alert('Bitte wählen Sie ein Haus aus.');
+        return;
+      }
+      
+      if (needsStation(currentSession.rolle) && !station) {
+        alert('Bitte wählen Sie eine Station aus.');
+        return;
+      }
+      
+      setMitarbeiterKontext(haus, station);
+      document.getElementById('kontextAuswahlModal').style.display = 'none';
+      showPortal();
     }
     
     function logout() {
@@ -1180,6 +1361,9 @@
       
       document.getElementById('userName').textContent = displayName;
       document.getElementById('userRole').textContent = getRolleText(currentSession.rolle);
+      
+      // Kontext-Info und Button anzeigen
+      updateKontextInfo();
       
       // Moin-Begrüßung setzen
       document.getElementById('welcomeGreeting').textContent = 'Moin, ' + displayName + '!';
@@ -1482,22 +1666,65 @@
       renderNotifications();
     }
     
+    // Effektiven Mitarbeiter mit gewähltem Kontext erstellen
+    function getEffektiverMitarbeiter() {
+      const kontext = getMitarbeiterKontext();
+      if (!kontext || !kontext.haus) {
+        // Fallback auf ursprüngliche Zuordnung wenn kein Kontext gesetzt
+        return currentSession;
+      }
+      
+      // Erstelle Kopie mit gewähltem Kontext
+      const effektiv = { ...currentSession };
+      effektiv.jvas = [kontext.haus];
+      if (kontext.station) {
+        effektiv.station = kontext.station;
+      } else {
+        effektiv.station = null;
+      }
+      return effektiv;
+    }
+    
+    // Kontext-Info im Header aktualisieren
+    function updateKontextInfo() {
+      const kontext = getMitarbeiterKontext();
+      const kontextInfo = document.getElementById('kontextInfo');
+      const changeBtn = document.getElementById('changeKontextBtn');
+      
+      if (kontext && kontext.haus) {
+        const hausName = HAUS_CONFIG[kontext.haus]?.name || kontext.haus;
+        let kontextText = hausName;
+        if (kontext.station) {
+          kontextText += ` - Station ${kontext.station}`;
+        }
+        kontextInfo.textContent = kontextText;
+        changeBtn.style.display = 'inline-block';
+      } else {
+        kontextInfo.textContent = '';
+        changeBtn.style.display = 'none';
+      }
+    }
+    
     function updateZustaendigkeitInfo() {
       const info = document.getElementById('zustaendigkeitInfo');
-      const hausNames = currentSession.jvas ? currentSession.jvas.map(j => getHausName(j)).join(', ') : '-';
+      const kontext = getMitarbeiterKontext();
+      
+      // Verwende gewählten Kontext statt feste Zuordnung
+      const hausName = kontext && kontext.haus ? (HAUS_CONFIG[kontext.haus]?.name || kontext.haus) : '-';
+      const station = kontext ? kontext.station : null;
       
       if (currentSession.rolle === 'jva-leitung' || currentSession.rolle === 'haus-leitung' || currentSession.rolle === 'hausleitung') {
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>VAL</strong> sehen Sie alle Anträge des <strong>${hausNames}</strong> (alle Stationen)</span>
+            <span>Als <strong>VAL</strong> sehen Sie alle Anträge des <strong>${hausName}</strong> (alle Stationen)</span>
           </div>
         `;
       } else if (currentSession.rolle === 'stationsleitung') {
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>Stationsleitung</strong> sehen Sie alle Anträge des <strong>${hausNames} - Station ${currentSession.station}</strong></span>
+            <span>Als <strong>Stationsleitung</strong> sehen Sie alle Anträge des <strong>${hausName} - Station ${station || '-'}</strong></span>
           </div>
         `;
       } else if (currentSession.rolle === 'kammer') {
@@ -1511,21 +1738,21 @@
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>Zahlstelle</strong> (${hausNames}) sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Zahlstelle zugewiesen wurden</span>
+            <span>Als <strong>Zahlstelle</strong> (${hausName}) sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Zahlstelle zugewiesen wurden</span>
           </div>
         `;
       } else if (currentSession.rolle === 'arbeitskoordination') {
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>Arbeitskoordination</strong> (${hausNames}) sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Arbeitskoordination zugewiesen wurden</span>
+            <span>Als <strong>Arbeitskoordination</strong> (${hausName}) sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Arbeitskoordination zugewiesen wurden</span>
           </div>
         `;
       } else {
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>AVD</strong> sehen Sie Anträge und Aufgaben des <strong>${hausNames} - Station ${currentSession.station}</strong> und Ihre persönlich bearbeiteten Anträge</span>
+            <span>Als <strong>AVD</strong> sehen Sie Anträge und Aufgaben des <strong>${hausName} - Station ${station || '-'}</strong> und Ihre persönlich bearbeiteten Anträge</span>
           </div>
         `;
       }
@@ -1535,7 +1762,7 @@
     const existingSession = sessionManager.getSession();
     if (existingSession && existingSession.type === 'mitarbeiter') {
       currentSession = existingSession;
-      showPortal();
+      checkKontextAndShowPortal();
     }
 
     // ============================================
@@ -2800,9 +3027,9 @@ ${t('action.archive')}
       document.getElementById('aufgabeGruppeTyp').value = '';
       document.getElementById('aufgabeGruppeHaus').value = '';
       document.getElementById('aufgabeGruppeStation').value = '';
-      document.getElementById('aufgabeKonkretePersonCheckbox').checked = false;
-      document.getElementById('aufgabePersonAuswahlContainer').style.display = 'none';
-      document.getElementById('aufgabePersonSuche').style.display = 'none';
+      document.querySelector('input[name="aufgabeZuweisungTyp"][value="gruppe"]').checked = true;
+      document.getElementById('aufgabeGruppeContainer').style.display = 'block';
+      document.getElementById('aufgabePersonContainer').style.display = 'none';
       document.getElementById('aufgabeBearbeitungOptionen').style.display = 'none';
       
       // Mitarbeiter-Auswahl zurücksetzen
@@ -2822,13 +3049,37 @@ ${t('action.archive')}
       if (ziel === 'mitarbeiter') {
         document.getElementById('mitarbeiterAuswahl').style.display = 'block';
         loadAufgabeGruppen();
+        toggleAufgabeZuweisungTyp();
       } else {
         document.getElementById('mitarbeiterAuswahl').style.display = 'none';
         // Reset
         document.getElementById('aufgabeGruppeSelect').value = '';
-        document.getElementById('aufgabePersonAuswahlContainer').style.display = 'none';
-        document.getElementById('aufgabePersonSuche').style.display = 'none';
+        document.getElementById('aufgabeGruppeContainer').style.display = 'block';
+        document.getElementById('aufgabePersonContainer').style.display = 'none';
         document.getElementById('aufgabeBearbeitungOptionen').style.display = 'none';
+      }
+    }
+    
+    // Zwischen Gruppe und Person wechseln
+    function toggleAufgabeZuweisungTyp() {
+      const typ = document.querySelector('input[name="aufgabeZuweisungTyp"]:checked')?.value;
+      const gruppeContainer = document.getElementById('aufgabeGruppeContainer');
+      const personContainer = document.getElementById('aufgabePersonContainer');
+      const bearbeitungOptionen = document.getElementById('aufgabeBearbeitungOptionen');
+      
+      if (typ === 'person') {
+        gruppeContainer.style.display = 'none';
+        personContainer.style.display = 'block';
+        bearbeitungOptionen.style.display = 'block';
+        // Alle Mitarbeiter laden (nicht hierarchisch)
+        loadAlleMitarbeiterFuerAufgabe();
+      } else {
+        gruppeContainer.style.display = 'block';
+        personContainer.style.display = 'none';
+        bearbeitungOptionen.style.display = 'none';
+        // Gruppenauswahl zurücksetzen
+        document.getElementById('aufgabeGruppeSelect').value = '';
+        onAufgabeGruppeChange();
       }
     }
     
@@ -2908,15 +3159,25 @@ ${t('action.archive')}
         document.getElementById('aufgabeGruppeStation').value = parts[2];
       }
       
-      // Person-Auswahl anzeigen
-      document.getElementById('aufgabePersonAuswahlContainer').style.display = 'block';
+      // Bearbeitungsoptionen anzeigen
       document.getElementById('aufgabeBearbeitungOptionen').style.display = 'block';
-      
-      // Mitarbeiterliste für diese Gruppe laden (hierarchisch - nur Mitglieder dieser Gruppe)
-      loadMitarbeiterFuerGruppe(gruppeTyp, parts[1], parts[2]);
     }
     
-    // Mitarbeiter einer Gruppe laden (hierarchisch - nur Mitglieder dieser Gruppe)
+    // Alle Mitarbeiter für Aufgabenstellung laden (nicht hierarchisch)
+    function loadAlleMitarbeiterFuerAufgabe() {
+      const alleMitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
+      
+      // Sortieren nach Name
+      alleMitarbeiter.sort((a, b) => {
+        const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
+        const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
+        return nameA.localeCompare(nameB, 'de');
+      });
+      
+      renderMitarbeiterListe(alleMitarbeiter);
+    }
+    
+    // Mitarbeiter einer Gruppe laden (nur noch für Gruppenauswahl, nicht mehr hierarchisch gefiltert)
     function loadMitarbeiterFuerGruppe(gruppeTyp, hausKey, station) {
       let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter');
       
@@ -2965,24 +3226,6 @@ ${t('action.archive')}
       renderMitarbeiterListe(mitarbeiter);
     }
     
-    // Checkbox für konkrete Personenauswahl
-    function toggleAufgabeKonkretePerson() {
-      const checkbox = document.getElementById('aufgabeKonkretePersonCheckbox');
-      const personSuche = document.getElementById('aufgabePersonSuche');
-      
-      if (checkbox.checked) {
-        personSuche.style.display = 'block';
-        // Mitarbeiterliste neu laden basierend auf gewählter Gruppe
-        const gruppeTyp = document.getElementById('aufgabeGruppeTyp').value;
-        const hausKey = document.getElementById('aufgabeGruppeHaus').value;
-        const station = document.getElementById('aufgabeGruppeStation').value;
-        loadMitarbeiterFuerGruppe(gruppeTyp, hausKey, station);
-      } else {
-        personSuche.style.display = 'none';
-        document.getElementById('aufgabePersonId').value = '';
-        document.getElementById('selectedPersonDisplay').style.display = 'none';
-      }
-    }
     
     // Alle Mitarbeiter laden und anzeigen (Legacy-Funktion)
     function loadAlleMitarbeiter() {
@@ -3025,43 +3268,12 @@ ${t('action.archive')}
       }).join('');
     }
     
-    // Mitarbeiterliste filtern (hierarchisch - nur Mitglieder der ausgewählten Gruppe)
+    // Mitarbeiterliste filtern (Suche über gesamte Belegschaft)
     function filterMitarbeiterListe() {
       const suchbegriff = document.getElementById('aufgabeMitarbeiterSuche').value.toLowerCase().trim();
       
-      // Hierarchisch: Nur Mitarbeiter der ausgewählten Gruppe anzeigen
-      const gruppeTyp = document.getElementById('aufgabeGruppeTyp').value;
-      const hausKey = document.getElementById('aufgabeGruppeHaus').value;
-      const station = document.getElementById('aufgabeGruppeStation').value;
-      
-      let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter');
-      
-      // Nach Gruppe filtern (hierarchisches Konzept)
-      if (gruppeTyp === 'kammer') {
-        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'kammer');
-      } else if (gruppeTyp === 'hausleitung') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
-      } else if (gruppeTyp === 'zahlstelle') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          m.rolle === 'zahlstelle' &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
-      } else if (gruppeTyp === 'arbeitskoordination') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          m.rolle === 'arbeitskoordination' &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
-      } else if (gruppeTyp === 'station') {
-        mitarbeiter = mitarbeiter.filter(m => {
-          const imHaus = m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'));
-          if (!imHaus) return false;
-          if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return false;
-          return m.station === station;
-        });
-      }
+      // Alle Mitarbeiter (nicht hierarchisch gefiltert)
+      let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
       
       // Nach Suchbegriff filtern
       if (suchbegriff) {
@@ -3390,34 +3602,38 @@ ${t('action.archive')}
         zugewiesenAnTyp = 'insasse';
       } else {
         // Aufgabe an Mitarbeiter/Gruppe
+        const zuweisungTyp = document.querySelector('input[name="aufgabeZuweisungTyp"]:checked')?.value;
         const gruppeTyp = document.getElementById('aufgabeGruppeTyp').value;
         const gruppeHaus = document.getElementById('aufgabeGruppeHaus').value;
         const gruppeStation = document.getElementById('aufgabeGruppeStation').value;
         const personId = document.getElementById('aufgabePersonId').value;
-        const konkretePersonChecked = document.getElementById('aufgabeKonkretePersonCheckbox').checked;
         
         // Debug-Ausgabe
-        console.log('[Debug] sendeAufgabe - Gruppenwerte:', {
+        console.log('[Debug] sendeAufgabe - Zuweisungswerte:', {
+          zuweisungTyp: zuweisungTyp,
           gruppeTyp: gruppeTyp,
           gruppeHaus: gruppeHaus,
           gruppeStation: gruppeStation,
-          personId: personId,
-          konkretePersonChecked: konkretePersonChecked
+          personId: personId
         });
         
-        if (!gruppeTyp) {
-          showAlert('Bitte wählen Sie eine Gruppe aus.');
-          return;
-        }
-        
-        if (konkretePersonChecked && personId) {
+        if (zuweisungTyp === 'person') {
           // Konkrete Person ausgewählt
+          if (!personId) {
+            showAlert('Bitte wählen Sie eine Person aus.');
+            return;
+          }
           const person = userSystem.getUser(personId);
           zugewiesenAnId = personId;
           zugewiesenAnName = `${person.vorname} ${person.nachname}`;
           zugewiesenAnTyp = 'mitarbeiter';
         } else {
-          // Nur Gruppe ausgewählt - Aufgabe geht an die Gruppe
+          // Gruppe ausgewählt
+          if (!gruppeTyp) {
+            showAlert('Bitte wählen Sie eine Gruppe aus.');
+            return;
+          }
+          // Aufgabe geht an die Gruppe
           zugewiesenAnTyp = 'gruppe';
           zugewiesenAnGruppe = {
             typ: gruppeTyp,
@@ -3888,10 +4104,10 @@ ${t('action.archive')}
       document.getElementById('weiterleitenGruppeTyp').value = '';
       document.getElementById('weiterleitenGruppeHaus').value = '';
       document.getElementById('weiterleitenGruppeStation').value = '';
-      document.getElementById('weiterleitenPersonAuswahlContainer').style.display = 'none';
-      document.getElementById('weiterleitenPersonSuche').style.display = 'none';
-      const konkretePersonCheckbox = document.getElementById('weiterleitenKonkretePersonCheckbox');
-      if (konkretePersonCheckbox) konkretePersonCheckbox.checked = false;
+      document.querySelector('input[name="weiterleitenZuweisungTyp"][value="gruppe"]').checked = true;
+      document.getElementById('weiterleitenGruppeContainer').style.display = 'block';
+      document.getElementById('weiterleitenPersonContainer').style.display = 'none';
+      toggleWeiterleitenZuweisungTyp();
       
       // Gruppen laden
       loadWeiterleitenGruppen();
@@ -4010,14 +4226,43 @@ ${t('action.archive')}
         document.getElementById('weiterleitenGruppeStation').value = parts[2];
       }
       
-      // Person-Auswahl anzeigen
-      document.getElementById('weiterleitenPersonAuswahlContainer').style.display = 'block';
-      
-      // Mitarbeiterliste für diese Gruppe laden (hierarchisch - nur Mitglieder dieser Gruppe)
-      loadWeiterleitenMitarbeiterFuerGruppe(gruppeTyp, parts[1], parts[2]);
     }
     
-    // Mitarbeiter einer Gruppe für Weiterleitung laden (hierarchisch - nur Mitglieder dieser Gruppe)
+    // Zwischen Gruppe und Person beim Weiterleiten wechseln
+    function toggleWeiterleitenZuweisungTyp() {
+      const typ = document.querySelector('input[name="weiterleitenZuweisungTyp"]:checked')?.value;
+      const gruppeContainer = document.getElementById('weiterleitenGruppeContainer');
+      const personContainer = document.getElementById('weiterleitenPersonContainer');
+      
+      if (typ === 'person') {
+        gruppeContainer.style.display = 'none';
+        personContainer.style.display = 'block';
+        // Alle Mitarbeiter laden (nicht hierarchisch gefiltert)
+        loadAlleMitarbeiterFuerWeiterleitung();
+      } else {
+        gruppeContainer.style.display = 'block';
+        personContainer.style.display = 'none';
+        // Gruppenauswahl zurücksetzen
+        document.getElementById('weiterleitenGruppeSelect').value = '';
+        onWeiterleitenGruppeChange();
+      }
+    }
+    
+    // Alle Mitarbeiter für Weiterleitung laden (nicht hierarchisch)
+    function loadAlleMitarbeiterFuerWeiterleitung() {
+      const alleMitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
+      
+      // Sortieren nach Name
+      alleMitarbeiter.sort((a, b) => {
+        const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
+        const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
+        return nameA.localeCompare(nameB, 'de');
+      });
+      
+      renderWeiterleitenMitarbeiter(alleMitarbeiter);
+    }
+    
+    // Mitarbeiter einer Gruppe für Weiterleitung laden (nur noch für Gruppenauswahl, nicht mehr hierarchisch gefiltert)
     function loadWeiterleitenMitarbeiterFuerGruppe(gruppeTyp, hausKey, station) {
       let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
       
@@ -4059,23 +4304,6 @@ ${t('action.archive')}
       renderWeiterleitenMitarbeiter(mitarbeiter);
     }
     
-    // Checkbox für konkrete Personenauswahl beim Weiterleiten
-    function toggleWeiterleitenKonkretePerson() {
-      const checkbox = document.getElementById('weiterleitenKonkretePersonCheckbox');
-      const personSuche = document.getElementById('weiterleitenPersonSuche');
-      
-      if (checkbox.checked) {
-        personSuche.style.display = 'block';
-        const gruppeTyp = document.getElementById('weiterleitenGruppeTyp').value;
-        const hausKey = document.getElementById('weiterleitenGruppeHaus').value;
-        const station = document.getElementById('weiterleitenGruppeStation').value;
-        loadWeiterleitenMitarbeiterFuerGruppe(gruppeTyp, hausKey, station);
-      } else {
-        personSuche.style.display = 'none';
-        document.getElementById('weiterleitenPersonId').value = '';
-        document.getElementById('weiterleitenSelectedContainer').style.display = 'none';
-      }
-    }
     
     // Alle Mitarbeiter für Weiterleitung laden (Legacy)
     function loadWeiterleitenMitarbeiter() {
@@ -4119,43 +4347,12 @@ ${t('action.archive')}
       }).join('');
     }
     
-    // Mitarbeiterliste für Weiterleitung filtern (hierarchisch - nur Mitglieder der ausgewählten Gruppe)
+    // Mitarbeiterliste für Weiterleitung filtern (Suche über gesamte Belegschaft)
     function filterWeiterleitenMitarbeiter() {
       const suchbegriff = document.getElementById('weiterleitenMitarbeiterSuche').value.toLowerCase().trim();
       
-      // Hierarchisch: Nur Mitarbeiter der ausgewählten Gruppe anzeigen
-      const gruppeTyp = document.getElementById('weiterleitenGruppeTyp').value;
-      const hausKey = document.getElementById('weiterleitenGruppeHaus').value;
-      const station = document.getElementById('weiterleitenGruppeStation').value;
-      
+      // Alle Mitarbeiter (nicht hierarchisch gefiltert)
       let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
-      
-      // Nach Gruppe filtern (hierarchisches Konzept)
-      if (gruppeTyp === 'kammer') {
-        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'kammer');
-      } else if (gruppeTyp === 'hausleitung') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
-      } else if (gruppeTyp === 'zahlstelle') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          m.rolle === 'zahlstelle' &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
-      } else if (gruppeTyp === 'arbeitskoordination') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          m.rolle === 'arbeitskoordination' &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
-      } else if (gruppeTyp === 'station') {
-        mitarbeiter = mitarbeiter.filter(m => {
-          const imHaus = m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'));
-          if (!imHaus) return false;
-          if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return false;
-          return m.station === station;
-        });
-      }
       
       // Nach Suchbegriff filtern
       if (suchbegriff) {
@@ -4192,7 +4389,7 @@ ${t('action.archive')}
       document.getElementById('weiterleitenPersonId').value = '';
       document.getElementById('weiterleitenSelectedContainer').style.display = 'none';
       document.getElementById('weiterleitenMitarbeiterSuche').value = '';
-      loadWeiterleitenMitarbeiter();
+      loadAlleMitarbeiterFuerWeiterleitung();
     }
     
     function closeWeiterleitenModal(confirmed) {
@@ -4211,22 +4408,21 @@ ${t('action.archive')}
       const entscheidung = document.querySelector('input[name="weiterleitenEntscheidung"]:checked').value;
       
       if (entscheidung === 'ja') {
+        const zuweisungTyp = document.querySelector('input[name="weiterleitenZuweisungTyp"]:checked')?.value;
         const gruppeTyp = document.getElementById('weiterleitenGruppeTyp').value;
         const gruppeHaus = document.getElementById('weiterleitenGruppeHaus').value;
         const gruppeStation = document.getElementById('weiterleitenGruppeStation').value;
         const personId = document.getElementById('weiterleitenPersonId').value;
-        const konkretePersonChecked = document.getElementById('weiterleitenKonkretePersonCheckbox')?.checked;
         const notiz = document.getElementById('weiterleitenNotiz').value.trim();
-        
-        if (!gruppeTyp) {
-          showAlert('Bitte wählen Sie eine Gruppe aus.');
-          return;
-        }
         
         const antrag = antragSystem.getAntrag(antragId);
         
-        if (konkretePersonChecked && personId) {
+        if (zuweisungTyp === 'person') {
           // Konkrete Person ausgewählt
+          if (!personId) {
+            showAlert('Bitte wählen Sie eine Person aus.');
+            return;
+          }
           const person = userSystem.getUser(personId);
           
           // Weiterleitung durchführen
@@ -4268,7 +4464,12 @@ ${t('action.archive')}
           
           showAlert(`Antrag an ${person.vorname} ${person.nachname} weitergeleitet.`);
         } else {
-          // Nur Gruppe ausgewählt - Antrag geht an die Gruppe
+          // Gruppe ausgewählt
+          if (!gruppeTyp) {
+            showAlert('Bitte wählen Sie eine Gruppe aus.');
+            return;
+          }
+          
           const gruppe = {
             typ: gruppeTyp,
             hausId: gruppeTyp === 'kammer' ? null : (gruppeHaus || null),
@@ -4868,9 +5069,12 @@ ${t('action.archive')}
       const bearbeitungList = document.getElementById('bearbeitungList');
       const historieList = document.getElementById('historieList');
       
-      let offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(currentSession);
-      let inBearbeitungAntraege = antragSystem.getInBearbeitungAntraege(currentSession);
-      let historieAntraege = antragSystem.getHistorieMitarbeiter(currentSession);
+      // Effektiven Mitarbeiter mit gewähltem Kontext erstellen
+      const effektiverMitarbeiter = getEffektiverMitarbeiter();
+      
+      let offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(effektiverMitarbeiter);
+      let inBearbeitungAntraege = antragSystem.getInBearbeitungAntraege(effektiverMitarbeiter);
+      let historieAntraege = antragSystem.getHistorieMitarbeiter(effektiverMitarbeiter);
       
       // Debug-Ausgabe
       console.log('[Debug] renderAntraege - offeneAntraege:', offeneAntraege.length, offeneAntraege.map(a => ({id: a.id, status: a.status, zugewiesenAnGruppe: a.zugewiesenAnGruppe})));
@@ -5066,7 +5270,8 @@ ${t('action.archive')}
     
     function renderTagAnsicht() {
       const main = document.getElementById('kalenderMain');
-      const termine = terminSystem.getTermineFuerTag(currentSession, kalenderDatum);
+      const effektiverMitarbeiter = getEffektiverMitarbeiter();
+      const termine = terminSystem.getTermineFuerTag(effektiverMitarbeiter, kalenderDatum);
       const heute = new Date().toDateString();
       const istHeute = kalenderDatum.toDateString() === heute;
       
@@ -5102,7 +5307,8 @@ ${t('action.archive')}
         const tag = new Date(startOfWeek);
         tag.setDate(tag.getDate() + i);
         const istHeute = tag.toDateString() === heute;
-        const termine = terminSystem.getTermineFuerTag(currentSession, tag);
+        const effektiverMitarbeiter = getEffektiverMitarbeiter();
+        const termine = terminSystem.getTermineFuerTag(effektiverMitarbeiter, tag);
         
         headerHtml += `
           <div class="woche-tag-header ${istHeute ? 'heute' : ''}" onclick="waehleTagInWoche('${tag.toISOString()}')">
@@ -5140,7 +5346,8 @@ ${t('action.archive')}
       const main = document.getElementById('kalenderMain');
       const jahr = kalenderDatum.getFullYear();
       const monat = kalenderDatum.getMonth();
-      const termine = terminSystem.getTermineFuerMonat(currentSession, jahr, monat);
+      const effektiverMitarbeiter = getEffektiverMitarbeiter();
+      const termine = terminSystem.getTermineFuerMonat(effektiverMitarbeiter, jahr, monat);
       
       const ersterTag = new Date(jahr, monat, 1);
       const letzterTag = new Date(jahr, monat + 1, 0);
@@ -5197,7 +5404,8 @@ ${t('action.archive')}
     function renderTermineSidebar() {
       const titel = document.getElementById('termineSidebarTitel');
       const liste = document.getElementById('termineSidebarListe');
-      const termine = terminSystem.getTermineFuerTag(currentSession, ausgewaehltesDatum);
+      const effektiverMitarbeiter = getEffektiverMitarbeiter();
+      const termine = terminSystem.getTermineFuerTag(effektiverMitarbeiter, ausgewaehltesDatum);
       
       const formatDatum = ausgewaehltesDatum.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
       titel.textContent = `${formatDatum}`;
@@ -5534,12 +5742,13 @@ ${t('action.archive')}
                             currentSession.rolle === 'haus-leitung';
       if (!istHausleitung) return;
       
-      const offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(currentSession);
+      const effektiverMitarbeiter = getEffektiverMitarbeiter();
+      const offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(effektiverMitarbeiter);
       const alleAntraege = antragSystem.antraege;
       const antraegeImHaus = alleAntraege.filter(a => {
         if (a.veraktet) return false;
         if (a.bearbeiterId === currentSession.userId) return false;
-        return antragSystem._matchesHaus(currentSession.jvas, a.insasseJva);
+        return antragSystem._matchesHaus(effektiverMitarbeiter.jvas, a.insasseJva);
       });
       
       console.log('[VAL Debug] Alle Anträge im Haus:', antraegeImHaus.length);
