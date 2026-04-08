@@ -2567,11 +2567,12 @@ ${t('action.archive')}
           showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
         }
         if (!syncSuccess) {
-          const msg = currentLanguage === 'en' ? 'Synchronisation failed. Please check your connection and try again.'
-                    : currentLanguage === 'fr' ? 'Échec de la synchronisation. Vérifiez votre connexion et réessayez.'
-                    : 'Synchronisation fehlgeschlagen. Bitte Verbindung prüfen und erneut versuchen.';
+          const msg = currentLanguage === 'en'
+            ? 'Synchronization failed. The phase transition is saved locally; you can continue, but please sync later.'
+            : currentLanguage === 'fr'
+            ? 'Échec de la synchronisation. La transition de phase est enregistrée localement; vous pouvez continuer, mais veuillez synchroniser plus tard.'
+            : 'Synchronisation fehlgeschlagen. Der Phasenübergang ist lokal gespeichert; Sie können fortfahren, bitte später synchronisieren.';
           showAlert(msg);
-          return;
         }
       }
       
@@ -2627,8 +2628,7 @@ ${t('action.archive')}
           showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
         }
         if (!syncSuccess) {
-          showAlert('Entscheidung lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen.');
-          return;
+          showAlert('Entscheidung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.');
         }
       }
       
@@ -4273,8 +4273,7 @@ ${t('action.archive')}
               showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
             }
             if (!syncSuccess) {
-              showAlert('Weiterleitung lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen.');
-              return;
+              showAlert('Weiterleitung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.');
             }
           }
           
@@ -4329,8 +4328,7 @@ ${t('action.archive')}
               showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
             }
             if (!syncSuccess) {
-              showAlert('Weiterleitung lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen.');
-              return;
+              showAlert('Weiterleitung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.');
             }
           }
           
