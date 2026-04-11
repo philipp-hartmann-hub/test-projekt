@@ -2879,6 +2879,13 @@ ${t('action.archive')}
         document.getElementById('aufgabeKurzCounter').textContent = this.value.length;
       };
       
+      // Standard: Mitarbeitende – damit Zuweisung sichtbar ist und Gruppenliste geladen wird
+      const zielMitarbeiter = document.querySelector('input[name="aufgabeZiel"][value="mitarbeiter"]');
+      if (zielMitarbeiter) {
+        zielMitarbeiter.checked = true;
+        toggleAufgabeZiel('mitarbeiter');
+      }
+      
       openModal('aufgabeModal');
     }
     
@@ -2965,12 +2972,16 @@ ${t('action.archive')}
       document.getElementById('aufgabeGruppeHaus').value = '';
       document.getElementById('aufgabeGruppeStation').value = '';
       document.getElementById('aufgabePersonId').value = '';
-      document.getElementById('selectedPersonDisplay').style.display = 'none';
-      document.getElementById('aufgabeKonkretePersonCheckbox').checked = false;
+      const selDisp = document.getElementById('selectedPersonDisplay');
+      if (selDisp) selDisp.style.display = 'none';
+      const konkretCb = document.getElementById('aufgabeKonkretePersonCheckbox');
+      if (konkretCb) konkretCb.checked = false;
       
       if (!value) {
-        document.getElementById('aufgabePersonAuswahlContainer').style.display = 'none';
-        document.getElementById('aufgabePersonSuche').style.display = 'none';
+        const persAusw = document.getElementById('aufgabePersonAuswahlContainer');
+        const persSuch = document.getElementById('aufgabePersonSuche');
+        if (persAusw) persAusw.style.display = 'none';
+        if (persSuch) persSuch.style.display = 'none';
         document.getElementById('aufgabeBearbeitungOptionen').style.display = 'none';
         return;
       }
