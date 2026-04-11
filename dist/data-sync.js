@@ -3,42 +3,11 @@
 // Diese Datei muss VOR app.js geladen werden!
 // ============================================
 
-// Bei file:// (Datei direkt geöffnet) funktionieren API-Aufrufe nicht – Fallback auf Vercel-URL
-const API_BASE = (window.location.protocol === 'file:' || window.location.protocol === 'null' || !window.location.origin || window.location.origin === 'null')
-  ? 'https://test-projekt-rose.vercel.app/api'
-  : (window.location.origin + '/api');
+const API_BASE = window.location.origin + '/api';
 
 // Flag ob wir mit dem Server verbunden sind
 let serverConnected = false;
 let initialDataLoaded = false;
-
-// Hilfsfunktion um die aktuelle Benutzer-ID zu erhalten
-function getCurrentUserId() {
-  try {
-    // Versuche Session aus sessionStorage zu holen
-    const sessionData = sessionStorage.getItem('currentSession');
-    if (sessionData) {
-      const session = JSON.parse(sessionData);
-      if (session && session.userId) {
-        return session.userId;
-      }
-    }
-    
-    // Fallback: Versuche aus localStorage (falls SessionManager dort speichert)
-    const userData = localStorage.getItem('currentUser');
-    if (userData) {
-      const user = JSON.parse(userData);
-      if (user && user.userId) {
-        return user.userId;
-      }
-    }
-    
-    return null;
-  } catch (e) {
-    console.warn('[Reload] Fehler beim Abrufen der aktuellen Benutzer-ID:', e);
-    return null;
-  }
-}
 
 // Storage Keys die synchronisiert werden sollen
 const SYNC_KEYS = {
@@ -59,11 +28,8 @@ async function apiCall(endpoint, options = {}) {
     const response = await fetch(`${API_BASE}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
         ...options.headers
       },
-      cache: 'no-store', // Verhindere Browser-Caching
       ...options
     });
 
@@ -73,7 +39,7 @@ async function apiCall(endpoint, options = {}) {
 
     return await response.json();
   } catch (error) {
-    console.warn(`API-Fehler bei ${endpoint}:`, error.message || error);
+    console.error(`API-Fehler bei ${endpoint}:`, error);
     throw error;
   }
 }
@@ -106,23 +72,8 @@ async function loadInitialData() {
         nachname: (u.name && u.name.split(' ').slice(1).join(' ')) || ''
       };
     });
-    // Anträge: fehlende insasseJva/insasseStation aus Insassen füllen (für AVD-Anzeige)
-    const antraegeMitOrt = antraege.map(a => {
-      if (a.insasseJva != null && a.insasseJva !== '' && a.insasseStation != null && a.insasseStation !== '') return a;
-      if (!a.insasseId) return a;
-      const insasse = usersFrontend.find(u => u.type === 'insasse' && (u.id === a.insasseId || String(u.id) === String(a.insasseId) || u.insassenNummer === a.insassenNummer));
-      if (!insasse) return a;
-      let jva = a.insasseJva;
-      let station = a.insasseStation;
-      if (station == null || station === '') station = insasse.station != null ? insasse.station : station;
-      if (jva == null || jva === '') {
-        const raw = insasse.jva != null ? (typeof insasse.jva === 'string' ? insasse.jva : (insasse.jva && (insasse.jva.id || insasse.jva.name))) : null;
-        if (raw) jva = typeof raw === 'string' && raw.indexOf('jva') !== -1 ? raw.replace(/jva/gi, 'haus') : raw;
-      }
-      return { ...a, insasseJva: jva, insasseStation: station };
-    });
     localStorage.setItem('gefaengnis_users', JSON.stringify(usersFrontend));
-    localStorage.setItem('gefaengnis_antraege', JSON.stringify(antraegeMitOrt));
+    localStorage.setItem('gefaengnis_antraege', JSON.stringify(antraege));
     localStorage.setItem('gefaengnis_aufgaben', JSON.stringify(aufgaben));
     localStorage.setItem('gefaengnis_notifications', JSON.stringify(notifications));
     localStorage.setItem('gefaengnis_aktivitaeten', JSON.stringify(aktivitaeten));
@@ -139,11 +90,6 @@ async function loadInitialData() {
   } catch (error) {
     console.warn('Server nicht erreichbar, verwende lokale Daten:', error.message);
     serverConnected = false;
-    // Trotzdem lokale Daten laden, damit Login und App mit localStorage weiter funktionieren
-    if (typeof window.reloadDataFromStorage === 'function') {
-      window.reloadDataFromStorage();
-    }
-    window.dispatchEvent(new CustomEvent('dataSyncLoaded'));
     return false;
   }
 }
@@ -152,31 +98,98 @@ async function loadInitialData() {
 // DATEN AN SERVER SENDEN
 // ============================================
 
-async function syncToServer(key, data) {
+// Pro Key eine Warteschlange: verhindert, dass ein älterer setItem-Sync nach einem neueren fertig wird
+// und den Server mit veraltetem Snapshot überschreibt (lokal höhere Latenz = auf Vercel häufiger).
+const syncKeyChains = {};
+
+function enqueueSyncJob(key, job) {
+  if (!SYNC_KEYS[key]) return Promise.resolve();
+  const prev = syncKeyChains[key] || Promise.resolve();
+  const next = prev.then(() => job());
+  syncKeyChains[key] = next.catch((err) => {
+    console.warn(`Sync queue ${key}:`, err?.message || err);
+  });
+  return next;
+}
+
+function _antragArrayItemKey(item) {
+  if (item && typeof item === 'object' && item.id != null && String(item.id) !== '') {
+    return 'id:' + String(item.id);
+  }
+  try {
+    return 'raw:' + JSON.stringify(item);
+  } catch (_) {
+    return 'raw:' + String(item);
+  }
+}
+
+function mergeAntragArraysByIdOrContent(existingArr, incomingArr) {
+  const ex = Array.isArray(existingArr) ? existingArr : [];
+  const inc = Array.isArray(incomingArr) ? incomingArr : [];
+  const map = new Map();
+  const order = [];
+  function add(item) {
+    const key = _antragArrayItemKey(item);
+    if (map.has(key)) {
+      const prev = map.get(key);
+      map.set(key, typeof prev === 'object' && prev && typeof item === 'object' && item ? { ...prev, ...item } : item);
+    } else {
+      map.set(key, item);
+      order.push(key);
+    }
+  }
+  ex.forEach(add);
+  inc.forEach(add);
+  return order.map((k) => map.get(k));
+}
+
+function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
+  if (!serverAntrag || typeof serverAntrag !== 'object') return localAntrag;
+  if (!localAntrag || typeof localAntrag !== 'object') return serverAntrag;
+  const merged = { ...localAntrag, ...serverAntrag };
+  merged.kommentare = mergeAntragArraysByIdOrContent(localAntrag.kommentare, serverAntrag.kommentare);
+  merged.dokumente = mergeAntragArraysByIdOrContent(localAntrag.dokumente, serverAntrag.dokumente);
+  merged.weiterleitungen = mergeAntragArraysByIdOrContent(localAntrag.weiterleitungen, serverAntrag.weiterleitungen);
+  const monotonicTrue = ['sachlichGeprueft', 'entscheidungGetroffen', 'veraktet', 'vollzogen', 'erledigt'];
+  for (const k of monotonicTrue) {
+    if (localAntrag[k] === true || serverAntrag[k] === true) {
+      merged[k] = true;
+    }
+  }
+  const len = (v) => (v == null ? 0 : String(v).length);
+  const pkL = localAntrag.pruefungsKommentar;
+  const pkS = serverAntrag.pruefungsKommentar;
+  if (len(pkS) > len(pkL)) {
+    merged.pruefungsKommentar = pkS;
+  } else if (pkL != null && pkS == null) {
+    merged.pruefungsKommentar = pkL;
+  }
+  return merged;
+}
+
+// Liest localStorage erst beim Ausführen des Jobs (nicht den Wert vom setItem-Zeitpunkt).
+async function syncToServerImpl(key) {
   if (!serverConnected) return;
 
   const endpoint = SYNC_KEYS[key];
   if (!endpoint) return;
 
-  try {
-    // Komplette Daten neu laden und dann einzelne Aenderungen synchen
-    // Fuer Prototyp: Einfache Loesung - ganzes Array ersetzen
+  const data = localStorage.getItem(key);
+  if (!data) return;
 
+  try {
     const currentServerData = await apiCall(endpoint);
     const localData = JSON.parse(data);
 
-    // Neue Items hinzufuegen
     for (const localItem of localData) {
       const serverItem = currentServerData.find(s => s.id === localItem.id);
 
       if (!serverItem) {
-        // Neues Item - POST
         await apiCall(endpoint, {
           method: 'POST',
           body: JSON.stringify(localItem)
         });
       } else {
-        // Bestehendes Item - Pruefen ob Update noetig
         const localStr = JSON.stringify(localItem);
         const serverStr = JSON.stringify(serverItem);
 
@@ -185,18 +198,20 @@ async function syncToServer(key, data) {
             method: 'PUT',
             body: JSON.stringify(localItem)
           });
-          // Wenn Server den aktualisierten Eintrag zurückgibt, verwende diesen
           if (response && response.id) {
             const index = localData.findIndex(l => l.id === response.id);
             if (index !== -1) {
-              localData[index] = response;
+              if (key === 'gefaengnis_antraege') {
+                localData[index] = mergeAntragSnapshotAfterPut(localData[index], response);
+              } else {
+                localData[index] = response;
+              }
             }
           }
         }
       }
     }
 
-    // Geloeschte Items entfernen
     for (const serverItem of currentServerData) {
       const stillExists = localData.find(l => l.id === serverItem.id);
       if (!stillExists) {
@@ -210,214 +225,79 @@ async function syncToServer(key, data) {
   }
 }
 
+function scheduleSyncToServer(key) {
+  if (!serverConnected || !initialDataLoaded) return Promise.resolve();
+  return enqueueSyncJob(key, () => syncToServerImpl(key));
+}
+
 // Flag um zu verhindern, dass reloadDataFromServer während der Synchronisation läuft
 let isSyncing = false;
 
 // Explizite Synchronisation eines einzelnen Antrags UND aller Aufgaben
+// Läuft in derselben Warteschlange wie Hintergrund-Syncs für gefaengnis_antraege (kein Überschreiben durch veraltete Jobs).
 async function syncAntragToServer(antragId) {
   if (!serverConnected) return false;
-  if (isSyncing) {
-    console.log('[Sync] Synchronisation bereits im Gange, warte...');
-    // Warte bis die aktuelle Synchronisation abgeschlossen ist
-    while (isSyncing) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    return true;
-  }
-  
-  isSyncing = true;
-  try {
-    const base = window.location.origin + '/api';
-    
-    // 1. Antrag synchronisieren
-    const antragData = localStorage.getItem('gefaengnis_antraege');
-    if (!antragData) {
-      isSyncing = false;
-      return false;
-    }
-    
-    const localAntraege = JSON.parse(antragData);
-    const antrag = localAntraege.find(a => a.id === antragId);
-    if (!antrag) {
-      isSyncing = false;
-      return false;
-    }
-    
-    // WICHTIG: Prüfe ob der aktuelle Benutzer noch der Bearbeiter ist
-    const currentUserId = getCurrentUserId();
-    if (antrag.bearbeiterId && antrag.bearbeiterId !== currentUserId) {
-      console.warn('[Sync] Benutzer ist nicht mehr Bearbeiter, Synchronisation abgebrochen:', {
-        antragId,
-        lokalerBearbeiter: antrag.bearbeiterId,
-        aktuellerBenutzer: currentUserId
-      });
-      isSyncing = false;
-      return false;
-    }
-    
-    // Prüfe auch auf dem Server, ob der Antrag noch dem Benutzer zugewiesen ist
+  return enqueueSyncJob('gefaengnis_antraege', async () => {
+    isSyncing = true;
     try {
-      const serverCheck = await fetch(base + '/antraege/' + antragId, {
-        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-      }).then(r => r.json());
-      
-      if (serverCheck.bearbeiterId && serverCheck.bearbeiterId !== currentUserId) {
-        console.warn('[Sync] Antrag wurde auf dem Server anderem Bearbeiter zugewiesen, Synchronisation abgebrochen:', {
-          antragId,
-          serverBearbeiter: serverCheck.bearbeiterId,
-          aktuellerBenutzer: currentUserId
-        });
-        // Aktualisiere lokale Daten mit Server-Daten
-        const index = localAntraege.findIndex(a => a.id === antragId);
+      const base = window.location.origin + '/api';
+
+      const antragData = localStorage.getItem('gefaengnis_antraege');
+      if (!antragData) return false;
+
+      const localAntraege = JSON.parse(antragData);
+      const antrag = localAntraege.find(a => a.id === antragId);
+      if (!antrag) return false;
+
+      console.log('[Sync] Synchronisiere Antrag:', antragId, 'Bearbeiter:', antrag.bearbeiterId);
+      const antragResponse = await fetch(base + '/antraege/' + antragId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(antrag)
+      });
+
+      if (!antragResponse.ok) {
+        throw new Error(`HTTP ${antragResponse.status}: ${antragResponse.statusText}`);
+      }
+
+      const serverAntrag = await antragResponse.json();
+      console.log('[Sync] Antrag synchronisiert:', serverAntrag.id, 'Bearbeiter:', serverAntrag.bearbeiterId);
+
+      if (localStorage.getItem('gefaengnis_aufgaben')) {
+        console.log('[Sync] Synchronisiere Aufgaben...');
+        await enqueueSyncJob('gefaengnis_aufgaben', () => syncToServerImpl('gefaengnis_aufgaben'));
+        console.log('[Sync] Aufgaben synchronisiert');
+      }
+
+      if (localStorage.getItem('gefaengnis_notifications')) {
+        await enqueueSyncJob('gefaengnis_notifications', () => syncToServerImpl('gefaengnis_notifications'));
+        console.log('[Sync] Benachrichtigungen synchronisiert');
+      }
+
+      if (serverAntrag.id) {
+        const fresh = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
+        const index = fresh.findIndex(a => a.id === serverAntrag.id);
         if (index !== -1) {
-          localAntraege[index] = serverCheck;
-          originalSetItem('gefaengnis_antraege', JSON.stringify(localAntraege));
+          fresh[index] = mergeAntragSnapshotAfterPut(fresh[index], serverAntrag);
+          originalSetItem('gefaengnis_antraege', JSON.stringify(fresh));
           if (typeof window.reloadDataFromStorage === 'function') {
             window.reloadDataFromStorage();
           }
         }
-        isSyncing = false;
-        return false;
       }
-    } catch (e) {
-      console.warn('[Sync] Fehler beim Prüfen des Server-Status:', e);
-      // Bei Fehler trotzdem synchronisieren
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return true;
+    } catch (error) {
+      console.warn('Explizite Antrag-Synchronisation fehlgeschlagen:', error);
+      return false;
+    } finally {
+      isSyncing = false;
     }
-    
-    console.log('[Sync] Synchronisiere Antrag:', antragId, 'Bearbeiter:', antrag.bearbeiterId);
-    const antragResponse = await fetch(base + '/antraege/' + antragId, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(antrag)
-    });
-    
-    if (!antragResponse.ok) {
-      throw new Error(`HTTP ${antragResponse.status}: ${antragResponse.statusText}`);
-    }
-    
-    const serverAntrag = await antragResponse.json();
-    console.log('[Sync] Antrag synchronisiert:', serverAntrag.id, 'Bearbeiter:', serverAntrag.bearbeiterId);
-    
-    // 2. Aufgaben synchronisieren (wichtig: Aufgaben können sich geändert haben)
-    const aufgabenData = localStorage.getItem('gefaengnis_aufgaben');
-    if (aufgabenData) {
-      console.log('[Sync] Synchronisiere Aufgaben...');
-      await syncToServer('gefaengnis_aufgaben', aufgabenData);
-      console.log('[Sync] Aufgaben synchronisiert');
-    }
-    
-    // 3. Verifiziere dass die Änderung wirklich auf dem Server gespeichert wurde
-    // Wichtig bei Netzwerk-Latenz: Mehrfach prüfen mit Retry
-    let verifiziert = false;
-    let retries = 0;
-    const maxRetries = 5;
-    
-    while (!verifiziert && retries < maxRetries) {
-      await new Promise(resolve => setTimeout(resolve, 500 + (retries * 200))); // Zunehmende Verzögerung
-      
-      try {
-        const verifyResponse = await fetch(base + '/antraege/' + antragId, {
-          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-        });
-        if (verifyResponse.ok) {
-          const verifyAntrag = await verifyResponse.json();
-          console.log('[Sync] Verifikation:', verifyAntrag.id, 'Bearbeiter:', verifyAntrag.bearbeiterId, 'Erwartet:', antrag.bearbeiterId);
-          
-          // Prüfe ob Bearbeiter übereinstimmt
-          if (verifyAntrag.bearbeiterId === antrag.bearbeiterId) {
-            verifiziert = true;
-            console.log('[Sync] Änderung erfolgreich verifiziert nach', retries + 1, 'Versuchen');
-            // Verwende die verifizierten Server-Daten
-            serverAntrag.bearbeiterId = verifyAntrag.bearbeiterId;
-            serverAntrag.bearbeiterName = verifyAntrag.bearbeiterName;
-            serverAntrag.status = verifyAntrag.status;
-            serverAntrag.zugewiesenAnGruppe = verifyAntrag.zugewiesenAnGruppe;
-          } else {
-            retries++;
-            console.log('[Sync] Verifikation fehlgeschlagen, versuche erneut...', retries);
-          }
-        } else {
-          retries++;
-          console.log('[Sync] Verifikations-Request fehlgeschlagen, versuche erneut...', retries);
-        }
-      } catch (e) {
-        retries++;
-        console.log('[Sync] Verifikations-Fehler, versuche erneut...', retries, e.message);
-      }
-    }
-    
-    if (!verifiziert) {
-      console.warn('[Sync] WARNUNG: Änderung konnte nicht verifiziert werden nach', maxRetries, 'Versuchen');
-    }
-    
-    // 4. Aktualisiere lokale Daten mit Server-Daten
-    // WICHTIG: Nur aktualisieren, wenn der lokale Benutzer noch der Bearbeiter ist
-    // oder wenn der Antrag noch keinem Bearbeiter zugewiesen ist
-    if (serverAntrag.id) {
-      const index = localAntraege.findIndex(a => a.id === serverAntrag.id);
-      if (index !== -1) {
-        const localAntrag = localAntraege[index];
-        
-        // Prüfe ob der lokale Benutzer noch der Bearbeiter ist
-        const currentUserId = getCurrentUserId();
-        const istNochBearbeiter = !localAntrag.bearbeiterId || localAntrag.bearbeiterId === currentUserId;
-        const serverBearbeiterId = serverAntrag.bearbeiterId;
-        
-        // Nur aktualisieren wenn:
-        // 1. Der lokale Benutzer noch der Bearbeiter ist ODER
-        // 2. Der Antrag noch keinem Bearbeiter zugewiesen ist ODER
-        // 3. Der Server-Bearbeiter ist derselbe wie der lokale Bearbeiter
-        if (istNochBearbeiter && (!serverBearbeiterId || serverBearbeiterId === currentUserId || serverBearbeiterId === localAntrag.bearbeiterId)) {
-          // Merge: Behalte lokale Änderungen für Felder, die der Bearbeiter ändern kann
-          // WICHTIG: Phasenfelder IMMER vom Server nehmen (für korrekte Schaltflächen-Anzeige)
-          const mergedAntrag = {
-            ...serverAntrag,
-            // Behalte lokale Änderungen für Bearbeitungsfelder (nur wenn noch nicht auf Server gespeichert)
-            kommentare: localAntrag.kommentare && localAntrag.kommentare.length > (serverAntrag.kommentare?.length || 0) 
-              ? localAntrag.kommentare 
-              : serverAntrag.kommentare,
-            dokumente: localAntrag.dokumente && localAntrag.dokumente.length > (serverAntrag.dokumente?.length || 0)
-              ? localAntrag.dokumente
-              : serverAntrag.dokumente,
-            // WICHTIG: Phasenfelder IMMER vom Server nehmen
-            sachlichGeprueft: serverAntrag.sachlichGeprueft !== undefined ? serverAntrag.sachlichGeprueft : localAntrag.sachlichGeprueft,
-            sachlichGeprueftAm: serverAntrag.sachlichGeprueftAm || localAntrag.sachlichGeprueftAm,
-            sachlichGeprueftVon: serverAntrag.sachlichGeprueftVon || localAntrag.sachlichGeprueftVon,
-            sachlichGeprueftVonId: serverAntrag.sachlichGeprueftVonId || localAntrag.sachlichGeprueftVonId,
-            pruefungsKommentar: serverAntrag.pruefungsKommentar || localAntrag.pruefungsKommentar,
-            entscheidungGetroffen: serverAntrag.entscheidungGetroffen !== undefined ? serverAntrag.entscheidungGetroffen : localAntrag.entscheidungGetroffen,
-            erledigt: serverAntrag.erledigt !== undefined ? serverAntrag.erledigt : localAntrag.erledigt,
-            vollzogen: serverAntrag.vollzogen !== undefined ? serverAntrag.vollzogen : localAntrag.vollzogen,
-            veraktet: serverAntrag.veraktet !== undefined ? serverAntrag.veraktet : localAntrag.veraktet,
-            wartetAufEroeffnung: serverAntrag.wartetAufEroeffnung !== undefined ? serverAntrag.wartetAufEroeffnung : localAntrag.wartetAufEroeffnung,
-            wartetAufVollzug: serverAntrag.wartetAufVollzug !== undefined ? serverAntrag.wartetAufVollzug : localAntrag.wartetAufVollzug
-          };
-          
-          localAntraege[index] = mergedAntrag;
-          console.log('[Sync] Lokale Daten aktualisiert (Bearbeiter behält Änderungen)');
-        } else {
-          // Benutzer ist nicht mehr Bearbeiter - vollständig mit Server-Daten aktualisieren
-          localAntraege[index] = serverAntrag;
-          console.log('[Sync] Lokale Daten mit Server-Daten überschrieben (Benutzer nicht mehr Bearbeiter)');
-        }
-        
-        originalSetItem('gefaengnis_antraege', JSON.stringify(localAntraege));
-        if (typeof window.reloadDataFromStorage === 'function') {
-          window.reloadDataFromStorage();
-        }
-      }
-    }
-    
-    // 5. Zusätzliche Verzögerung für Netzwerk-Latenz
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    isSyncing = false;
-    return true;
-  } catch (error) {
-    console.warn('Explizite Antrag-Synchronisation fehlgeschlagen:', error);
-    isSyncing = false;
-    return false;
-  }
+  }).then(
+    (ok) => ok === true,
+    () => false
+  );
 }
 
 // ============================================
@@ -433,7 +313,7 @@ localStorage.setItem = function(key, value) {
   // Dann an Server senden (asynchron, nicht blockierend)
   if (SYNC_KEYS[key] && serverConnected && initialDataLoaded) {
     console.log(`Sync: ${key} → Server (${key === 'gefaengnis_antraege' ? JSON.parse(value).length + ' Anträge' : 'Daten'})`);
-    syncToServer(key, value).catch(err => {
+    scheduleSyncToServer(key).catch(err => {
       console.warn('Hintergrund-Sync fehlgeschlagen:', err.message);
     });
   } else {
@@ -471,7 +351,7 @@ async function serverLogin(username, password, portalTyp) {
 async function syncUsersNow() {
   if (!serverConnected) return;
   try {
-    await syncToServer('gefaengnis_users', localStorage.getItem('gefaengnis_users'));
+    await enqueueSyncJob('gefaengnis_users', () => syncToServerImpl('gefaengnis_users'));
   } catch (e) {
     console.warn('syncUsersNow:', e.message);
   }
@@ -496,14 +376,14 @@ async function reloadDataFromServer() {
   try {
     console.log('Lade aktuelle Daten vom Server...');
     
-    // Alle Daten parallel laden mit Cache-Control Headers für frische Daten
+    // Alle Daten parallel laden
     const [users, antraege, aufgaben, notifications, aktivitaeten, termine] = await Promise.all([
-      apiCall('/users', { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } }),
-      apiCall('/antraege', { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } }),
-      apiCall('/aufgaben', { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } }),
-      apiCall('/notifications', { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } }),
-      apiCall('/aktivitaeten', { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } }),
-      apiCall('/termine', { headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } })
+      apiCall('/users'),
+      apiCall('/antraege'),
+      apiCall('/aufgaben'),
+      apiCall('/notifications'),
+      apiCall('/aktivitaeten'),
+      apiCall('/termine')
     ]);
 
     // Server-User auf Frontend-Format mappen
@@ -517,141 +397,9 @@ async function reloadDataFromServer() {
       };
     });
     
-    // WICHTIG: Anträge schützen - Anträge die dem aktuellen Benutzer gehören nicht überschreiben
-    const currentUserId = getCurrentUserId();
-    let localAntraege = [];
-    try {
-      const localAntraegeData = localStorage.getItem('gefaengnis_antraege');
-      if (localAntraegeData) {
-        localAntraege = JSON.parse(localAntraegeData);
-      }
-    } catch (e) {
-      console.warn('[Reload] Fehler beim Lesen lokaler Anträge:', e);
-    }
-    
-    // Merge-Strategie: Anträge die dem aktuellen Benutzer gehören behalten lokale Änderungen
-    const mergedAntraege = antraege.map(serverAntrag => {
-      const localAntrag = localAntraege.find(a => a.id === serverAntrag.id);
-      
-      // Wenn kein lokaler Antrag existiert, verwende Server-Daten
-      if (!localAntrag) {
-        return serverAntrag;
-      }
-      
-      // WICHTIG: Prüfe zuerst ob der lokale Benutzer noch der Bearbeiter ist
-      // Wenn nicht, verwende IMMER Server-Daten (verhindert parallele Bearbeitung)
-      if (serverAntrag.bearbeiterId && serverAntrag.bearbeiterId !== currentUserId) {
-        console.log('[Reload] Antrag wurde anderem Bearbeiter zugewiesen, lokale Änderungen werden verworfen:', {
-          antragId: serverAntrag.id,
-          lokalerBearbeiter: localAntrag.bearbeiterId,
-          serverBearbeiter: serverAntrag.bearbeiterId,
-          aktuellerBenutzer: currentUserId
-        });
-        // Verwende Server-Daten komplett - lokale Änderungen werden verworfen
-        return serverAntrag;
-      }
-      
-      // Wenn der lokale Benutzer der Bearbeiter ist, behalte lokale Änderungen
-      if (localAntrag.bearbeiterId === currentUserId && serverAntrag.bearbeiterId === currentUserId) {
-        // Merge: Behalte lokale Änderungen für Bearbeitungsfelder, aber aktualisiere Phasenfelder vom Server
-        return {
-          ...serverAntrag,
-          // Behalte lokale Änderungen für Bearbeitungsfelder (nur wenn noch nicht auf Server gespeichert)
-          kommentare: localAntrag.kommentare && localAntrag.kommentare.length > (serverAntrag.kommentare?.length || 0) 
-            ? localAntrag.kommentare 
-            : serverAntrag.kommentare,
-          dokumente: localAntrag.dokumente && localAntrag.dokumente.length > (serverAntrag.dokumente?.length || 0)
-            ? localAntrag.dokumente
-            : serverAntrag.dokumente,
-          // WICHTIG: Phasenfelder IMMER vom Server nehmen (für korrekte Schaltflächen-Anzeige)
-          sachlichGeprueft: serverAntrag.sachlichGeprueft !== undefined ? serverAntrag.sachlichGeprueft : localAntrag.sachlichGeprueft,
-          sachlichGeprueftAm: serverAntrag.sachlichGeprueftAm || localAntrag.sachlichGeprueftAm,
-          sachlichGeprueftVon: serverAntrag.sachlichGeprueftVon || localAntrag.sachlichGeprueftVon,
-          sachlichGeprueftVonId: serverAntrag.sachlichGeprueftVonId || localAntrag.sachlichGeprueftVonId,
-          pruefungsKommentar: serverAntrag.pruefungsKommentar || localAntrag.pruefungsKommentar,
-          entscheidungGetroffen: serverAntrag.entscheidungGetroffen !== undefined ? serverAntrag.entscheidungGetroffen : localAntrag.entscheidungGetroffen,
-          erledigt: serverAntrag.erledigt !== undefined ? serverAntrag.erledigt : localAntrag.erledigt,
-          vollzogen: serverAntrag.vollzogen !== undefined ? serverAntrag.vollzogen : localAntrag.vollzogen,
-          veraktet: serverAntrag.veraktet !== undefined ? serverAntrag.veraktet : localAntrag.veraktet,
-          wartetAufEroeffnung: serverAntrag.wartetAufEroeffnung !== undefined ? serverAntrag.wartetAufEroeffnung : localAntrag.wartetAufEroeffnung,
-          wartetAufVollzug: serverAntrag.wartetAufVollzug !== undefined ? serverAntrag.wartetAufVollzug : localAntrag.wartetAufVollzug,
-          // Aktualisiere Metadaten vom Server
-          bearbeiterId: serverAntrag.bearbeiterId,
-          bearbeiterName: serverAntrag.bearbeiterName,
-          status: serverAntrag.status,
-          zugewiesenAnGruppe: serverAntrag.zugewiesenAnGruppe,
-          zugewiesenAnGruppeName: serverAntrag.zugewiesenAnGruppeName
-        };
-      }
-      
-      // WICHTIG: Wenn der lokale Benutzer der Insasse ist, der den Antrag erstellt hat,
-      // und der Antrag noch keinem Bearbeiter zugewiesen ist, behalte lokale Änderungen
-      // (z.B. Entwürfe die noch nicht eingereicht wurden)
-      if (localAntrag.insasseId === currentUserId && 
-          (!localAntrag.bearbeiterId || localAntrag.bearbeiterId === null) &&
-          (!serverAntrag.bearbeiterId || serverAntrag.bearbeiterId === null)) {
-        // Merge: Behalte lokale Änderungen für Insassen-Anträge ohne Bearbeiter
-        return {
-          ...serverAntrag,
-          // Behalte lokale Änderungen für Insassen-Felder
-          begruendung: localAntrag.begruendung || serverAntrag.begruendung,
-          // Aktualisiere Metadaten vom Server
-          status: serverAntrag.status,
-          erstelltAm: serverAntrag.erstelltAm || localAntrag.erstelltAm
-        };
-      }
-      
-      // Wenn der Antrag einem anderen Bearbeiter zugewiesen wurde, verwende Server-Daten
-      if (serverAntrag.bearbeiterId && serverAntrag.bearbeiterId !== currentUserId) {
-        console.log('[Reload] Antrag wurde anderem Bearbeiter zugewiesen:', serverAntrag.id, serverAntrag.bearbeiterId);
-        return serverAntrag;
-      }
-      
-      // WICHTIG: Phasenfelder IMMER vom Server nehmen, um sicherzustellen dass Phasenübergänge nicht verloren gehen
-      // Auch wenn der Benutzer nicht der Bearbeiter ist, müssen Phasenfelder aktualisiert werden
-      const mergedAntrag = {
-        ...serverAntrag,
-        // Behalte lokale Kommentare/Dokumente nur wenn sie neuer sind
-        kommentare: localAntrag.kommentare && localAntrag.kommentare.length > (serverAntrag.kommentare?.length || 0) 
-          ? localAntrag.kommentare 
-          : serverAntrag.kommentare,
-        dokumente: localAntrag.dokumente && localAntrag.dokumente.length > (serverAntrag.dokumente?.length || 0)
-          ? localAntrag.dokumente
-          : serverAntrag.dokumente,
-        // Phasenfelder IMMER vom Server (verhindert Rücksprung zu früheren Phasen)
-        sachlichGeprueft: serverAntrag.sachlichGeprueft !== undefined ? serverAntrag.sachlichGeprueft : localAntrag.sachlichGeprueft,
-        sachlichGeprueftAm: serverAntrag.sachlichGeprueftAm || localAntrag.sachlichGeprueftAm,
-        entscheidungGetroffen: serverAntrag.entscheidungGetroffen !== undefined ? serverAntrag.entscheidungGetroffen : localAntrag.entscheidungGetroffen,
-        erledigt: serverAntrag.erledigt !== undefined ? serverAntrag.erledigt : localAntrag.erledigt,
-        vollzogen: serverAntrag.vollzogen !== undefined ? serverAntrag.vollzogen : localAntrag.vollzogen,
-        veraktet: serverAntrag.veraktet !== undefined ? serverAntrag.veraktet : localAntrag.veraktet,
-        status: serverAntrag.status || localAntrag.status, // Status IMMER vom Server
-        bearbeiterId: serverAntrag.bearbeiterId || localAntrag.bearbeiterId,
-        bearbeiterName: serverAntrag.bearbeiterName || localAntrag.bearbeiterName
-      };
-      
-      return mergedAntrag;
-    });
-
-    // Anträge: fehlende insasseJva/insasseStation aus Insassen nachziehen (für AVD-Filter)
-    const antraegeMitOrt = mergedAntraege.map(a => {
-      if (a.insasseJva != null && a.insasseJva !== '' && a.insasseStation != null && a.insasseStation !== '') return a;
-      if (!a.insasseId) return a;
-      const insasse = usersFrontend.find(u => u.type === 'insasse' && (u.id === a.insasseId || String(u.id) === String(a.insasseId) || u.insassenNummer === a.insassenNummer));
-      if (!insasse) return a;
-      let jva = a.insasseJva;
-      let station = a.insasseStation;
-      if (station == null || station === '') station = insasse.station != null ? insasse.station : station;
-      if (jva == null || jva === '') {
-        const raw = insasse.jva != null ? (typeof insasse.jva === 'string' ? insasse.jva : (insasse.jva && (insasse.jva.id || insasse.jva.name))) : null;
-        if (raw) jva = typeof raw === 'string' && raw.indexOf('jva') !== -1 ? raw.replace(/jva/gi, 'haus') : raw;
-      }
-      return { ...a, insasseJva: jva, insasseStation: station };
-    });
-
     // Daten in localStorage speichern (ohne Sync-Loop zu triggern)
     originalSetItem('gefaengnis_users', JSON.stringify(usersFrontend));
-    originalSetItem('gefaengnis_antraege', JSON.stringify(antraegeMitOrt));
+    originalSetItem('gefaengnis_antraege', JSON.stringify(antraege));
     originalSetItem('gefaengnis_aufgaben', JSON.stringify(aufgaben));
     originalSetItem('gefaengnis_notifications', JSON.stringify(notifications));
     originalSetItem('gefaengnis_aktivitaeten', JSON.stringify(aktivitaeten));
@@ -724,21 +472,13 @@ window.DataSync = {
 // AUTOMATISCH BEIM LADEN AUSFUEHREN
 // ============================================
 
-// Initiale Daten laden wenn DOM bereit; Fehler abfangen damit Login auch bei API-Ausfall funktioniert
-function runLoadInitialData() {
-  loadInitialData().catch((err) => {
-    console.warn('Initialdaten konnten nicht geladen werden:', err);
-    serverConnected = false;
-    if (typeof window.reloadDataFromStorage === 'function') {
-      window.reloadDataFromStorage();
-    }
-    window.dispatchEvent(new CustomEvent('dataSyncLoaded'));
-  });
-}
+// Initiale Daten laden wenn DOM bereit
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', runLoadInitialData);
+  document.addEventListener('DOMContentLoaded', () => {
+    loadInitialData();
+  });
 } else {
-  runLoadInitialData();
+  loadInitialData();
 }
 
 console.log('Data-Sync Modul geladen');

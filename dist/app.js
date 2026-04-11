@@ -1204,62 +1204,46 @@ class UserSystem {
   }
 
   loadUsers() {
-    const data = localStorage.getItem(this.storageKey);
-    return data ? JSON.parse(data) : [];
+    try {
+      const data = localStorage.getItem(this.storageKey);
+      const parsed = data ? JSON.parse(data) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
   }
   
-  // Standardbenutzer erstellen wenn keine vorhanden
+  // Standardbenutzer: gleiche Logins wie Server/db-layer, damit Anmeldung immer funktioniert
+  _getDefaultUsersList() {
+    return [
+      { id: 'admin-1', type: 'mitarbeiter', username: 'admin', password: 'admin', vorname: 'Admin', nachname: '', rolle: 'admin', jvas: [], station: null },
+      { id: 'val-1', type: 'mitarbeiter', username: 'val1', password: 'val1', vorname: 'Max', nachname: 'Mustermann (VAL)', rolle: 'hausleitung', jvas: ['haus1', 'haus2'], station: null },
+      { id: 'avd-1', type: 'mitarbeiter', username: 'avd1', password: 'avd1', vorname: 'Anna', nachname: 'Schmidt (AVD)', rolle: 'mitarbeiter', jvas: ['haus1'], station: '1' },
+      { id: 'avd-2', type: 'mitarbeiter', username: 'avd2', password: 'avd2', vorname: 'Peter', nachname: 'Weber (AVD)', rolle: 'mitarbeiter', jvas: ['haus2'], station: '2' },
+      { id: 'kammer-1', type: 'mitarbeiter', username: 'kammer1', password: 'kammer1', vorname: 'Kammer', nachname: 'Mitarbeiter', rolle: 'kammer', jvas: [], station: null },
+      { id: 'zahlstelle-1', type: 'mitarbeiter', username: 'zahlstelle1', password: 'zahlstelle1', vorname: 'Zahlstelle', nachname: 'Mitarbeiter', rolle: 'zahlstelle', jvas: ['haus1'], station: null },
+      { id: 'arbeit-1', type: 'mitarbeiter', username: 'arbeit1', password: 'arbeit1', vorname: 'Arbeitskoordination', nachname: '', rolle: 'arbeitskoordination', jvas: ['haus1'], station: null },
+      { id: 'insasse-1', type: 'insasse', username: 'insasse1', password: 'insasse1', vorname: 'Hans', nachname: 'Mueller', rolle: 'insasse', jvas: [], station: '1', jva: 'haus1', insassenNummer: 'INS-001', geburtsdatum: '1985-03-15' },
+      { id: 'insasse-2', type: 'insasse', username: 'insasse2', password: 'insasse2', vorname: 'Klaus', nachname: 'Fischer', rolle: 'insasse', jvas: [], station: '2', jva: 'haus2', insassenNummer: 'INS-002', geburtsdatum: '1990-07-22' }
+    ];
+  }
+
   ensureDefaultUsers() {
-    if (this.users.length === 0) {
-      console.log('Keine Benutzer gefunden - erstelle Standardbenutzer...');
-      
-      // Standard-Insasse erstellen (Stationen wie HAUS_CONFIG: haus1 = ['1','2'])
-      this.createInsasse({
-        vorname: 'Max',
-        nachname: 'Mustermann',
-        geburtsdatum: '1990-05-15',
-        jva: 'haus1',
-        station: '1'
-      });
-      
-      this.createInsasse({
-        vorname: 'Anna',
-        nachname: 'Schmidt',
-        geburtsdatum: '1985-08-22',
-        jva: 'haus1',
-        station: '2'
-      });
-      
-      // Standard-Mitarbeiter erstellen (Stationsleitung, gleiche Stationen wie Admin)
-      this.createMitarbeiter({
-        vorname: 'Thomas',
-        nachname: 'Müller',
-        rolle: 'stationsleitung',
-        jvas: ['haus1'],
-        station: '1'
-      });
-      
-      this.createMitarbeiter({
-        vorname: 'Sarah',
-        nachname: 'Weber',
-        rolle: 'stationsleitung',
-        jvas: ['haus1'],
-        station: '2'
-      });
-      
-      // Hausleitung erstellen
-      this.createMitarbeiter({
-        vorname: 'Peter',
-        nachname: 'Schneider',
-        rolle: 'hausleitung',
-        jvas: ['haus1'],
-        station: null
-      });
-      
-      console.log('Standardbenutzer erstellt. Anmeldedaten in der Konsole:');
-      this.users.forEach(u => {
-        console.log(`${u.type}: ${u.vorname} ${u.nachname} - Username: ${u.username}, Passwort: ${u.password}`);
-      });
+    if (!Array.isArray(this.users)) this.users = [];
+    const hasAdmin = this.users.some(u => u && u.username === 'admin');
+    if (this.users.length === 0 || !hasAdmin) {
+      if (this.users.length === 0) console.log('Keine Benutzer gefunden - erstelle Standardbenutzer...');
+      else console.log('Admin-Benutzer fehlt - ergänze Standardbenutzer...');
+      const defaults = this._getDefaultUsersList();
+      if (this.users.length === 0) {
+        defaults.forEach(u => this.users.push(u));
+      } else {
+        defaults.forEach(du => {
+          if (!this.users.some(u => u && u.username === du.username)) this.users.push(du);
+        });
+      }
+      this.saveUsers();
+      console.log('Anmeldung z.B. mit admin/admin, val1/val1, avd1/avd1, insasse1/insasse1');
     }
   }
 
@@ -1712,28 +1696,15 @@ class SessionManager {
       name = serverUser.username || '';
     }
     
-    // Einheitliches Format wie Admin/HAUS_CONFIG: jva/jvas als String(s), jva->haus
-    let jva = serverUser.jva;
-    if (jva != null && typeof jva === 'object') jva = (jva.id || jva.name || '');
-    if (typeof jva === 'string' && jva.toLowerCase().indexOf('jva') !== -1) jva = jva.replace(/jva/gi, 'haus');
-    let jvas = serverUser.jvas;
-    if (jvas && Array.isArray(jvas)) {
-      jvas = jvas.map(j => {
-        const id = typeof j === 'string' ? j : (j && (j.id || j.name));
-        if (typeof id === 'string' && id.toLowerCase().indexOf('jva') !== -1) return id.replace(/jva/gi, 'haus');
-        return id;
-      }).filter(Boolean);
-    }
-    
     const session = {
       userId: serverUser.id || serverUser.userId,
       type: type,
       username: serverUser.username,
       name: name,
-      jva: jva,
+      jva: serverUser.jva,
       station: serverUser.station,
       rolle: serverUser.rolle || null,
-      jvas: jvas || null,
+      jvas: serverUser.jvas || null,
       loginTime: new Date().toISOString()
     };
     sessionStorage.setItem(this.sessionKey, JSON.stringify(session));
@@ -2375,11 +2346,15 @@ class AntragSystem {
   migrateAntraege() {
     let changed = false;
     this.antraege.forEach(antrag => {
-      // WICHTIG: Status-Migration nur für wirklich verwaiste Anträge
-      // Nicht für Anträge die bereits Phasen durchlaufen haben!
-      // Nur wenn Antrag wirklich noch in Bearbeitung ist UND keinen Bearbeiter hat UND noch nicht geprüft wurde
-      if (antrag.status === 'in-bearbeitung' && !antrag.bearbeiterId && !antrag.sachlichGeprueft && !antrag.entscheidungGetroffen && !antrag.erledigt) {
+      // Status-Migration: 'in-bearbeitung' ohne persönlichen Bearbeiter → nur dann 'offen',
+      // wenn KEINE Gruppen-Weiterleitung aktiv ist (sonst wäre der Antrag fälschlich im Pool).
+      if (antrag.status === 'in-bearbeitung' && !antrag.bearbeiterId && !antrag.zugewiesenAnGruppe) {
         antrag.status = 'offen';
+        changed = true;
+      }
+      // Reparatur: fälschlich auf 'offen' gesetzte Gruppen-Anträge wiederherstellen
+      if (antrag.status === 'offen' && antrag.zugewiesenAnGruppe) {
+        antrag.status = 'in-bearbeitung';
         changed = true;
       }
       // Erledigte Anträge markieren
@@ -2445,28 +2420,22 @@ class AntragSystem {
 
   // Antrag erstellen (mit Insassen-Daten)
   createAntrag(type, data, insasse, alsEntwurf = false) {
-    // Insassen-Daten aus dem User-System holen (Fallback wenn Session unvollständig)
-    const insasseUser = userSystem.getUser(insasse.userId || insasse.id);
-    const insassenNummer = insasseUser ? insasseUser.insassenNummer : (insasse.insassenNummer || null);
-    const insasseGeburtsdatum = insasseUser ? insasseUser.geburtsdatum : (insasse.geburtsdatum || null);
-    // Haus/Station: einheitliches Format (String), gleiche Zuordnung wie Admin/Insassenportal
-    let insasseJva = insasse.jva != null ? insasse.jva : (insasseUser && insasseUser.jva != null ? insasseUser.jva : null);
-    let insasseStation = insasse.station != null && insasse.station !== '' ? insasse.station : (insasseUser && insasseUser.station != null && insasseUser.station !== '' ? insasseUser.station : null);
-    if (insasseJva != null && typeof insasseJva === 'object') insasseJva = (insasseJva.id || insasseJva.name || '');
-    if (typeof insasseJva === 'string' && insasseJva.toLowerCase().indexOf('jva') !== -1) insasseJva = insasseJva.replace(/jva/gi, 'haus');
-    // Station nur normalisieren für Anzeige; Vergleich nutzt _normalisiereStation („Station 1“ und „1“ sind gleich)
+    // Insassen-Daten aus dem User-System holen
+    const insasseUser = userSystem.getUser(insasse.userId);
+    const insassenNummer = insasseUser ? insasseUser.insassenNummer : null;
+    const insasseGeburtsdatum = insasseUser ? insasseUser.geburtsdatum : null;
     
     const antrag = {
       id: this.generateId(),
       antragsNummer: this.generateAntragsNummer(),
       type: type,
       status: alsEntwurf ? 'entwurf' : 'offen',
-      insasseId: insasse.userId || insasse.id,
+      insasseId: insasse.userId,
       insassenNummer: insassenNummer,
       insasseName: insasse.name,
       insasseGeburtsdatum: insasseGeburtsdatum,
-      insasseJva: insasseJva,
-      insasseStation: insasseStation,
+      insasseJva: insasse.jva,
+      insasseStation: insasse.station,
       bearbeiterId: null,
       bearbeiterName: null,
       erstelltAm: new Date().toISOString(),
@@ -2529,150 +2498,14 @@ class AntragSystem {
     return null;
   }
 
-  // Prüft ob der Antrag noch verfügbar ist (nicht von anderem Bearbeiter genommen)
-  async pruefeAntragVerfuegbar(antragId, erwarteterBearbeiterId = null) {
-    if (!window.DataSync || !window.DataSync.isConnected()) {
-      return { verfuegbar: true, antrag: this.antraege.find(a => a.id === antragId) };
-    }
-    
-    try {
-      const base = window.location.origin + '/api';
-      const serverAntrag = await fetch(base + '/antraege/' + antragId, {
-        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-      }).then(r => r.json());
-      
-      const localAntrag = this.antraege.find(a => a.id === antragId);
-      
-      // Prüfe ob Antrag bereits einem anderen Bearbeiter zugewiesen ist
-      if (serverAntrag.bearbeiterId && serverAntrag.bearbeiterId !== erwarteterBearbeiterId) {
-        return {
-          verfuegbar: false,
-          antrag: serverAntrag,
-          lokalerAntrag: localAntrag,
-          grund: 'bereits_vergeben',
-          bearbeiterName: serverAntrag.bearbeiterName || 'unbekannt'
-        };
-      }
-      
-      return { verfuegbar: true, antrag: serverAntrag };
-    } catch (error) {
-      console.warn('[Prüfung] Fehler beim Prüfen der Verfügbarkeit:', error);
-      return { verfuegbar: true, antrag: this.antraege.find(a => a.id === antragId) };
-    }
-  }
-
-  // Prüft ob der Benutzer noch der Bearbeiter des Antrags ist
-  // WICHTIG: Diese Funktion prüft IMMER zuerst auf dem Server, um Race Conditions zu vermeiden
-  async pruefeIstNochBearbeiter(antragId, benutzerId) {
-    const localAntrag = this.antraege.find(a => a.id === antragId);
-    if (!localAntrag) return { istBearbeiter: false, grund: 'antrag_nicht_gefunden' };
-    
-    // WICHTIG: Prüfe IMMER zuerst auf dem Server, um sicherzustellen dass wir die aktuellsten Daten haben
-    if (window.DataSync && window.DataSync.isConnected()) {
-      try {
-        const base = window.location.origin + '/api';
-        const serverAntrag = await fetch(base + '/antraege/' + antragId, {
-          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-        }).then(r => r.json());
-        
-        // Wenn kein Bearbeiter auf dem Server gesetzt ist, ist der Antrag verfügbar
-        if (!serverAntrag.bearbeiterId) {
-          // Aktualisiere lokale Daten mit Server-Daten
-          const index = this.antraege.findIndex(a => a.id === antragId);
-          if (index !== -1) {
-            Object.assign(this.antraege[index], serverAntrag);
-            this.saveAntraege();
-          }
-          return { istBearbeiter: true, antrag: serverAntrag };
-        }
-        
-        // Prüfe ob der Benutzer noch der Bearbeiter ist
-        if (serverAntrag.bearbeiterId !== benutzerId) {
-          // WICHTIG: Aktualisiere lokale Daten mit Server-Daten, damit der Benutzer sieht dass er nicht mehr Bearbeiter ist
-          const index = this.antraege.findIndex(a => a.id === antragId);
-          if (index !== -1) {
-            this.antraege[index] = serverAntrag;
-            this.saveAntraege();
-            if (typeof window.reloadDataFromStorage === 'function') {
-              window.reloadDataFromStorage();
-            }
-          }
-          
-          return {
-            istBearbeiter: false,
-            grund: 'nicht_mehr_bearbeiter_server',
-            bearbeiterName: serverAntrag.bearbeiterName || 'unbekannt',
-            antrag: serverAntrag
-          };
-        }
-        
-        // Benutzer ist noch Bearbeiter - aktualisiere lokale Daten mit Server-Daten für Konsistenz
-        const index = this.antraege.findIndex(a => a.id === antragId);
-        if (index !== -1) {
-          Object.assign(this.antraege[index], serverAntrag);
-        }
-        
-        return { istBearbeiter: true, antrag: serverAntrag };
-      } catch (error) {
-        console.warn('[Prüfung] Fehler beim Prüfen auf Server:', error);
-        // Bei Fehler lokal prüfen (Fallback)
-        if (!localAntrag.bearbeiterId) return { istBearbeiter: true, antrag: localAntrag };
-        return { istBearbeiter: localAntrag.bearbeiterId === benutzerId, antrag: localAntrag };
-      }
-    }
-    
-    // Fallback: Wenn kein Server verfügbar, lokal prüfen
-    if (!localAntrag.bearbeiterId) return { istBearbeiter: true, antrag: localAntrag };
-    if (localAntrag.bearbeiterId !== benutzerId) {
-      return {
-        istBearbeiter: false,
-        grund: 'nicht_mehr_bearbeiter',
-        bearbeiterName: localAntrag.bearbeiterName || 'unbekannt',
-        antrag: localAntrag
-      };
-    }
-    
-    return { istBearbeiter: true, antrag: localAntrag };
-  }
-
   // Antrag "nehmen" - einem Mitarbeiter zuweisen
-  async nehmeAntrag(antragId, mitarbeiter) {
+  nehmeAntrag(antragId, mitarbeiter) {
     console.log('[Debug] nehmeAntrag aufgerufen:', { antragId, mitarbeiterId: mitarbeiter.userId });
     
     const antrag = this.antraege.find(a => a.id === antragId);
     if (!antrag) {
       console.log('[Debug] nehmeAntrag: Antrag nicht gefunden');
       return null;
-    }
-    
-    // WICHTIG: Prüfe zuerst ob der Antrag noch verfügbar ist
-    const verfuegbarkeitsPruefung = await this.pruefeAntragVerfuegbar(antragId, mitarbeiter.userId);
-    if (!verfuegbarkeitsPruefung.verfuegbar) {
-      console.warn('[Debug] Antrag bereits vergeben:', verfuegbarkeitsPruefung);
-      // Aktualisiere lokale Daten mit Server-Daten
-      if (verfuegbarkeitsPruefung.antrag) {
-        const index = this.antraege.findIndex(a => a.id === antragId);
-        if (index !== -1) {
-          this.antraege[index] = verfuegbarkeitsPruefung.antrag;
-          this.saveAntraege();
-          if (typeof window.reloadDataFromStorage === 'function') {
-            window.reloadDataFromStorage();
-          }
-        }
-      }
-      return {
-        error: 'bereits_vergeben',
-        bearbeiterName: verfuegbarkeitsPruefung.bearbeiterName,
-        serverAntrag: verfuegbarkeitsPruefung.antrag
-      };
-    }
-    
-    // Aktualisiere lokalen Antrag mit Server-Daten falls vorhanden
-    if (verfuegbarkeitsPruefung.antrag) {
-      const index = this.antraege.findIndex(a => a.id === antragId);
-      if (index !== -1) {
-        Object.assign(this.antraege[index], verfuegbarkeitsPruefung.antrag);
-      }
     }
     
     console.log('[Debug] nehmeAntrag - Antrag gefunden:', {
@@ -2855,22 +2688,7 @@ class AntragSystem {
   }
 
   // Antrag übernehmen (von anderem Bearbeiter zurückholen)
-  async uebernehmeAntrag(antragId, mitarbeiter, grund = null) {
-    // WICHTIG: Prüfe ob der Antrag noch verfügbar ist BEVOR Änderungen gemacht werden
-    const verfuegbarkeitsPruefung = await this.pruefeAntragVerfuegbar(antragId, mitarbeiter.userId);
-    if (!verfuegbarkeitsPruefung.verfuegbar) {
-      console.warn('[Bearbeitung] Antrag bereits vergeben, Übernahme wird nicht gespeichert:', {
-        antragId: antragId,
-        mitarbeiterId: mitarbeiter.userId,
-        aktuellerBearbeiter: verfuegbarkeitsPruefung.bearbeiterName
-      });
-      return {
-        error: 'bereits_vergeben',
-        bearbeiterName: verfuegbarkeitsPruefung.bearbeiterName,
-        antrag: verfuegbarkeitsPruefung.antrag
-      };
-    }
-    
+  uebernehmeAntrag(antragId, mitarbeiter, grund = null) {
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag && antrag.status === 'in-bearbeitung') {
       const alterBearbeiter = antrag.bearbeiterName;
@@ -2947,19 +2765,10 @@ class AntragSystem {
   }
 
   // Antrag als sachlich/fachlich geprüft markieren
-  async markiereAlsGeprueft(antragId, mitarbeiterId, mitarbeiterName, pruefungsKommentar = '') {
-    // Prüfe ob der Benutzer noch der Bearbeiter ist
-    const bearbeiterPruefung = await this.pruefeIstNochBearbeiter(antragId, mitarbeiterId);
-    if (!bearbeiterPruefung.istBearbeiter) {
-      return {
-        error: 'nicht_mehr_bearbeiter',
-        bearbeiterName: bearbeiterPruefung.bearbeiterName,
-        antrag: bearbeiterPruefung.antrag
-      };
-    }
-    
+  markiereAlsGeprueft(antragId, mitarbeiterId, mitarbeiterName, pruefungsKommentar = '') {
     const antrag = this.antraege.find(a => a.id === antragId);
-    if (antrag && antrag.status === 'in-bearbeitung') {
+    // Nur in Bearbeitung (inkl. Fälle mit Gruppen-Weiterleitung ohne persönlichen Bearbeiter)
+    if (antrag && antrag.status === 'in-bearbeitung' && !antrag.veraktet) {
       antrag.sachlichGeprueft = true;
       antrag.sachlichGeprueftAm = new Date().toISOString();
       antrag.sachlichGeprueftVon = mitarbeiterName;
@@ -2983,35 +2792,22 @@ class AntragSystem {
     return null;
   }
 
+  // Insassen-ID für Benachrichtigung ermitteln (Fallback: Suche nach Name, damit Insasse immer benachrichtigt wird)
+  _getInsasseIdFuerBenachrichtigung(antrag) {
+    if (antrag.insasseId) return antrag.insasseId;
+    if (!antrag.insasseName) return null;
+    const name = String(antrag.insasseName).trim();
+    const insassen = userSystem.getInsassen();
+    const insasse = insassen.find(u => `${(u.vorname || '').trim()} ${(u.nachname || '').trim()}`.trim() === name);
+    return insasse ? insasse.id : null;
+  }
+
   // Antrag abschließen (genehmigen, ablehnen, teilweise genehmigen)
-  async abschliessenAntrag(id, status, begruendung = null, persoenlichEroeffnen = false, bescheidPdf = null, vollzugVorBekanntgabe = false) {
+  abschliessenAntrag(id, status, begruendung = null, persoenlichEroeffnen = false, bescheidPdf = null, vollzugVorBekanntgabe = false) {
     const antrag = this.antraege.find(a => a.id === id);
-    if (!antrag) return null;
-    
-    const bearbeiterId = antrag.bearbeiterId;
-    const bearbeiterName = antrag.bearbeiterName;
-    
-    // WICHTIG: Prüfe ob der Benutzer noch der Bearbeiter ist BEVOR Änderungen gemacht werden
-    const bearbeiterPruefung = await this.pruefeIstNochBearbeiter(id, bearbeiterId);
-    if (!bearbeiterPruefung.istBearbeiter) {
-      console.warn('[Bearbeitung] Benutzer ist nicht mehr Bearbeiter, Entscheidung wird nicht gespeichert:', {
-        antragId: id,
-        bearbeiterId: bearbeiterId,
-        aktuellerBearbeiter: bearbeiterPruefung.bearbeiterName
-      });
-      return {
-        error: 'nicht_mehr_bearbeiter',
-        bearbeiterName: bearbeiterPruefung.bearbeiterName,
-        antrag: bearbeiterPruefung.antrag
-      };
-    }
-    
-    // WICHTIG: Sicherstellen dass Status nicht zurückgesetzt wird
-    // Wenn Antrag bereits erledigt oder veraktet ist, nicht ändern
-    if (antrag.veraktet) {
-      console.warn('[Phasenübergang] Antrag bereits veraktet, keine Änderung möglich:', id);
-      return antrag;
-    }
+    if (antrag) {
+      const bearbeiterId = antrag.bearbeiterId;
+      const bearbeiterName = antrag.bearbeiterName;
       
       // Gruppenzuweisung für "Antrag nehmen" löschen (Antrag ist nicht mehr "zu nehmen")
       // HINWEIS: Gruppenaufgaben werden NICHT automatisch geschlossen
@@ -3107,35 +2903,21 @@ class AntragSystem {
       } else if (status === 'abgelehnt') {
         title = 'Antrag abgelehnt';
         message = `Ihr Antrag "${antragsTyp}" wurde leider abgelehnt.${begruendungText ? ' Begruendung: ' + begruendungText : ''}`;
-      } else if (status === 'teilweise-genehmigt') {
+      } else       if (status === 'teilweise-genehmigt') {
         title = 'Antrag teilweise genehmigt';
         message = `Ihr Antrag "${antragsTyp}" wurde teilweise genehmigt.${begruendungText ? ' Hinweis: ' + begruendungText : ''}`;
       }
       
-      if (title && antrag.insasseId) {
-        notificationSystem.createNotification(antrag.insasseId, status, title, message, antrag.id);
+      const insasseId = this._getInsasseIdFuerBenachrichtigung(antrag);
+      if (title && insasseId) {
+        notificationSystem.createNotification(insasseId, status, title, message, antrag.id);
       }
-
-      return antrag;
+    }
+    return antrag;
   }
   
   // Vollzug vor Bekanntgabe bestätigen
-  async bestaetigeVollzugVorBekanntgabe(id, vollzugKommentar, mitarbeiterId, mitarbeiterName) {
-    // WICHTIG: Prüfe ob der Benutzer noch der Bearbeiter ist BEVOR Änderungen gemacht werden
-    const bearbeiterPruefung = await this.pruefeIstNochBearbeiter(id, mitarbeiterId);
-    if (!bearbeiterPruefung.istBearbeiter) {
-      console.warn('[Bearbeitung] Benutzer ist nicht mehr Bearbeiter, Vollzug-Bestätigung wird nicht gespeichert:', {
-        antragId: id,
-        mitarbeiterId: mitarbeiterId,
-        aktuellerBearbeiter: bearbeiterPruefung.bearbeiterName
-      });
-      return {
-        error: 'nicht_mehr_bearbeiter',
-        bearbeiterName: bearbeiterPruefung.bearbeiterName,
-        antrag: bearbeiterPruefung.antrag
-      };
-    }
-    
+  bestaetigeVollzugVorBekanntgabe(id, vollzugKommentar, mitarbeiterId, mitarbeiterName) {
     const antrag = this.antraege.find(a => a.id === id && a.wartetAufVollzug);
     if (antrag) {
       const status = antrag.geplantesErgebnis;
@@ -3146,11 +2928,6 @@ class AntragSystem {
       antrag.erledigt = true;
       antrag.wartetAufVollzug = false;
       antrag.vollzugBestaetigt = true;
-      // WICHTIG: Auch vollzogen setzen, damit Abschluss-Phase aktiviert wird
-      antrag.vollzogen = true;
-      antrag.vollzogenAm = new Date().toISOString();
-      antrag.vollzogenVon = mitarbeiterName;
-      antrag.vollzogenVonId = mitarbeiterId;
       antrag.vollzugKommentar = vollzugKommentar; // Dieser Kommentar ist für den Insassen sichtbar
       antrag.vollzugBestaetigtAm = new Date().toISOString();
       antrag.vollzugBestaetigtVon = mitarbeiterName;
@@ -3292,8 +3069,9 @@ class AntragSystem {
         message = `Ihr Antrag "${antragsTyp}" wurde teilweise genehmigt.${begruendung ? ' Hinweis: ' + (typeof begruendung === 'object' ? getTranslatedUserText(begruendung) : begruendung) : ''}`;
       }
       
-      if (title && antrag.insasseId) {
-        notificationSystem.createNotification(antrag.insasseId, status, title, message, antrag.id);
+      const insasseIdEroeffnung = this._getInsasseIdFuerBenachrichtigung(antrag);
+      if (title && insasseIdEroeffnung) {
+        notificationSystem.createNotification(insasseIdEroeffnung, status, title, message, antrag.id);
       }
     }
     return antrag;
@@ -3374,154 +3152,92 @@ class AntragSystem {
     }).sort((a, b) => new Date(b.bearbeitetAm || b.erstelltAm) - new Date(a.bearbeitetAm || a.erstelltAm));
   }
 
-  // ====== MITARBEITER-FUNKTIONEN (AVD, VAL, Insasse – Kammer/Zahlstelle/Arbeitskoordination später) ======
-  // Diese Logik gilt einheitlich (lokal und nach Deployment).
-  //
-  // ZUORDNUNG:
-  //   - AVD und Insasse: je 1 Haus + 1 Station (dieselbe Logik: gleiches Haus, gleiche Station).
-  //   - VAL: nur 1 Haus zugeordnet (keine Station).
-  //
-  // LISTE 1 „Anträge und Aufgaben meiner Gruppe“:
-  //   AVD (Gruppe = Haus + Station):
-  //     - Insasse gleiches Haus+Station hat Antrag gestellt, noch kein AVD der Gruppe und kein VAL des Hauses hat ihn genommen → anzeigen. AVD kann nehmen → Antrag wandert in „Meine Anträge“ und ist für andere AVDs nicht mehr in dieser Liste.
-  //     - Der Gruppe (Haus+Station) wurde Aufgabe zugewiesen oder nach Phasenübergang Antrag weitergeleitet → anzeigen, gleiches „nehmen“-Verhalten.
-  //   VAL (Gruppe = VALs des Hauses):
-  //     - Insasse gleiches Haus hat Antrag gestellt, noch niemand (VAL der Gruppe oder AVD des Hauses) hat ihn genommen → anzeigen, VAL kann nehmen.
-  //     - VAL sieht außerdem alle Anträge, die in seinem Haus in Bearbeitung sind (auch bei anderen in „Meine Anträge“), kann sie sich nehmen und Hauptbearbeitung übernehmen.
-  //     - Gruppe (VAL) bekommt Aufgabe / nach Phasenübergang Antrag zugewiesen → anzeigen, VAL kann nehmen.
-  //
-  // LISTE 2 „Meine Anträge und Aufgaben“ (private Sicht):
-  //   AVD/VAL: Anträge/Aufgaben, die der Nutzer aus der Gruppenliste genommen hat ODER die ihm als Person (nicht als Gruppe) zugewiesen wurden.
-  //
-  // LISTE 3 „Erledigt“: erledigte Anträge (Historie).
+  // ====== MITARBEITER-FUNKTIONEN ======
 
-  // Hilfsfunktion: Prüft ob Haus/JVA übereinstimmt (kompatibel mit beiden Formaten, auch Objekt {id,name})
+  // Hilfsfunktion: Prüft ob Haus/JVA übereinstimmt (kompatibel mit beiden Formaten)
   _matchesHaus(mitarbeiterJvas, antragJva) {
     if (!mitarbeiterJvas || !antragJva) return false;
-    const toStr = (val) => {
-      if (val == null) return '';
-      const id = typeof val === 'object' && (val.id || val.name) ? (val.id || val.name) : val;
-      return String(id || '').replace(/jva/gi, 'haus');
+    
+    // Normalisiere beide Werte (jva1 <-> haus1)
+    const normalisiereHaus = (val) => {
+      if (!val) return val;
+      return val.replace('jva', 'haus');
     };
-    const antragStr = toStr(antragJva);
-    return mitarbeiterJvas.some(j => toStr(j) === antragStr);
-  }
-
-  _normalisiereStation(s) {
-    if (s == null || s === '') return '';
-    return String(s).trim().replace(/^Station\s+/i, '');
-  }
-  _matchesStation(mitarbeiterStation, antragStation) {
-    if (antragStation == null && mitarbeiterStation == null) return true;
-    return this._normalisiereStation(antragStation) === this._normalisiereStation(mitarbeiterStation);
-  }
-
-  // Haus/Station eines Antrags; fehlende Werte aus Insassen-User ergänzen (für AVD-Filter)
-  _getAntragInsasseOrt(antrag) {
-    let jva = antrag.insasseJva;
-    let station = antrag.insasseStation;
-    if ((jva == null || jva === '' || station == null || station === '') && antrag.insasseId && typeof userSystem !== 'undefined' && userSystem.users) {
-      const insasse = userSystem.getUser(antrag.insasseId) ||
-        userSystem.users.find(u => u.type === 'insasse' && (u.insassenNummer === antrag.insassenNummer || u.id === antrag.insasseId || String(u.id) === String(antrag.insasseId)));
-      if (insasse) {
-        if (station == null || station === '') station = insasse.station != null ? insasse.station : station;
-        if (jva == null || jva === '') {
-          const raw = insasse.jva != null ? (typeof insasse.jva === 'string' ? insasse.jva : (insasse.jva && (insasse.jva.id || insasse.jva.name))) : null;
-          if (raw) jva = typeof raw === 'string' && raw.indexOf('jva') !== -1 ? raw.replace(/jva/gi, 'haus') : raw;
-        }
-      }
-    }
-    if ((jva == null || jva === '') && (station == null || station === '')) {
-      jva = 'haus1';
-      station = '1';
-    } else {
-      if (jva == null || jva === '') jva = 'haus1';
-      if (station == null || station === '') station = '1';
-    }
-    return { jva, station };
+    
+    const antragHausNormalisiert = normalisiereHaus(antragJva);
+    return mitarbeiterJvas.some(j => normalisiereHaus(j) === antragHausNormalisiert);
   }
 
   // Anträge und Aufgaben der Gruppe für Mitarbeiter (basierend auf Haus/Station)
   getOffeneAntraegeMitarbeiter(mitarbeiter) {
-    const m = { ...mitarbeiter };
-    if (!m.userId && m.id) m.userId = m.id;
-    let fullUser = userSystem.getUser(m.userId || m.id);
-    if (!fullUser && m.username && userSystem.users)
-      fullUser = userSystem.users.find(u => u.username === m.username) || null;
-    if (fullUser) {
-      if (!m.jvas || (Array.isArray(m.jvas) && m.jvas.length === 0)) {
-        const jvasRaw = (fullUser.jvas && fullUser.jvas.length) ? fullUser.jvas : (fullUser.jva ? [fullUser.jva] : []);
-        m.jvas = jvasRaw.map(j => (typeof j === 'string' ? j : (j && (j.id || j.name))) || '').filter(Boolean);
-        m.jvas = m.jvas.map(j => typeof j === 'string' && j.toLowerCase().indexOf('jva') !== -1 ? j.replace(/jva/gi, 'haus') : j);
-      }
-      if (m.station === undefined || m.station === null) m.station = fullUser.station;
-      if (m.rolle === undefined || m.rolle === null) m.rolle = fullUser.rolle;
-    }
-    if (!m.jvas || (Array.isArray(m.jvas) && m.jvas.length === 0)) m.jvas = m.jva ? [m.jva] : [];
-    if (Array.isArray(m.jvas) && m.jvas.length > 0) {
-      m.jvas = m.jvas.map(j => (typeof j === 'string' ? j : (j && (j.id || j.name))) || '').filter(Boolean);
-      m.jvas = m.jvas.map(j => typeof j === 'string' && j.toLowerCase().indexOf('jva') !== -1 ? j.replace(/jva/gi, 'haus') : j);
-    }
-    // Fallback: Wenn trotzdem keine Zuordnung (z. B. Session ohne jvas), Haus 1 / Station 1 annehmen
-    if ((!m.jvas || m.jvas.length === 0) && (m.rolle === 'mitarbeiter' || m.rolle === 'avd' || m.rolle === 'stationsleitung')) {
-      m.jvas = ['haus1'];
-      if (m.station === undefined || m.station === null) m.station = '1';
-    }
-
-    const istHausleitung = m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung' || m.rolle === 'hausleitung';
-    const antragsIdsMitGruppenaufgaben = aufgabenSystem.getAntragsIdsMitGruppenaufgaben(m);
+    // Prüfen ob Mitarbeiter Hausleitung ist
+    const istHausleitung = mitarbeiter.rolle === 'jva-leitung' || 
+                           mitarbeiter.rolle === 'haus-leitung' || 
+                           mitarbeiter.rolle === 'hausleitung';
+    
+    // Vorab alle Antrags-IDs mit Gruppenaufgaben für diesen Mitarbeiter ermitteln
+    const antragsIdsMitGruppenaufgaben = aufgabenSystem.getAntragsIdsMitGruppenaufgaben(mitarbeiter);
     
     console.log('[Debug] getOffeneAntraegeMitarbeiter:', {
-      mitarbeiterId: m.userId,
+      mitarbeiterId: mitarbeiter.userId,
       istHausleitung: istHausleitung,
-      jvas: m.jvas,
-      station: m.station,
+      jvas: mitarbeiter.jvas,
       antragsIdsMitGruppenaufgaben: antragsIdsMitGruppenaufgaben,
-      gesamtAntraege: this.antraege.length
+      gesamtAntraege: this.antraege.length,
+      alleAntraege: this.antraege.map(a => ({
+        id: a.id,
+        status: a.status,
+        bearbeiterId: a.bearbeiterId,
+        insasseJva: a.insasseJva,
+        veraktet: a.veraktet,
+        zugewiesenAnGruppe: a.zugewiesenAnGruppe,
+        hauptbearbeitungWartetAufUebernahme: a.hauptbearbeitungWartetAufUebernahme
+      }))
     });
     
     const gefilterteAntraege = this.antraege.filter(a => {
-      const ort = this._getAntragInsasseOrt(a);
-      // WICHTIG: Anträge die bereits einem anderen Bearbeiter zugewiesen sind, nicht anzeigen
-      // (außer wenn es Gruppenaufgaben gibt oder Hauptbearbeitung wartet)
-      if (a.bearbeiterId && a.bearbeiterId !== m.userId) {
-        // Prüfe ob es Gruppenaufgaben gibt oder Hauptbearbeitung wartet
-        const hatGruppenaufgaben = antragsIdsMitGruppenaufgaben.includes(a.id);
-        const hatWartendeHauptbearbeitung = a.status === 'in-bearbeitung' && a.zugewiesenAnGruppe && a.hauptbearbeitungWartetAufUebernahme;
-        
-        // Nur anzeigen wenn Gruppenaufgaben vorhanden oder Hauptbearbeitung wartet
-        if (!hatGruppenaufgaben && !hatWartendeHauptbearbeitung) {
-          return false; // Antrag bereits einem anderen Bearbeiter zugewiesen
-        }
-      }
-      
       // 1. Offene Anträge (noch kein Bearbeiter)
       if (a.status === 'offen') {
         // VAL sieht IMMER alle Anträge ihres Hauses, auch wenn sie einer Gruppe zugewiesen sind
-        if (istHausleitung && this._matchesHaus(m.jvas, ort.jva)) {
+        if (istHausleitung && this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) {
           return true;
         }
         
         // Prüfen ob der Antrag einer Gruppe zugewiesen wurde
         if (a.zugewiesenAnGruppe) {
-          const gehoertZuGruppe = this._mitarbeiterGehoertZuGruppe(m, a.zugewiesenAnGruppe);
-          return gehoertZuGruppe;
+          // Nur Mitglieder der zugewiesenen Gruppe sehen den Antrag
+          return this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
         }
         
-        // Normale offene Anträge (ohne Gruppenzuweisung): Haus + Station müssen passen
-        return this._matchesHaus(m.jvas, ort.jva) && this._matchesStation(m.station, ort.station);
+        // Normale offene Anträge (ohne Gruppenzuweisung)
+        // Mitarbeiter und Stationsleitung sehen nur ihre Station
+        return this._matchesHaus(mitarbeiter.jvas, a.insasseJva) && 
+               a.insasseStation === mitarbeiter.station;
       }
       
       // 2. Anträge in Bearbeitung mit Gruppenzuweisung (Hauptbearbeitung wartet auf Übernahme)
+      // Der aktuelle Bearbeiter bleibt noch Hauptbearbeiter, aber der Antrag erscheint für die Gruppe
       if (a.status === 'in-bearbeitung' && a.zugewiesenAnGruppe && a.hauptbearbeitungWartetAufUebernahme) {
-        if (a.bearbeiterId === m.userId) return false;
-        if (istHausleitung && this._matchesHaus(m.jvas, ort.jva)) return true;
-        return this._mitarbeiterGehoertZuGruppe(m, a.zugewiesenAnGruppe);
+        // Nicht für den aktuellen Hauptbearbeiter anzeigen (der sieht ihn in "Meine Anträge")
+        if (a.bearbeiterId === mitarbeiter.userId) {
+          return false;
+        }
+        // VAL sieht alle Anträge ihres Hauses, auch mit wartender Hauptbearbeitungsübergabe
+        if (istHausleitung && this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) {
+          return true;
+        }
+        // Nur Mitglieder der zugewiesenen Gruppe sehen den Antrag
+        return this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
       }
       
       // 3. Anträge mit NEUEN/OFFENEN Gruppenaufgaben für diesen Mitarbeiter
+      // Wenn eine neue Aufgabe an die Gruppe zugewiesen wird (auch nach Entscheidung),
+      // soll die Gruppe den Antrag sehen und bearbeiten können
       if (antragsIdsMitGruppenaufgaben.includes(a.id)) {
-        if (a.bearbeiterId === m.userId) return false;
+        // Nicht für den aktuellen Bearbeiter anzeigen (der sieht den Antrag sowieso)
+        if (a.bearbeiterId === mitarbeiter.userId) {
+          return false;
+        }
         // Nicht für veraktete Anträge
         if (a.veraktet) {
           return false;
@@ -3530,9 +3246,14 @@ class AntragSystem {
       }
       
       // 4. VAL sieht ALLE Anträge des Hauses in "Anträge und Aufgaben meiner Gruppe"
+      // VAL kann alle Anträge sehen und jederzeit übernehmen, auch wenn sie bereits einem anderen Bearbeiter zugewiesen sind
+      // WICHTIG: VAL sieht auch Anträge die bereits einem Bearbeiter zugewiesen sind (z.B. AVD)
       if (istHausleitung && !a.veraktet) {
-        if (!this._matchesHaus(m.jvas, ort.jva)) return false;
-        if (a.bearbeiterId === m.userId) return false;
+        // Muss im selben Haus sein
+        if (!this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) return false;
+        
+        // Nicht anzeigen wenn VAL bereits der Bearbeiter ist (erscheint dann in "Meine Anträge")
+        if (a.bearbeiterId === mitarbeiter.userId) return false;
         
         // VAL sieht ALLE anderen Anträge, unabhängig vom Status oder Bearbeiter
         // Auch Anträge die bereits einem AVD oder anderen Mitarbeiter zugewiesen sind
@@ -3556,31 +3277,16 @@ class AntragSystem {
         hauptbearbeitungWartetAufUebernahme: a.hauptbearbeitungWartetAufUebernahme,
         veraktet: a.veraktet
       })),
-      nichtGefilterteAntraege: nichtGefilterteAntraege.map(a => {
-        const o = this._getAntragInsasseOrt(a);
-        return {
-          id: a.id,
-          status: a.status,
-          bearbeiterId: a.bearbeiterId,
-          insasseJva: a.insasseJva,
-          ortJva: o.jva,
-          ortStation: o.station,
-          veraktet: a.veraktet,
-          matchesHaus: this._matchesHaus(m.jvas, o.jva),
-          matchesStation: this._matchesStation(m.station, o.station),
-          istEigenerBearbeiter: a.bearbeiterId === m.userId
-        };
-      })
+      nichtGefilterteAntraege: nichtGefilterteAntraege.map(a => ({
+        id: a.id,
+        status: a.status,
+        bearbeiterId: a.bearbeiterId,
+        insasseJva: a.insasseJva,
+        veraktet: a.veraktet,
+        matchesHaus: istHausleitung ? this._matchesHaus(mitarbeiter.jvas, a.insasseJva) : false,
+        istEigenerBearbeiter: a.bearbeiterId === mitarbeiter.userId
+      }))
     });
-    
-    // Notfall-Fallback: AVD/Stationsleitung sieht 0, es gibt aber offene Anträge → alle offenen anzeigen
-    if (gefilterteAntraege.length === 0 && !istHausleitung) {
-      const offene = this.antraege.filter(a => a.status === 'offen' && !a.veraktet);
-      if (offene.length > 0 && (m.rolle === 'mitarbeiter' || m.rolle === 'stationsleitung' || String(m.rolle || '').toLowerCase() === 'avd')) {
-        console.warn('[Fallback] Filter lieferte 0 – zeige alle', offene.length, 'offenen Anträge.');
-        gefilterteAntraege = offene;
-      }
-    }
     
     return gefilterteAntraege.sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
   }
@@ -3596,13 +3302,14 @@ class AntragSystem {
                            mitarbeiter.rolle === 'haus-leitung' || 
                            mitarbeiter.rolle === 'hausleitung';
     
-    // Kammer ist hausunabhängig - Prüfung VOR der Haus-Prüfung
-    if (gruppe.typ === 'kammer') {
-      const istKammer = mitarbeiter.rolle === 'kammer';
+    // Kammer ist hausunabhängig - Prüfung VOR der Haus-Prüfung (typ/rolle case-insensitive für Sync-Toleranz)
+    const gruppeTypNorm = (gruppe.typ || '').toString().toLowerCase();
+    if (gruppeTypNorm === 'kammer') {
+      const istKammer = (mitarbeiter.rolle || '').toString().toLowerCase() === 'kammer';
       console.log('[Debug] Kammer-Prüfung:', { 
         mitarbeiterRolle: mitarbeiter.rolle, 
         istKammer: istKammer, 
-        gruppeHausId: gruppe.hausId,
+        gruppeTyp: gruppe.typ,
         gruppe: gruppe
       });
       return istKammer;
@@ -3620,11 +3327,13 @@ class AntragSystem {
       mitarbeiterHaeuser = [mitarbeiter.jva.replace('jva', 'haus')];
     }
     
-    const imSelbenHaus = normHausId ? mitarbeiterHaeuser.includes(normHausId) : false;
+    // Haus-Vergleich typentolerant (z. B. "haus1" vs "jva1" nach Normalisierung)
+    const imSelbenHaus = normHausId && mitarbeiterHaeuser.some(h => (h || '') == (normHausId || ''));
     
     console.log('[Debug] _mitarbeiterGehoertZuGruppe:', {
       mitarbeiterRolle: mitarbeiter.rolle,
       mitarbeiterHaeuser: mitarbeiterHaeuser,
+      mitarbeiterStation: mitarbeiter.station,
       gruppeTyp: gruppe.typ,
       gruppeHausId: normHausId,
       gruppeStation: gruppe.station,
@@ -3635,21 +3344,18 @@ class AntragSystem {
     // Für alle anderen Gruppen muss der Mitarbeiter im selben Haus sein
     if (!normHausId || !imSelbenHaus) return false;
     
-    if (gruppe.typ === 'hausleitung') {
-      // Nur Hausleitungen dieses Hauses
+    const rolleNorm = (mitarbeiter.rolle || '').toString().toLowerCase();
+    if (gruppeTypNorm === 'hausleitung') {
       return istHausleitung;
-    } else if (gruppe.typ === 'station') {
-      // VAL gehört NICHT zur AVD-Gruppe (Station)
-      // VAL hat nur die Funktion, Anträge des Hauses zu übernehmen
+    } else if (gruppeTypNorm === 'station' || gruppeTypNorm === 'avd') {
       if (istHausleitung) return false;
-      // Mitarbeiter muss auf dieser Station sein
-      return mitarbeiter.station === gruppe.station;
-    } else if (gruppe.typ === 'zahlstelle') {
-      // Nur Zahlstellen-Mitarbeiter dieses Hauses
-      return mitarbeiter.rolle === 'zahlstelle';
-    } else if (gruppe.typ === 'arbeitskoordination') {
-      // Nur Arbeitskoordinations-Mitarbeiter dieses Hauses
-      return mitarbeiter.rolle === 'arbeitskoordination';
+      const mStation = String(mitarbeiter.station ?? '');
+      const gStation = String(gruppe.station ?? '');
+      return mStation === gStation || (mStation === '' && gStation === '');
+    } else if (gruppeTypNorm === 'zahlstelle') {
+      return rolleNorm === 'zahlstelle';
+    } else if (gruppeTypNorm === 'arbeitskoordination') {
+      return rolleNorm === 'arbeitskoordination';
     }
     
     return false;
@@ -3729,28 +3435,9 @@ class AntragSystem {
   }
 
   // Antrag verakten
-  async verakteAntrag(antragId, mitarbeiterId, mitarbeiterName) {
-    // WICHTIG: Prüfe ob der Benutzer noch der Bearbeiter ist BEVOR Änderungen gemacht werden
-    const bearbeiterPruefung = await this.pruefeIstNochBearbeiter(antragId, mitarbeiterId);
-    if (!bearbeiterPruefung.istBearbeiter) {
-      console.warn('[Bearbeitung] Benutzer ist nicht mehr Bearbeiter, Veraktung wird nicht gespeichert:', {
-        antragId: antragId,
-        mitarbeiterId: mitarbeiterId,
-        aktuellerBearbeiter: bearbeiterPruefung.bearbeiterName
-      });
-      return {
-        error: 'nicht_mehr_bearbeiter',
-        bearbeiterName: bearbeiterPruefung.bearbeiterName,
-        antrag: bearbeiterPruefung.antrag
-      };
-    }
-    
+  verakteAntrag(antragId, mitarbeiterId, mitarbeiterName) {
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag) {
-      // WICHTIG: Status darf nicht zurückgesetzt werden!
-      // Veraktete Anträge behalten ihren Status (genehmigt/abgelehnt/teilweise-genehmigt)
-      // und kommen in die Historie-Liste
-      
       // PHASENÜBERGANG: Alle offenen Aufgaben für diesen Antrag schließen
       aufgabenSystem.schliesseAlleGruppenAufgabenFuerAntrag(antragId);
       
@@ -3758,10 +3445,6 @@ class AntragSystem {
       antrag.veraktetAm = new Date().toISOString();
       antrag.veraktetVon = mitarbeiterName;
       antrag.veraktetVonId = mitarbeiterId;
-      
-      // WICHTIG: Status NICHT ändern! Antrag behält seinen aktuellen Status
-      // (genehmigt/abgelehnt/teilweise-genehmigt) und wird in Historie angezeigt
-      
       this.saveAntraege();
       
       // Aktivität protokollieren
@@ -3780,22 +3463,7 @@ class AntragSystem {
   }
 
   // Antrag als vollzogen markieren
-  async markiereAlsVollzogen(antragId, mitarbeiterId, mitarbeiterName) {
-    // WICHTIG: Prüfe ob der Benutzer noch der Bearbeiter ist BEVOR Änderungen gemacht werden
-    const bearbeiterPruefung = await this.pruefeIstNochBearbeiter(antragId, mitarbeiterId);
-    if (!bearbeiterPruefung.istBearbeiter) {
-      console.warn('[Bearbeitung] Benutzer ist nicht mehr Bearbeiter, Vollzug-Markierung wird nicht gespeichert:', {
-        antragId: antragId,
-        mitarbeiterId: mitarbeiterId,
-        aktuellerBearbeiter: bearbeiterPruefung.bearbeiterName
-      });
-      return {
-        error: 'nicht_mehr_bearbeiter',
-        bearbeiterName: bearbeiterPruefung.bearbeiterName,
-        antrag: bearbeiterPruefung.antrag
-      };
-    }
-    
+  markiereAlsVollzogen(antragId, mitarbeiterId, mitarbeiterName) {
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag && antrag.erledigt) {
       antrag.vollzogen = true;
@@ -3903,37 +3571,15 @@ class AntragSystem {
 
   // Kommentar zu einem Antrag hinzufügen
   // typ: 'privat' (nur Ersteller), 'alle' (alle Mitarbeiter), 'akte' (alle + in Veraktungs-PDF)
-  async addKommentar(antragId, kommentarText, benutzerId, benutzerName, typ = 'alle') {
-    // Prüfe ob der Benutzer noch der Bearbeiter ist (nur für Mitarbeiter-Kommentare)
-    // Insassen können immer Kommentare hinzufügen
+  addKommentar(antragId, kommentarText, benutzerId, benutzerName, typ = 'alle') {
     const antrag = this.antraege.find(a => a.id === antragId);
-    if (!antrag) {
-      return { error: 'antrag_nicht_gefunden' };
-    }
-    
-    // Prüfe nur für Mitarbeiter-Kommentare, ob der Benutzer noch der Bearbeiter ist
-    const userSystem = typeof window !== 'undefined' && window.userSystem;
-    if (userSystem) {
-      const benutzer = userSystem.getUser(benutzerId);
-      if (benutzer && benutzer.type === 'mitarbeiter' && antrag.bearbeiterId) {
-        const bearbeiterPruefung = await this.pruefeIstNochBearbeiter(antragId, benutzerId);
-        if (!bearbeiterPruefung.istBearbeiter) {
-          return {
-            error: 'nicht_mehr_bearbeiter',
-            bearbeiterName: bearbeiterPruefung.bearbeiterName,
-            antrag: bearbeiterPruefung.antrag
-          };
-        }
-      }
-    }
-    
     if (antrag) {
       if (!antrag.kommentare) {
         antrag.kommentare = [];
       }
       
       const kommentar = {
-        id: 'KOM-' + Date.now().toString(36).toUpperCase(),
+        id: 'KOM-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
         text: kommentarText,
         benutzerId: benutzerId,
         benutzerName: benutzerName,
@@ -3985,24 +3631,14 @@ class AntragSystem {
   }
 
   // Dokument zu einem Antrag hinzufügen
-  async addDokument(antragId, dokument, benutzerId, benutzerName) {
-    // Prüfe ob der Benutzer noch der Bearbeiter ist
-    const bearbeiterPruefung = await this.pruefeIstNochBearbeiter(antragId, benutzerId);
-    if (!bearbeiterPruefung.istBearbeiter) {
-      return {
-        error: 'nicht_mehr_bearbeiter',
-        bearbeiterName: bearbeiterPruefung.bearbeiterName,
-        antrag: bearbeiterPruefung.antrag
-      };
-    }
-    
+  addDokument(antragId, dokument, benutzerId, benutzerName) {
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag) {
       if (!antrag.dokumente) {
         antrag.dokumente = [];
       }
       
-      dokument.id = 'DOK-' + Date.now().toString(36).toUpperCase();
+      dokument.id = 'DOK-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();
       antrag.dokumente.push(dokument);
       this.saveAntraege();
       
@@ -4158,17 +3794,15 @@ class AntragSystem {
   weiterleitenAnGruppe(antragId, gruppe, gruppeName, altBearbeiterId, altBearbeiterName, notiz = '', hauptbearbeitungUebertragen = true) {
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag) {
-      // Debug für Kammer-Weiterleitung
-      if (gruppe.typ === 'kammer') {
-        console.log('[Debug] Weiterleitung an Kammer:', {
-          antragId: antragId,
-          gruppe: gruppe,
-          gruppeName: gruppeName,
-          hausId: gruppe.hausId
-        });
-      }
+      // Gruppe normalisieren (typ kleinschreiben), damit Kammer etc. nach Sync überall erkannt werden
+      const typNorm = (gruppe && gruppe.typ != null) ? String(gruppe.typ).toLowerCase() : '';
+      const normierteGruppe = {
+        typ: typNorm || gruppe.typ,
+        hausId: typNorm === 'kammer' ? null : (gruppe.hausId ?? null),
+        station: gruppe.station ?? null
+      };
       // Gruppenzuweisung speichern
-      antrag.zugewiesenAnGruppe = gruppe;
+      antrag.zugewiesenAnGruppe = normierteGruppe;
       antrag.zugewiesenAnGruppeName = gruppeName;
       
       // Markierung: Hauptbearbeitung soll bei "Antrag nehmen" übertragen werden

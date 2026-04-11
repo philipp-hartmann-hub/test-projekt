@@ -112,6 +112,61 @@ function enqueueSyncJob(key, job) {
   return next;
 }
 
+function _antragArrayItemKey(item) {
+  if (item && typeof item === 'object' && item.id != null && String(item.id) !== '') {
+    return 'id:' + String(item.id);
+  }
+  try {
+    return 'raw:' + JSON.stringify(item);
+  } catch (_) {
+    return 'raw:' + String(item);
+  }
+}
+
+function mergeAntragArraysByIdOrContent(existingArr, incomingArr) {
+  const ex = Array.isArray(existingArr) ? existingArr : [];
+  const inc = Array.isArray(incomingArr) ? incomingArr : [];
+  const map = new Map();
+  const order = [];
+  function add(item) {
+    const key = _antragArrayItemKey(item);
+    if (map.has(key)) {
+      const prev = map.get(key);
+      map.set(key, typeof prev === 'object' && prev && typeof item === 'object' && item ? { ...prev, ...item } : item);
+    } else {
+      map.set(key, item);
+      order.push(key);
+    }
+  }
+  ex.forEach(add);
+  inc.forEach(add);
+  return order.map((k) => map.get(k));
+}
+
+function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
+  if (!serverAntrag || typeof serverAntrag !== 'object') return localAntrag;
+  if (!localAntrag || typeof localAntrag !== 'object') return serverAntrag;
+  const merged = { ...localAntrag, ...serverAntrag };
+  merged.kommentare = mergeAntragArraysByIdOrContent(localAntrag.kommentare, serverAntrag.kommentare);
+  merged.dokumente = mergeAntragArraysByIdOrContent(localAntrag.dokumente, serverAntrag.dokumente);
+  merged.weiterleitungen = mergeAntragArraysByIdOrContent(localAntrag.weiterleitungen, serverAntrag.weiterleitungen);
+  const monotonicTrue = ['sachlichGeprueft', 'entscheidungGetroffen', 'veraktet', 'vollzogen', 'erledigt'];
+  for (const k of monotonicTrue) {
+    if (localAntrag[k] === true || serverAntrag[k] === true) {
+      merged[k] = true;
+    }
+  }
+  const len = (v) => (v == null ? 0 : String(v).length);
+  const pkL = localAntrag.pruefungsKommentar;
+  const pkS = serverAntrag.pruefungsKommentar;
+  if (len(pkS) > len(pkL)) {
+    merged.pruefungsKommentar = pkS;
+  } else if (pkL != null && pkS == null) {
+    merged.pruefungsKommentar = pkL;
+  }
+  return merged;
+}
+
 // Liest localStorage erst beim Ausführen des Jobs (nicht den Wert vom setItem-Zeitpunkt).
 async function syncToServerImpl(key) {
   if (!serverConnected) return;
@@ -146,7 +201,11 @@ async function syncToServerImpl(key) {
           if (response && response.id) {
             const index = localData.findIndex(l => l.id === response.id);
             if (index !== -1) {
-              localData[index] = response;
+              if (key === 'gefaengnis_antraege') {
+                localData[index] = mergeAntragSnapshotAfterPut(localData[index], response);
+              } else {
+                localData[index] = response;
+              }
             }
           }
         }
@@ -219,7 +278,7 @@ async function syncAntragToServer(antragId) {
         const fresh = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
         const index = fresh.findIndex(a => a.id === serverAntrag.id);
         if (index !== -1) {
-          fresh[index] = serverAntrag;
+          fresh[index] = mergeAntragSnapshotAfterPut(fresh[index], serverAntrag);
           originalSetItem('gefaengnis_antraege', JSON.stringify(fresh));
           if (typeof window.reloadDataFromStorage === 'function') {
             window.reloadDataFromStorage();

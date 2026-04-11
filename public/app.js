@@ -2346,9 +2346,15 @@ class AntragSystem {
   migrateAntraege() {
     let changed = false;
     this.antraege.forEach(antrag => {
-      // Status-Migration: 'in-bearbeitung' ohne Bearbeiter wird zu 'offen'
-      if (antrag.status === 'in-bearbeitung' && !antrag.bearbeiterId) {
+      // Status-Migration: 'in-bearbeitung' ohne persönlichen Bearbeiter → nur dann 'offen',
+      // wenn KEINE Gruppen-Weiterleitung aktiv ist (sonst wäre der Antrag fälschlich im Pool).
+      if (antrag.status === 'in-bearbeitung' && !antrag.bearbeiterId && !antrag.zugewiesenAnGruppe) {
         antrag.status = 'offen';
+        changed = true;
+      }
+      // Reparatur: fälschlich auf 'offen' gesetzte Gruppen-Anträge wiederherstellen
+      if (antrag.status === 'offen' && antrag.zugewiesenAnGruppe) {
+        antrag.status = 'in-bearbeitung';
         changed = true;
       }
       // Erledigte Anträge markieren
@@ -2761,7 +2767,8 @@ class AntragSystem {
   // Antrag als sachlich/fachlich geprüft markieren
   markiereAlsGeprueft(antragId, mitarbeiterId, mitarbeiterName, pruefungsKommentar = '') {
     const antrag = this.antraege.find(a => a.id === antragId);
-    if (antrag && antrag.status === 'in-bearbeitung') {
+    // Nur in Bearbeitung (inkl. Fälle mit Gruppen-Weiterleitung ohne persönlichen Bearbeiter)
+    if (antrag && antrag.status === 'in-bearbeitung' && !antrag.veraktet) {
       antrag.sachlichGeprueft = true;
       antrag.sachlichGeprueftAm = new Date().toISOString();
       antrag.sachlichGeprueftVon = mitarbeiterName;
@@ -3572,7 +3579,7 @@ class AntragSystem {
       }
       
       const kommentar = {
-        id: 'KOM-' + Date.now().toString(36).toUpperCase(),
+        id: 'KOM-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
         text: kommentarText,
         benutzerId: benutzerId,
         benutzerName: benutzerName,
@@ -3631,7 +3638,7 @@ class AntragSystem {
         antrag.dokumente = [];
       }
       
-      dokument.id = 'DOK-' + Date.now().toString(36).toUpperCase();
+      dokument.id = 'DOK-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();
       antrag.dokumente.push(dokument);
       this.saveAntraege();
       

@@ -33,32 +33,59 @@ function generateId(prefix = 'ID') {
 }
 
 // Verhindert Datenverlust bei verzögerten oder veralteten PUTs (z. B. parallele Sync-Jobs):
-// Wenn der Client kürzere Arrays sendet als in der DB, fehlende Einträge mit id werden wieder angehängt.
+// dokumente/kommentare/weiterleitungen werden nach id vereinigt; Einträge ohne id per Inhalt dedupliziert.
+function _antragArrayItemKey(item) {
+  if (item && typeof item === 'object' && item.id != null && String(item.id) !== '') {
+    return 'id:' + String(item.id);
+  }
+  try {
+    return 'raw:' + JSON.stringify(item);
+  } catch (_) {
+    return 'raw:' + String(item);
+  }
+}
+
+function mergeAntragArraysByIdOrContent(existingArr, incomingArr) {
+  const ex = Array.isArray(existingArr) ? existingArr : [];
+  const inc = Array.isArray(incomingArr) ? incomingArr : [];
+  const map = new Map();
+  const order = [];
+  function add(item) {
+    const key = _antragArrayItemKey(item);
+    if (map.has(key)) {
+      const prev = map.get(key);
+      map.set(key, typeof prev === 'object' && prev && typeof item === 'object' && item ? { ...prev, ...item } : item);
+    } else {
+      map.set(key, item);
+      order.push(key);
+    }
+  }
+  ex.forEach(add);
+  inc.forEach(add);
+  return order.map((k) => map.get(k));
+}
+
 function mergeAntragPutPayload(existing, incoming) {
   if (!incoming || typeof incoming !== 'object') return incoming;
   if (!existing || typeof existing !== 'object') return incoming;
   const base = { ...existing, ...incoming };
   const arrayFields = ['dokumente', 'kommentare', 'weiterleitungen'];
-  const idOf = (x) => (x && typeof x === 'object' && x.id != null) ? String(x.id) : null;
   for (const f of arrayFields) {
-    const exArr = existing[f];
-    const incArr = incoming[f];
-    if (!Array.isArray(exArr) || exArr.length === 0) continue;
-    if (!Array.isArray(incArr)) {
-      base[f] = exArr;
-      continue;
+    base[f] = mergeAntragArraysByIdOrContent(existing[f], incoming[f]);
+  }
+  const monotonicTrue = ['sachlichGeprueft', 'entscheidungGetroffen', 'veraktet', 'vollzogen', 'erledigt'];
+  for (const k of monotonicTrue) {
+    if (existing[k] === true || incoming[k] === true) {
+      base[k] = true;
     }
-    if (incArr.length >= exArr.length) continue;
-    const seen = new Set(incArr.map(idOf).filter(Boolean));
-    const merged = [...incArr];
-    for (const item of exArr) {
-      const id = idOf(item);
-      if (id && !seen.has(id)) {
-        merged.push(item);
-        seen.add(id);
-      }
-    }
-    base[f] = merged;
+  }
+  const pkEx = existing.pruefungsKommentar;
+  const pkIn = incoming.pruefungsKommentar;
+  const len = (v) => (v == null ? 0 : String(v).length);
+  if (len(pkIn) > len(pkEx)) {
+    base.pruefungsKommentar = pkIn;
+  } else if (pkEx != null && pkIn == null) {
+    base.pruefungsKommentar = pkEx;
   }
   return base;
 }

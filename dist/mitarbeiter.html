@@ -8,15 +8,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-  <!-- Hinweis bei Datei-Öffnung (file://) -->
-  <div id="fileOpenHint" style="display: none; padding: 10px 16px; background: #fff3cd; border-bottom: 1px solid #ffc107; text-align: center; font-size: 0.9rem;">
-    Sie haben die Seite als Datei geöffnet. Bitte nutzen Sie stattdessen: <strong><a href="https://test-projekt-rose.vercel.app/mitarbeiter.html">test-projekt-rose.vercel.app/mitarbeiter.html</a></strong> oder starten Sie lokal mit <code>node server.js</code> und öffnen Sie <code>http://localhost:3000/mitarbeiter.html</code>.
-  </div>
-  <script>
-    if (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null') {
-      document.getElementById('fileOpenHint').style.display = 'block';
-    }
-  </script>
   <!-- Login-Bereich -->
   <div class="start-page" id="loginSection">
     <div class="bg-decoration">
@@ -151,13 +142,10 @@
 
         <!-- Tabs -->
         <div class="tabs">
-          <button class="tab active" onclick="switchTab('offen')">Anträge und Aufgaben meiner Gruppe</button>
+          <button class="tab active" onclick="switchTab('offen')">Anträge und Aufgaben meiner Gruppe <span class="tab-count" id="offenTabCount">0</span></button>
           <button class="tab" onclick="switchTab('bearbeitung')">Meine Anträge und Aufgaben <span class="tab-count" id="bearbeitungTabCount">0</span></button>
           <button class="tab" onclick="switchTab('historie')">Erledigt</button>
         </div>
-
-        <!-- Debug-Balken (immer sichtbar wenn eingeloggt) -->
-        <div id="antraegeDebugBar" style="display: none; padding: 10px 12px; margin: 0 0 12px 0; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; font-size: 0.9rem; color: #856404;"></div>
 
         <!-- Anträge und Aufgaben meiner Gruppe -->
         <section class="section" id="offenSection">
@@ -165,7 +153,7 @@
             <h2>Anträge und Aufgaben meiner Gruppe <span class="count" id="offenCount">0</span></h2>
             <div class="sort-controls">
               <label for="sortierungOffen">Sortieren:</label>
-              <select id="sortierungOffen" onchange="if(window.renderAntraege) window.renderAntraege()">
+              <select id="sortierungOffen" onchange="renderAntraege()">
                 <option value="datum-neu">Neueste zuerst</option>
                 <option value="datum-alt">Älteste zuerst</option>
                 <option value="antragsteller-az">Antragsteller A-Z</option>
@@ -184,7 +172,7 @@
             <h2>Meine Anträge und Aufgaben <span class="count" id="bearbeitungCount">0</span></h2>
             <div class="sort-controls">
               <label for="sortierung">Sortieren:</label>
-              <select id="sortierung" onchange="if(window.renderAntraege) window.renderAntraege()">
+              <select id="sortierung" onchange="renderAntraege()">
                 <option value="datum-neu">Neueste zuerst</option>
                 <option value="datum-alt">Älteste zuerst</option>
                 <option value="antragsteller-az">Antragsteller A-Z</option>
@@ -204,7 +192,7 @@
             <h2>Erledigte Anträge <span class="count" id="historieCount">0</span></h2>
             <div class="sort-controls">
               <label for="sortierungHistorie">Sortieren:</label>
-              <select id="sortierungHistorie" onchange="if(window.renderAntraege) window.renderAntraege()">
+              <select id="sortierungHistorie" onchange="renderAntraege()">
                 <option value="datum-neu">Neueste zuerst</option>
                 <option value="datum-alt">Älteste zuerst</option>
                 <option value="antragsteller-az">Antragsteller A-Z</option>
@@ -436,34 +424,43 @@
         
         <!-- Mitarbeiter-Auswahl -->
         <div id="mitarbeiterAuswahl" style="display: none;">
-          <!-- Schritt 1: Gruppe auswählen -->
+          <!-- Schritt 1: Gruppe ODER Person wählen -->
           <div class="form-group">
-            <label>Gruppe auswählen: *</label>
-            <select id="aufgabeGruppeSelect" onchange="onAufgabeGruppeChange()">
-              <option value="">-- Bitte Gruppe wählen --</option>
-              <!-- Wird dynamisch gefüllt -->
-            </select>
-            <input type="hidden" id="aufgabeGruppeTyp">
-            <input type="hidden" id="aufgabeGruppeHaus">
-            <input type="hidden" id="aufgabeGruppeStation">
+            <label>Zuweisung an: *</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="aufgabeZuweisungTyp" value="gruppe" checked onchange="toggleAufgabeZuweisungTyp()">
+                <span class="radio-label">Gruppe</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="aufgabeZuweisungTyp" value="person" onchange="toggleAufgabeZuweisungTyp()">
+                <span class="radio-label">Konkrete Person</span>
+              </label>
+            </div>
           </div>
           
-          <!-- Schritt 2: Optional konkrete Person auswählen -->
-          <div class="form-group" id="aufgabePersonAuswahlContainer" style="display: none;">
-            <label>
-              <input type="checkbox" id="aufgabeKonkretePersonCheckbox" onchange="toggleAufgabeKonkretePerson()">
-              Konkrete Person auswählen (optional)
-            </label>
-            <p class="field-hint">Ohne Auswahl wird die Aufgabe der gesamten Gruppe zugewiesen</p>
+          <!-- Gruppe auswählen -->
+          <div id="aufgabeGruppeContainer">
+            <div class="form-group">
+              <label>Gruppe auswählen: *</label>
+              <select id="aufgabeGruppeSelect" onchange="onAufgabeGruppeChange()">
+                <option value="">-- Bitte Gruppe wählen --</option>
+                <!-- Wird dynamisch gefüllt -->
+              </select>
+              <input type="hidden" id="aufgabeGruppeTyp">
+              <input type="hidden" id="aufgabeGruppeHaus">
+              <input type="hidden" id="aufgabeGruppeStation">
+            </div>
           </div>
           
-          <div id="aufgabePersonSuche" style="display: none;">
+          <!-- Person auswählen -->
+          <div id="aufgabePersonContainer" style="display: none;">
             <div class="form-group">
               <label for="aufgabeMitarbeiterSuche">Mitarbeiter suchen</label>
               <input type="text" id="aufgabeMitarbeiterSuche" placeholder="Name eingeben..." oninput="filterMitarbeiterListe()">
             </div>
             <div class="form-group">
-              <label>Mitarbeiter auswählen:</label>
+              <label>Mitarbeiter auswählen: *</label>
               <div class="mitarbeiter-liste" id="aufgabeMitarbeiterListe">
                 <!-- Wird dynamisch gefüllt -->
               </div>
@@ -616,41 +613,50 @@
         </div>
         
         <div id="weiterleitenFelder" style="display: none;">
-          <!-- Schritt 1: Gruppe auswählen -->
+          <!-- Schritt 1: Gruppe ODER Person wählen -->
           <div class="form-group">
-            <label>Gruppe auswählen: *</label>
-            <select id="weiterleitenGruppeSelect" onchange="onWeiterleitenGruppeChange()">
-              <option value="">-- Bitte Gruppe wählen --</option>
-              <!-- Wird dynamisch gefüllt -->
-            </select>
-            <input type="hidden" id="weiterleitenGruppeTyp">
-            <input type="hidden" id="weiterleitenGruppeHaus">
-            <input type="hidden" id="weiterleitenGruppeStation">
+            <label>Weiterleitung an: *</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="weiterleitenZuweisungTyp" value="gruppe" checked onchange="toggleWeiterleitenZuweisungTyp()">
+                <span class="radio-label">Gruppe</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="weiterleitenZuweisungTyp" value="person" onchange="toggleWeiterleitenZuweisungTyp()">
+                <span class="radio-label">Konkrete Person</span>
+              </label>
+            </div>
           </div>
           
-          <!-- Schritt 2: Optional konkrete Person auswählen -->
-          <div class="form-group" id="weiterleitenPersonAuswahlContainer" style="display: none;">
-            <label>
-              <input type="checkbox" id="weiterleitenKonkretePersonCheckbox" onchange="toggleWeiterleitenKonkretePerson()">
-              Konkrete Person auswählen (optional)
-            </label>
-            <p class="field-hint">Ohne Auswahl wird der Antrag der gesamten Gruppe zugewiesen</p>
+          <!-- Gruppe auswählen -->
+          <div id="weiterleitenGruppeContainer">
+            <div class="form-group">
+              <label>Gruppe auswählen: *</label>
+              <select id="weiterleitenGruppeSelect" onchange="onWeiterleitenGruppeChange()">
+                <option value="">-- Bitte Gruppe wählen --</option>
+                <!-- Wird dynamisch gefüllt -->
+              </select>
+              <input type="hidden" id="weiterleitenGruppeTyp">
+              <input type="hidden" id="weiterleitenGruppeHaus">
+              <input type="hidden" id="weiterleitenGruppeStation">
+            </div>
           </div>
           
-          <div id="weiterleitenPersonSuche" style="display: none;">
+          <!-- Person auswählen -->
+          <div id="weiterleitenPersonContainer" style="display: none;">
             <div class="form-group">
               <label for="weiterleitenMitarbeiterSuche">Mitarbeiter suchen</label>
               <input type="text" id="weiterleitenMitarbeiterSuche" placeholder="Name eingeben..." oninput="filterWeiterleitenMitarbeiter()">
             </div>
             <div class="form-group">
-              <label>Mitarbeiter auswählen:</label>
+              <label>Mitarbeiter auswählen: *</label>
               <div class="mitarbeiter-liste" id="weiterleitenMitarbeiterListe" style="max-height: 250px; overflow-y: auto;">
                 <!-- Wird dynamisch gefüllt -->
               </div>
             </div>
             <div class="form-group" id="weiterleitenSelectedContainer" style="display: none;">
               <div class="selected-person-box">
-                <span class="selected-label">Ausgewaehlt:</span>
+                <span class="selected-label">Ausgewählt:</span>
                 <span class="selected-name" id="weiterleitenSelectedPersonName"></span>
                 <button type="button" class="btn-clear-small" onclick="clearWeiterleitenSelection()">×</button>
               </div>
@@ -811,7 +817,7 @@
       // Tabs aktualisieren
       const tabs = document.querySelectorAll('.tabs .tab');
       if (tabs.length >= 4) {
-        tabs[0].innerHTML = t('nav.openApplications');
+        tabs[0].innerHTML = t('nav.openApplications') + ' <span class="tab-count" id="offenTabCount">0</span>';
         tabs[1].innerHTML = t('nav.myApplicationsTasks') + ' <span class="tab-count" id="bearbeitungTabCount">0</span>';
         tabs[2].innerHTML = t('nav.personalOpening');
         tabs[3].innerHTML = t('nav.completed');
@@ -1139,16 +1145,29 @@
       errEl.style.display = 'none';
 
       if (window.DataSync) {
-        const res = await window.DataSync.serverLogin(username, password, 'mitarbeiter');
-        if (res.success) {
-          sessionManager.setSessionFromServer(res.user);
-          currentSession = sessionManager.getSession();
-          showPortal();
-          return;
+        try {
+          const res = await window.DataSync.serverLogin(username, password, 'mitarbeiter');
+          if (res && res.success) {
+            sessionManager.setSessionFromServer(res.user);
+            currentSession = sessionManager.getSession();
+            showPortal();
+            return;
+          }
+        } catch (err) {
+          console.warn('Server-Login fehlgeschlagen, versuche lokale Anmeldung:', err);
         }
-        // Server-Login fehlgeschlagen – Fallback auf lokale Zugangsdaten (z. B. im Admin angelegt)
+        // Nach Server-Login-Fehler: Benutzer aus localStorage neu laden (falls DataSync sie geladen hat)
+        if (typeof window.reloadDataFromStorage === 'function') {
+          window.reloadDataFromStorage();
+        }
       }
-      const result = sessionManager.login(username, password, 'mitarbeiter');
+      let result = sessionManager.login(username, password, 'mitarbeiter');
+      if (!result.success && typeof userSystem !== 'undefined') {
+        // Einmal Standard-Benutzer erzwingen und erneut versuchen (falls localStorage leer/korrupt war)
+        userSystem.ensureDefaultUsers();
+        if (typeof window.reloadDataFromStorage === 'function') window.reloadDataFromStorage();
+        result = sessionManager.login(username, password, 'mitarbeiter');
+      }
       if (result.success) {
         currentSession = result.user;
         showPortal();
@@ -1167,18 +1186,11 @@
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('portalSection').style.display = 'block';
       
-      // Debug-Balken sofort anzeigen (falls renderAntraege später fehlschlägt)
-      var debugBarEl = document.getElementById('antraegeDebugBar');
-      if (debugBarEl) {
-        debugBarEl.style.display = 'block';
-        debugBarEl.innerHTML = '<strong>Debug:</strong> Portal geladen. Lade Anträge…';
-      }
-      
       // Name aus Session holen oder aus userSystem falls nicht vorhanden
       let displayName = currentSession.name;
       if (!displayName || displayName.trim() === '' || displayName === 'Kammer mitarbeiter' || displayName === 'kammer mitarbeiter') {
-        // Versuche Name aus userSystem zu holen (vorsichtig: userSystem/users kann fehlen bei API-Fehler)
-        var user = (typeof userSystem !== 'undefined' && userSystem && Array.isArray(userSystem.users)) ? userSystem.users.find(function(u){ return u.id === currentSession.userId; }) : null;
+        // Versuche Name aus userSystem zu holen
+        const user = userSystem.users.find(u => u.id === currentSession.userId);
         if (user) {
           if (user.vorname && user.nachname) {
             displayName = `${user.vorname} ${user.nachname}`;
@@ -1197,63 +1209,46 @@
         sessionManager.setSession(currentSession);
       }
       
-      try {
-        document.getElementById('userName').textContent = displayName;
-        document.getElementById('userRole').textContent = typeof getRolleText === 'function' ? getRolleText(currentSession.rolle) : (currentSession.rolle || '');
-        
-        document.getElementById('welcomeGreeting').textContent = 'Moin, ' + displayName + '!';
-        document.getElementById('welcomeMessage').textContent = 'Willkommen im Mitarbeiter-Portal.';
-        
-        if (typeof updateZustaendigkeitInfo === 'function') updateZustaendigkeitInfo();
-        if (typeof aufgabenSystem !== 'undefined' && aufgabenSystem && typeof aufgabenSystem.pruefeUeberfaelligeAufgaben === 'function') aufgabenSystem.pruefeUeberfaelligeAufgaben();
-        
-        if (window.renderAntraege) window.renderAntraege();
-        if (window.renderNotifications) window.renderNotifications();
-        if (window.renderKalender) window.renderKalender();
-        
-        window.addEventListener('dataSyncLoaded', function() {
-          if (currentSession) {
-            if (window.renderAntraege) window.renderAntraege();
-            if (window.renderNotifications) window.renderNotifications();
-            if (window.renderKalender) window.renderKalender();
-          }
-        });
-      } catch (err) {
-        console.error('showPortal Fehler:', err);
-        if (debugBarEl) debugBarEl.innerHTML = '<strong>Debug Fehler:</strong> ' + (err && err.message ? err.message : String(err));
-      }
+      document.getElementById('userName').textContent = displayName;
+      document.getElementById('userRole').textContent = getRolleText(currentSession.rolle);
+      
+      // Moin-Begrüßung setzen
+      document.getElementById('welcomeGreeting').textContent = 'Moin, ' + displayName + '!';
+      document.getElementById('welcomeMessage').textContent = 'Willkommen im Mitarbeiter-Portal.';
+      
+      // Zuständigkeitsbereich anzeigen
+      updateZustaendigkeitInfo();
+      
+      // Überfällige Aufgaben prüfen (sendet Erinnerungen)
+      aufgabenSystem.pruefeUeberfaelligeAufgaben();
+      
+      renderAntraege();
+      renderNotifications();
+      renderKalender();
+      
+      window.addEventListener('dataSyncLoaded', () => {
+        if (currentSession) { renderAntraege(); renderNotifications(); renderKalender(); }
+      });
       
       // Event-Listener für Daten-Reload vom Server
       window.addEventListener('dataReloaded', (event) => {
         console.log('dataReloaded Event empfangen:', event.detail);
         if (currentSession) {
           console.log('Aktualisiere UI nach dataReloaded...');
-          
-          // WICHTIG: Wenn Detailansicht geöffnet ist, prüfe ob der Benutzer noch Bearbeiter ist
-          if (currentAntragId) {
-            const antrag = antragSystem.getAntrag(currentAntragId);
-            if (antrag && antrag.bearbeiterId && antrag.bearbeiterId !== currentSession.userId) {
-              // Benutzer ist nicht mehr Bearbeiter - Detailansicht aktualisieren
-              console.log('[UI] Benutzer ist nicht mehr Bearbeiter, aktualisiere Detailansicht:', currentAntragId);
-              openAntragDetail(currentAntragId);
-            }
-          }
-          
-          if (window.renderAntraege) window.renderAntraege();
-          if (window.renderNotifications) window.renderNotifications();
-          if (window.renderKalender) window.renderKalender();
+          renderAntraege();
+          renderNotifications();
+          renderKalender();
         }
       });
 
       // Benachrichtigungen und überfällige Aufgaben periodisch prüfen
       setInterval(() => {
         aufgabenSystem.pruefeUeberfaelligeAufgaben();
-        if (window.renderNotifications) window.renderNotifications();
-        if (window.renderAntraege) window.renderAntraege();
+        renderNotifications();
+        renderAntraege();
       }, 60000); // Jede Minute prüfen
       
       // Daten vom Server regelmäßig neu laden (für Anträge von anderen Geräten)
-      // Häufigeres Polling für bessere Synchronisation zwischen Geräten
       if (window.DataSync && window.DataSync.reloadDataFromServer) {
         console.log('Starte automatisches Polling für Server-Daten...');
         setInterval(async () => {
@@ -1264,7 +1259,7 @@
           } else {
             console.log('Polling: Server nicht verbunden, überspringe...');
           }
-        }, 10000); // Alle 10 Sekunden (statt 30) für schnellere Synchronisation
+        }, 30000); // Alle 30 Sekunden
       } else {
         console.warn('DataSync.reloadDataFromServer nicht verfügbar');
       }
@@ -1377,7 +1372,6 @@
         `;
       }).join('');
     }
-    window.renderNotifications = renderNotifications;
     
     function getNotificationIcon(type) {
       return ''; // Icons entfernt
@@ -1492,31 +1486,14 @@
       const typ = selectedTyp.value;
       
       // Kommentar mit Typ speichern
-      const result = await antragSystem.addKommentar(antragId, text, currentSession.userId, currentSession.name, typ);
+      antragSystem.addKommentar(antragId, text, currentSession.userId, currentSession.name, typ);
       
-      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
-      if (result && result.error === 'nicht_mehr_bearbeiter') {
-        const msg = currentLanguage === 'de' 
-          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Änderungen wurden nicht gespeichert.`
-          : currentLanguage === 'en'
-          ? `The application has already been taken by ${result.bearbeiterName}. Your changes were not saved.`
-          : `La demande a déjà été prise par ${result.bearbeiterName}. Vos modifications n'ont pas été enregistrées.`;
-        
+      if (window.DataSync && window.DataSync.syncAntragToServer) {
+        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
+        const ok = await window.DataSync.syncAntragToServer(antragId);
         if (typeof showSyncStatus === 'function') {
-          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+          showSyncStatus(ok ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', ok ? 'success' : 'error');
         }
-        
-        // Daten vom Server neu laden
-        if (window.DataSync && window.DataSync.reloadDataFromServer) {
-          await window.DataSync.reloadDataFromServer();
-        }
-        
-        closeModal('notizTypModal');
-        document.getElementById('neuerKommentar').value = '';
-        renderAntraege();
-        openAntragDetail(antragId);
-        alert(msg);
-        return;
       }
       
       // Modal schließen, Eingabefeld leeren und Ansicht aktualisieren
@@ -1544,22 +1521,38 @@
       renderNotifications();
     }
     
+    function getEffektiverMitarbeiter() {
+      return currentSession;
+    }
+    
+    function getMitarbeiterHausUndStationAusSession() {
+      if (!currentSession) return { hausName: '-', station: null };
+      let hausKey = currentSession.jva || null;
+      if (!hausKey && Array.isArray(currentSession.jvas) && currentSession.jvas.length) {
+        const j0 = currentSession.jvas[0];
+        hausKey = typeof j0 === 'object' && j0 !== null ? (j0.id || j0.hausId) : j0;
+      }
+      const hausName = hausKey ? (HAUS_CONFIG[hausKey]?.name || hausKey) : '-';
+      const station = currentSession.station != null && currentSession.station !== '' ? String(currentSession.station) : null;
+      return { hausName, station };
+    }
+    
     function updateZustaendigkeitInfo() {
       const info = document.getElementById('zustaendigkeitInfo');
-      const hausNames = currentSession.jvas ? currentSession.jvas.map(j => getHausName(j)).join(', ') : '-';
+      const { hausName, station } = getMitarbeiterHausUndStationAusSession();
       
       if (currentSession.rolle === 'jva-leitung' || currentSession.rolle === 'haus-leitung' || currentSession.rolle === 'hausleitung') {
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>VAL</strong> sehen Sie alle Anträge des <strong>${hausNames}</strong> (alle Stationen)</span>
+            <span>Als <strong>VAL</strong> sehen Sie alle Anträge des <strong>${hausName}</strong> (alle Stationen)</span>
           </div>
         `;
       } else if (currentSession.rolle === 'stationsleitung') {
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>Stationsleitung</strong> sehen Sie alle Anträge des <strong>${hausNames} - Station ${currentSession.station}</strong></span>
+            <span>Als <strong>Stationsleitung</strong> sehen Sie alle Anträge des <strong>${hausName} - Station ${station || '-'}</strong></span>
           </div>
         `;
       } else if (currentSession.rolle === 'kammer') {
@@ -1573,21 +1566,21 @@
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>Zahlstelle</strong> (${hausNames}) sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Zahlstelle zugewiesen wurden</span>
+            <span>Als <strong>Zahlstelle</strong> (${hausName}) sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Zahlstelle zugewiesen wurden</span>
           </div>
         `;
       } else if (currentSession.rolle === 'arbeitskoordination') {
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>Arbeitskoordination</strong> (${hausNames}) sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Arbeitskoordination zugewiesen wurden</span>
+            <span>Als <strong>Arbeitskoordination</strong> (${hausName}) sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Arbeitskoordination zugewiesen wurden</span>
           </div>
         `;
       } else {
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>AVD</strong> sehen Sie Anträge und Aufgaben des <strong>${hausNames} - Station ${currentSession.station}</strong> und Ihre persönlich bearbeiteten Anträge</span>
+            <span>Als <strong>AVD</strong> sehen Sie Anträge und Aufgaben des <strong>${hausName} - Station ${station || '-'}</strong> und Ihre persönlich bearbeiteten Anträge</span>
           </div>
         `;
       }
@@ -2424,7 +2417,7 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                       t('button.takeApplication')}
                   </button>
                 ` : ''}
-                ${!kannUebernehmen && !istBearbeiter && istHausleitung() && antrag.status === 'in-bearbeitung' ? `
+                ${!kannUebernehmen && !istBearbeiter && istHausleitung && antrag.status === 'in-bearbeitung' ? `
                   <button class="btn btn-warning btn-large" onclick="openHausleitungUebernahmeModal('${antrag.id}')">
                     Antrag übernehmen
                   </button>
@@ -2460,15 +2453,9 @@ ${t('task.create')}
                   </button>
                 ` : ''}
                 ${!antrag.veraktet && istBearbeiter && prozessStatus.abschluss === 'aktiv' ? `
-                  ${(antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') && !antrag.vollzogen ? `
-                    <button class="btn btn-secondary btn-large disabled" onclick="showExecutionRequiredAlert()" title="${t('hint.executionRequired') || 'Bitte markieren Sie zunächst den Antrag als vollzogen.'}">
+                  <button class="btn btn-secondary btn-large" onclick="veraktenAntrag('${antrag.id}')">
 ${t('action.archive')}
-                    </button>
-                  ` : `
-                    <button class="btn btn-secondary btn-large" onclick="veraktenAntrag('${antrag.id}')">
-${t('action.archive')}
-                    </button>
-                  `}
+                  </button>
                 ` : ''}
               </div>
             </div>
@@ -2578,30 +2565,32 @@ ${t('action.archive')}
       }
       
       // Antrag als geprüft markieren mit Kommentar
-      const result = await antragSystem.markiereAlsGeprueft(antragId, currentSession.userId, currentSession.name, kommentar);
-      
-      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
-      if (result && result.error === 'nicht_mehr_bearbeiter') {
-        const msg = currentLanguage === 'de' 
-          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Änderungen wurden nicht gespeichert.`
-          : currentLanguage === 'en'
-          ? `The application has already been taken by ${result.bearbeiterName}. Your changes were not saved.`
-          : `La demande a déjà été prise par ${result.bearbeiterName}. Vos modifications n'ont pas été enregistrées.`;
-        
-        if (typeof showSyncStatus === 'function') {
-          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
-        }
-        
-        // Daten vom Server neu laden
-        if (window.DataSync && window.DataSync.reloadDataFromServer) {
-          await window.DataSync.reloadDataFromServer();
-        }
-        
-        closeModal('pruefungModal');
-        renderAntraege();
-        openAntragDetail(antragId);
-        alert(msg);
+      const geprueft = antragSystem.markiereAlsGeprueft(antragId, currentSession.userId, currentSession.name, kommentar);
+      if (!geprueft) {
+        const msg = currentLanguage === 'en'
+          ? 'The application could not be marked as reviewed. It must be in progress (not archived) and not incorrectly in the open pool.'
+          : currentLanguage === 'fr'
+          ? 'La demande n\'a pas pu être marquée comme examinée.'
+          : 'Der Antrag konnte nicht als geprüft markiert werden. Er muss in Bearbeitung sein (nicht veraktet). Bei Problemen nach Gruppen-Weiterleitung bitte Seite neu laden.';
+        showAlert(msg);
         return;
+      }
+      
+      // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
+      if (window.DataSync && window.DataSync.syncAntragToServer) {
+        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
+        const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
+        }
+        if (!syncSuccess) {
+          const msg = currentLanguage === 'en'
+            ? 'Synchronization failed. The phase transition is saved locally; you can continue, but please sync later.'
+            : currentLanguage === 'fr'
+            ? 'Échec de la synchronisation. La transition de phase est enregistrée localement; vous pouvez continuer, mais veuillez synchroniser plus tard.'
+            : 'Synchronisation fehlgeschlagen. Der Phasenübergang ist lokal gespeichert; Sie können fortfahren, bitte später synchronisieren.';
+          showAlert(msg);
+        }
       }
       
       closeModal('pruefungModal');
@@ -2646,30 +2635,18 @@ ${t('action.archive')}
       const bescheidPdf = generateBescheidPdf(antragId, status, begruendungText);
       
       // Antrag abschließen - die beiden Optionen werden jetzt separat behandelt
-      const result = await antragSystem.abschliessenAntrag(antragId, status, begruendung, persoenlichEroeffnen, bescheidPdf, vollzugVorBekanntgabe);
+      antragSystem.abschliessenAntrag(antragId, status, begruendung, persoenlichEroeffnen, bescheidPdf, vollzugVorBekanntgabe);
       
-      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
-      if (result && result.error === 'nicht_mehr_bearbeiter') {
-        const msg = currentLanguage === 'de' 
-          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Entscheidung wurde nicht gespeichert.`
-          : currentLanguage === 'en'
-          ? `The application has already been taken by ${result.bearbeiterName}. Your decision was not saved.`
-          : `La demande a déjà été prise par ${result.bearbeiterName}. Votre décision n'a pas été enregistrée.`;
-        
+      // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
+      if (window.DataSync && window.DataSync.syncAntragToServer) {
+        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
+        const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
         if (typeof showSyncStatus === 'function') {
-          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+          showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
         }
-        
-        // Daten vom Server neu laden
-        if (window.DataSync && window.DataSync.reloadDataFromServer) {
-          await window.DataSync.reloadDataFromServer();
+        if (!syncSuccess) {
+          showAlert('Entscheidung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.');
         }
-        
-        closeModal('entscheidenModal');
-        renderAntraege();
-        openAntragDetail(antragId);
-        alert(msg);
-        return;
       }
       
       closeModal('entscheidenModal');
@@ -2708,7 +2685,7 @@ ${t('action.archive')}
     }
     
     // Vollzug bestätigen
-    async function confirmVollzugBestaetigung() {
+    function confirmVollzugBestaetigung() {
       const antragId = document.getElementById('vollzugBestaetigenAntragId').value;
       const kommentar = document.getElementById('vollzugKommentar').value.trim();
       
@@ -2723,32 +2700,7 @@ ${t('action.archive')}
       // Kommentar mit Sprachinfo speichern
       const vollzugKommentar = createTranslatableText(kommentar);
       
-      const result = await antragSystem.bestaetigeVollzugVorBekanntgabe(antragId, vollzugKommentar, currentSession.userId, currentSession.name);
-      
-      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
-      if (result && result.error === 'nicht_mehr_bearbeiter') {
-        const msg = currentLanguage === 'de' 
-          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Änderungen wurden nicht gespeichert.`
-          : currentLanguage === 'en'
-          ? `The application has already been taken by ${result.bearbeiterName}. Your changes were not saved.`
-          : `La demande a déjà été prise par ${result.bearbeiterName}. Vos modifications n'ont pas été enregistrées.`;
-        
-        if (typeof showSyncStatus === 'function') {
-          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
-        }
-        
-        // Daten vom Server neu laden
-        if (window.DataSync && window.DataSync.reloadDataFromServer) {
-          await window.DataSync.reloadDataFromServer();
-        }
-        
-        closeModal('vollzugBestaetigenModal');
-        renderAntraege();
-        openAntragDetail(antragId);
-        alert(msg);
-        return;
-      }
-      
+      antragSystem.bestaetigeVollzugVorBekanntgabe(antragId, vollzugKommentar, currentSession.userId, currentSession.name);
       closeModal('vollzugBestaetigenModal');
       
       // Bekanntgabe erfolgt jetzt: Dokumentenfreigabe-Modal anzeigen
@@ -2912,9 +2864,9 @@ ${t('action.archive')}
       document.getElementById('aufgabeGruppeTyp').value = '';
       document.getElementById('aufgabeGruppeHaus').value = '';
       document.getElementById('aufgabeGruppeStation').value = '';
-      document.getElementById('aufgabeKonkretePersonCheckbox').checked = false;
-      document.getElementById('aufgabePersonAuswahlContainer').style.display = 'none';
-      document.getElementById('aufgabePersonSuche').style.display = 'none';
+      document.querySelector('input[name="aufgabeZuweisungTyp"][value="gruppe"]').checked = true;
+      document.getElementById('aufgabeGruppeContainer').style.display = 'block';
+      document.getElementById('aufgabePersonContainer').style.display = 'none';
       document.getElementById('aufgabeBearbeitungOptionen').style.display = 'none';
       
       // Mitarbeiter-Auswahl zurücksetzen
@@ -2934,13 +2886,37 @@ ${t('action.archive')}
       if (ziel === 'mitarbeiter') {
         document.getElementById('mitarbeiterAuswahl').style.display = 'block';
         loadAufgabeGruppen();
+        toggleAufgabeZuweisungTyp();
       } else {
         document.getElementById('mitarbeiterAuswahl').style.display = 'none';
         // Reset
         document.getElementById('aufgabeGruppeSelect').value = '';
-        document.getElementById('aufgabePersonAuswahlContainer').style.display = 'none';
-        document.getElementById('aufgabePersonSuche').style.display = 'none';
+        document.getElementById('aufgabeGruppeContainer').style.display = 'block';
+        document.getElementById('aufgabePersonContainer').style.display = 'none';
         document.getElementById('aufgabeBearbeitungOptionen').style.display = 'none';
+      }
+    }
+    
+    // Zwischen Gruppe und Person wechseln
+    function toggleAufgabeZuweisungTyp() {
+      const typ = document.querySelector('input[name="aufgabeZuweisungTyp"]:checked')?.value;
+      const gruppeContainer = document.getElementById('aufgabeGruppeContainer');
+      const personContainer = document.getElementById('aufgabePersonContainer');
+      const bearbeitungOptionen = document.getElementById('aufgabeBearbeitungOptionen');
+      
+      if (typ === 'person') {
+        gruppeContainer.style.display = 'none';
+        personContainer.style.display = 'block';
+        bearbeitungOptionen.style.display = 'block';
+        // Alle Mitarbeiter laden (nicht hierarchisch)
+        loadAlleMitarbeiterFuerAufgabe();
+      } else {
+        gruppeContainer.style.display = 'block';
+        personContainer.style.display = 'none';
+        bearbeitungOptionen.style.display = 'none';
+        // Gruppenauswahl zurücksetzen
+        document.getElementById('aufgabeGruppeSelect').value = '';
+        onAufgabeGruppeChange();
       }
     }
     
@@ -3020,15 +2996,25 @@ ${t('action.archive')}
         document.getElementById('aufgabeGruppeStation').value = parts[2];
       }
       
-      // Person-Auswahl anzeigen
-      document.getElementById('aufgabePersonAuswahlContainer').style.display = 'block';
+      // Bearbeitungsoptionen anzeigen
       document.getElementById('aufgabeBearbeitungOptionen').style.display = 'block';
-      
-      // Mitarbeiterliste für diese Gruppe laden (hierarchisch - nur Mitglieder dieser Gruppe)
-      loadMitarbeiterFuerGruppe(gruppeTyp, parts[1], parts[2]);
     }
     
-    // Mitarbeiter einer Gruppe laden (hierarchisch - nur Mitglieder dieser Gruppe)
+    // Alle Mitarbeiter für Aufgabenstellung laden (nicht hierarchisch)
+    function loadAlleMitarbeiterFuerAufgabe() {
+      const alleMitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
+      
+      // Sortieren nach Name
+      alleMitarbeiter.sort((a, b) => {
+        const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
+        const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
+        return nameA.localeCompare(nameB, 'de');
+      });
+      
+      renderMitarbeiterListe(alleMitarbeiter);
+    }
+    
+    // Mitarbeiter einer Gruppe laden (nur noch für Gruppenauswahl, nicht mehr hierarchisch gefiltert)
     function loadMitarbeiterFuerGruppe(gruppeTyp, hausKey, station) {
       let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter');
       
@@ -3077,24 +3063,6 @@ ${t('action.archive')}
       renderMitarbeiterListe(mitarbeiter);
     }
     
-    // Checkbox für konkrete Personenauswahl
-    function toggleAufgabeKonkretePerson() {
-      const checkbox = document.getElementById('aufgabeKonkretePersonCheckbox');
-      const personSuche = document.getElementById('aufgabePersonSuche');
-      
-      if (checkbox.checked) {
-        personSuche.style.display = 'block';
-        // Mitarbeiterliste neu laden basierend auf gewählter Gruppe
-        const gruppeTyp = document.getElementById('aufgabeGruppeTyp').value;
-        const hausKey = document.getElementById('aufgabeGruppeHaus').value;
-        const station = document.getElementById('aufgabeGruppeStation').value;
-        loadMitarbeiterFuerGruppe(gruppeTyp, hausKey, station);
-      } else {
-        personSuche.style.display = 'none';
-        document.getElementById('aufgabePersonId').value = '';
-        document.getElementById('selectedPersonDisplay').style.display = 'none';
-      }
-    }
     
     // Alle Mitarbeiter laden und anzeigen (Legacy-Funktion)
     function loadAlleMitarbeiter() {
@@ -3137,43 +3105,12 @@ ${t('action.archive')}
       }).join('');
     }
     
-    // Mitarbeiterliste filtern (hierarchisch - nur Mitglieder der ausgewählten Gruppe)
+    // Mitarbeiterliste filtern (Suche über gesamte Belegschaft)
     function filterMitarbeiterListe() {
       const suchbegriff = document.getElementById('aufgabeMitarbeiterSuche').value.toLowerCase().trim();
       
-      // Hierarchisch: Nur Mitarbeiter der ausgewählten Gruppe anzeigen
-      const gruppeTyp = document.getElementById('aufgabeGruppeTyp').value;
-      const hausKey = document.getElementById('aufgabeGruppeHaus').value;
-      const station = document.getElementById('aufgabeGruppeStation').value;
-      
-      let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter');
-      
-      // Nach Gruppe filtern (hierarchisches Konzept)
-      if (gruppeTyp === 'kammer') {
-        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'kammer');
-      } else if (gruppeTyp === 'hausleitung') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
-      } else if (gruppeTyp === 'zahlstelle') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          m.rolle === 'zahlstelle' &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
-      } else if (gruppeTyp === 'arbeitskoordination') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          m.rolle === 'arbeitskoordination' &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
-      } else if (gruppeTyp === 'station') {
-        mitarbeiter = mitarbeiter.filter(m => {
-          const imHaus = m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'));
-          if (!imHaus) return false;
-          if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return false;
-          return m.station === station;
-        });
-      }
+      // Alle Mitarbeiter (nicht hierarchisch gefiltert)
+      let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
       
       // Nach Suchbegriff filtern
       if (suchbegriff) {
@@ -3215,7 +3152,7 @@ ${t('action.archive')}
     // ANTRAGS-DOKUMENTE UPLOAD
     // ============================================
     
-    async function handleAntragDokumentUpload(input, antragId) {
+    function handleAntragDokumentUpload(input, antragId) {
       const antrag = antragSystem.getAntrag(antragId);
       const files = input.files;
       
@@ -3223,7 +3160,7 @@ ${t('action.archive')}
         const file = files[i];
         if (file && file.type === 'application/pdf') {
           const reader = new FileReader();
-          reader.onload = async function(e) {
+          reader.onload = function(e) {
             const dokument = {
               name: file.name,
               data: e.target.result,
@@ -3232,35 +3169,12 @@ ${t('action.archive')}
               hochgeladenAm: new Date().toISOString(),
               fuerInsasseFreigegeben: false // Standardmäßig nicht freigegeben
             };
-            const result = await antragSystem.addDokument(antragId, dokument, currentSession.userId, currentSession.name);
-            
-            // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
-            if (result && result.error === 'nicht_mehr_bearbeiter') {
-              const msg = currentLanguage === 'de' 
-                ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Das Dokument wurde nicht hochgeladen.`
-                : currentLanguage === 'en'
-                ? `The application has already been taken by ${result.bearbeiterName}. The document was not uploaded.`
-                : `La demande a déjà été prise par ${result.bearbeiterName}. Le document n'a pas été téléchargé.`;
-              
-              if (typeof showSyncStatus === 'function') {
-                showSyncStatus('⚠ Antrag bereits vergeben', 'error');
-              }
-              
-              // Daten vom Server neu laden
-              if (window.DataSync && window.DataSync.reloadDataFromServer) {
-                await window.DataSync.reloadDataFromServer();
-              }
-              
-              renderAntraege();
-              openAntragDetail(antragId);
-              alert(msg);
-              return;
-            }
+            const neuesDokument = antragSystem.addDokument(antragId, dokument, currentSession.userId, currentSession.name);
             
             // Prüfen ob Bekanntgabe bereits erfolgt ist (Insasse wurde informiert)
             const bekanntgabeErfolgt = antrag.erledigt && !antrag.wartetAufEroeffnung && !antrag.wartetAufVollzug;
             
-            if (bekanntgabeErfolgt && result) {
+            if (bekanntgabeErfolgt && neuesDokument) {
               // Modal für nachträgliche Freigabe öffnen
               const dokIndex = (antrag.dokumente || []).length - 1;
               openNachtraeglichFreigebenModal(antragId, dokIndex, file.name);
@@ -3493,7 +3407,7 @@ ${t('action.archive')}
       renderAntwortPdfList();
     }
     
-    function sendeAufgabe() {
+    async function sendeAufgabe() {
       const antragId = document.getElementById('aufgabeAntragId').value;
       const antrag = antragSystem.getAntrag(antragId);
       const kurzbeschreibungText = document.getElementById('aufgabeKurzbeschreibung').value.trim();
@@ -3525,34 +3439,38 @@ ${t('action.archive')}
         zugewiesenAnTyp = 'insasse';
       } else {
         // Aufgabe an Mitarbeiter/Gruppe
+        const zuweisungTyp = document.querySelector('input[name="aufgabeZuweisungTyp"]:checked')?.value;
         const gruppeTyp = document.getElementById('aufgabeGruppeTyp').value;
         const gruppeHaus = document.getElementById('aufgabeGruppeHaus').value;
         const gruppeStation = document.getElementById('aufgabeGruppeStation').value;
         const personId = document.getElementById('aufgabePersonId').value;
-        const konkretePersonChecked = document.getElementById('aufgabeKonkretePersonCheckbox').checked;
         
         // Debug-Ausgabe
-        console.log('[Debug] sendeAufgabe - Gruppenwerte:', {
+        console.log('[Debug] sendeAufgabe - Zuweisungswerte:', {
+          zuweisungTyp: zuweisungTyp,
           gruppeTyp: gruppeTyp,
           gruppeHaus: gruppeHaus,
           gruppeStation: gruppeStation,
-          personId: personId,
-          konkretePersonChecked: konkretePersonChecked
+          personId: personId
         });
         
-        if (!gruppeTyp) {
-          showAlert('Bitte wählen Sie eine Gruppe aus.');
-          return;
-        }
-        
-        if (konkretePersonChecked && personId) {
+        if (zuweisungTyp === 'person') {
           // Konkrete Person ausgewählt
+          if (!personId) {
+            showAlert('Bitte wählen Sie eine Person aus.');
+            return;
+          }
           const person = userSystem.getUser(personId);
           zugewiesenAnId = personId;
           zugewiesenAnName = `${person.vorname} ${person.nachname}`;
           zugewiesenAnTyp = 'mitarbeiter';
         } else {
-          // Nur Gruppe ausgewählt - Aufgabe geht an die Gruppe
+          // Gruppe ausgewählt
+          if (!gruppeTyp) {
+            showAlert('Bitte wählen Sie eine Gruppe aus.');
+            return;
+          }
+          // Aufgabe geht an die Gruppe
           zugewiesenAnTyp = 'gruppe';
           zugewiesenAnGruppe = {
             typ: gruppeTyp,
@@ -3627,6 +3545,21 @@ ${t('action.archive')}
           `${kurzbeschreibungText} (${t('application.id')}: ${antrag.antragsNummer || antragId})`,
           antragId
         );
+      }
+      
+      // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
+      if (window.DataSync && window.DataSync.syncAntragToServer) {
+        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
+        const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
+        }
+        if (!syncSuccess) {
+          const msg = currentLanguage === 'en' ? 'Task saved locally but sync failed. Check your connection and refresh to retry.'
+                    : currentLanguage === 'fr' ? 'Tâche enregistrée localement mais la synchronisation a échoué. Vérifiez la connexion.'
+                    : 'Aufgabe lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen und Seite ggf. aktualisieren.';
+          showAlert(msg);
+        }
       }
       
       closeModal('aufgabeModal');
@@ -3896,6 +3829,18 @@ ${t('action.archive')}
           aufgabe.antragId
         );
         
+        // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
+        if (window.DataSync && window.DataSync.syncAntragToServer) {
+          if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
+          const syncSuccess = await window.DataSync.syncAntragToServer(aufgabe.antragId);
+          if (typeof showSyncStatus === 'function') {
+            showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
+          }
+          if (!syncSuccess) {
+            showAlert('Änderung lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen.');
+          }
+        }
+        
         closeModal('aufgabeLoesungModal');
         
         // Zurück zur Übersicht (da kein Zugriff mehr)
@@ -3961,37 +3906,9 @@ ${t('action.archive')}
     // ANTRAG VOLLZOGEN (Kontrollkästchen)
     // ============================================
     
-    async function toggleVollzogen(antragId, checked) {
+    function toggleVollzogen(antragId, checked) {
       if (checked) {
-        const result = await antragSystem.markiereAlsVollzogen(antragId, currentSession.userId, currentSession.name);
-        
-        // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
-        if (result && result.error === 'nicht_mehr_bearbeiter') {
-          const msg = currentLanguage === 'de' 
-            ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Ihre Änderungen wurden nicht gespeichert.`
-            : currentLanguage === 'en'
-            ? `The application has already been taken by ${result.bearbeiterName}. Your changes were not saved.`
-            : `La demande a déjà été prise par ${result.bearbeiterName}. Vos modifications n'ont pas été enregistrées.`;
-          
-          if (typeof showSyncStatus === 'function') {
-            showSyncStatus('⚠ Antrag bereits vergeben', 'error');
-          }
-          
-          // Daten vom Server neu laden
-          if (window.DataSync && window.DataSync.reloadDataFromServer) {
-            await window.DataSync.reloadDataFromServer();
-          }
-          
-          // Checkbox zurücksetzen
-          const checkbox = document.getElementById('vollzogenCheckbox');
-          if (checkbox) checkbox.checked = false;
-          
-          renderAntraege();
-          openAntragDetail(antragId);
-          alert(msg);
-          return;
-        }
-        
+        antragSystem.markiereAlsVollzogen(antragId, currentSession.userId, currentSession.name);
         // Nach Vollzug: Weiterleitung anbieten
         openWeiterleitenModal(antragId, 'vollzug');
       }
@@ -4024,10 +3941,10 @@ ${t('action.archive')}
       document.getElementById('weiterleitenGruppeTyp').value = '';
       document.getElementById('weiterleitenGruppeHaus').value = '';
       document.getElementById('weiterleitenGruppeStation').value = '';
-      document.getElementById('weiterleitenPersonAuswahlContainer').style.display = 'none';
-      document.getElementById('weiterleitenPersonSuche').style.display = 'none';
-      const konkretePersonCheckbox = document.getElementById('weiterleitenKonkretePersonCheckbox');
-      if (konkretePersonCheckbox) konkretePersonCheckbox.checked = false;
+      document.querySelector('input[name="weiterleitenZuweisungTyp"][value="gruppe"]').checked = true;
+      document.getElementById('weiterleitenGruppeContainer').style.display = 'block';
+      document.getElementById('weiterleitenPersonContainer').style.display = 'none';
+      toggleWeiterleitenZuweisungTyp();
       
       // Gruppen laden
       loadWeiterleitenGruppen();
@@ -4146,14 +4063,43 @@ ${t('action.archive')}
         document.getElementById('weiterleitenGruppeStation').value = parts[2];
       }
       
-      // Person-Auswahl anzeigen
-      document.getElementById('weiterleitenPersonAuswahlContainer').style.display = 'block';
-      
-      // Mitarbeiterliste für diese Gruppe laden (hierarchisch - nur Mitglieder dieser Gruppe)
-      loadWeiterleitenMitarbeiterFuerGruppe(gruppeTyp, parts[1], parts[2]);
     }
     
-    // Mitarbeiter einer Gruppe für Weiterleitung laden (hierarchisch - nur Mitglieder dieser Gruppe)
+    // Zwischen Gruppe und Person beim Weiterleiten wechseln
+    function toggleWeiterleitenZuweisungTyp() {
+      const typ = document.querySelector('input[name="weiterleitenZuweisungTyp"]:checked')?.value;
+      const gruppeContainer = document.getElementById('weiterleitenGruppeContainer');
+      const personContainer = document.getElementById('weiterleitenPersonContainer');
+      
+      if (typ === 'person') {
+        gruppeContainer.style.display = 'none';
+        personContainer.style.display = 'block';
+        // Alle Mitarbeiter laden (nicht hierarchisch gefiltert)
+        loadAlleMitarbeiterFuerWeiterleitung();
+      } else {
+        gruppeContainer.style.display = 'block';
+        personContainer.style.display = 'none';
+        // Gruppenauswahl zurücksetzen
+        document.getElementById('weiterleitenGruppeSelect').value = '';
+        onWeiterleitenGruppeChange();
+      }
+    }
+    
+    // Alle Mitarbeiter für Weiterleitung laden (nicht hierarchisch)
+    function loadAlleMitarbeiterFuerWeiterleitung() {
+      const alleMitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
+      
+      // Sortieren nach Name
+      alleMitarbeiter.sort((a, b) => {
+        const nameA = `${a.nachname} ${a.vorname}`.toLowerCase();
+        const nameB = `${b.nachname} ${b.vorname}`.toLowerCase();
+        return nameA.localeCompare(nameB, 'de');
+      });
+      
+      renderWeiterleitenMitarbeiter(alleMitarbeiter);
+    }
+    
+    // Mitarbeiter einer Gruppe für Weiterleitung laden (nur noch für Gruppenauswahl, nicht mehr hierarchisch gefiltert)
     function loadWeiterleitenMitarbeiterFuerGruppe(gruppeTyp, hausKey, station) {
       let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
       
@@ -4195,23 +4141,6 @@ ${t('action.archive')}
       renderWeiterleitenMitarbeiter(mitarbeiter);
     }
     
-    // Checkbox für konkrete Personenauswahl beim Weiterleiten
-    function toggleWeiterleitenKonkretePerson() {
-      const checkbox = document.getElementById('weiterleitenKonkretePersonCheckbox');
-      const personSuche = document.getElementById('weiterleitenPersonSuche');
-      
-      if (checkbox.checked) {
-        personSuche.style.display = 'block';
-        const gruppeTyp = document.getElementById('weiterleitenGruppeTyp').value;
-        const hausKey = document.getElementById('weiterleitenGruppeHaus').value;
-        const station = document.getElementById('weiterleitenGruppeStation').value;
-        loadWeiterleitenMitarbeiterFuerGruppe(gruppeTyp, hausKey, station);
-      } else {
-        personSuche.style.display = 'none';
-        document.getElementById('weiterleitenPersonId').value = '';
-        document.getElementById('weiterleitenSelectedContainer').style.display = 'none';
-      }
-    }
     
     // Alle Mitarbeiter für Weiterleitung laden (Legacy)
     function loadWeiterleitenMitarbeiter() {
@@ -4255,43 +4184,12 @@ ${t('action.archive')}
       }).join('');
     }
     
-    // Mitarbeiterliste für Weiterleitung filtern (hierarchisch - nur Mitglieder der ausgewählten Gruppe)
+    // Mitarbeiterliste für Weiterleitung filtern (Suche über gesamte Belegschaft)
     function filterWeiterleitenMitarbeiter() {
       const suchbegriff = document.getElementById('weiterleitenMitarbeiterSuche').value.toLowerCase().trim();
       
-      // Hierarchisch: Nur Mitarbeiter der ausgewählten Gruppe anzeigen
-      const gruppeTyp = document.getElementById('weiterleitenGruppeTyp').value;
-      const hausKey = document.getElementById('weiterleitenGruppeHaus').value;
-      const station = document.getElementById('weiterleitenGruppeStation').value;
-      
+      // Alle Mitarbeiter (nicht hierarchisch gefiltert)
       let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
-      
-      // Nach Gruppe filtern (hierarchisches Konzept)
-      if (gruppeTyp === 'kammer') {
-        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'kammer');
-      } else if (gruppeTyp === 'hausleitung') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
-      } else if (gruppeTyp === 'zahlstelle') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          m.rolle === 'zahlstelle' &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
-      } else if (gruppeTyp === 'arbeitskoordination') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          m.rolle === 'arbeitskoordination' &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
-      } else if (gruppeTyp === 'station') {
-        mitarbeiter = mitarbeiter.filter(m => {
-          const imHaus = m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'));
-          if (!imHaus) return false;
-          if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return false;
-          return m.station === station;
-        });
-      }
       
       // Nach Suchbegriff filtern
       if (suchbegriff) {
@@ -4328,7 +4226,7 @@ ${t('action.archive')}
       document.getElementById('weiterleitenPersonId').value = '';
       document.getElementById('weiterleitenSelectedContainer').style.display = 'none';
       document.getElementById('weiterleitenMitarbeiterSuche').value = '';
-      loadWeiterleitenMitarbeiter();
+      loadAlleMitarbeiterFuerWeiterleitung();
     }
     
     function closeWeiterleitenModal(confirmed) {
@@ -4341,28 +4239,27 @@ ${t('action.archive')}
       }
     }
     
-    function confirmWeiterleiten() {
+    async function confirmWeiterleiten() {
       const antragId = document.getElementById('weiterleitenAntragId').value;
       const phase = document.getElementById('weiterleitenPhase').value;
       const entscheidung = document.querySelector('input[name="weiterleitenEntscheidung"]:checked').value;
       
       if (entscheidung === 'ja') {
+        const zuweisungTyp = document.querySelector('input[name="weiterleitenZuweisungTyp"]:checked')?.value;
         const gruppeTyp = document.getElementById('weiterleitenGruppeTyp').value;
         const gruppeHaus = document.getElementById('weiterleitenGruppeHaus').value;
         const gruppeStation = document.getElementById('weiterleitenGruppeStation').value;
         const personId = document.getElementById('weiterleitenPersonId').value;
-        const konkretePersonChecked = document.getElementById('weiterleitenKonkretePersonCheckbox')?.checked;
         const notiz = document.getElementById('weiterleitenNotiz').value.trim();
-        
-        if (!gruppeTyp) {
-          showAlert('Bitte wählen Sie eine Gruppe aus.');
-          return;
-        }
         
         const antrag = antragSystem.getAntrag(antragId);
         
-        if (konkretePersonChecked && personId) {
+        if (zuweisungTyp === 'person') {
           // Konkrete Person ausgewählt
+          if (!personId) {
+            showAlert('Bitte wählen Sie eine Person aus.');
+            return;
+          }
           const person = userSystem.getUser(personId);
           
           // Weiterleitung durchführen
@@ -4385,13 +4282,30 @@ ${t('action.archive')}
             antragId
           );
           
+          // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
+          if (window.DataSync && window.DataSync.syncAntragToServer) {
+            if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
+            const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
+            if (typeof showSyncStatus === 'function') {
+              showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
+            }
+            if (!syncSuccess) {
+              showAlert('Weiterleitung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.');
+            }
+          }
+          
           closeModal('weiterleitenModal');
           closeAntragDetail();
           renderAntraege();
           
           showAlert(`Antrag an ${person.vorname} ${person.nachname} weitergeleitet.`);
         } else {
-          // Nur Gruppe ausgewählt - Antrag geht an die Gruppe
+          // Gruppe ausgewählt
+          if (!gruppeTyp) {
+            showAlert('Bitte wählen Sie eine Gruppe aus.');
+            return;
+          }
+          
           const gruppe = {
             typ: gruppeTyp,
             hausId: gruppeTyp === 'kammer' ? null : (gruppeHaus || null),
@@ -4423,6 +4337,18 @@ ${t('action.archive')}
             notiz
           );
           
+          // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
+          if (window.DataSync && window.DataSync.syncAntragToServer) {
+            if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
+            const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
+            if (typeof showSyncStatus === 'function') {
+              showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
+            }
+            if (!syncSuccess) {
+              showAlert('Weiterleitung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.');
+            }
+          }
+          
           closeModal('weiterleitenModal');
           closeAntragDetail();
           renderAntraege();
@@ -4440,44 +4366,23 @@ ${t('action.archive')}
     // VERAKTEN (PDF)
     // ============================================
     
-    function veraktenAntrag(antragId) {
-      const antrag = antragSystem.getAntrag(antragId);
-      if (!antrag) return;
-      
     async function veraktenAntrag(antragId) {
       const antrag = antragSystem.getAntrag(antragId);
       if (!antrag) return;
       
-      // WICHTIG: Bei genehmigt/teilweise-genehmigt muss Vollzug bestätigt sein
-      if ((antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') && !antrag.vollzogen) {
-        showExecutionRequiredAlert();
-        return;
-      }
-      
       // Antrag als veraktet markieren
-      const result = await antragSystem.verakteAntrag(antragId, currentSession.userId, currentSession.name);
+      antragSystem.verakteAntrag(antragId, currentSession.userId, currentSession.name);
       
-      // Prüfe auf Fehler (z.B. nicht mehr Bearbeiter)
-      if (result && result.error === 'nicht_mehr_bearbeiter') {
-        const msg = currentLanguage === 'de' 
-          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Die Veraktung wurde nicht gespeichert.`
-          : currentLanguage === 'en'
-          ? `The application has already been taken by ${result.bearbeiterName}. Archiving was not saved.`
-          : `La demande a déjà été prise par ${result.bearbeiterName}. L'archivage n'a pas été enregistré.`;
-        
+      // Synchronisation mit Server abwarten (wichtig für Tablet – sonst bleibt Antrag nach Aktualisierung in "Meine Anträge")
+      if (window.DataSync && window.DataSync.syncAntragToServer) {
+        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
+        const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
         if (typeof showSyncStatus === 'function') {
-          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
+          showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
         }
-        
-        // Daten vom Server neu laden
-        if (window.DataSync && window.DataSync.reloadDataFromServer) {
-          await window.DataSync.reloadDataFromServer();
+        if (!syncSuccess) {
+          showAlert('Antrag wurde veraktet, aber die Synchronisation ist fehlgeschlagen. Bitte Verbindung prüfen und erneut versuchen – sonst erscheint der Antrag nach Aktualisierung wieder in "Meine Anträge".');
         }
-        
-        renderAntraege();
-        openAntragDetail(antragId);
-        alert(msg);
-        return;
       }
       
       // PDF generieren und herunterladen
@@ -4485,6 +4390,7 @@ ${t('action.archive')}
       
       // Zurück zur Übersicht oder Detailansicht aktualisieren
       closeAntragDetail();
+      renderAntraege();
     }
     
     function generateAntragPdf(antrag) {
@@ -4728,56 +4634,27 @@ ${t('action.archive')}
       
       console.log('[Debug Frontend] nehmeAntrag wird aufgerufen für:', antragId);
       
-      const result = await antragSystem.nehmeAntrag(antragId, currentSession);
+      const result = antragSystem.nehmeAntrag(antragId, currentSession);
       console.log('[Debug Frontend] nehmeAntrag Ergebnis:', result);
       
-      // Prüfe auf Fehler (z.B. Antrag bereits vergeben)
-      if (result && result.error === 'bereits_vergeben') {
-        const msg = currentLanguage === 'de' 
-          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Die Bearbeitung wurde abgebrochen.`
-          : currentLanguage === 'en'
-          ? `The application has already been taken by ${result.bearbeiterName}. Processing has been cancelled.`
-          : `La demande a déjà été prise par ${result.bearbeiterName}. Le traitement a été annulé.`;
-        
-        if (typeof showSyncStatus === 'function') {
-          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
-        }
-        
-        // Daten vom Server neu laden
-        if (window.DataSync && window.DataSync.reloadDataFromServer) {
-          await window.DataSync.reloadDataFromServer();
-        }
-        
-        renderAntraege();
-        alert(msg);
-        return;
-      }
-      
-      if (result && !result.error) {
-        // Explizite Synchronisation mit dem Server, damit die Änderung sofort gespeichert wird
+      if (result) {
+        // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
         let syncStatus = '';
         if (window.DataSync && window.DataSync.syncAntragToServer) {
           console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
-          if (typeof showSyncStatus === 'function') {
-            showSyncStatus('Synchronisiere mit Server...', 'info');
-          }
+          showSyncStatus('Synchronisiere mit Server...');
           const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
           if (syncSuccess) {
             console.log('[Debug] Antrag-Übernahme erfolgreich synchronisiert:', antragId);
             syncStatus = '✓ Synchronisiert';
-            if (typeof showSyncStatus === 'function') {
-              showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
-            }
+            showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
           } else {
             console.warn('[Debug] Antrag-Übernahme Synchronisation fehlgeschlagen');
-            syncStatus = '✗ Fehler';
-            if (typeof showSyncStatus === 'function') {
-              showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
-            }
+            syncStatus = '✗ Synchronisation fehlgeschlagen';
+            showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
           }
         }
         
-        // UI aktualisieren
         renderAntraege();
         // Automatisch zum "Meine Anträge und Aufgaben" Tab wechseln
         switchTab('bearbeitung');
@@ -4815,32 +4692,10 @@ ${t('action.archive')}
       
       console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail wird aufgerufen für:', antragId);
       
-      const result = await antragSystem.nehmeAntrag(antragId, currentSession);
+      const result = antragSystem.nehmeAntrag(antragId, currentSession);
       console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail Ergebnis:', result);
       
-      // Prüfe auf Fehler (z.B. Antrag bereits vergeben)
-      if (result && result.error === 'bereits_vergeben') {
-        const msg = currentLanguage === 'de' 
-          ? `Der Antrag wurde bereits von ${result.bearbeiterName} übernommen. Die Bearbeitung wurde abgebrochen.`
-          : currentLanguage === 'en'
-          ? `The application has already been taken by ${result.bearbeiterName}. Processing has been cancelled.`
-          : `La demande a déjà été prise par ${result.bearbeiterName}. Le traitement a été annulé.`;
-        
-        if (typeof showSyncStatus === 'function') {
-          showSyncStatus('⚠ Antrag bereits vergeben', 'error');
-        }
-        
-        // Daten vom Server neu laden
-        if (window.DataSync && window.DataSync.reloadDataFromServer) {
-          await window.DataSync.reloadDataFromServer();
-        }
-        
-        renderAntraege();
-        alert(msg);
-        return;
-      }
-      
-      if (result && !result.error) {
+      if (result) {
         // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
         if (window.DataSync && window.DataSync.syncAntragToServer) {
           console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
@@ -5007,16 +4862,8 @@ ${t('action.archive')}
     }
 
     function renderAntraege() {
-      var debugBar = document.getElementById('antraegeDebugBar');
-      function setDebug(msg) {
-        if (debugBar) { debugBar.innerHTML = '<strong>Debug:</strong> ' + msg; debugBar.style.display = 'block'; }
-      }
-      if (!currentSession) {
-        setDebug('Keine Session – bitte erneut anmelden.');
-        return;
-      }
-      setDebug('renderAntraege läuft…');
-      try {
+      if (!currentSession) return;
+      
       // Debug-Ausgabe
       console.log('[Debug] renderAntraege - currentSession:', {
         userId: currentSession.userId,
@@ -5032,7 +4879,7 @@ ${t('action.archive')}
       }
       
       // KAMMER DEBUG: Alle offenen Gruppenaufgaben anzeigen
-      const alleAufgaben = (typeof aufgabenSystem !== 'undefined' && aufgabenSystem) ? aufgabenSystem.aufgaben : [];
+      const alleAufgaben = aufgabenSystem.aufgaben;
       const gruppenAufgaben = alleAufgaben.filter(a => a.zugewiesenAnTyp === 'gruppe' && a.status === 'offen');
       const kammerAufgaben = gruppenAufgaben.filter(a => a.zugewiesenAnGruppe?.typ === 'kammer');
       
@@ -5057,25 +4904,11 @@ ${t('action.archive')}
       const bearbeitungList = document.getElementById('bearbeitungList');
       const historieList = document.getElementById('historieList');
       
-      let offeneAntraege = [];
-      let inBearbeitungAntraege = [];
-      let historieAntraege = [];
-      try {
-        offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(currentSession);
-        inBearbeitungAntraege = antragSystem.getInBearbeitungAntraege(currentSession);
-        historieAntraege = antragSystem.getHistorieMitarbeiter(currentSession);
-      } catch (e) {
-        console.error('renderAntraege Fehler:', e);
-      }
+      const effektiverMitarbeiter = getEffektiverMitarbeiter();
       
-      // Debug-Balken immer anzeigen
-      if (debugBar && typeof antragSystem !== 'undefined' && antragSystem) {
-        const total = antragSystem.antraege ? antragSystem.antraege.length : 0;
-        const offen = total ? antragSystem.antraege.filter(function(a){ return a.status === 'offen'; }).length : 0;
-        const jvas = currentSession.jvas && currentSession.jvas.length ? currentSession.jvas.join(', ') : (currentSession.jva || '-');
-        debugBar.innerHTML = '<strong>Debug:</strong> Anträge im System: <strong>' + total + '</strong> (davon offen: ' + offen + ') &nbsp;|&nbsp; Für deine Gruppe: <strong>' + offeneAntraege.length + '</strong> &nbsp;|&nbsp; Haus=' + jvas + ', Station=' + (currentSession.station ?? '-') + ', Rolle=' + (currentSession.rolle || '-');
-        debugBar.style.display = 'block';
-      }
+      let offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(effektiverMitarbeiter);
+      let inBearbeitungAntraege = antragSystem.getInBearbeitungAntraege(effektiverMitarbeiter);
+      let historieAntraege = antragSystem.getHistorieMitarbeiter(effektiverMitarbeiter);
       
       // Debug-Ausgabe
       console.log('[Debug] renderAntraege - offeneAntraege:', offeneAntraege.length, offeneAntraege.map(a => ({id: a.id, status: a.status, zugewiesenAnGruppe: a.zugewiesenAnGruppe})));
@@ -5110,7 +4943,15 @@ ${t('action.archive')}
       const sortierungBearbeitung = document.getElementById('sortierung')?.value || 'datum-neu';
       const sortierungHistorie = document.getElementById('sortierungHistorie')?.value || 'datum-neu';
       
-      offeneAntraege = [...offeneAntraege].sort(erstelleSortierFunktion(sortierungOffen));
+      // "Anträge und Aufgaben meiner Gruppe": Weitergeleitete Anträge immer oben, danach gewählte Sortierung
+      const sortOffen = erstelleSortierFunktion(sortierungOffen);
+      offeneAntraege = [...offeneAntraege].sort((a, b) => {
+        const aWeitergeleitet = !!(a.weiterleitungen && a.weiterleitungen.length > 0);
+        const bWeitergeleitet = !!(b.weiterleitungen && b.weiterleitungen.length > 0);
+        if (aWeitergeleitet && !bWeitergeleitet) return -1;
+        if (!aWeitergeleitet && bWeitergeleitet) return 1;
+        return sortOffen(a, b);
+      });
       inBearbeitungAntraege = [...inBearbeitungAntraege].sort(erstelleSortierFunktion(sortierungBearbeitung));
       meineAufgaben = [...meineAufgaben].sort(erstelleSortierFunktion(sortierungBearbeitung));
       historieAntraege = [...historieAntraege].sort(erstelleSortierFunktion(sortierungHistorie));
@@ -5120,6 +4961,12 @@ ${t('action.archive')}
       document.getElementById('bearbeitungCount').textContent = bearbeitungTotal;
       document.getElementById('historieCount').textContent = historieAntraege.length;
       
+      // Tab-Zähler für "Anträge und Aufgaben meiner Gruppe" aktualisieren
+      const offenTabCount = document.getElementById('offenTabCount');
+      if (offenTabCount) {
+        offenTabCount.textContent = offeneAntraege.length;
+        offenTabCount.style.display = offeneAntraege.length > 0 ? 'inline-block' : 'none';
+      }
       // Tab-Zähler für "Meine Anträge und Aufgaben" aktualisieren
       const tabCount = document.getElementById('bearbeitungTabCount');
       if (tabCount) {
@@ -5129,32 +4976,7 @@ ${t('action.archive')}
       
       // Anträge und Aufgaben meiner Gruppe
       if (offeneAntraege.length === 0) {
-        let debugHtml = '<div class="empty-state"><p>Keine offenen Anträge vorhanden.</p>';
-        // Debug immer anzeigen wenn Liste leer (auch bei 0 geladenen Anträgen)
-        const totalAntraege = antragSystem.antraege ? antragSystem.antraege.length : 0;
-        const m = { ...currentSession };
-        if (!m.jvas || (Array.isArray(m.jvas) && m.jvas.length === 0)) m.jvas = m.jva ? [m.jva] : [];
-        const jvasStr = Array.isArray(m.jvas) ? m.jvas.join(', ') : (m.jvas || '-');
-        debugHtml += '<div class="antraege-debug" style="margin-top:1rem;padding:0.75rem;background:#f5f5f5;border:1px solid #ccc;border-radius:6px;font-size:0.85rem;text-align:left;">';
-        debugHtml += '<strong>Debug – Anträge meiner Gruppe</strong><br>';
-        debugHtml += 'Anträge im System: <strong>' + totalAntraege + '</strong><br>';
-        debugHtml += 'Deine Zuordnung: <strong>Haus</strong>=' + jvasStr + ', <strong>Station</strong>=' + (m.station ?? '-') + ', <strong>Rolle</strong>=' + (m.rolle || '-') + '<br>';
-        if (totalAntraege > 0 && typeof antragSystem._getAntragInsasseOrt === 'function') {
-          const offen = antragSystem.antraege.filter(a => a.status === 'offen');
-          debugHtml += 'Davon offen: ' + offen.length + '<br><br>';
-          offen.slice(0, 5).forEach((a, i) => {
-            const ort = antragSystem._getAntragInsasseOrt(a);
-            const matchH = antragSystem._matchesHaus(m.jvas, ort.jva);
-            const matchS = antragSystem._matchesStation(m.station, ort.station);
-            debugHtml += 'Antrag ' + (i+1) + ': Haus=' + (ort.jva || '(leer)') + ', Station=' + (ort.station ?? '(leer)') + ' &rarr; Haus-Match=' + matchH + ', Station-Match=' + matchS;
-            if (a.bearbeiterId) debugHtml += ', Bearbeiter=' + a.bearbeiterId;
-            debugHtml += '<br>';
-          });
-        } else if (totalAntraege === 0) {
-          debugHtml += '<br>Es sind keine Anträge geladen. Bitte Seite neu laden (F5) oder prüfen, ob die Daten vom Server ankommen.';
-        }
-        debugHtml += '</div></div>';
-        offenList.innerHTML = debugHtml;
+        offenList.innerHTML = '<div class="empty-state"><p>Keine offenen Anträge vorhanden.</p></div>';
       } else {
         offenList.innerHTML = offeneAntraege.map(a => renderAntragCard(a, 'offen')).join('');
       }
@@ -5186,12 +5008,7 @@ ${t('action.archive')}
       } else {
         historieList.innerHTML = historieAntraege.map(a => renderAntragCard(a, 'historie')).join('');
       }
-      } catch (err) {
-        console.error('renderAntraege Fehler:', err);
-        setDebug('Fehler: ' + (err && err.message ? err.message : String(err)));
-      }
     }
-    window.renderAntraege = renderAntraege;
 
     // ============================================
     // KALENDER-FUNKTIONEN
@@ -5263,7 +5080,6 @@ ${t('action.archive')}
         }
       }
     }
-    window.renderKalender = renderKalender;
     
     function updateKalenderAnzeige() {
       const anzeige = document.getElementById('kalenderAnzeige');
@@ -5288,7 +5104,8 @@ ${t('action.archive')}
     
     function renderTagAnsicht() {
       const main = document.getElementById('kalenderMain');
-      const termine = terminSystem.getTermineFuerTag(currentSession, kalenderDatum);
+      const effektiverMitarbeiter = getEffektiverMitarbeiter();
+      const termine = terminSystem.getTermineFuerTag(effektiverMitarbeiter, kalenderDatum);
       const heute = new Date().toDateString();
       const istHeute = kalenderDatum.toDateString() === heute;
       
@@ -5324,7 +5141,8 @@ ${t('action.archive')}
         const tag = new Date(startOfWeek);
         tag.setDate(tag.getDate() + i);
         const istHeute = tag.toDateString() === heute;
-        const termine = terminSystem.getTermineFuerTag(currentSession, tag);
+        const effektiverMitarbeiter = getEffektiverMitarbeiter();
+        const termine = terminSystem.getTermineFuerTag(effektiverMitarbeiter, tag);
         
         headerHtml += `
           <div class="woche-tag-header ${istHeute ? 'heute' : ''}" onclick="waehleTagInWoche('${tag.toISOString()}')">
@@ -5362,7 +5180,8 @@ ${t('action.archive')}
       const main = document.getElementById('kalenderMain');
       const jahr = kalenderDatum.getFullYear();
       const monat = kalenderDatum.getMonth();
-      const termine = terminSystem.getTermineFuerMonat(currentSession, jahr, monat);
+      const effektiverMitarbeiter = getEffektiverMitarbeiter();
+      const termine = terminSystem.getTermineFuerMonat(effektiverMitarbeiter, jahr, monat);
       
       const ersterTag = new Date(jahr, monat, 1);
       const letzterTag = new Date(jahr, monat + 1, 0);
@@ -5419,7 +5238,8 @@ ${t('action.archive')}
     function renderTermineSidebar() {
       const titel = document.getElementById('termineSidebarTitel');
       const liste = document.getElementById('termineSidebarListe');
-      const termine = terminSystem.getTermineFuerTag(currentSession, ausgewaehltesDatum);
+      const effektiverMitarbeiter = getEffektiverMitarbeiter();
+      const termine = terminSystem.getTermineFuerTag(effektiverMitarbeiter, ausgewaehltesDatum);
       
       const formatDatum = ausgewaehltesDatum.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
       titel.textContent = `${formatDatum}`;
@@ -5756,12 +5576,13 @@ ${t('action.archive')}
                             currentSession.rolle === 'haus-leitung';
       if (!istHausleitung) return;
       
-      const offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(currentSession);
+      const effektiverMitarbeiter = getEffektiverMitarbeiter();
+      const offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(effektiverMitarbeiter);
       const alleAntraege = antragSystem.antraege;
       const antraegeImHaus = alleAntraege.filter(a => {
         if (a.veraktet) return false;
         if (a.bearbeiterId === currentSession.userId) return false;
-        return antragSystem._matchesHaus(currentSession.jvas, a.insasseJva);
+        return antragSystem._matchesHaus(effektiverMitarbeiter.jvas, a.insasseJva);
       });
       
       console.log('[VAL Debug] Alle Anträge im Haus:', antraegeImHaus.length);
@@ -5771,7 +5592,6 @@ ${t('action.archive')}
       // Zeige Debug-Info im UI
       const debugInfo = `VAL Debug:\nAnträge im Haus: ${antraegeImHaus.length}\nGefiltert: ${offeneAntraege.length}\nNicht gefiltert: ${antraegeImHaus.length - offeneAntraege.length}`;
       console.log(debugInfo);
-    }
     }
   </script>
 </body>

@@ -1470,7 +1470,7 @@
     }
     
     // Notiz mit ausgewähltem Typ speichern
-    function confirmNotizTyp() {
+    async function confirmNotizTyp() {
       const antragId = document.getElementById('notizTypAntragId').value;
       const text = document.getElementById('notizTypText').value;
       const selectedTyp = document.querySelector('input[name="notizTyp"]:checked');
@@ -1487,6 +1487,14 @@
       
       // Kommentar mit Typ speichern
       antragSystem.addKommentar(antragId, text, currentSession.userId, currentSession.name, typ);
+      
+      if (window.DataSync && window.DataSync.syncAntragToServer) {
+        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
+        const ok = await window.DataSync.syncAntragToServer(antragId);
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus(ok ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', ok ? 'success' : 'error');
+        }
+      }
       
       // Modal schließen, Eingabefeld leeren und Ansicht aktualisieren
       closeModal('notizTypModal');
@@ -2557,7 +2565,16 @@ ${t('action.archive')}
       }
       
       // Antrag als geprüft markieren mit Kommentar
-      antragSystem.markiereAlsGeprueft(antragId, currentSession.userId, currentSession.name, kommentar);
+      const geprueft = antragSystem.markiereAlsGeprueft(antragId, currentSession.userId, currentSession.name, kommentar);
+      if (!geprueft) {
+        const msg = currentLanguage === 'en'
+          ? 'The application could not be marked as reviewed. It must be in progress (not archived) and not incorrectly in the open pool.'
+          : currentLanguage === 'fr'
+          ? 'La demande n\'a pas pu être marquée comme examinée.'
+          : 'Der Antrag konnte nicht als geprüft markiert werden. Er muss in Bearbeitung sein (nicht veraktet). Bei Problemen nach Gruppen-Weiterleitung bitte Seite neu laden.';
+        showAlert(msg);
+        return;
+      }
       
       // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
       if (window.DataSync && window.DataSync.syncAntragToServer) {
