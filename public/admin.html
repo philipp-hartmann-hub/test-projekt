@@ -447,7 +447,7 @@
       errEl.textContent = 'Ungültige Zugangsdaten. Bitte versuchen Sie es erneut.';
 
       if (window.DataSync) {
-        const res = await window.DataSync.serverLogin(username, password, 'mitarbeiter');
+        const res = await window.DataSync.serverLogin(username, password, 'admin');
         if (res.success && res.user && res.user.rolle === 'admin') {
           sessionStorage.setItem('adminLoggedIn', 'true');
           showAdminSection();

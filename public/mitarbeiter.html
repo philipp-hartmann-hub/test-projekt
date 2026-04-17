@@ -2576,6 +2576,7 @@ ${t('action.archive')}
         return;
       }
       
+      let syncHinweis = null;
       // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
       if (window.DataSync && window.DataSync.syncAntragToServer) {
         if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
@@ -2584,18 +2585,20 @@ ${t('action.archive')}
           showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
         }
         if (!syncSuccess) {
-          const msg = currentLanguage === 'en'
+          syncHinweis = currentLanguage === 'en'
             ? 'Synchronization failed. The phase transition is saved locally; you can continue, but please sync later.'
             : currentLanguage === 'fr'
             ? 'Échec de la synchronisation. La transition de phase est enregistrée localement; vous pouvez continuer, mais veuillez synchroniser plus tard.'
             : 'Synchronisation fehlgeschlagen. Der Phasenübergang ist lokal gespeichert; Sie können fortfahren, bitte später synchronisieren.';
-          showAlert(msg);
         }
       }
       
       closeModal('pruefungModal');
+      if (syncHinweis) {
+        await showAlert(syncHinweis);
+      }
       
-      // Nach Prüfung: Weiterleitung anbieten
+      // Nach Prüfung: Weiterleitung anbieten (selbst weiter / weiterleiten)
       openWeiterleitenModal(antragId, 'geprueft');
     }
 
@@ -2637,6 +2640,7 @@ ${t('action.archive')}
       // Antrag abschließen - die beiden Optionen werden jetzt separat behandelt
       antragSystem.abschliessenAntrag(antragId, status, begruendung, persoenlichEroeffnen, bescheidPdf, vollzugVorBekanntgabe);
       
+      let entscheidSyncHinweis = null;
       // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
       if (window.DataSync && window.DataSync.syncAntragToServer) {
         if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
@@ -2645,11 +2649,14 @@ ${t('action.archive')}
           showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
         }
         if (!syncSuccess) {
-          showAlert('Entscheidung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.');
+          entscheidSyncHinweis = 'Entscheidung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.';
         }
       }
       
       closeModal('entscheidenModal');
+      if (entscheidSyncHinweis) {
+        await showAlert(entscheidSyncHinweis);
+      }
       
       // Prüfen ob persönliche Eröffnung oder Vollzug vor Bekanntgabe gewählt wurde
       if (persoenlichEroeffnen || vollzugVorBekanntgabe) {
@@ -4048,8 +4055,10 @@ ${t('action.archive')}
       if (konkretePersonCheckbox) konkretePersonCheckbox.checked = false;
       
       if (!value) {
-        document.getElementById('weiterleitenPersonAuswahlContainer').style.display = 'none';
-        document.getElementById('weiterleitenPersonSuche').style.display = 'none';
+        const wPersAusw = document.getElementById('weiterleitenPersonAuswahlContainer');
+        const wPersSuch = document.getElementById('weiterleitenPersonSuche');
+        if (wPersAusw) wPersAusw.style.display = 'none';
+        if (wPersSuch) wPersSuch.style.display = 'none';
         return;
       }
       
