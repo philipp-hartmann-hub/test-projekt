@@ -184,16 +184,60 @@ app.get('/api/trigger-deployment', handleTriggerDeployment);
 // API ROUTEN - AUTHENTIFIZIERUNG
 // ============================================
 
+/** Login: Benutzername oder Anzeigename (name / Vorname Nachname), Passwort exakt wie gespeichert */
+async function findUserByCredentials(rawUsername, rawPassword) {
+  const username = String(rawUsername || '').trim();
+  const password = String(rawPassword ?? '');
+  if (!username || password === '') return null;
+
+  const users = await dbLayer.getAll('users');
+  const pwOk = (u) => u.password === password;
+
+  let u = users.find((x) => x.username === username && pwOk(x));
+  if (u) return u;
+
+  u = users.find(
+    (x) =>
+      x.username &&
+      String(x.username).trim().toLowerCase() === username.toLowerCase() &&
+      pwOk(x)
+  );
+  if (u) return u;
+
+  const want = username.toLowerCase().replace(/\s+/g, ' ').trim();
+  u = users.find((x) => {
+    if (!pwOk(x)) return false;
+    const nameFull = String(x.name || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+    if (nameFull === want) return true;
+    const vn = String(x.vorname || '').trim();
+    const nn = String(x.nachname || '').trim();
+    const combined = `${vn} ${nn}`
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+    return combined === want;
+  });
+  return u || null;
+}
+
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password, portalTyp } = req.body;
-    
-    const user = await dbLayer.findOne('users', u => u.username === username && u.password === password);
-    
+
+    const user = await findUserByCredentials(username, password);
+
     if (!user) {
       return res.json({ success: false, message: 'Ungueltige Anmeldedaten' });
     }
-    
+
+    // Admin-Portal: nur nicht-Insassen (Mitarbeitende / Admin / VAL etc.)
+    if (portalTyp === 'admin' && user.rolle === 'insasse') {
+      return res.json({ success: false, message: 'Kein Zugang zum Admin-Portal' });
+    }
+
     // Portal-Typ pruefen
     if (portalTyp === 'insasse' && user.rolle !== 'insasse') {
       return res.json({ success: false, message: 'Kein Zugang zum Insassen-Portal' });

@@ -448,13 +448,16 @@
 
       if (window.DataSync) {
         const res = await window.DataSync.serverLogin(username, password, 'admin');
-        if (res.success && res.user && res.user.rolle === 'admin') {
+        // Alle im System angelegten Mitarbeitenden (nicht Insassen) dürfen das Admin-Portal nutzen
+        if (res.success && res.user && res.user.rolle !== 'insasse') {
           sessionStorage.setItem('adminLoggedIn', 'true');
           showAdminSection();
           return;
         }
         if (res.success) {
-          errEl.textContent = 'Kein Zugang zum Admin-Portal mit diesem Benutzer.';
+          errEl.textContent =
+            res.message ||
+            'Kein Zugang zum Admin-Portal (nur für Mitarbeitende, nicht für Insassen).';
           errEl.style.display = 'block';
           return;
         }
