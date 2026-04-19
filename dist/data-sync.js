@@ -143,6 +143,17 @@ function mergeAntragArraysByIdOrContent(existingArr, incomingArr) {
   return order.map((k) => map.get(k));
 }
 
+function unionAbgegebenVonMerge(a, b) {
+  const set = new Set();
+  for (const arr of [a, b]) {
+    if (!Array.isArray(arr)) continue;
+    for (const id of arr) {
+      if (id != null && String(id).length) set.add(String(id));
+    }
+  }
+  return [...set];
+}
+
 function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
   if (!serverAntrag || typeof serverAntrag !== 'object') return localAntrag;
   if (!localAntrag || typeof localAntrag !== 'object') return serverAntrag;
@@ -150,6 +161,15 @@ function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
   merged.kommentare = mergeAntragArraysByIdOrContent(localAntrag.kommentare, serverAntrag.kommentare);
   merged.dokumente = mergeAntragArraysByIdOrContent(localAntrag.dokumente, serverAntrag.dokumente);
   merged.weiterleitungen = mergeAntragArraysByIdOrContent(localAntrag.weiterleitungen, serverAntrag.weiterleitungen);
+  merged.abgegebenVon = unionAbgegebenVonMerge(localAntrag.abgegebenVon, serverAntrag.abgegebenVon);
+
+  const lwl = Array.isArray(localAntrag.weiterleitungen) ? localAntrag.weiterleitungen.length : 0;
+  const swl = Array.isArray(serverAntrag.weiterleitungen) ? serverAntrag.weiterleitungen.length : 0;
+  if (lwl < swl) {
+    merged.bearbeiterId = serverAntrag.bearbeiterId;
+    merged.bearbeiterName = serverAntrag.bearbeiterName;
+  }
+
   const monotonicTrue = ['sachlichGeprueft', 'entscheidungGetroffen', 'veraktet', 'vollzogen', 'erledigt'];
   for (const k of monotonicTrue) {
     if (localAntrag[k] === true || serverAntrag[k] === true) {

@@ -65,14 +65,39 @@ function mergeAntragArraysByIdOrContent(existingArr, incomingArr) {
   return order.map((k) => map.get(k));
 }
 
+/** Vereinigt Bearbeiter-IDs aus Weiterleitungen (kein Datenverlust bei parallelen Clients). */
+function unionAbgegebenVonIds(a, b) {
+  const set = new Set();
+  for (const arr of [a, b]) {
+    if (!Array.isArray(arr)) continue;
+    for (const id of arr) {
+      if (id != null && String(id).length) set.add(String(id));
+    }
+  }
+  return [...set];
+}
+
 function mergeAntragPutPayload(existing, incoming) {
   if (!incoming || typeof incoming !== 'object') return incoming;
   if (!existing || typeof existing !== 'object') return incoming;
+
+  const incWlLen = Array.isArray(incoming.weiterleitungen) ? incoming.weiterleitungen.length : 0;
+  const exWlLen = Array.isArray(existing.weiterleitungen) ? existing.weiterleitungen.length : 0;
+
   const base = { ...existing, ...incoming };
   const arrayFields = ['dokumente', 'kommentare', 'weiterleitungen'];
   for (const f of arrayFields) {
     base[f] = mergeAntragArraysByIdOrContent(existing[f], incoming[f]);
   }
+
+  base.abgegebenVon = unionAbgegebenVonIds(existing.abgegebenVon, incoming.abgegebenVon);
+
+  // Veralteter Client mit weniger Weiterleitungseinträgen darf Bearbeiter nicht zurückdrehen
+  if (incWlLen < exWlLen) {
+    base.bearbeiterId = existing.bearbeiterId;
+    base.bearbeiterName = existing.bearbeiterName;
+  }
+
   const monotonicTrue = ['sachlichGeprueft', 'entscheidungGetroffen', 'veraktet', 'vollzogen', 'erledigt'];
   for (const k of monotonicTrue) {
     if (existing[k] === true || incoming[k] === true) {

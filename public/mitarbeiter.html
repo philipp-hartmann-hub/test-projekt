@@ -516,10 +516,11 @@
         </div>
         
         <input type="hidden" id="aufgabeAntragId">
+        <p class="field-hint">Nach dem Senden können Sie die Aufgabe in dieser Antragsdetailansicht unter „Zugehörige Aufgaben“ über „Aufgabe zurücknehmen“ wieder entfernen.</p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal('aufgabeModal')">Abbrechen</button>
-        <button class="btn btn-primary" onclick="sendeAufgabe()">Aufgabe senden</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('aufgabeModal')">Abbrechen</button>
+        <button type="button" class="btn btn-primary" onclick="sendeAufgabe()">Aufgabe senden</button>
       </div>
     </div>
   </div>
@@ -1940,13 +1941,15 @@ Persönlich eröffnet
       const msgText = currentLanguage === 'en' ? `The task for application ${aufgabe.antragsNummer} was withdrawn by ${currentSession.name}.`
                     : currentLanguage === 'fr' ? `La tâche pour la demande ${aufgabe.antragsNummer} a été retirée par ${currentSession.name}.`
                     : `Die Aufgabe zum Antrag ${aufgabe.antragsNummer} wurde von ${currentSession.name} zurückgenommen.`;
-      notificationSystem.createNotification(
-        aufgabe.zugewiesenAnId,
-        'aufgabe-geloescht',
-        titleText,
-        msgText,
-        aufgabe.antragId
-      );
+      if (aufgabe.zugewiesenAnId) {
+        notificationSystem.createNotification(
+          aufgabe.zugewiesenAnId,
+          'aufgabe-geloescht',
+          titleText,
+          msgText,
+          aufgabe.antragId
+        );
+      }
       
       // Wenn wir in der Detailansicht sind, diese aktualisieren
       if (currentAntragId === aufgabe.antragId) {
@@ -1994,8 +1997,13 @@ Persönlich eröffnet
       const hatOffeneAufgabe = !!meineOffeneAufgabe;
       
       // Der aktuelle Bearbeiter hat IMMER Zugriff (bis zur Veraktung)
-      // Dies umfasst sowohl den ursprünglichen Bearbeiter als auch jeden, der den Antrag durch Weiterleitung erhalten hat
-      const istBearbeiter = antrag.bearbeiterId === currentSession.userId;
+      // Schutz vor veraltetem Snapshot: wer schon persönlich an einen anderen Mitarbeiter weitergeleitet hat,
+      // gilt nicht mehr als Hauptbearbeiter — auch wenn bearbeiterId lokal noch auf „mich“ steht.
+      const hattePersoenlicheWeiterleitungWeg = (antrag.weiterleitungen || []).some(
+        (w) => w && w.anId && w.vonId === currentSession.userId && w.anId !== currentSession.userId
+      );
+      const istBearbeiter =
+        antrag.bearbeiterId === currentSession.userId && !hattePersoenlicheWeiterleitungWeg;
       
       // Prüfen ob der Benutzer den Antrag "abgegeben" hat (durch Aufgabenerledigung mit Antwort/Zurück)
       // WICHTIG: Wenn jemand jetzt der Bearbeiter ist (durch Weiterleitung), ist er NICHT mehr "abgegeben"
@@ -3577,6 +3585,8 @@ ${t('action.archive')}
                     : currentLanguage === 'fr' ? 'Tâche enregistrée localement mais la synchronisation a échoué. Vérifiez la connexion.'
                     : 'Aufgabe lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen und Seite ggf. aktualisieren.';
           showAlert(msg);
+        } else if (window.DataSync.reloadDataFromServer) {
+          await window.DataSync.reloadDataFromServer();
         }
       }
       
@@ -4311,6 +4321,8 @@ ${t('action.archive')}
             }
             if (!syncSuccess) {
               showAlert('Weiterleitung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.');
+            } else if (window.DataSync.reloadDataFromServer) {
+              await window.DataSync.reloadDataFromServer();
             }
           }
           
@@ -4366,6 +4378,8 @@ ${t('action.archive')}
             }
             if (!syncSuccess) {
               showAlert('Weiterleitung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.');
+            } else if (window.DataSync.reloadDataFromServer) {
+              await window.DataSync.reloadDataFromServer();
             }
           }
           
