@@ -1413,7 +1413,14 @@
         return;
       }
       
-      const aufgabe = aufgabenSystem.erledigeAufgabe(aufgabeId, antwortText, erledigungsTyp);
+      const erledigerName =
+        (currentSession.name && String(currentSession.name).trim()) ||
+        `${currentSession.vorname || ''} ${currentSession.nachname || ''}`.trim() ||
+        'Insasse';
+      const aufgabe = aufgabenSystem.erledigeAufgabe(aufgabeId, antwortText, erledigungsTyp, null, {
+        userId: currentSession.userId,
+        userName: erledigerName
+      });
       console.log('Aufgabe erledigt:', aufgabe.id, 'Status:', aufgabe.status);
       
       // Warten kurz, damit localStorage.setItem Zeit hat zu syncen
@@ -1447,19 +1454,6 @@
           console.warn('Explizite Synchronisation fehlgeschlagen:', e);
         }
       }
-      
-      // Benachrichtigung an den Ersteller
-      const nachrichtText = erledigungsTyp === 'kenntnisnahme'
-        ? `Zur Kenntnis genommen (Antrags-ID: ${aufgabe.antragsNummer || aufgabe.antragId})`
-        : `Antwort erhalten (Antrags-ID: ${aufgabe.antragsNummer || aufgabe.antragId})`;
-      
-      notificationSystem.createNotification(
-        aufgabe.erstelltVonId,
-        'aufgabe-erledigt',
-        'Aufgabe erledigt',
-        nachrichtText,
-        aufgabe.antragId
-      );
       
       closeModal('aufgabeInsasseModal');
       showAlert(erledigungsTyp === 'kenntnisnahme' ? 'Zur Kenntnis genommen' : 'Erfolgreich übermittelt');

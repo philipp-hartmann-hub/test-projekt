@@ -23,6 +23,26 @@ const SYNC_KEYS = {
 // API HELPER
 // ============================================
 
+/** Vereinigt Aktivitäten nach id (Verlauf append-only; verhindert Datenverlust bei Reload). */
+function mergeAktivitaetenArrays(existing, incoming) {
+  const map = new Map();
+  const add = (item) => {
+    if (!item || item.id == null || String(item.id) === '') return;
+    const id = String(item.id);
+    const prev = map.get(id);
+    if (!prev) {
+      map.set(id, item);
+      return;
+    }
+    const tPrev = new Date(prev.erstelltAm || 0).getTime();
+    const tNew = new Date(item.erstelltAm || 0).getTime();
+    map.set(id, tNew >= tPrev ? { ...prev, ...item } : { ...item, ...prev });
+  };
+  (Array.isArray(existing) ? existing : []).forEach(add);
+  (Array.isArray(incoming) ? incoming : []).forEach(add);
+  return Array.from(map.values());
+}
+
 async function apiCall(endpoint, options = {}) {
   try {
     const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -76,7 +96,11 @@ async function loadInitialData() {
     localStorage.setItem('gefaengnis_antraege', JSON.stringify(antraege));
     localStorage.setItem('gefaengnis_aufgaben', JSON.stringify(aufgaben));
     localStorage.setItem('gefaengnis_notifications', JSON.stringify(notifications));
-    localStorage.setItem('gefaengnis_aktivitaeten', JSON.stringify(aktivitaeten));
+    const prevAktivitaeten = JSON.parse(localStorage.getItem('gefaengnis_aktivitaeten') || '[]');
+    localStorage.setItem(
+      'gefaengnis_aktivitaeten',
+      JSON.stringify(mergeAktivitaetenArrays(prevAktivitaeten, aktivitaeten))
+    );
     localStorage.setItem('gefaengnis_termine', JSON.stringify(termine));
 
     serverConnected = true;
@@ -232,12 +256,14 @@ async function syncToServerImpl(key) {
       }
     }
 
-    for (const serverItem of currentServerData) {
-      const stillExists = localData.find(l => l.id === serverItem.id);
-      if (!stillExists) {
-        await apiCall(`${endpoint}/${serverItem.id}`, {
-          method: 'DELETE'
-        });
+    if (key !== 'gefaengnis_aktivitaeten') {
+      for (const serverItem of currentServerData) {
+        const stillExists = localData.find(l => l.id === serverItem.id);
+        if (!stillExists) {
+          await apiCall(`${endpoint}/${serverItem.id}`, {
+            method: 'DELETE'
+          });
+        }
       }
     }
   } catch (error) {
@@ -422,7 +448,11 @@ async function reloadDataFromServer() {
     originalSetItem('gefaengnis_antraege', JSON.stringify(antraege));
     originalSetItem('gefaengnis_aufgaben', JSON.stringify(aufgaben));
     originalSetItem('gefaengnis_notifications', JSON.stringify(notifications));
-    originalSetItem('gefaengnis_aktivitaeten', JSON.stringify(aktivitaeten));
+    const prevAktivReload = JSON.parse(localStorage.getItem('gefaengnis_aktivitaeten') || '[]');
+    originalSetItem(
+      'gefaengnis_aktivitaeten',
+      JSON.stringify(mergeAktivitaetenArrays(prevAktivReload, aktivitaeten))
+    );
     originalSetItem('gefaengnis_termine', JSON.stringify(termine));
 
     const vorherAntraege = antragSystem ? antragSystem.antraege.length : 0;

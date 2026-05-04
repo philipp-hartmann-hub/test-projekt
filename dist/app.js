@@ -1757,7 +1757,12 @@ class AktivitaetenSystem {
   // Alle Aktivitäten zu einem Antrag (chronologisch sortiert)
   getAktivitaetenZuAntrag(antragId) {
     return this.aktivitaeten
-      .filter(a => a.antragId === antragId)
+      .filter((a) => {
+        if (a.antragId !== antragId) return false;
+        // Private Notizen nicht im Bearbeitungsverlauf (defensiv; werden beim Speichern nicht protokolliert)
+        if (a.typ === 'kommentar' && a.details && a.details.kommentarTyp === 'privat') return false;
+        return true;
+      })
       .sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
   }
   
@@ -2071,7 +2076,8 @@ class AufgabenSystem {
   // Aufgabe erledigen
   // erledigungsTyp: 'antwort' oder 'kenntnisnahme'
   // antwortPdfs: Array von PDFs [{name, data}, ...]
-  erledigeAufgabe(aufgabeId, antwort, erledigungsTyp = 'antwort', antwortPdfs = null) {
+  // erledigerInfo: { userId, userName, omitCreatorNotify?: boolean } — wer abschließt; omitCreatorNotify z. B. wenn nur „Bearbeitung übernommen“ gesendet wird
+  erledigeAufgabe(aufgabeId, antwort, erledigungsTyp = 'antwort', antwortPdfs = null, erledigerInfo = null) {
     const aufgabe = this.aufgaben.find(a => a.id === aufgabeId);
     if (aufgabe) {
       aufgabe.status = 'erledigt';
@@ -2101,6 +2107,36 @@ class AufgabenSystem {
         benutzerId: aufgabe.zugewiesenAnId,
         benutzerName: aufgabe.zugewiesenAnName
       });
+
+      // Benachrichtigung an die Person, die die Aufgabe gestellt hat (nicht bei Selbst-Erledigung)
+      if (
+        erledigerInfo &&
+        !erledigerInfo.omitCreatorNotify &&
+        erledigerInfo.userId &&
+        aufgabe.erstelltVonId &&
+        aufgabe.erstelltVonId !== erledigerInfo.userId
+      ) {
+        const kurz =
+          aufgabe.kurzbeschreibung || aufgabe.beschreibung;
+        let kurzLabel = 'Aufgabe';
+        if (kurz) {
+          if (typeof kurz === 'string') {
+            kurzLabel = kurz.length > 80 ? kurz.slice(0, 77) + '…' : kurz;
+          } else {
+            const t = getTranslatedUserText(kurz);
+            kurzLabel = t.length > 80 ? t.slice(0, 77) + '…' : t;
+          }
+        }
+        const vonName = erledigerInfo.userName || 'Bearbeiter/in';
+        const antrNr = aufgabe.antragsNummer || aufgabe.antragId || '';
+        notificationSystem.createNotification(
+          aufgabe.erstelltVonId,
+          'aufgabe-abgeschlossen',
+          'Aufgabe erledigt',
+          `„${kurzLabel}“ zum Antrag ${antrNr} wurde von ${vonName} abgeschlossen.`,
+          aufgabe.antragId
+        );
+      }
     }
     return aufgabe;
   }

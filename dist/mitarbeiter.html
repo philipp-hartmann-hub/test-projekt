@@ -1965,6 +1965,9 @@ Persönlich eröffnet
     // ============================================
     
     function openAntragDetail(antragId, isHistorie = false, isOffen = false) {
+      if (typeof window.reloadDataFromStorage === 'function') {
+        window.reloadDataFromStorage();
+      }
       const antrag = antragSystem.getAntrag(antragId);
       if (!antrag) return;
       
@@ -1993,7 +1996,30 @@ Persönlich eröffnet
       
       // Prüfen ob der aktuelle Benutzer berechtigt ist
       const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(antragId);
-      const meineOffeneAufgabe = aufgabenZuAntrag.find(a => a.zugewiesenAnId === currentSession.userId && a.status === 'offen');
+      // Nach „Kenntnisnahme“ mit Hauptbearbeitungsübergabe darf keine zweite „offen“-Zeile derselben Aufgabe bleiben (Phantom/Duplikat)
+      const aufgabeAbgleichKey = (x) =>
+        `${x.erstelltVonId || ''}|${String(x.zugewiesenAnId || '')}|${JSON.stringify(x.kurzbeschreibung || x.beschreibung || '')}|${x.erstelltAm || ''}`;
+      const erledigtKenntnisUebertragKeys = new Set(
+        (aufgabenZuAntrag || [])
+          .filter(
+            (a) =>
+              a.status === 'erledigt' &&
+              a.erledigungsTyp === 'kenntnisnahme' &&
+              a.bearbeitungNachErledigung === 'uebertragen'
+          )
+          .map(aufgabeAbgleichKey)
+      );
+      const passtOffeneAufgabeMir = (a) =>
+        String(a.zugewiesenAnId) === String(currentSession.userId) ||
+        (a.zugewiesenAnTyp === 'gruppe' &&
+          a.zugewiesenAnGruppe &&
+          antragSystem._mitarbeiterGehoertZuGruppe(currentSession, a.zugewiesenAnGruppe));
+      let meineOffeneAufgabe = (aufgabenZuAntrag || []).find((a) => {
+        if (a.status !== 'offen' || !passtOffeneAufgabeMir(a)) return false;
+        if (erledigtKenntnisUebertragKeys.has(aufgabeAbgleichKey(a))) return false;
+        const live = aufgabenSystem.getAufgabe(a.id);
+        return live && live.status === 'offen';
+      });
       const hatOffeneAufgabe = !!meineOffeneAufgabe;
       
       // Der aktuelle Bearbeiter hat IMMER Zugriff (bis zur Veraktung)
@@ -3792,12 +3818,21 @@ ${t('action.archive')}
       
       // Aufgabe-Objekt vorab laden um bearbeitungNachErledigung zu prüfen
       const aufgabeVorab = aufgabenSystem.getAufgabe(aufgabeId);
+      const sollUebertragen = !!(aufgabeVorab && aufgabeVorab.bearbeitungNachErledigung === 'uebertragen');
+      // Bei Kenntnisnahme + geplanter Hauptbearbeitungsübergabe: nur die spez. „übernommen“-Meldung, nicht doppelt „erledigt“
+      const omitCreatorNotify = erledigungsTyp === 'kenntnisnahme' && sollUebertragen;
       
       // Antwort mit Sprachinfo für Übersetzung speichern
       const antwort = antwortText ? createTranslatableText(antwortText) : '';
       
       // PDFs als Array übergeben
-      const aufgabe = aufgabenSystem.erledigeAufgabe(aufgabeId, antwort, erledigungsTyp, antwortPdfs.length > 0 ? [...antwortPdfs] : null);
+      const aufgabe = aufgabenSystem.erledigeAufgabe(
+        aufgabeId,
+        antwort,
+        erledigungsTyp,
+        antwortPdfs.length > 0 ? [...antwortPdfs] : null,
+        { userId: currentSession.userId, userName: currentSession.name, omitCreatorNotify }
+      );
       console.log('Aufgabe erledigt:', aufgabe.id, 'Status:', aufgabe.status);
       
       // Warten kurz, damit localStorage.setItem Zeit hat zu syncen
@@ -3834,28 +3869,11 @@ ${t('action.archive')}
       
       const antrag = antragSystem.getAntrag(aufgabe.antragId);
       
-      // Prüfen ob bei der Aufgabenerstellung die Hauptbearbeitung übertragen werden soll
-      // Dies wurde vom Aufgabensteller festgelegt (nur bei Mitarbeiter-Aufgaben)
-      const sollUebertragen = aufgabeVorab && aufgabeVorab.bearbeitungNachErledigung === 'uebertragen';
-      
       // Logik basierend auf Erledigungstyp und der Einstellung des Aufgabenstellers
       if (erledigungsTyp === 'antwort' || (erledigungsTyp === 'kenntnisnahme' && !sollUebertragen)) {
         // Antrag geht zurück an den Aufgabensteller
         // Der Empfänger verliert den Zugriff (wird als "abgegeben" markiert)
         antragSystem.markiereAufgabeAbgegeben(aufgabe.antragId, currentSession.userId);
-        
-        // Benachrichtigung an den Ersteller
-        const nachrichtText = erledigungsTyp === 'kenntnisnahme'
-          ? `${t('task.acknowledged')} (${t('application.id')}: ${aufgabe.antragsNummer || aufgabe.antragId})`
-          : `${t('task.answer')}: ${aufgabe.antragsNummer || aufgabe.antragId}`;
-        
-        notificationSystem.createNotification(
-          aufgabe.erstelltVonId,
-          'aufgabe-erledigt',
-          '' + t('task.complete'),
-          nachrichtText,
-          aufgabe.antragId
-        );
         
         // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
         if (window.DataSync && window.DataSync.syncAntragToServer) {
