@@ -40,7 +40,27 @@ function mergeAktivitaetenArrays(existing, incoming) {
   };
   (Array.isArray(existing) ? existing : []).forEach(add);
   (Array.isArray(incoming) ? incoming : []).forEach(add);
-  return Array.from(map.values());
+    return Array.from(map.values());
+}
+
+/**
+ * Lädt alle Aktivitäten zu einem Antrag vom Server und merged sie in localStorage
+ * (fürs Bearbeitungsverlauf: Einträge aller Bearbeiter, auch nach Gerätewechsel).
+ */
+async function fetchAktivitaetenForAntrag(antragId) {
+  if (!serverConnected || !initialDataLoaded) return;
+  if (antragId == null || String(antragId) === '') return;
+  try {
+    const data = await apiCall('/aktivitaeten?antragId=' + encodeURIComponent(String(antragId)));
+    const prev = JSON.parse(localStorage.getItem('gefaengnis_aktivitaeten') || '[]');
+    const merged = mergeAktivitaetenArrays(prev, Array.isArray(data) ? data : []);
+    localStorage.setItem('gefaengnis_aktivitaeten', JSON.stringify(merged));
+    if (typeof window.reloadDataFromStorage === 'function') {
+      window.reloadDataFromStorage();
+    }
+  } catch (error) {
+    console.warn('fetchAktivitaetenForAntrag:', error?.message || error);
+  }
 }
 
 async function apiCall(endpoint, options = {}) {
@@ -93,7 +113,11 @@ async function loadInitialData() {
       };
     });
     localStorage.setItem('gefaengnis_users', JSON.stringify(usersFrontend));
-    localStorage.setItem('gefaengnis_antraege', JSON.stringify(antraege));
+    const prevAntraegeInit = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
+    localStorage.setItem(
+      'gefaengnis_antraege',
+      JSON.stringify(mergeAntraegeArraysAfterFetch(prevAntraegeInit, antraege))
+    );
     localStorage.setItem('gefaengnis_aufgaben', JSON.stringify(aufgaben));
     localStorage.setItem('gefaengnis_notifications', JSON.stringify(notifications));
     const prevAktivitaeten = JSON.parse(localStorage.getItem('gefaengnis_aktivitaeten') || '[]');
@@ -167,6 +191,41 @@ function mergeAntragArraysByIdOrContent(existingArr, incomingArr) {
   return order.map((k) => map.get(k));
 }
 
+/** PDF-Binary (data URL) bei zusammengeführten Dokumenten nicht durch „leeren“ Server-Eintrag überschreiben. */
+function _isPdfDataUrl(s) {
+  return typeof s === 'string' && s.startsWith('data:') && s.length > 200;
+}
+
+function mergeDokumenteArrays(existingArr, incomingArr) {
+  const ex = Array.isArray(existingArr) ? existingArr : [];
+  const inc = Array.isArray(incomingArr) ? incomingArr : [];
+  const map = new Map();
+  const order = [];
+  function add(item) {
+    const key = _antragArrayItemKey(item);
+    if (map.has(key)) {
+      const prev = map.get(key);
+      if (typeof prev === 'object' && prev && typeof item === 'object' && item) {
+        const o = { ...prev, ...item };
+        if (_isPdfDataUrl(prev.data) && !_isPdfDataUrl(item.data)) o.data = prev.data;
+        else if (!_isPdfDataUrl(prev.data) && _isPdfDataUrl(item.data)) o.data = item.data;
+        else if (_isPdfDataUrl(prev.data) && _isPdfDataUrl(item.data)) {
+          o.data = String(item.data).length >= String(prev.data).length ? item.data : prev.data;
+        }
+        map.set(key, o);
+      } else {
+        map.set(key, item);
+      }
+    } else {
+      map.set(key, item);
+      order.push(key);
+    }
+  }
+  ex.forEach(add);
+  inc.forEach(add);
+  return order.map((k) => map.get(k));
+}
+
 function unionAbgegebenVonMerge(a, b) {
   const set = new Set();
   for (const arr of [a, b]) {
@@ -183,7 +242,7 @@ function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
   if (!localAntrag || typeof localAntrag !== 'object') return serverAntrag;
   const merged = { ...localAntrag, ...serverAntrag };
   merged.kommentare = mergeAntragArraysByIdOrContent(localAntrag.kommentare, serverAntrag.kommentare);
-  merged.dokumente = mergeAntragArraysByIdOrContent(localAntrag.dokumente, serverAntrag.dokumente);
+  merged.dokumente = mergeDokumenteArrays(localAntrag.dokumente, serverAntrag.dokumente);
   merged.weiterleitungen = mergeAntragArraysByIdOrContent(localAntrag.weiterleitungen, serverAntrag.weiterleitungen);
   merged.abgegebenVon = unionAbgegebenVonMerge(localAntrag.abgegebenVon, serverAntrag.abgegebenVon);
 
@@ -209,6 +268,26 @@ function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
     merged.pruefungsKommentar = pkL;
   }
   return merged;
+}
+
+/**
+ * Beim Neuladen vom Server: Anträge nicht blind ersetzen (Race mit Upload/Sync).
+ * Pro ID: mergeAntragSnapshotAfterPut(lokal, Server) → dokumente/kommentare/weiterleitungen vereinigt.
+ */
+function mergeAntraegeArraysAfterFetch(localArr, serverArr) {
+  const local = Array.isArray(localArr) ? localArr : [];
+  const server = Array.isArray(serverArr) ? serverArr : [];
+  const map = new Map();
+  local.forEach((a) => {
+    if (a && a.id != null && String(a.id) !== '') map.set(String(a.id), a);
+  });
+  server.forEach((a) => {
+    if (!a || a.id == null || String(a.id) === '') return;
+    const id = String(a.id);
+    if (!map.has(id)) map.set(id, a);
+    else map.set(id, mergeAntragSnapshotAfterPut(map.get(id), a));
+  });
+  return Array.from(map.values());
 }
 
 // Liest localStorage erst beim Ausführen des Jobs (nicht den Wert vom setItem-Zeitpunkt).
@@ -445,7 +524,11 @@ async function reloadDataFromServer() {
     
     // Daten in localStorage speichern (ohne Sync-Loop zu triggern)
     originalSetItem('gefaengnis_users', JSON.stringify(usersFrontend));
-    originalSetItem('gefaengnis_antraege', JSON.stringify(antraege));
+    const prevAntraegeReload = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
+    originalSetItem(
+      'gefaengnis_antraege',
+      JSON.stringify(mergeAntraegeArraysAfterFetch(prevAntraegeReload, antraege))
+    );
     originalSetItem('gefaengnis_aufgaben', JSON.stringify(aufgaben));
     originalSetItem('gefaengnis_notifications', JSON.stringify(notifications));
     const prevAktivReload = JSON.parse(localStorage.getItem('gefaengnis_aktivitaeten') || '[]');
@@ -514,6 +597,7 @@ window.DataSync = {
   syncUsersNow,
   reloadDataFromServer,
   syncAntragToServer,
+  fetchAktivitaetenForAntrag,
   isConnected: () => serverConnected,
   isLoaded: () => initialDataLoaded
 };

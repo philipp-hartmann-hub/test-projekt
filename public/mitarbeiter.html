@@ -1964,9 +1964,23 @@ Persönlich eröffnet
     // ANTRAGS-DETAILANSICHT
     // ============================================
     
-    function openAntragDetail(antragId, isHistorie = false, isOffen = false) {
+    async function openAntragDetail(antragId, isHistorie = false, isOffen = false) {
       if (typeof window.reloadDataFromStorage === 'function') {
         window.reloadDataFromStorage();
+      }
+      if (
+        window.DataSync &&
+        typeof DataSync.fetchAktivitaetenForAntrag === 'function' &&
+        DataSync.isConnected &&
+        DataSync.isConnected() &&
+        DataSync.isLoaded &&
+        DataSync.isLoaded()
+      ) {
+        try {
+          await DataSync.fetchAktivitaetenForAntrag(antragId);
+        } catch (e) {
+          console.warn('Aktivitäten nachladen:', e);
+        }
       }
       const antrag = antragSystem.getAntrag(antragId);
       if (!antrag) return;

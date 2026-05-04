@@ -65,6 +65,40 @@ function mergeAntragArraysByIdOrContent(existingArr, incomingArr) {
   return order.map((k) => map.get(k));
 }
 
+function _isPdfDataUrl(s) {
+  return typeof s === 'string' && s.startsWith('data:') && s.length > 200;
+}
+
+function mergeDokumenteArrays(existingArr, incomingArr) {
+  const ex = Array.isArray(existingArr) ? existingArr : [];
+  const inc = Array.isArray(incomingArr) ? incomingArr : [];
+  const map = new Map();
+  const order = [];
+  function add(item) {
+    const key = _antragArrayItemKey(item);
+    if (map.has(key)) {
+      const prev = map.get(key);
+      if (typeof prev === 'object' && prev && typeof item === 'object' && item) {
+        const o = { ...prev, ...item };
+        if (_isPdfDataUrl(prev.data) && !_isPdfDataUrl(item.data)) o.data = prev.data;
+        else if (!_isPdfDataUrl(prev.data) && _isPdfDataUrl(item.data)) o.data = item.data;
+        else if (_isPdfDataUrl(prev.data) && _isPdfDataUrl(item.data)) {
+          o.data = String(item.data).length >= String(prev.data).length ? item.data : prev.data;
+        }
+        map.set(key, o);
+      } else {
+        map.set(key, item);
+      }
+    } else {
+      map.set(key, item);
+      order.push(key);
+    }
+  }
+  ex.forEach(add);
+  inc.forEach(add);
+  return order.map((k) => map.get(k));
+}
+
 /** Vereinigt Bearbeiter-IDs aus Weiterleitungen (kein Datenverlust bei parallelen Clients). */
 function unionAbgegebenVonIds(a, b) {
   const set = new Set();
@@ -85,10 +119,9 @@ function mergeAntragPutPayload(existing, incoming) {
   const exWlLen = Array.isArray(existing.weiterleitungen) ? existing.weiterleitungen.length : 0;
 
   const base = { ...existing, ...incoming };
-  const arrayFields = ['dokumente', 'kommentare', 'weiterleitungen'];
-  for (const f of arrayFields) {
-    base[f] = mergeAntragArraysByIdOrContent(existing[f], incoming[f]);
-  }
+  base.dokumente = mergeDokumenteArrays(existing.dokumente, incoming.dokumente);
+  base.kommentare = mergeAntragArraysByIdOrContent(existing.kommentare, incoming.kommentare);
+  base.weiterleitungen = mergeAntragArraysByIdOrContent(existing.weiterleitungen, incoming.weiterleitungen);
 
   base.abgegebenVon = unionAbgegebenVonIds(existing.abgegebenVon, incoming.abgegebenVon);
 
@@ -541,7 +574,8 @@ app.get('/api/aktivitaeten', async (req, res) => {
     
     let result;
     if (antragId) {
-      result = await dbLayer.findMany('aktivitaeten', a => a.antragId === antragId);
+      const aid = String(antragId);
+      result = await dbLayer.findMany('aktivitaeten', a => String(a.antragId) === aid);
     } else {
       result = await dbLayer.getAll('aktivitaeten');
     }

@@ -1728,6 +1728,35 @@ class AktivitaetenSystem {
     return data ? JSON.parse(data) : [];
   }
 
+  /** Vereinigt localStorage und Speicher-Array (falls sie auseinanderlaufen). */
+  _mergeAktivitaetenQuelle() {
+    let stored = [];
+    try {
+      const raw = localStorage.getItem(this.storageKey);
+      if (raw) stored = JSON.parse(raw);
+    } catch (_) {
+      stored = [];
+    }
+    if (!Array.isArray(stored)) stored = [];
+    const mem = Array.isArray(this.aktivitaeten) ? this.aktivitaeten : [];
+    const map = new Map();
+    const add = (item) => {
+      if (!item || item.id == null || String(item.id) === '') return;
+      const id = String(item.id);
+      const prev = map.get(id);
+      if (!prev) {
+        map.set(id, item);
+        return;
+      }
+      const tPrev = new Date(prev.erstelltAm || 0).getTime();
+      const tNew = new Date(item.erstelltAm || 0).getTime();
+      map.set(id, tNew >= tPrev ? { ...prev, ...item } : { ...item, ...prev });
+    };
+    stored.forEach(add);
+    mem.forEach(add);
+    return Array.from(map.values());
+  }
+
   saveAktivitaeten() {
     localStorage.setItem(this.storageKey, JSON.stringify(this.aktivitaeten));
   }
@@ -1756,9 +1785,10 @@ class AktivitaetenSystem {
 
   // Alle Aktivitäten zu einem Antrag (chronologisch sortiert)
   getAktivitaetenZuAntrag(antragId) {
-    return this.aktivitaeten
+    const aid = String(antragId);
+    return this._mergeAktivitaetenQuelle()
       .filter((a) => {
-        if (a.antragId !== antragId) return false;
+        if (String(a.antragId) !== aid) return false;
         // Private Notizen nicht im Bearbeitungsverlauf (defensiv; werden beim Speichern nicht protokolliert)
         if (a.typ === 'kommentar' && a.details && a.details.kommentarTyp === 'privat') return false;
         return true;
@@ -1768,18 +1798,20 @@ class AktivitaetenSystem {
   
   // Alle Mitarbeiter-IDs, die an einem Antrag gearbeitet haben
   getBeteiligteMitarbeiter(antragId) {
+    const aid = String(antragId);
     const mitarbeiterIds = new Set();
-    this.aktivitaeten
-      .filter(a => a.antragId === antragId && a.benutzerTyp === 'mitarbeiter')
+    this._mergeAktivitaetenQuelle()
+      .filter(a => String(a.antragId) === aid && a.benutzerTyp === 'mitarbeiter')
       .forEach(a => mitarbeiterIds.add(a.benutzerId));
     return Array.from(mitarbeiterIds);
   }
   
   // Prüft ob ein Mitarbeiter an einem Antrag beteiligt war
   istMitarbeiterBeteiligt(antragId, mitarbeiterId) {
-    return this.aktivitaeten.some(a => 
-      a.antragId === antragId && 
-      a.benutzerTyp === 'mitarbeiter' && 
+    const aid = String(antragId);
+    return this._mergeAktivitaetenQuelle().some(a =>
+      String(a.antragId) === aid &&
+      a.benutzerTyp === 'mitarbeiter' &&
       a.benutzerId === mitarbeiterId
     );
   }
