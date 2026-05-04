@@ -516,7 +516,7 @@
         </div>
         
         <input type="hidden" id="aufgabeAntragId">
-        <p class="field-hint">Nach dem Senden können Sie die Aufgabe in dieser Antragsdetailansicht unter „Zugehörige Aufgaben“ über „Aufgabe zurücknehmen“ wieder entfernen.</p>
+        <p class="field-hint">Nach dem Senden können Sie die Aufgabe in dieser Antragsdetailansicht unter „Zugehörige Aufgabe“ über „Aufgabe zurücknehmen“ wieder entfernen.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeModal('aufgabeModal')">Abbrechen</button>
@@ -2117,13 +2117,20 @@ Persönlich eröffnet
         `;
       }
       
-      // Aufgaben zu diesem Antrag laden
-      const aufgaben = aufgabenSystem.getAufgabenZuAntrag(antragId);
+      // Nur die aktuell neueste offene Aufgabe (erledigte stehen im Bearbeitungsverlauf)
+      const aufgabenAlle = aufgabenSystem.getAufgabenZuAntrag(antragId);
+      const offeneMitLive = aufgabenAlle
+        .filter((x) => {
+          const live = aufgabenSystem.getAufgabe(x.id);
+          return live && live.status === 'offen';
+        })
+        .sort((x, y) => new Date(y.erstelltAm || 0) - new Date(x.erstelltAm || 0));
+      const aufgaben = offeneMitLive.length > 0 ? [offeneMitLive[0]] : [];
       let aufgabenHtml = '';
       if (aufgaben.length > 0) {
         aufgabenHtml = `
           <div class="detail-section">
-            <h3>${currentLanguage === 'en' ? 'Related Tasks' : currentLanguage === 'fr' ? 'Tâches associées' : 'Zugehörige Aufgaben'}</h3>
+            <h3>${currentLanguage === 'en' ? 'Related task' : currentLanguage === 'fr' ? 'Tâche associée' : 'Zugehörige Aufgabe'}</h3>
             <div class="aufgaben-liste">
               ${aufgaben.map(a => {
                 const istErsteller = a.erstelltVonId === currentSession.userId;
