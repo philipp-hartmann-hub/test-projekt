@@ -1223,6 +1223,9 @@
       // Überfällige Aufgaben prüfen (sendet Erinnerungen)
       aufgabenSystem.pruefeUeberfaelligeAufgaben();
       
+      if (typeof terminSystem !== 'undefined' && typeof terminSystem.syncAufgabenFristenFromAufgaben === 'function') {
+        terminSystem.syncAufgabenFristenFromAufgaben(aufgabenSystem.aufgaben);
+      }
       renderAntraege();
       renderNotifications();
       renderKalender();
@@ -1507,11 +1510,11 @@
       notificationSystem.markAsRead(notificationId);
       renderNotifications();
       
-      // Wenn ein Antrag verknüpft ist, zur Detailansicht wechseln
-      if (antragId) {
+      // Antrag öffnen, wenn die Nachricht einen verknüpft (Zugriff regelt openAntragDetail)
+      if (antragId != null && String(antragId) !== '') {
         const antrag = antragSystem.getAntrag(antragId);
-        if (antrag && antrag.bearbeiterId === currentSession.userId) {
-          openAntragDetail(antragId);
+        if (antrag) {
+          openAntragDetail(antrag.id);
         }
       }
     }
@@ -5407,6 +5410,9 @@ ${t('action.archive')}
       document.getElementById('terminDetailContent').innerHTML = html;
       
       let footerHtml = `<button class="btn btn-secondary" onclick="closeModal('terminDetailModal')">${t('button.close')}</button>`;
+      if (termin.antragId) {
+        footerHtml += `<button type="button" class="btn btn-primary" onclick="closeModal('terminDetailModal'); openAntragDetail('${termin.antragId}');">${openAppText}</button>`;
+      }
       if (termin.erstelltVonId === currentSession.userId && termin.typ !== 'aufgabe') {
         footerHtml += `<button class="btn btn-danger" onclick="loescheTermin('${termin.id}')">${t('button.delete')}</button>`;
       }

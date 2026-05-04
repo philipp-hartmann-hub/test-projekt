@@ -1575,16 +1575,18 @@ class NotificationSystem {
 
   // Ungelesene Benachrichtigungen für einen Benutzer
   getUngeleseneNotifications(userId) {
-    return this.notifications.filter(n => 
-      n.userId === userId && !n.gelesen
-    ).sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
+    const uid = String(userId);
+    return this.notifications
+      .filter((n) => String(n.userId) === uid && !n.gelesen)
+      .sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
   }
 
   // Alle Benachrichtigungen für einen Benutzer
   getAllNotifications(userId) {
-    return this.notifications.filter(n => 
-      n.userId === userId
-    ).sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
+    const uid = String(userId);
+    return this.notifications
+      .filter((n) => String(n.userId) === uid)
+      .sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
   }
 
   // Benachrichtigung als gelesen markieren
@@ -1598,9 +1600,10 @@ class NotificationSystem {
 
   // Alle Benachrichtigungen eines Benutzers als gelesen markieren
   markAllAsRead(userId) {
+    const uid = String(userId);
     let changed = false;
     this.notifications.forEach(n => {
-      if (n.userId === userId && !n.gelesen) {
+      if (String(n.userId) === uid && !n.gelesen) {
         n.gelesen = true;
         changed = true;
       }
@@ -1612,7 +1615,8 @@ class NotificationSystem {
 
   // Anzahl ungelesener Benachrichtigungen
   getUnreadCount(userId) {
-    return this.notifications.filter(n => n.userId === userId && !n.gelesen).length;
+    const uid = String(userId);
+    return this.notifications.filter((n) => String(n.userId) === uid && !n.gelesen).length;
   }
 }
 
@@ -1905,7 +1909,8 @@ class TerminSystem {
       
       // Aufgaben-Termine: Für die in sichtbarFuer eingetragenen User (Hausleitung sieht fremde Aufgaben-Termine nicht)
       if (t.typ === 'aufgabe') {
-        return t.sichtbarFuer && t.sichtbarFuer.includes(mitarbeiter.userId);
+        const uid = String(mitarbeiter.userId);
+        return Array.isArray(t.sichtbarFuer) && t.sichtbarFuer.some((id) => String(id) === uid);
       }
       
       // Haus-Termine: Für alle Mitarbeiter des Hauses (inkl. Ersteller)
@@ -1957,12 +1962,13 @@ class TerminSystem {
 
   // Aufgaben-Termin erstellen (automatisch bei Aufgabe mit Frist)
   createAufgabenTermin(aufgabe) {
-    if (!aufgabe.fristDatum) return null;
-    
-    // Prüfen ob bereits ein Termin für diese Aufgabe existiert
-    const existierend = this.termine.find(t => t.aufgabeId === aufgabe.id);
-    if (existierend) return existierend;
-    
+    if (!aufgabe || !aufgabe.fristDatum) return null;
+    // Nur persönlich zugewiesene Mitarbeiter: Frist im persönlichen Kalender
+    if (aufgabe.zugewiesenAnTyp !== 'mitarbeiter') {
+      this.deleteAufgabenTermin(aufgabe.id);
+      return null;
+    }
+
     // Text aus Kurzbeschreibung oder Beschreibung extrahieren (kann String oder Objekt sein)
     const getText = (field) => {
       if (!field) return '';
@@ -1970,10 +1976,26 @@ class TerminSystem {
       if (typeof field === 'object' && field.text) return field.text;
       return String(field);
     };
-    
+
     const titelText = getText(aufgabe.kurzbeschreibung) || getText(aufgabe.beschreibung);
     const titelKurz = titelText.substring(0, 50) + (titelText.length > 50 ? '...' : '');
-    
+    const sichtbarFuer = [String(aufgabe.erstelltVonId), String(aufgabe.zugewiesenAnId)].filter(
+      (x) => x != null && x !== '' && x !== 'undefined'
+    );
+
+    const existierend = this.termine.find((t) => t.aufgabeId === aufgabe.id);
+    if (existierend) {
+      return (
+        this.updateTermin(existierend.id, {
+          titel: `Aufgabe: ${titelKurz}`,
+          beschreibung: getText(aufgabe.beschreibung),
+          datum: aufgabe.fristDatum,
+          antragId: aufgabe.antragId,
+          sichtbarFuer
+        }) || existierend
+      );
+    }
+
     return this.createTermin({
       titel: `Aufgabe: ${titelKurz}`,
       beschreibung: getText(aufgabe.beschreibung),
@@ -1983,8 +2005,31 @@ class TerminSystem {
       erstelltVonName: aufgabe.erstelltVonName,
       aufgabeId: aufgabe.id,
       antragId: aufgabe.antragId,
-      sichtbarFuer: [aufgabe.erstelltVonId, aufgabe.zugewiesenAnId]
+      sichtbarFuer
     });
+  }
+
+  /**
+   * Stellt sicher, dass jede offene Mitarbeiter-Aufgabe mit Frist einen Kalendereintrag hat
+   * (z. B. nach Server-Sync, wenn Termine lokal fehlten).
+   */
+  syncAufgabenFristenFromAufgaben(aufgaben) {
+    const list = Array.isArray(aufgaben) ? aufgaben : [];
+    const alive = new Set(list.map((a) => a && a.id).filter(Boolean));
+    for (const auf of list) {
+      if (!auf || auf.status === 'geloescht') continue;
+      const gueltig =
+        auf.status === 'offen' && auf.zugewiesenAnTyp === 'mitarbeiter' && !!auf.fristDatum;
+      if (gueltig) this.createAufgabenTermin(auf);
+      else this.deleteAufgabenTermin(auf.id);
+    }
+    // Nur aufräumen, wenn die Aufgabenliste nicht leer ist (sonst kein Massenlöschen bei Sync-Glitches)
+    if (list.length > 0) {
+      const orphans = this.termine.filter(
+        (t) => t.typ === 'aufgabe' && t.aufgabeId && !alive.has(t.aufgabeId)
+      );
+      orphans.forEach((t) => this.deleteTermin(t.id));
+    }
   }
 
   // Aufgaben-Termin löschen (wenn Aufgabe erledigt/gelöscht)
@@ -3181,7 +3226,9 @@ class AntragSystem {
   }
 
   getAntrag(id) {
-    return this.antraege.find(a => a.id === id);
+    if (id == null || id === '') return undefined;
+    const s = String(id);
+    return this.antraege.find((a) => String(a.id) === s);
   }
 
   // ====== INSASSEN-FUNKTIONEN ======
@@ -3957,6 +4004,9 @@ function reloadDataFromStorage() {
     if (rawAufgaben) aufgabenSystem.aufgaben = JSON.parse(rawAufgaben);
     const rawAntraege = localStorage.getItem('gefaengnis_antraege');
     if (rawAntraege) antragSystem.antraege = JSON.parse(rawAntraege);
+    if (typeof terminSystem !== 'undefined' && typeof aufgabenSystem !== 'undefined') {
+      terminSystem.syncAufgabenFristenFromAufgaben(aufgabenSystem.aufgaben);
+    }
   } catch (e) {
     console.warn('reloadDataFromStorage:', e);
   }
