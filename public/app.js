@@ -2977,7 +2977,16 @@ class AntragSystem {
   // Insassen-ID für Benachrichtigung ermitteln (Fallback: Suche nach Name, damit Insasse immer benachrichtigt wird)
   _getInsasseIdFuerBenachrichtigung(antrag) {
     if (antrag.insasseId) return antrag.insasseId;
+    // Fallback 1: Insassen-Nummer
+    if (antrag.insassenNummer) {
+      const insassen = userSystem.getInsassen();
+      const byNummer = insassen.find(
+        (u) => String(u.insassenNummer || '').trim() === String(antrag.insassenNummer || '').trim()
+      );
+      if (byNummer) return byNummer.id;
+    }
     if (!antrag.insasseName) return null;
+    // Fallback 2: Vollständiger Name
     const name = String(antrag.insasseName).trim();
     const insassen = userSystem.getInsassen();
     const insasse = insassen.find(u => `${(u.vorname || '').trim()} ${(u.nachname || '').trim()}`.trim() === name);
@@ -3193,6 +3202,16 @@ class AntragSystem {
       
       // Wenn auch Vollzug vor Bekanntgabe gesetzt ist, warten wir darauf
       if (antrag.wartetAufVollzug) {
+        const insasseIdEroeffnungInfo = this._getInsasseIdFuerBenachrichtigung(antrag);
+        if (insasseIdEroeffnungInfo) {
+          notificationSystem.createNotification(
+            insasseIdEroeffnungInfo,
+            'bekanntgabe-abgeschlossen',
+            'Bekanntgabe abgeschlossen',
+            `Die Bekanntgabe zu Ihrem Antrag ${antrag.antragsNummer || antrag.id} wurde abgeschlossen. Der Vollzug ist als nächster Schritt vorgesehen.`,
+            antrag.id
+          );
+        }
         // Noch nicht abschließen - erst wenn beide bestätigt sind
         this.saveAntraege();
         return antrag;
@@ -3810,9 +3829,12 @@ class AntragSystem {
         benutzerName: benutzerName
       });
 
-      // Nachträglicher Upload bei bereits abgeschlossenem Antrag:
-      // Insasse bekommt immer eine Nachricht (zusätzlich zur ggf. späteren Freigabe-Nachricht).
-      if (antrag.erledigt === true && !dokument.uploadBenachrichtigtAm) {
+      // Nachträglicher Upload nach abgeschlossener Bekanntgabe:
+      // Insasse bekommt eine Nachricht (zusätzlich zur ggf. späteren Freigabe-Nachricht).
+      const bekanntgabeAbgeschlossen =
+        !antrag.wartetAufEroeffnung &&
+        (antrag.erledigt === true || antrag.persoenlichEroeffnet === true);
+      if (bekanntgabeAbgeschlossen && !dokument.uploadBenachrichtigtAm) {
         const insasseId = this._getInsasseIdFuerBenachrichtigung(antrag);
         if (insasseId) {
           notificationSystem.createNotification(
