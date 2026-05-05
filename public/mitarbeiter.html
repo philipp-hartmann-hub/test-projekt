@@ -1667,7 +1667,7 @@
     
     function renderAntragCard(antrag, mode = 'offen') {
       const statusClass = antrag.status;
-      const isOwnAntrag = antrag.bearbeiterId === currentSession.userId;
+      const isOwnAntrag = String(antrag.bearbeiterId) === String(currentSession.userId);
       
       let detailsHtml = '';
       let typeLabel = '';
@@ -1832,9 +1832,9 @@ Persönlich eröffnet
         }
         if (antrag.bearbeiterName) {
           bearbeiterInfo = `
-            <div class="bearbeiter-info ${antrag.bearbeiterId === currentSession.userId ? 'own' : ''}">
+            <div class="bearbeiter-info ${String(antrag.bearbeiterId) === String(currentSession.userId) ? 'own' : ''}">
               <span class="bearbeiter-icon"></span>
-              <span>Bearbeitet von: <strong>${antrag.bearbeiterName}</strong>${antrag.bearbeiterId === currentSession.userId ? ' (Sie)' : ''}${antrag.persoenlichEroeffnet ? '' : ''}</span>
+              <span>Bearbeitet von: <strong>${antrag.bearbeiterName}</strong>${String(antrag.bearbeiterId) === String(currentSession.userId) ? ' (Sie)' : ''}${antrag.persoenlichEroeffnet ? '' : ''}</span>
             </div>
           `;
         }
@@ -2475,13 +2475,7 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                 </div>
               ` : ''}
               
-              ${antrag.entscheidungGetroffen && currentSession.rolle === 'hausleitung' && !antrag.veraktet ? `
-                <div class="revision-bereich">
-                  <button class="btn btn-danger btn-sm" onclick="revidiereEntscheidung('${antrag.id}')">
-                    ${currentLanguage === 'en' ? 'Revise decision (VAL)' : currentLanguage === 'fr' ? 'Réviser la décision (VAL)' : 'Entscheidung revidieren (VAL)'}
-                  </button>
-                </div>
-              ` : ''}
+              
               
               ${istErledigt && !antrag.veraktet && kannVollziehenVerakten && (antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') ? `
                 <div class="vollzug-checkbox">
@@ -2836,20 +2830,14 @@ ${t('action.archive')}
       }
     }
     
-    // Entscheidung revidieren (nur für Hausleitung)
+    // Entscheidung revidieren (deaktiviert)
     async function revidiereEntscheidung(antragId) {
-      const confirmMsg = currentLanguage === 'en' 
-        ? 'Are you sure you want to revise this decision? This action can only be performed by house management.'
+      const msg = currentLanguage === 'en'
+        ? 'Decisions are final and cannot be revised.'
         : currentLanguage === 'fr'
-        ? 'Êtes-vous sûr de vouloir réviser cette décision ? Cette action ne peut être effectuée que par la direction de la maison.'
-        : 'Sind Sie sicher, dass Sie diese Entscheidung revidieren möchten? Diese Aktion kann nur von der VAL durchgeführt werden.';
-      
-      if (!await showConfirm(confirmMsg)) return;
-      
-      const result = antragSystem.revidiereEntscheidung(antragId, currentSession.userId, currentSession.name);
-      if (result) {
-        openAntragDetail(antragId);
-      }
+        ? 'Les décisions sont définitives et ne peuvent pas être révisées.'
+        : 'Entscheidungen sind final und können nicht revidiert werden.';
+      await showAlert(msg);
     }
     
     // Bescheid-PDF generieren (in der Sprache des aktuellen Benutzers)

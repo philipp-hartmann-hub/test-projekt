@@ -3157,35 +3157,10 @@ class AntragSystem {
     return null;
   }
   
-  // Entscheidung revidieren (nur für Hausleitung)
+  // Entscheidung revidieren (deaktiviert)
+  // Rechtliche Anforderung: Eine getroffene Entscheidung ist final und darf nicht zurückgesetzt werden.
   revidiereEntscheidung(id, mitarbeiterId, mitarbeiterName) {
-    const antrag = this.antraege.find(a => a.id === id && a.entscheidungGetroffen);
-    if (antrag) {
-      // Zurücksetzen der Entscheidung
-      antrag.entscheidungGetroffen = false;
-      antrag.status = 'in-bearbeitung';
-      antrag.erledigt = false;
-      antrag.wartetAufEroeffnung = false;
-      antrag.wartetAufVollzug = false;
-      antrag.geplantesErgebnis = null;
-      antrag.geplanteBegruendung = null;
-      antrag.begruendung = null;
-      antrag.bescheidPdf = null;
-      
-      this.saveAntraege();
-      
-      // Aktivität protokollieren
-      aktivitaetenSystem.logAktivitaet({
-        antragId: id,
-        typ: 'entscheidung-revidiert',
-        beschreibung: 'Entscheidung durch VAL revidiert',
-        benutzerTyp: 'mitarbeiter',
-        benutzerId: mitarbeiterId,
-        benutzerName: mitarbeiterName
-      });
-      
-      return antrag;
-    }
+    console.warn('revidiereEntscheidung ist deaktiviert:', { id, mitarbeiterId, mitarbeiterName });
     return null;
   }
 
