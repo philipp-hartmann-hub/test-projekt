@@ -618,7 +618,12 @@
       
       const list = document.getElementById('notificationList');
       const preview = document.getElementById('notificationPreview');
-      const notifications = notificationSystem.getAllNotifications(currentSession.userId);
+      const notifications = [...notificationSystem.getAllNotifications(currentSession.userId)]
+        .sort((a, b) => {
+          const ta = new Date(a?.erstelltAm || 0).getTime();
+          const tb = new Date(b?.erstelltAm || 0).getTime();
+          return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
+        });
       const section = document.getElementById('notificationSection');
       
       if (notifications.length === 0) {

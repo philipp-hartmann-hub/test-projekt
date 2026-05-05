@@ -3528,14 +3528,12 @@ class AntragSystem {
     return false;
   }
 
-  // In Bearbeitung befindliche Anträge (inkl. entschiedene aber nicht veraktete)
+  // In Bearbeitung befindliche Anträge (nur nicht abgeschlossene)
   getInBearbeitungAntraege(mitarbeiter) {
     return this.antraege.filter(a => {
-      // Anträge in Bearbeitung ODER entschieden aber noch nicht veraktet
-      const istInBearbeitung = a.status === 'in-bearbeitung';
-      const istEntschiedenNichtVeraktet = a.erledigt && !a.veraktet;
-      
-      if (!istInBearbeitung && !istEntschiedenNichtVeraktet) return false;
+      // Sobald abgeschlossen, nicht mehr in "Bearbeitung" anzeigen
+      if (a.erledigt === true) return false;
+      if (a.status !== 'in-bearbeitung') return false;
       
       // Prüfen ob Mitarbeiter berechtigt ist (Bearbeiter, Aufgaben-Beteiligter oder hat bereits am Antrag gearbeitet)
       const istBearbeiter = a.bearbeiterId === mitarbeiter.userId;
@@ -3571,11 +3569,11 @@ class AntragSystem {
     }).sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
   }
 
-  // Historie für Mitarbeiter (nur veraktete Anträge)
+  // Historie für Mitarbeiter (abgeschlossene oder veraktete Anträge)
   getHistorieMitarbeiter(mitarbeiter) {
     return this.antraege.filter(a => {
-      // Nur veraktete Anträge in der Historie
-      if (!a.veraktet) return false;
+      // Abgeschlossene Anträge gehören in die Historie (auch vor Veraktung)
+      if (!(a.veraktet === true || a.erledigt === true)) return false;
       
       // VAL sieht alle verakteten Anträge ihres Hauses
       if (mitarbeiter.rolle === 'jva-leitung' || mitarbeiter.rolle === 'haus-leitung' || mitarbeiter.rolle === 'hausleitung') {
@@ -3819,6 +3817,23 @@ class AntragSystem {
         benutzerId: benutzerId,
         benutzerName: benutzerName
       });
+
+      // Nachträglicher Upload bei bereits abgeschlossenem Antrag:
+      // Insasse bekommt immer eine Nachricht (zusätzlich zur ggf. späteren Freigabe-Nachricht).
+      if (antrag.erledigt === true && !dokument.uploadBenachrichtigtAm) {
+        const insasseId = this._getInsasseIdFuerBenachrichtigung(antrag);
+        if (insasseId) {
+          notificationSystem.createNotification(
+            insasseId,
+            'dokument-nachgereicht',
+            'Neues Dokument nachgereicht',
+            `Zu Ihrem Antrag ${antrag.antragsNummer || antrag.id} wurde ein weiteres Dokument hochgeladen: ${dokument.name}.`,
+            antrag.id
+          );
+          dokument.uploadBenachrichtigtAm = new Date().toISOString();
+          this.saveAntraege();
+        }
+      }
 
       return dokument;
     }
