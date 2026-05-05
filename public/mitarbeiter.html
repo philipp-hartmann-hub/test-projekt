@@ -2090,6 +2090,7 @@ Persönlich eröffnet
         }
       }
       const hatOffeneAufgabe = !!meineOffeneAufgabe;
+      const aufgabeMussErstErledigtWerden = hatOffeneAufgabe;
       
       // Der aktuelle Bearbeiter hat IMMER Zugriff (bis zur Veraktung)
       // Schutz vor veraltetem Snapshot: wer schon persönlich an einen anderen Mitarbeiter weitergeleitet hat,
@@ -2533,11 +2534,17 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                   </button>
                 ` : ''}
                 ${hatOffeneAufgabe ? `
+                <div class="offen-hinweis">
+                  <span class="hinweis-icon"></span>
+                  <span>${currentLanguage === 'en' ? 'Please complete the open task first.' : currentLanguage === 'fr' ? 'Veuillez d’abord terminer la tâche ouverte.' : 'Bitte zuerst die offene Aufgabe erledigen.'}</span>
+                </div>
+              ` : ''}
+              ${hatOffeneAufgabe ? `
                   <button class="btn btn-primary btn-large" onclick="openAufgabeLoesungModal('${meineOffeneAufgabe.id}')">
                     ${t('task.edit')}
                   </button>
                 ` : ''}
-                ${!istOffen && !istErledigt && istBearbeiter && !antrag.entscheidungGetroffen ? `
+                ${!aufgabeMussErstErledigtWerden && !istOffen && !istErledigt && istBearbeiter && !antrag.entscheidungGetroffen ? `
                   ${!antrag.sachlichGeprueft ? `
                     <button class="btn btn-warning btn-large" onclick="markiereAlsGeprueft('${antrag.id}')">
                       ${t('action.technicalReview')}
@@ -2552,17 +2559,17 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
 ${t('task.create')}
                   </button>
                 ` : ''}
-                ${antrag.entscheidungGetroffen && !antrag.erledigt && istBearbeiter ? `
+                ${!aufgabeMussErstErledigtWerden && antrag.entscheidungGetroffen && !antrag.erledigt && istBearbeiter ? `
                   <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
 ${t('task.create')}
                   </button>
                 ` : ''}
-                ${istErledigt && !antrag.veraktet && istBearbeiter ? `
+                ${!aufgabeMussErstErledigtWerden && istErledigt && !antrag.veraktet && istBearbeiter ? `
                   <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
 ${t('task.create')}
                   </button>
                 ` : ''}
-                ${!antrag.veraktet && istBearbeiter && prozessStatus.abschluss === 'aktiv' ? `
+                ${!aufgabeMussErstErledigtWerden && !antrag.veraktet && istBearbeiter && prozessStatus.abschluss === 'aktiv' ? `
                   <button class="btn btn-secondary btn-large" onclick="veraktenAntrag('${antrag.id}')">
 ${t('action.archive')}
                   </button>
@@ -4720,9 +4727,11 @@ ${t('action.archive')}
       }
       
       // Bekanntgabe:
-      // - aktiv nur solange auf persönliche Eröffnung gewartet wird
+      // - aktiv bei gewählter persönlicher Eröffnung ODER Vollzugsplanung (vor erfolgter persönlicher Eröffnung)
       // - erledigt sobald persönlich eröffnet ODER regulär erledigt
-      const wartetAufBekanntgabe = !!antrag.wartetAufEroeffnung;
+      const wartetAufBekanntgabe =
+        !!antrag.wartetAufEroeffnung ||
+        (!!antrag.wartetAufVollzug && antrag.persoenlichEroeffnet !== true);
       const bekanntgabeErfolgt =
         antrag.persoenlichEroeffnet === true ||
         (antrag.erledigt === true && !antrag.wartetAufEroeffnung);
@@ -4737,7 +4746,7 @@ ${t('action.archive')}
       // - alternativ wie bisher nach erledigter Bekanntgabe bis vollzogen
       // Nur relevant für genehmigt/teilweise-genehmigt
       const istGenehmigt = antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt';
-      if (istGenehmigt && antrag.wartetAufVollzug && !antrag.vollzogen) {
+      if (istGenehmigt && antrag.wartetAufVollzug && antrag.persoenlichEroeffnet === true && !antrag.vollzogen) {
         status.vollzug = 'aktiv';
       } else if (istGenehmigt && bekanntgabeErfolgt && !antrag.vollzogen) {
         status.vollzug = 'aktiv';
