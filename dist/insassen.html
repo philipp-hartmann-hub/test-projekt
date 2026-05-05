@@ -1089,6 +1089,10 @@
       }
       
       let actionsHtml = '';
+      const bekanntgabeAbgeschlossen =
+        antrag.erledigt === true &&
+        !antrag.wartetAufEroeffnung &&
+        !antrag.wartetAufVollzug;
       
       if (isEntwurf) {
         actionsHtml = `
@@ -1123,7 +1127,7 @@
             </div>
           `;
         }
-        if (antrag.bescheidPdf) {
+        if (antrag.bescheidPdf && bekanntgabeAbgeschlossen) {
           actionsHtml += `
             <div class="antrag-actions">
               <button class="btn btn-secondary btn-sm" onclick="downloadBescheidPdf('${antrag.id}')">
@@ -1151,8 +1155,8 @@
           `;
         }
       } else if (mode === 'aktiv') {
-        // Bei persönlicher Eröffnung + geplantem Vollzug soll der Insasse den Bescheid bereits sehen können.
-        if (antrag.bescheidPdf) {
+        // Bescheid erst nach abgeschlossener Bekanntgabe.
+        if (antrag.bescheidPdf && bekanntgabeAbgeschlossen) {
           actionsHtml += `
             <div class="antrag-actions">
               <button class="btn btn-secondary btn-sm" onclick="downloadBescheidPdf('${antrag.id}')">
@@ -1184,7 +1188,12 @@
     // Bescheid-PDF herunterladen
     function downloadBescheidPdf(antragId) {
       const antrag = antragSystem.getAntrag(antragId);
-      if (!antrag || !antrag.bescheidPdf) {
+      const bekanntgabeAbgeschlossen =
+        antrag &&
+        antrag.erledigt === true &&
+        !antrag.wartetAufEroeffnung &&
+        !antrag.wartetAufVollzug;
+      if (!antrag || !antrag.bescheidPdf || !bekanntgabeAbgeschlossen) {
         showAlert('Kein Bescheid vorhanden.');
         return;
       }
