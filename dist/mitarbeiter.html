@@ -2099,7 +2099,7 @@ Persönlich eröffnet
         (w) => w && w.anId && w.vonId === currentSession.userId && w.anId !== currentSession.userId
       );
       const istBearbeiter =
-        antrag.bearbeiterId === currentSession.userId && !hattePersoenlicheWeiterleitungWeg;
+        String(antrag.bearbeiterId) === String(currentSession.userId) && !hattePersoenlicheWeiterleitungWeg;
       
       // Prüfen ob der Benutzer den Antrag "abgegeben" hat (durch Aufgabenerledigung mit Antwort/Zurück)
       // WICHTIG: Wenn jemand jetzt der Bearbeiter ist (durch Weiterleitung), ist er NICHT mehr "abgegeben"

@@ -2648,10 +2648,23 @@ class AntragSystem {
       hauptbearbeitungWartetAufUebernahme: antrag.hauptbearbeitungWartetAufUebernahme,
       zugewiesenAnGruppe: antrag.zugewiesenAnGruppe
     });
+    const maybeNotifyVorherigerBearbeiter = (alterId, alterName) => {
+      if (alterId == null || String(alterId) === '') return;
+      if (String(alterId) === String(mitarbeiter.userId)) return;
+      notificationSystem.createNotification(
+        alterId,
+        'antrag-uebernommen',
+        'Antrag durch VAL übernommen',
+        `Der Antrag ${antrag.antragsNummer || antragId} wurde von ${mitarbeiter.name} (VAL) übernommen.`,
+        antragId
+      );
+    };
     
     // Fall 1: Offener Antrag - komplett übernehmen
     // Auch Hausleitung kann offene Anträge übernehmen
     if (antrag.status === 'offen') {
+      const alterBearbeiterId = antrag.bearbeiterId;
+      const alterBearbeiterName = antrag.bearbeiterName;
       antrag.status = 'in-bearbeitung';
       antrag.bearbeiterId = mitarbeiter.userId;
       antrag.bearbeiterName = mitarbeiter.name;
@@ -2691,6 +2704,7 @@ class AntragSystem {
         benutzerId: mitarbeiter.userId,
         benutzerName: mitarbeiter.name
       });
+      maybeNotifyVorherigerBearbeiter(alterBearbeiterId, alterBearbeiterName);
       
       return antrag;
     }
@@ -2744,6 +2758,7 @@ class AntragSystem {
         benutzerId: mitarbeiter.userId,
         benutzerName: mitarbeiter.name
       });
+      maybeNotifyVorherigerBearbeiter(alterBearbeiterId, alterBearbeiterName);
       
       return antrag;
     }
@@ -2798,6 +2813,7 @@ class AntragSystem {
           console.log('[Debug] nehmeAntrag Fall 3b: Hausleitung übernimmt Antrag (Status: ' + antrag.status + ')');
           
           const alterBearbeiter = antrag.bearbeiterName;
+          const alterBearbeiterId = antrag.bearbeiterId;
           antrag.bearbeiterId = mitarbeiter.userId;
           antrag.bearbeiterName = mitarbeiter.name;
           this.saveAntraege();
@@ -2811,6 +2827,7 @@ class AntragSystem {
             benutzerId: mitarbeiter.userId,
             benutzerName: mitarbeiter.name
           });
+          maybeNotifyVorherigerBearbeiter(alterBearbeiterId, alterBearbeiter);
           
           return antrag;
         }
@@ -3386,7 +3403,7 @@ class AntragSystem {
       // Der aktuelle Bearbeiter bleibt noch Hauptbearbeiter, aber der Antrag erscheint für die Gruppe
       if (a.status === 'in-bearbeitung' && a.zugewiesenAnGruppe && a.hauptbearbeitungWartetAufUebernahme) {
         // Nicht für den aktuellen Hauptbearbeiter anzeigen (der sieht ihn in "Meine Anträge")
-        if (a.bearbeiterId === mitarbeiter.userId) {
+        if (String(a.bearbeiterId) === String(mitarbeiter.userId)) {
           return false;
         }
         // VAL sieht alle Anträge ihres Hauses, auch mit wartender Hauptbearbeitungsübergabe
@@ -3402,7 +3419,7 @@ class AntragSystem {
       // soll die Gruppe den Antrag sehen und bearbeiten können
       if (antragsIdsMitGruppenaufgaben.includes(a.id)) {
         // Nicht für den aktuellen Bearbeiter anzeigen (der sieht den Antrag sowieso)
-        if (a.bearbeiterId === mitarbeiter.userId) {
+        if (String(a.bearbeiterId) === String(mitarbeiter.userId)) {
           return false;
         }
         // Nicht für veraktete Anträge
@@ -3420,7 +3437,7 @@ class AntragSystem {
         if (!this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) return false;
         
         // Nicht anzeigen wenn VAL bereits der Bearbeiter ist (erscheint dann in "Meine Anträge")
-        if (a.bearbeiterId === mitarbeiter.userId) return false;
+        if (String(a.bearbeiterId) === String(mitarbeiter.userId)) return false;
         
         // VAL sieht ALLE anderen Anträge, unabhängig vom Status oder Bearbeiter
         // Auch Anträge die bereits einem AVD oder anderen Mitarbeiter zugewiesen sind
@@ -3536,11 +3553,11 @@ class AntragSystem {
       if (a.status !== 'in-bearbeitung') return false;
       
       // Prüfen ob Mitarbeiter berechtigt ist (Bearbeiter, Aufgaben-Beteiligter oder hat bereits am Antrag gearbeitet)
-      const istBearbeiter = a.bearbeiterId === mitarbeiter.userId;
+      const istBearbeiter = String(a.bearbeiterId) === String(mitarbeiter.userId);
       const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(a.id);
       // Aufgabenkette: Jeder der eine Aufgabe erstellt oder erhalten hat, hat Zugriff
-      const hatAufgabeErhalten = aufgabenZuAntrag.some(auf => auf.zugewiesenAnId === mitarbeiter.userId);
-      const hatAufgabeErstellt = aufgabenZuAntrag.some(auf => auf.erstelltVonId === mitarbeiter.userId);
+      const hatAufgabeErhalten = aufgabenZuAntrag.some(auf => String(auf.zugewiesenAnId) === String(mitarbeiter.userId));
+      const hatAufgabeErstellt = aufgabenZuAntrag.some(auf => String(auf.erstelltVonId) === String(mitarbeiter.userId));
       // Aktivitätsbezug: Jeder der bereits eine Aktion am Antrag durchgeführt hat
       const hatAmAntragGearbeitet = aktivitaetenSystem.istMitarbeiterBeteiligt(a.id, mitarbeiter.userId);
       const hatAufgabenbezug = hatAufgabeErhalten || hatAufgabeErstellt || hatAmAntragGearbeitet;
@@ -3588,10 +3605,10 @@ class AntragSystem {
       
       // Normale Mitarbeiter sehen ihre persönlich bearbeiteten Anträge
       // ODER Anträge, zu denen sie eine Aufgabe hatten oder an denen sie gearbeitet haben
-      const istBearbeiter = a.bearbeiterId === mitarbeiter.userId;
+      const istBearbeiter = String(a.bearbeiterId) === String(mitarbeiter.userId);
       const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(a.id);
       const hatteAufgabe = aufgabenZuAntrag.some(auf => 
-        auf.zugewiesenAnId === mitarbeiter.userId || auf.erstelltVonId === mitarbeiter.userId
+        String(auf.zugewiesenAnId) === String(mitarbeiter.userId) || String(auf.erstelltVonId) === String(mitarbeiter.userId)
       );
       const hatAmAntragGearbeitet = aktivitaetenSystem.istMitarbeiterBeteiligt(a.id, mitarbeiter.userId);
       
