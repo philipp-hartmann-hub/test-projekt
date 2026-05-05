@@ -4746,7 +4746,7 @@ ${t('action.archive')}
       // - alternativ wie bisher nach erledigter Bekanntgabe bis vollzogen
       // Nur relevant für genehmigt/teilweise-genehmigt
       const istGenehmigt = antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt';
-      if (istGenehmigt && antrag.wartetAufVollzug && antrag.persoenlichEroeffnet === true && !antrag.vollzogen) {
+      if (istGenehmigt && antrag.wartetAufVollzug && !antrag.wartetAufEroeffnung && !antrag.vollzogen) {
         status.vollzug = 'aktiv';
       } else if (istGenehmigt && bekanntgabeErfolgt && !antrag.vollzogen) {
         status.vollzug = 'aktiv';

@@ -1556,6 +1556,12 @@ class NotificationSystem {
     return 'NOT-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2, 4).toUpperCase();
   }
 
+  _notificationTs(n) {
+    const ts = new Date(n?.erstelltAm || 0).getTime();
+    if (Number.isFinite(ts)) return ts;
+    return 0;
+  }
+
   // Benachrichtigung erstellen
   createNotification(userId, type, title, message, antragId = null) {
     const notification = {
@@ -1578,7 +1584,7 @@ class NotificationSystem {
     const uid = String(userId);
     return this.notifications
       .filter((n) => String(n.userId) === uid && !n.gelesen)
-      .sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
+      .sort((a, b) => this._notificationTs(b) - this._notificationTs(a));
   }
 
   // Alle Benachrichtigungen für einen Benutzer
@@ -1586,7 +1592,7 @@ class NotificationSystem {
     const uid = String(userId);
     return this.notifications
       .filter((n) => String(n.userId) === uid)
-      .sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
+      .sort((a, b) => this._notificationTs(b) - this._notificationTs(a));
   }
 
   // Benachrichtigung als gelesen markieren
