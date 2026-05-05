@@ -237,6 +237,17 @@ function unionAbgegebenVonMerge(a, b) {
   return [...set];
 }
 
+function _antragPhaseRank(a) {
+  if (!a || typeof a !== 'object') return 0;
+  if (a.veraktet === true) return 6;
+  if (a.vollzogen === true) return 5;
+  if (a.erledigt === true || ['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(a.status)) return 4;
+  if (a.entscheidungGetroffen === true) return 3;
+  if (a.sachlichGeprueft === true) return 2;
+  if (a.status === 'in-bearbeitung') return 1;
+  return 0;
+}
+
 function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
   if (!serverAntrag || typeof serverAntrag !== 'object') return localAntrag;
   if (!localAntrag || typeof localAntrag !== 'object') return serverAntrag;
@@ -258,6 +269,31 @@ function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
     if (localAntrag[k] === true || serverAntrag[k] === true) {
       merged[k] = true;
     }
+  }
+  const rankLocal = _antragPhaseRank(localAntrag);
+  const rankServer = _antragPhaseRank(serverAntrag);
+  const progressed = rankLocal >= rankServer ? localAntrag : serverAntrag;
+  const progressedStatus = progressed && progressed.status;
+  if (progressedStatus && _antragPhaseRank(merged) < Math.max(rankLocal, rankServer)) {
+    merged.status = progressedStatus;
+  }
+
+  // Nie in frühere Bekanntgabe-/Vollzugszustände zurückfallen.
+  const bekanntgabeErledigt =
+    localAntrag.persoenlichEroeffnet === true ||
+    serverAntrag.persoenlichEroeffnet === true ||
+    (localAntrag.erledigt === true && localAntrag.wartetAufEroeffnung === false) ||
+    (serverAntrag.erledigt === true && serverAntrag.wartetAufEroeffnung === false);
+  if (bekanntgabeErledigt && (localAntrag.wartetAufEroeffnung === false || serverAntrag.wartetAufEroeffnung === false)) {
+    merged.wartetAufEroeffnung = false;
+  }
+  const vollzugErledigt =
+    localAntrag.vollzogen === true ||
+    serverAntrag.vollzogen === true ||
+    (localAntrag.erledigt === true && localAntrag.wartetAufVollzug === false) ||
+    (serverAntrag.erledigt === true && serverAntrag.wartetAufVollzug === false);
+  if (vollzugErledigt && (localAntrag.wartetAufVollzug === false || serverAntrag.wartetAufVollzug === false)) {
+    merged.wartetAufVollzug = false;
   }
   const len = (v) => (v == null ? 0 : String(v).length);
   const pkL = localAntrag.pruefungsKommentar;

@@ -111,6 +111,17 @@ function unionAbgegebenVonIds(a, b) {
   return [...set];
 }
 
+function antragPhaseRank(a) {
+  if (!a || typeof a !== 'object') return 0;
+  if (a.veraktet === true) return 6;
+  if (a.vollzogen === true) return 5;
+  if (a.erledigt === true || ['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(a.status)) return 4;
+  if (a.entscheidungGetroffen === true) return 3;
+  if (a.sachlichGeprueft === true) return 2;
+  if (a.status === 'in-bearbeitung') return 1;
+  return 0;
+}
+
 function mergeAntragPutPayload(existing, incoming) {
   if (!incoming || typeof incoming !== 'object') return incoming;
   if (!existing || typeof existing !== 'object') return incoming;
@@ -136,6 +147,31 @@ function mergeAntragPutPayload(existing, incoming) {
     if (existing[k] === true || incoming[k] === true) {
       base[k] = true;
     }
+  }
+  const rankExisting = antragPhaseRank(existing);
+  const rankIncoming = antragPhaseRank(incoming);
+  const progressed = rankExisting >= rankIncoming ? existing : incoming;
+  const progressedStatus = progressed && progressed.status;
+  if (progressedStatus && antragPhaseRank(base) < Math.max(rankExisting, rankIncoming)) {
+    base.status = progressedStatus;
+  }
+
+  // Nie in frühere Bekanntgabe-/Vollzugszustände zurückfallen.
+  const bekanntgabeErledigt =
+    existing.persoenlichEroeffnet === true ||
+    incoming.persoenlichEroeffnet === true ||
+    (existing.erledigt === true && existing.wartetAufEroeffnung === false) ||
+    (incoming.erledigt === true && incoming.wartetAufEroeffnung === false);
+  if (bekanntgabeErledigt && (existing.wartetAufEroeffnung === false || incoming.wartetAufEroeffnung === false)) {
+    base.wartetAufEroeffnung = false;
+  }
+  const vollzugErledigt =
+    existing.vollzogen === true ||
+    incoming.vollzogen === true ||
+    (existing.erledigt === true && existing.wartetAufVollzug === false) ||
+    (incoming.erledigt === true && incoming.wartetAufVollzug === false);
+  if (vollzugErledigt && (existing.wartetAufVollzug === false || incoming.wartetAufVollzug === false)) {
+    base.wartetAufVollzug = false;
   }
   const pkEx = existing.pruefungsKommentar;
   const pkIn = incoming.pruefungsKommentar;
