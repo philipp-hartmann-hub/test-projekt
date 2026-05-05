@@ -3109,8 +3109,9 @@ class AntragSystem {
         message = `Ihr Antrag "${antragsTyp}" wurde teilweise genehmigt.${vollzugKommentar ? ' Hinweis: ' + getTranslatedUserText(vollzugKommentar) : ''}`;
       }
       
-      if (title && antrag.insasseId) {
-        notificationSystem.createNotification(antrag.insasseId, status, title, message, antrag.id);
+      const insasseIdVollzug = this._getInsasseIdFuerBenachrichtigung(antrag);
+      if (title && insasseIdVollzug) {
+        notificationSystem.createNotification(insasseIdVollzug, status, title, message, antrag.id);
       }
       
       return antrag;
@@ -3266,16 +3267,18 @@ class AntragSystem {
 
   // Entwürfe eines bestimmten Insassen
   getEntwuerfeInsasse(insasseId) {
+    const sid = String(insasseId);
     return this.antraege.filter(a => 
-      a.insasseId === insasseId &&
+      String(a.insasseId) === sid &&
       a.status === 'entwurf'
     ).sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
   }
 
   // Aktive Anträge eines bestimmten Insassen (ohne Entwürfe, ohne erledigte)
   getAktiveAntraegeInsasse(insasseId) {
+    const sid = String(insasseId);
     return this.antraege.filter(a => {
-      if (a.insasseId !== insasseId) return false;
+      if (String(a.insasseId) !== sid) return false;
       if (a.status === 'entwurf') return false;
       // Anträge die auf persönliche Eröffnung oder Vollzug warten, zeigen wir als aktiv
       if (a.wartetAufEroeffnung || a.wartetAufVollzug) return true;
@@ -3287,8 +3290,9 @@ class AntragSystem {
 
   // Historie eines bestimmten Insassen (erledigte Anträge, die bekannt gegeben wurden)
   getHistorieInsasse(insasseId) {
+    const sid = String(insasseId);
     return this.antraege.filter(a => {
-      if (a.insasseId !== insasseId) return false;
+      if (String(a.insasseId) !== sid) return false;
       if (a.status === 'entwurf') return false;
       // Anträge die noch auf Bekanntgabe warten, nicht in Historie
       if (a.wartetAufEroeffnung || a.wartetAufVollzug) return false;

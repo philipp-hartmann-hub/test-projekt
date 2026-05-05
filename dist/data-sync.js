@@ -394,6 +394,14 @@ async function syncAntragToServer(antragId) {
         console.log('[Sync] Aufgaben synchronisiert');
       }
 
+      // KRITISCH für Bearbeitungsverlauf bei Weiterleitung:
+      // Aktivitäten explizit mitsynchronisieren, damit der nächste Bearbeiter sie sofort vom Server sieht.
+      if (localStorage.getItem('gefaengnis_aktivitaeten')) {
+        console.log('[Sync] Synchronisiere Aktivitäten...');
+        await enqueueSyncJob('gefaengnis_aktivitaeten', () => syncToServerImpl('gefaengnis_aktivitaeten'));
+        console.log('[Sync] Aktivitäten synchronisiert');
+      }
+
       if (localStorage.getItem('gefaengnis_notifications')) {
         await enqueueSyncJob('gefaengnis_notifications', () => syncToServerImpl('gefaengnis_notifications'));
         console.log('[Sync] Benachrichtigungen synchronisiert');

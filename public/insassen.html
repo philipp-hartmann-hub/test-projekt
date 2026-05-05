@@ -1145,6 +1145,17 @@
             </div>
           `;
         }
+      } else if (mode === 'aktiv') {
+        // Bei persönlicher Eröffnung + geplantem Vollzug soll der Insasse den Bescheid bereits sehen können.
+        if (antrag.bescheidPdf) {
+          actionsHtml += `
+            <div class="antrag-actions">
+              <button class="btn btn-secondary btn-sm" onclick="downloadBescheidPdf('${antrag.id}')">
+                Bescheid herunterladen
+              </button>
+            </div>
+          `;
+        }
       }
       
       return `
