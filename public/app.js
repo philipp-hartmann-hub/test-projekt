@@ -2146,6 +2146,21 @@ class AufgabenSystem {
     if (data.fristDatum && data.zugewiesenAnTyp === 'mitarbeiter') {
       terminSystem.createAufgabenTermin(aufgabe);
     }
+
+    // Insasse benachrichtigen, wenn ihm eine Aufgabe zugewiesen wurde
+    if (data.zugewiesenAnTyp === 'insasse' && data.zugewiesenAnId) {
+      const kurzText = data.kurzbeschreibung || data.beschreibung || 'Neue Aufgabe';
+      const fristHinweis = data.fristDatum
+        ? ` Frist: ${new Date(data.fristDatum).toLocaleDateString('de-DE')}.`
+        : '';
+      notificationSystem.createNotification(
+        data.zugewiesenAnId,
+        'aufgabe-neu',
+        'Neue Aufgabe erhalten',
+        `Sie haben eine neue Aufgabe zum Antrag ${data.antragsNummer || data.antragId} erhalten: ${typeof kurzText === 'object' ? getTranslatedUserText(kurzText) : kurzText}.${fristHinweis}`,
+        data.antragId
+      );
+    }
     
     return aufgabe;
   }
@@ -3280,11 +3295,10 @@ class AntragSystem {
     return this.antraege.filter(a => {
       if (String(a.insasseId) !== sid) return false;
       if (a.status === 'entwurf') return false;
-      // Anträge die auf persönliche Eröffnung oder Vollzug warten, zeigen wir als aktiv
-      if (a.wartetAufEroeffnung || a.wartetAufVollzug) return true;
-      // Alle nicht-erledigten Anträge sind aktiv
-      if (a.erledigt !== true) return true;
-      return false;
+      // Abgeschlossene Anträge gehören immer in die Historie
+      if (a.erledigt === true) return false;
+      // Alle nicht-erledigten Anträge sind aktiv (inkl. wartet-Auf-Eroeffnung/Vollzug)
+      return true;
     }).sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
   }
 
@@ -3294,11 +3308,8 @@ class AntragSystem {
     return this.antraege.filter(a => {
       if (String(a.insasseId) !== sid) return false;
       if (a.status === 'entwurf') return false;
-      // Anträge die noch auf Bekanntgabe warten, nicht in Historie
-      if (a.wartetAufEroeffnung || a.wartetAufVollzug) return false;
-      // Erledigte Anträge in Historie
-      if (a.erledigt === true) return true;
-      return false;
+      // Alle abgeschlossenen Anträge gehören in die Historie
+      return a.erledigt === true;
     }).sort((a, b) => new Date(b.bearbeitetAm || b.erstelltAm) - new Date(a.bearbeitetAm || a.erstelltAm));
   }
 
@@ -3802,6 +3813,20 @@ class AntragSystem {
         benutzerId: benutzerId,
         benutzerName: benutzerName
       });
+
+      // Wenn der Antrag bereits abgeschlossen ist, Insassen über nachgereichtes Dokument informieren
+      if (antrag.erledigt === true) {
+        const insasseId = this._getInsasseIdFuerBenachrichtigung(antrag);
+        if (insasseId) {
+          notificationSystem.createNotification(
+            insasseId,
+            'dokument-nachgereicht',
+            'Neues Dokument zum abgeschlossenen Antrag',
+            `Zu Ihrem abgeschlossenen Antrag ${antrag.antragsNummer || antrag.id} wurde ein weiteres Dokument hinzugefügt: ${dokument.name}.`,
+            antrag.id
+          );
+        }
+      }
       
       return dokument;
     }
