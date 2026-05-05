@@ -4719,23 +4719,27 @@ ${t('action.archive')}
         status.entscheiden = 'erledigt';
       }
       
-      // Bekanntgabe - wenn entschieden, aber noch auf Eröffnung/Vollzug gewartet wird
-      // wartetAufEroeffnung = persönliche Eröffnung gewählt
-      // wartetAufVollzug = Vollzug vor Bekanntgabe gewählt
-      const wartetAufBekanntgabe = antrag.wartetAufEroeffnung || antrag.wartetAufVollzug;
-      
+      // Bekanntgabe:
+      // - aktiv nur solange auf persönliche Eröffnung gewartet wird
+      // - erledigt sobald persönlich eröffnet ODER regulär erledigt
+      const wartetAufBekanntgabe = !!antrag.wartetAufEroeffnung;
+      const bekanntgabeErfolgt =
+        antrag.persoenlichEroeffnet === true ||
+        (antrag.erledigt === true && !antrag.wartetAufEroeffnung);
       if (antrag.entscheidungGetroffen && wartetAufBekanntgabe) {
         status.bekanntgabe = 'aktiv';
-      } else if (antrag.erledigt) {
+      } else if (bekanntgabeErfolgt) {
         status.bekanntgabe = 'erledigt';
       }
       
-      // Vollzug - wenn Bekanntgabe erfolgt, aber noch nicht vollzogen
+      // Vollzug:
+      // - aktiv wenn Vollzug explizit aussteht (wartetAufVollzug)
+      // - alternativ wie bisher nach erledigter Bekanntgabe bis vollzogen
       // Nur relevant für genehmigt/teilweise-genehmigt
       const istGenehmigt = antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt';
-      const bekanntgabeErfolgt = antrag.erledigt && !wartetAufBekanntgabe;
-      
-      if (istGenehmigt && bekanntgabeErfolgt && !antrag.vollzogen) {
+      if (istGenehmigt && antrag.wartetAufVollzug && !antrag.vollzogen) {
+        status.vollzug = 'aktiv';
+      } else if (istGenehmigt && bekanntgabeErfolgt && !antrag.vollzogen) {
         status.vollzug = 'aktiv';
       } else if (antrag.vollzogen) {
         status.vollzug = 'erledigt';

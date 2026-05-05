@@ -3848,6 +3848,7 @@ class AntragSystem {
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag && antrag.dokumente && antrag.dokumente[dokumentIndex]) {
       const dokument = antrag.dokumente[dokumentIndex];
+      const warSchonFreigegeben = dokument.fuerInsasseFreigegeben === true;
       dokument.fuerInsasseFreigegeben = true;
       dokument.freigegebenVon = benutzerName;
       dokument.freigegebenVonId = benutzerId;
@@ -3865,9 +3866,13 @@ class AntragSystem {
         benutzerName: benutzerName
       });
       
-      // Benachrichtigung an Insassen senden (nur bei expliziter Freigabe)
+      // Benachrichtigung an Insassen senden:
+      // - explizit angefordert (z. B. nachträglicher Freigabe-Dialog), ODER
+      // - Antrag ist bereits erledigt und Dokument wurde soeben neu freigegeben.
       const insasseId = this._getInsasseIdFuerBenachrichtigung(antrag);
-      if (mitBenachrichtigung && insasseId) {
+      const sollBenachrichtigen =
+        !!mitBenachrichtigung || (antrag.erledigt === true && !warSchonFreigegeben);
+      if (sollBenachrichtigen && insasseId && !dokument.freigabeBenachrichtigtAm) {
         notificationSystem.createNotification(
           insasseId,
           'dokument',
@@ -3875,6 +3880,8 @@ class AntragSystem {
           `Ein neues Dokument "${dokument.name}" wurde zu Ihrem Antrag hinzugefuegt.`,
           antragId
         );
+        dokument.freigabeBenachrichtigtAm = new Date().toISOString();
+        this.saveAntraege();
       }
       
       return dokument;
