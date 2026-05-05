@@ -3814,20 +3814,6 @@ class AntragSystem {
         benutzerName: benutzerName
       });
 
-      // Wenn der Antrag bereits abgeschlossen ist, Insassen über nachgereichtes Dokument informieren
-      if (antrag.erledigt === true) {
-        const insasseId = this._getInsasseIdFuerBenachrichtigung(antrag);
-        if (insasseId) {
-          notificationSystem.createNotification(
-            insasseId,
-            'dokument-nachgereicht',
-            'Neues Dokument zum abgeschlossenen Antrag',
-            `Zu Ihrem abgeschlossenen Antrag ${antrag.antragsNummer || antrag.id} wurde ein weiteres Dokument hinzugefügt: ${dokument.name}.`,
-            antrag.id
-          );
-        }
-      }
-      
       return dokument;
     }
     return null;
@@ -3879,10 +3865,11 @@ class AntragSystem {
         benutzerName: benutzerName
       });
       
-      // Benachrichtigung an Insassen senden (bei nachträglicher Freigabe)
-      if (mitBenachrichtigung && antrag.insasseId) {
+      // Benachrichtigung an Insassen senden (nur bei expliziter Freigabe)
+      const insasseId = this._getInsasseIdFuerBenachrichtigung(antrag);
+      if (mitBenachrichtigung && insasseId) {
         notificationSystem.createNotification(
-          antrag.insasseId,
+          insasseId,
           'dokument',
           'Neues Dokument verfuegbar',
           `Ein neues Dokument "${dokument.name}" wurde zu Ihrem Antrag hinzugefuegt.`,
