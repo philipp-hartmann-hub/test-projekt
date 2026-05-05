@@ -1322,16 +1322,54 @@
       const list = document.getElementById('notificationList');
       const preview = document.getElementById('notificationPreview');
       const notifications = notificationSystem.getAllNotifications(currentSession.userId);
+      const aufgabenZugewiesen = aufgabenSystem.getAlleAufgaben(currentSession.userId) || [];
+      const aufgabenErstellt = (aufgabenSystem.aufgaben || []).filter(
+        (a) => String(a.erstelltVonId) === String(currentSession.userId) && a.status !== 'geloescht'
+      );
+      const aufgabenMap = new Map();
+      [...aufgabenZugewiesen, ...aufgabenErstellt].forEach((a) => {
+        if (!a || !a.id) return;
+        const live = aufgabenSystem.getAufgabe(a.id) || a;
+        if (live.status === 'geloescht') return;
+        aufgabenMap.set(String(live.id), live);
+      });
+      const aufgabenInboxItems = Array.from(aufgabenMap.values()).map((a) => {
+        const istEmpfaenger = String(a.zugewiesenAnId) === String(currentSession.userId);
+        const roleText = istEmpfaenger
+          ? (currentLanguage === 'en' ? 'Assigned to you' : currentLanguage === 'fr' ? 'Attribuée à vous' : 'An Sie zugewiesen')
+          : (currentLanguage === 'en' ? 'Created by you' : currentLanguage === 'fr' ? 'Créée par vous' : 'Von Ihnen erstellt');
+        const shortText = getTranslatedUserText(a.kurzbeschreibung || a.beschreibung || '');
+        const fristText = a.fristDatum
+          ? (currentLanguage === 'en' ? `Deadline: ${new Date(a.fristDatum).toLocaleDateString('en-GB')}`
+            : currentLanguage === 'fr' ? `Échéance: ${new Date(a.fristDatum).toLocaleDateString('fr-FR')}`
+            : `Frist: ${new Date(a.fristDatum).toLocaleDateString('de-DE')}`)
+          : (currentLanguage === 'en' ? 'No deadline' : currentLanguage === 'fr' ? 'Sans échéance' : 'Keine Frist');
+        const statusText = a.status === 'offen'
+          ? (currentLanguage === 'en' ? 'Open' : currentLanguage === 'fr' ? 'Ouverte' : 'Offen')
+          : (currentLanguage === 'en' ? 'Completed' : currentLanguage === 'fr' ? 'Terminée' : 'Erledigt');
+        return {
+          id: `task-${a.id}`,
+          source: 'task',
+          type: a.status === 'offen' ? 'aufgabe-offen' : 'aufgabe-erledigt',
+          title: currentLanguage === 'en' ? 'Task' : currentLanguage === 'fr' ? 'Tâche' : 'Aufgabe',
+          message: `${roleText}: ${shortText || '-'} (${statusText}, ${fristText})`,
+          erstelltAm: a.erledigtAm || a.erstelltAm || new Date().toISOString(),
+          antragId: a.antragId || '',
+          gelesen: true
+        };
+      });
+      const inboxItems = [...notifications, ...aufgabenInboxItems]
+        .sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
       const section = document.getElementById('notificationSection');
       const unreadCount = notificationSystem.getUnreadCount(currentSession.userId);
       
-      document.getElementById('notificationCount').textContent = unreadCount;
+      document.getElementById('notificationCount').textContent = String(inboxItems.length);
       
       // "Alle als gelesen" Button nur anzeigen, wenn es ungelesene gibt
       const markAllBtn = document.getElementById('markAllReadBtn');
       markAllBtn.style.display = unreadCount > 0 ? 'inline-block' : 'none';
       
-      if (notifications.length === 0) {
+      if (inboxItems.length === 0) {
         section.style.display = 'none';
         return;
       }
@@ -1339,39 +1377,39 @@
       section.style.display = 'flex';
       
       // Vorschau: Nur neueste Nachricht
-      if (notifications.length > 0) {
-        const newest = notifications[0];
+      if (inboxItems.length > 0) {
+        const newest = inboxItems[0];
         const typeClass = newest.type || 'info';
-        const unreadClass = newest.gelesen ? 'read' : 'unread';
+        const unreadClass = newest.source === 'task' ? 'read' : (newest.gelesen ? 'read' : 'unread');
         
         preview.innerHTML = `
-          <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${newest.id}', '${newest.antragId || ''}'); event.stopPropagation();">
+          <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${newest.source === 'task' ? '' : newest.id}', '${newest.antragId || ''}'); event.stopPropagation();">
             <div class="notification-card-icon">${getNotificationIcon(newest.type)}</div>
             <div class="notification-card-content">
               <div class="notification-card-title">${newest.title}</div>
               <div class="notification-card-message">${newest.message}</div>
               <div class="notification-card-time">${formatDate(newest.erstelltAm)}</div>
             </div>
-            ${!newest.gelesen ? '<div class="notification-card-dot"></div>' : ''}
+            ${newest.source !== 'task' && !newest.gelesen ? '<div class="notification-card-dot"></div>' : ''}
           </div>
-          ${notifications.length > 1 ? `<div class="notification-more-hint">+ ${notifications.length - 1} weitere Nachrichten</div>` : ''}
+          ${inboxItems.length > 1 ? `<div class="notification-more-hint">+ ${inboxItems.length - 1} weitere Nachrichten</div>` : ''}
         `;
       }
       
       // Vollständige Liste
-      list.innerHTML = notifications.map(n => {
+      list.innerHTML = inboxItems.map(n => {
         const typeClass = n.type || 'info';
-        const unreadClass = n.gelesen ? 'read' : 'unread';
+        const unreadClass = n.source === 'task' ? 'read' : (n.gelesen ? 'read' : 'unread');
         
         return `
-          <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${n.id}', '${n.antragId || ''}'); event.stopPropagation();">
+          <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${n.source === 'task' ? '' : n.id}', '${n.antragId || ''}'); event.stopPropagation();">
             <div class="notification-card-icon">${getNotificationIcon(n.type)}</div>
             <div class="notification-card-content">
               <div class="notification-card-title">${n.title}</div>
               <div class="notification-card-message">${n.message}</div>
               <div class="notification-card-time">${formatDate(n.erstelltAm)}</div>
             </div>
-            ${!n.gelesen ? '<div class="notification-card-dot"></div>' : ''}
+            ${n.source !== 'task' && !n.gelesen ? '<div class="notification-card-dot"></div>' : ''}
           </div>
         `;
       }).join('');
@@ -1507,7 +1545,9 @@
     }
     
     function handleNotificationClick(notificationId, antragId) {
-      notificationSystem.markAsRead(notificationId);
+      if (notificationId) {
+        notificationSystem.markAsRead(notificationId);
+      }
       renderNotifications();
       
       // Antrag öffnen, wenn die Nachricht einen verknüpft (Zugriff regelt openAntragDetail)
@@ -1724,7 +1764,7 @@
               <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${antrag.id}', false, true)">
                 ${t('button.open')}
               </button>
-              <button class="btn btn-primary btn-sm" onclick="nehmeAntrag('${antrag.id}')">
+              <button class="btn btn-primary btn-sm" onclick="${istHausleitung() ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntrag('${antrag.id}')`}">
 ${buttonText}
               </button>
             </div>
@@ -2031,12 +2071,24 @@ Persönlich eröffnet
         (a.zugewiesenAnTyp === 'gruppe' &&
           a.zugewiesenAnGruppe &&
           antragSystem._mitarbeiterGehoertZuGruppe(currentSession, a.zugewiesenAnGruppe));
-      let meineOffeneAufgabe = (aufgabenZuAntrag || []).find((a) => {
-        if (a.status !== 'offen' || !passtOffeneAufgabeMir(a)) return false;
-        if (erledigtKenntnisUebertragKeys.has(aufgabeAbgleichKey(a))) return false;
-        const live = aufgabenSystem.getAufgabe(a.id);
-        return live && live.status === 'offen';
-      });
+      // Nur der neueste Aufgabenstand für mich zählt:
+      // sobald die zuletzt zugewiesene Aufgabe erledigt ist, verschwindet "Aufgabe bearbeiten",
+      // bis eine neue Aufgabe erstellt wird.
+      const meineAufgabenNeuesteZuerst = (aufgabenZuAntrag || [])
+        .filter((a) => passtOffeneAufgabeMir(a))
+        .sort((a, b) => new Date(b.erstelltAm || 0) - new Date(a.erstelltAm || 0));
+      const neuesteAufgabeFuerMich = meineAufgabenNeuesteZuerst[0] || null;
+      let meineOffeneAufgabe = null;
+      if (
+        neuesteAufgabeFuerMich &&
+        neuesteAufgabeFuerMich.status === 'offen' &&
+        !erledigtKenntnisUebertragKeys.has(aufgabeAbgleichKey(neuesteAufgabeFuerMich))
+      ) {
+        const live = aufgabenSystem.getAufgabe(neuesteAufgabeFuerMich.id);
+        if (live && live.status === 'offen') {
+          meineOffeneAufgabe = live;
+        }
+      }
       const hatOffeneAufgabe = !!meineOffeneAufgabe;
       
       // Der aktuelle Bearbeiter hat IMMER Zugriff (bis zur Veraktung)
@@ -2469,7 +2521,7 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
               
               <div class="action-buttons">
                 ${kannUebernehmen && !istBearbeiter ? `
-                  <button class="btn btn-primary btn-large" onclick="nehmeAntragUndBleibeInDetail('${antrag.id}')">
+                  <button class="btn btn-primary btn-large" onclick="${istHausleitung ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
                     ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : 
                       hatGruppenaufgaben ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche') : 
                       t('button.takeApplication')}
@@ -4707,6 +4759,13 @@ ${t('action.archive')}
         alert('Fehler: Keine Session vorhanden');
         return;
       }
+      if (istHausleitung()) {
+        const antragVal = antragSystem.getAntrag(antragId);
+        if (antragVal && antragVal.bearbeiterId !== currentSession.userId) {
+          openHausleitungUebernahmeModal(antragId);
+          return;
+        }
+      }
       
       console.log('[Debug Frontend] nehmeAntrag wird aufgerufen für:', antragId);
       
@@ -4764,6 +4823,13 @@ ${t('action.archive')}
       if (!currentSession) {
         alert('Fehler: Keine Session vorhanden');
         return;
+      }
+      if (istHausleitung()) {
+        const antragVal = antragSystem.getAntrag(antragId);
+        if (antragVal && antragVal.bearbeiterId !== currentSession.userId) {
+          openHausleitungUebernahmeModal(antragId);
+          return;
+        }
       }
       
       console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail wird aufgerufen für:', antragId);
@@ -4882,17 +4948,6 @@ ${t('action.archive')}
       const result = antragSystem.uebernehmeAntragAlsHausleitung(antragId, currentSession, begruendung);
       
       if (result.success) {
-        // Benachrichtigung an den ursprünglichen Bearbeiter senden
-        if (result.alterBearbeiterId) {
-          notificationSystem.createNotification(
-            result.alterBearbeiterId,
-            'antrag-uebernommen',
-            'Antrag durch VAL übernommen',
-            `Der Antrag ${result.antrag.antragsNummer || antragId} wurde von ${currentSession.name} (VAL) übernommen. Begründung: ${begruendung}`,
-            antragId
-          );
-        }
-        
         closeModal('hausleitungUebernahmeModal');
         showAlert('Der Antrag wurde erfolgreich übernommen.');
         renderAntraege();

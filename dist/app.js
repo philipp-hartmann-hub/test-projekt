@@ -2830,6 +2830,10 @@ class AntragSystem {
   uebernehmeAntragAlsHausleitung(antragId, hausleitung, begruendung) {
     const antrag = this.antraege.find(a => a.id === antragId);
     if (!antrag) return { success: false, error: 'Antrag nicht gefunden' };
+    const cleanBegruendung = typeof begruendung === 'string' ? begruendung.trim() : '';
+    if (!cleanBegruendung) {
+      return { success: false, error: 'Begründung ist erforderlich' };
+    }
     
     // Prüfen ob der Antrag bereits einen Bearbeiter hat
     const alterBearbeiterId = antrag.bearbeiterId;
@@ -2846,12 +2850,24 @@ class AntragSystem {
     
     // Übernahme-Informationen speichern
     antrag.uebernommenVonHausleitung = true;
-    antrag.uebernahmeBegruendung = begruendung;
+    antrag.uebernahmeBegruendung = cleanBegruendung;
     antrag.uebernahmeAm = new Date().toISOString();
     antrag.uebernahmeVon = hausleitung.name;
     antrag.uebernahmeVonId = hausleitung.userId;
     antrag.alterBearbeiterBeiUebernahme = alterBearbeiterName;
     antrag.alterBearbeiterIdBeiUebernahme = alterBearbeiterId;
+    if (!Array.isArray(antrag.kommentare)) {
+      antrag.kommentare = [];
+    }
+    antrag.kommentare.push({
+      id: 'KOM-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
+      text: `VAL-Übernahme begründet: ${cleanBegruendung}`,
+      benutzerId: hausleitung.userId,
+      benutzerName: hausleitung.name,
+      typ: 'akte',
+      systemEintrag: true,
+      erstelltAm: new Date().toISOString()
+    });
     
     this.saveAntraege();
     
@@ -2861,13 +2877,28 @@ class AntragSystem {
       typ: 'hausleitung-uebernahme',
       beschreibung: `Antrag durch Hausleitung übernommen${alterBearbeiterName ? ' von ' + alterBearbeiterName : ''}`,
       details: { 
-        begruendung: begruendung,
+        begruendung: cleanBegruendung,
         alterBearbeiter: alterBearbeiterName || null
       },
       benutzerTyp: 'mitarbeiter',
       benutzerId: hausleitung.userId,
       benutzerName: hausleitung.name
     });
+
+    // Vorherigen Bearbeiter informieren (falls vorhanden und nicht identisch zur Hausleitung)
+    if (
+      alterBearbeiterId != null &&
+      String(alterBearbeiterId) !== '' &&
+      String(alterBearbeiterId) !== String(hausleitung.userId)
+    ) {
+      notificationSystem.createNotification(
+        alterBearbeiterId,
+        'antrag-uebernommen',
+        'Antrag durch VAL übernommen',
+        `Der Antrag ${antrag.antragsNummer || antragId} wurde von ${hausleitung.name} (VAL) übernommen. Begründung: ${cleanBegruendung}`,
+        antragId
+      );
+    }
     
     return { 
       success: true, 
