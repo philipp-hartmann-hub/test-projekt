@@ -196,7 +196,9 @@
         <div id="teilhabegeldFields">
           <div class="form-group">
             <label for="monatSelect">Monat auswählen</label>
-            <input type="month" id="monatSelect">
+            <select id="monatSelect">
+              <option value="">Bitte Monat auswählen...</option>
+            </select>
           </div>
         </div>
 
@@ -281,7 +283,9 @@
         <div id="entwurfTeilhabegeldFields">
           <div class="form-group">
             <label for="entwurfMonatSelect">Monat auswählen</label>
-            <input type="month" id="entwurfMonatSelect">
+            <select id="entwurfMonatSelect">
+              <option value="">Bitte Monat auswählen...</option>
+            </select>
           </div>
         </div>
 
@@ -359,7 +363,9 @@
         <div id="editTeilhabegeldFields">
           <div class="form-group">
             <label for="editMonatSelect">Neuen Monat auswählen</label>
-            <input type="month" id="editMonatSelect">
+            <select id="editMonatSelect">
+              <option value="">Bitte Monat auswählen...</option>
+            </select>
           </div>
         </div>
 
@@ -696,6 +702,9 @@
     
     // Check if already logged in
     populateUserSelect();
+    populateMonatSelect('monatSelect');
+    populateMonatSelect('entwurfMonatSelect');
+    populateMonatSelect('editMonatSelect');
     window.addEventListener('dataSyncLoaded', populateUserSelect);
     window.addEventListener('dataReloaded', populateUserSelect);
     window.addEventListener('dataSyncLoaded', populateHeaderUserSwitch);
@@ -862,6 +871,42 @@
       document.getElementById('entwurfEigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
     }
 
+    function getErlaubteMonate() {
+      const jetzt = new Date();
+      const monate = [];
+      for (let i = 0; i < 3; i++) {
+        const d = new Date(jetzt.getFullYear(), jetzt.getMonth() - i, 1);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        monate.push(`${y}-${m}`);
+      }
+      return monate;
+    }
+
+    function formatMonatLabel(monat) {
+      return new Date(`${monat}-01`).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+    }
+
+    function populateMonatSelect(selectId, selectedValue = '') {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const monate = getErlaubteMonate();
+      const options = ['<option value="">Bitte Monat auswählen...</option>']
+        .concat(monate.map((monat) => `<option value="${monat}">${formatMonatLabel(monat)}</option>`));
+      select.innerHTML = options.join('');
+      if (selectedValue && monate.includes(selectedValue)) {
+        select.value = selectedValue;
+      }
+    }
+
+    function istErlaubterMonat(monat) {
+      return getErlaubteMonate().includes(monat);
+    }
+
+    function getErlaubteMonateHinweis() {
+      return 'Erlaubt sind nur aktueller Monat und die zwei Vormonate.';
+    }
+
     function getNewAntragData() {
       const type = document.querySelector('input[name="antragType"]:checked').value;
       
@@ -869,6 +914,9 @@
         const monat = document.getElementById('monatSelect').value;
         if (!monat) {
           return { type, data: { monat }, valid: false, error: 'Bitte wählen Sie einen Monat aus.' };
+        }
+        if (!istErlaubterMonat(monat)) {
+          return { type, data: { monat }, valid: false, error: getErlaubteMonateHinweis() };
         }
         // Prüfen ob bereits ein Antrag für diesen Monat existiert
         if (antragSystem.hatTeilhabegeldAntragFuerMonat(currentSession.userId, monat)) {
@@ -1048,6 +1096,7 @@
     }
 
     function resetNewAntragForm() {
+      populateMonatSelect('monatSelect');
       document.getElementById('monatSelect').value = '';
       document.querySelectorAll('input[name="kleidung"]').forEach(cb => cb.checked = false);
       document.getElementById('eigentumBegruendung').value = '';
@@ -1069,9 +1118,10 @@
       // Typ setzen
       document.querySelector(`input[name="entwurfType"][value="${entwurf.type}"]`).checked = true;
       toggleEntwurfFields();
+      populateMonatSelect('entwurfMonatSelect', entwurf.monat || '');
       
       if (entwurf.type === 'teilhabegeld') {
-        document.getElementById('entwurfMonatSelect').value = entwurf.monat || '';
+        document.getElementById('entwurfMonatSelect').value = istErlaubterMonat(entwurf.monat || '') ? (entwurf.monat || '') : '';
       } else {
         if (entwurf.aktion) {
           document.querySelector(`input[name="entwurfEigentumAktion"][value="${entwurf.aktion}"]`).checked = true;
@@ -1092,6 +1142,9 @@
         const monat = document.getElementById('entwurfMonatSelect').value;
         if (!monat) {
           return { type, monat, valid: false, error: 'Bitte wählen Sie einen Monat aus.' };
+        }
+        if (!istErlaubterMonat(monat)) {
+          return { type, monat, valid: false, error: getErlaubteMonateHinweis() };
         }
         // Prüfen ob bereits ein Antrag für diesen Monat existiert (aber dieser Entwurf ausschließen)
         const entwurfId = document.getElementById('entwurfId').value;
@@ -1349,7 +1402,8 @@
       if (antrag.type === 'teilhabegeld') {
         document.getElementById('editTeilhabegeldFields').style.display = 'block';
         document.getElementById('editEigentumFields').style.display = 'none';
-        document.getElementById('editMonatSelect').value = antrag.monat;
+        populateMonatSelect('editMonatSelect', antrag.monat || '');
+        document.getElementById('editMonatSelect').value = istErlaubterMonat(antrag.monat || '') ? (antrag.monat || '') : '';
       } else {
         document.getElementById('editTeilhabegeldFields').style.display = 'none';
         document.getElementById('editEigentumFields').style.display = 'block';
@@ -1372,6 +1426,22 @@
         const monat = document.getElementById('editMonatSelect').value;
         if (!monat) {
           showAlert('Bitte wählen Sie einen Monat aus.');
+          return;
+        }
+        if (!istErlaubterMonat(monat)) {
+          showAlert(getErlaubteMonateHinweis());
+          return;
+        }
+        const andererAntragImMonat = antragSystem.antraege.find((a) =>
+          a.type === 'teilhabegeld' &&
+          String(a.insasseId) === String(currentSession.userId) &&
+          a.monat === monat &&
+          a.status !== 'entwurf' &&
+          String(a.id) !== String(antragId)
+        );
+        if (andererAntragImMonat) {
+          const monatFormatiert = new Date(monat + '-01').toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+          showAlert(`Sie haben bereits einen Teilhabegeld-Antrag für ${monatFormatiert} gestellt. Pro Monat ist nur ein Antrag möglich.`);
           return;
         }
         antragSystem.updateAntragMonat(antragId, monat);
