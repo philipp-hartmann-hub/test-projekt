@@ -513,15 +513,17 @@
       if (!user) return '';
       const fullName = `${user.vorname || ''} ${user.nachname || ''}`.trim();
       const name = fullName || user.name || user.username || `ID ${user.id}`;
-      const haus = user.jva || (Array.isArray(user.jvas) && user.jvas.length > 0 ? user.jvas[0] : '-') || '-';
+      const rawHaus = user.jva || (Array.isArray(user.jvas) && user.jvas.length > 0 ? user.jvas[0] : '-') || '-';
+      const hausMatch = String(rawHaus).trim().match(/^haus\s*(\d+)$/i);
+      const haus = hausMatch ? `Haus ${hausMatch[1]}` : String(rawHaus).trim();
       const station = (user.station !== undefined && user.station !== null && String(user.station).trim() !== '')
         ? String(user.station)
         : '-';
       if (user.type === 'mitarbeiter') {
         const rolle = user.rolle || '-';
-        return `${name} - Rolle: ${rolle} | Haus: ${haus} | Station: ${station}`;
+        return `${name} - ${rolle} I ${haus} I Station ${station}`;
       }
-      return `${name} - Haus: ${haus} | Station: ${station}`;
+      return `${name} - ${haus} I Station ${station}`;
     }
 
     function populateUserSelect() {
