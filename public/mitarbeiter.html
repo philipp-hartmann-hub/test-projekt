@@ -101,6 +101,13 @@
           </div>
         </section>
 
+        <section class="section">
+          <div class="section-header">
+            <h2>Fachverfahren</h2>
+          </div>
+          <div class="jvp-kachel-grid" id="jvpFachverfahrenGrid"></div>
+        </section>
+
         <!-- Postfach / Benachrichtigungen (aufklappbar) -->
         <section class="section notification-section collapsed" id="notificationSection" style="display: none;">
           <div class="notification-header" onclick="togglePostfach()">
@@ -159,13 +166,6 @@
               </div>
             </div>
           </div>
-        </section>
-
-        <section class="section">
-          <div class="section-header">
-            <h2>Fachverfahren</h2>
-          </div>
-          <div class="jvp-kachel-grid" id="jvpFachverfahrenGrid"></div>
         </section>
       </div>
       
@@ -1860,6 +1860,10 @@
       if (antragId != null && String(antragId) !== '') {
         const antrag = antragSystem.getAntrag(antragId);
         if (antrag) {
+          const jvpHubVisible = document.getElementById('jvpHubView')?.style.display !== 'none';
+          if (jvpHubVisible) {
+            openFachverfahren('antraege');
+          }
           openAntragDetail(antrag.id);
         }
       }
