@@ -2408,12 +2408,23 @@ Persönlich eröffnet
       const hatOffeneAufgabe = !!meineOffeneAufgabe;
       const aufgabeMussErstErledigtWerden = hatOffeneAufgabe;
       
-      // Der aktuelle Bearbeiter hat IMMER Zugriff (bis zur Veraktung)
-      // Schutz vor veraltetem Snapshot: wer schon persönlich an einen anderen Mitarbeiter weitergeleitet hat,
-      // gilt nicht mehr als Hauptbearbeiter — auch wenn bearbeiterId lokal noch auf „mich“ steht.
-      const hattePersoenlicheWeiterleitungWeg = (antrag.weiterleitungen || []).some(
-        (w) => w && w.anId && String(w.vonId) === String(currentSession.userId) && String(w.anId) !== String(currentSession.userId)
-      );
+      // Der aktuelle Bearbeiter hat IMMER Zugriff (bis zur Veraktung).
+      // Bei Weiterleitungen zählt nur die LETZTE Richtung:
+      // wenn nach einer Abgabe an andere später wieder an mich zugewiesen/übernommen wurde,
+      // bin ich wieder gültiger Hauptbearbeiter.
+      const weiterleitungen = (antrag.weiterleitungen || []).filter(Boolean);
+      const parseWeiterleitungsZeit = (w) => {
+        const raw = w?.erstelltAm || w?.datum || w?.am || null;
+        const ts = raw ? new Date(raw).getTime() : NaN;
+        return Number.isFinite(ts) ? ts : 0;
+      };
+      const letzteAbgabeWeg = weiterleitungen
+        .filter((w) => w && w.anId && String(w.vonId) === String(currentSession.userId) && String(w.anId) !== String(currentSession.userId))
+        .reduce((max, w) => Math.max(max, parseWeiterleitungsZeit(w)), 0);
+      const letzteRueckleitungZuMir = weiterleitungen
+        .filter((w) => w && w.anId && String(w.anId) === String(currentSession.userId) && String(w.vonId) !== String(currentSession.userId))
+        .reduce((max, w) => Math.max(max, parseWeiterleitungsZeit(w)), 0);
+      const hattePersoenlicheWeiterleitungWeg = letzteAbgabeWeg > 0 && letzteAbgabeWeg > letzteRueckleitungZuMir;
       const istBearbeiter =
         String(antrag.bearbeiterId) === String(currentSession.userId) && !hattePersoenlicheWeiterleitungWeg;
       
