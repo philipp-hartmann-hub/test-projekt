@@ -1374,7 +1374,7 @@
       
       // Moin-Begrüßung setzen
       document.getElementById('welcomeGreeting').textContent = 'Moin, ' + displayName + '!';
-      document.getElementById('welcomeMessage').textContent = 'Willkommen in der Justizvollzugsplattform.';
+      document.getElementById('welcomeMessage').textContent = 'Willkommen auf der Justizvollzugsplattform.';
       
       // Zuständigkeitsbereich anzeigen
       updateZustaendigkeitInfo();
@@ -1521,7 +1521,7 @@
       const meineHauptbearbeitungCount = getMeineHauptbearbeitungsAntraegeCount();
 
       document.getElementById('welcomeGreeting').textContent = `${getJvpGreeting()}, ${displayName}!`;
-      document.getElementById('welcomeMessage').innerHTML = `Willkommen in der Justizvollzugsplattform. Angemeldet als <strong>${roleText}</strong> · ${hausText}`;
+      document.getElementById('welcomeMessage').innerHTML = `Willkommen auf der Justizvollzugsplattform. Angemeldet als <strong>${roleText}</strong> · ${hausText}`;
       document.getElementById('jvpStatAntraege').textContent = String(meineHauptbearbeitungCount);
       document.getElementById('jvpStatMeldungen').textContent = String(stats.meldungen || 0);
       document.getElementById('jvpStatUrgent').textContent = String(stats.urgent || 0);
