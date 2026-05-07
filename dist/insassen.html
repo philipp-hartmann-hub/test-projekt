@@ -557,12 +557,21 @@
         });
     }
 
+    function isAdminUser(user) {
+      if (!user) return false;
+      const rolle = String(user.rolle || '').toLowerCase();
+      const username = String(user.username || '').toLowerCase();
+      return ['admin', 'administrator', 'itadmin'].includes(rolle) || username === 'admin';
+    }
+
     function populateHeaderUserSwitch() {
       const select = document.getElementById('headerUserSwitch');
       if (!select) return;
       const currentValue = currentSession ? `${currentSession.type}:${String(currentSession.userId)}` : '';
       const insassen = getUsersByType('insasse');
-      const mitarbeiter = getUsersByType('mitarbeiter');
+      const alleMitarbeiter = getUsersByType('mitarbeiter');
+      const admins = alleMitarbeiter.filter((u) => isAdminUser(u));
+      const mitarbeiter = alleMitarbeiter.filter((u) => !isAdminUser(u));
       const options = ['<option value="">Person wechseln...</option>'];
 
       if (insassen.length > 0) {
@@ -573,6 +582,11 @@
       if (mitarbeiter.length > 0) {
         options.push('<optgroup label="Mitarbeiter">');
         mitarbeiter.forEach((u) => options.push(`<option value="mitarbeiter:${String(u.id)}">${getDisplayName(u)}</option>`));
+        options.push('</optgroup>');
+      }
+      if (admins.length > 0) {
+        options.push('<optgroup label="Administration">');
+        admins.forEach((u) => options.push(`<option value="admin:${String(u.id)}">${getDisplayName(u)}</option>`));
         options.push('</optgroup>');
       }
 
@@ -586,11 +600,16 @@
       if (!value) return;
       const [targetType, targetUserId] = String(value).split(':');
       if (!targetType || !targetUserId) return;
-      const result = sessionManager.loginAsUser(targetUserId, targetType);
+      const sessionType = targetType === 'insasse' ? 'insasse' : 'mitarbeiter';
+      const result = sessionManager.loginAsUser(targetUserId, sessionType);
       if (!result.success) return;
 
       if (targetType === 'mitarbeiter') {
         window.location.href = 'mitarbeiter.html';
+        return;
+      }
+      if (targetType === 'admin') {
+        window.location.href = 'admin.html';
         return;
       }
       location.reload();

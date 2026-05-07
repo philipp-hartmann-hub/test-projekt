@@ -1220,6 +1220,61 @@ body.hamburg-start {
   border-color: var(--accent-warning);
 }
 
+/* JVP-Kacheln */
+.jvp-kachel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.jvp-kachel {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  width: 100%;
+  text-align: left;
+  padding: 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--jhh-border);
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.jvp-kachel:hover {
+  border-color: var(--jhh-secondary);
+  box-shadow: 0 4px 12px rgba(0, 48, 99, 0.12);
+  transform: translateY(-1px);
+}
+
+.jvp-kachel-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 92, 169, 0.12);
+  flex-shrink: 0;
+  font-size: 1.1rem;
+}
+
+.jvp-kachel-content h3 {
+  margin: 0 0 0.25rem;
+  color: var(--jhh-primary);
+  font-size: 1rem;
+}
+
+.jvp-kachel-content p {
+  margin: 0;
+  color: var(--jhh-text-light);
+  font-size: 0.85rem;
+}
+
+.jvp-kachel-disabled {
+  opacity: 0.85;
+}
+
 .antrag-card .incomplete {
   color: var(--text-muted);
   font-style: italic;

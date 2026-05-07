@@ -83,9 +83,35 @@
         <h2 id="welcomeGreeting">Moin!</h2>
         <p id="welcomeMessage">Willkommen im Mitarbeiter-Portal.</p>
       </div>
+
+      <!-- JVP-Auswahl (neu) -->
+      <div class="dashboard" id="jvpHubView">
+        <section class="section">
+          <div class="section-header">
+            <h2>Justizvollzugsplattform</h2>
+          </div>
+          <p class="section-hint">Bitte wählen Sie das gewünschte Fachverfahren.</p>
+          <div class="jvp-kachel-grid">
+            <button type="button" class="jvp-kachel" onclick="openFachverfahren('antraege')">
+              <div class="jvp-kachel-icon">📋</div>
+              <div class="jvp-kachel-content">
+                <h3>eGefangenenanträge</h3>
+                <p>Bestehendes Antragswesen öffnen und weiterarbeiten.</p>
+              </div>
+            </button>
+            <button type="button" class="jvp-kachel jvp-kachel-disabled" onclick="openFachverfahren('meldungen')">
+              <div class="jvp-kachel-icon">📨</div>
+              <div class="jvp-kachel-content">
+                <h3>eMeldewesen</h3>
+                <p>Platzhalteransicht: Inhalte folgen.</p>
+              </div>
+            </button>
+          </div>
+        </section>
+      </div>
       
       <!-- Übersicht (Dashboard) -->
-      <div class="dashboard" id="dashboardView">
+      <div class="dashboard" id="dashboardView" style="display: none;">
         <!-- Postfach / Benachrichtigungen (aufklappbar) -->
         <section class="section notification-section collapsed" id="notificationSection" style="display: none;">
           <div class="notification-header" onclick="togglePostfach()">
@@ -1198,6 +1224,20 @@
       }
     }
 
+    function isAdminUser(user) {
+      if (!user) return false;
+      const rolle = String(user.rolle || '').toLowerCase();
+      const username = String(user.username || '').toLowerCase();
+      return ['admin', 'administrator', 'itadmin'].includes(rolle) || username === 'admin';
+    }
+
+    function getPortalForUser(user) {
+      if (!user) return 'mitarbeiter';
+      if (user.type === 'insasse') return 'insasse';
+      if (isAdminUser(user)) return 'admin';
+      return 'mitarbeiter';
+    }
+
     function getUsersByType(type) {
       return (Array.isArray(userSystem?.users) ? userSystem.users : [])
         .filter((u) => u && u.type === type)
@@ -1211,9 +1251,12 @@
     function populateHeaderUserSwitch() {
       const select = document.getElementById('headerUserSwitch');
       if (!select) return;
-      const currentValue = currentSession ? `${currentSession.type}:${String(currentSession.userId)}` : '';
+      const currentPortal = getPortalForUser(currentSession || {});
+      const currentValue = currentSession ? `${currentPortal}:${String(currentSession.userId)}` : '';
       const insassen = getUsersByType('insasse');
-      const mitarbeiter = getUsersByType('mitarbeiter');
+      const alleMitarbeiter = getUsersByType('mitarbeiter');
+      const admins = alleMitarbeiter.filter((u) => getPortalForUser(u) === 'admin');
+      const mitarbeiter = alleMitarbeiter.filter((u) => getPortalForUser(u) === 'mitarbeiter');
       const options = ['<option value="">Person wechseln...</option>'];
 
       if (insassen.length > 0) {
@@ -1224,6 +1267,11 @@
       if (mitarbeiter.length > 0) {
         options.push('<optgroup label="Mitarbeiter">');
         mitarbeiter.forEach((u) => options.push(`<option value="mitarbeiter:${String(u.id)}">${getDisplayName(u)}</option>`));
+        options.push('</optgroup>');
+      }
+      if (admins.length > 0) {
+        options.push('<optgroup label="Administration">');
+        admins.forEach((u) => options.push(`<option value="admin:${String(u.id)}">${getDisplayName(u)}</option>`));
         options.push('</optgroup>');
       }
 
@@ -1237,11 +1285,16 @@
       if (!value) return;
       const [targetType, targetUserId] = String(value).split(':');
       if (!targetType || !targetUserId) return;
-      const result = sessionManager.loginAsUser(targetUserId, targetType);
+      const sessionType = targetType === 'insasse' ? 'insasse' : 'mitarbeiter';
+      const result = sessionManager.loginAsUser(targetUserId, sessionType);
       if (!result.success) return;
 
       if (targetType === 'insasse') {
         window.location.href = 'insassen.html';
+        return;
+      }
+      if (targetType === 'admin') {
+        window.location.href = 'admin.html';
         return;
       }
       location.reload();
@@ -1258,6 +1311,8 @@
         return;
       }
 
+      const selectedUser = (Array.isArray(userSystem?.users) ? userSystem.users : [])
+        .find((u) => String(u.id) === String(selectedUserId));
       let result = sessionManager.loginAsUser(selectedUserId, 'mitarbeiter');
       if (!result.success && typeof userSystem !== 'undefined') {
         userSystem.ensureDefaultUsers();
@@ -1266,6 +1321,10 @@
       }
 
       if (result.success) {
+        if (isAdminUser(selectedUser || result.user)) {
+          window.location.href = 'admin.html';
+          return;
+        }
         currentSession = result.user;
         showPortal();
       } else {
@@ -1280,6 +1339,10 @@
     }
     
     function showPortal() {
+      if (getPortalForUser(currentSession || {}) === 'admin') {
+        window.location.href = 'admin.html';
+        return;
+      }
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('portalSection').style.display = 'block';
       
@@ -1312,7 +1375,7 @@
       
       // Moin-Begrüßung setzen
       document.getElementById('welcomeGreeting').textContent = 'Moin, ' + displayName + '!';
-      document.getElementById('welcomeMessage').textContent = 'Willkommen im Mitarbeiter-Portal.';
+      document.getElementById('welcomeMessage').textContent = 'Willkommen in der Justizvollzugsplattform.';
       
       // Zuständigkeitsbereich anzeigen
       updateZustaendigkeitInfo();
@@ -1326,6 +1389,7 @@
       renderAntraege();
       renderNotifications();
       renderKalender();
+      openJvpHub();
       
       window.addEventListener('dataSyncLoaded', () => {
         if (currentSession) { renderAntraege(); renderNotifications(); renderKalender(); }
@@ -1364,6 +1428,26 @@
       } else {
         console.warn('DataSync.reloadDataFromServer nicht verfügbar');
       }
+    }
+
+    function openJvpHub() {
+      document.getElementById('jvpHubView').style.display = 'grid';
+      document.getElementById('dashboardView').style.display = 'none';
+      document.getElementById('antragDetailView').style.display = 'none';
+    }
+
+    function openFachverfahren(key) {
+      if (key === 'antraege') {
+        document.getElementById('jvpHubView').style.display = 'none';
+        document.getElementById('dashboardView').style.display = 'grid';
+        document.getElementById('antragDetailView').style.display = 'none';
+        switchTab(currentTab || 'offen');
+        renderAntraege();
+        renderNotifications();
+        renderKalender();
+        return;
+      }
+      showAlert('eMeldewesen ist aktuell noch nicht hinterlegt.');
     }
 
     // ============================================
