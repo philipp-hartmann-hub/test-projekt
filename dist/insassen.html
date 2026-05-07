@@ -22,18 +22,23 @@
       </div>
       <form id="loginForm" onsubmit="handleLogin(event)">
         <div class="form-group">
-          <label for="username">Benutzername</label>
-          <input type="text" id="username" placeholder="Benutzername" required autocomplete="username">
+          <label for="portalTypeSelect">Portal</label>
+          <select id="portalTypeSelect" onchange="handlePortalSwitch(this.value)">
+            <option value="insasse" selected>Insassen-Portal</option>
+            <option value="mitarbeiter">Mitarbeiter-Portal</option>
+          </select>
         </div>
         <div class="form-group">
-          <label for="password">Passwort</label>
-          <input type="password" id="password" placeholder="Passwort" required autocomplete="current-password">
+          <label for="userSelect">Name</label>
+          <select id="userSelect" required>
+            <option value="">Bitte Person auswaehlen</option>
+          </select>
         </div>
         <div id="loginError" class="login-error" style="display: none;">
-          Ungültige Zugangsdaten. Bitte versuchen Sie es erneut.
+          Auswahl ungueltig. Bitte Person auswaehlen.
         </div>
         <button type="submit" class="btn btn-primary btn-full">
-          Anmelden
+          Portal oeffnen
         </button>
       </form>
       <div class="login-hint">
@@ -487,24 +492,56 @@
     // LOGIN
     // ============================================
     
-    async function handleLogin(e) {
+    function getPortalUsers() {
+      const users = Array.isArray(userSystem?.users) ? userSystem.users : [];
+      return users
+        .filter((u) => u && u.type === 'insasse')
+        .sort((a, b) => {
+          const an = `${a.nachname || ''} ${a.vorname || ''}`.trim().toLowerCase();
+          const bn = `${b.nachname || ''} ${b.vorname || ''}`.trim().toLowerCase();
+          return an.localeCompare(bn, 'de');
+        });
+    }
+
+    function getDisplayName(user) {
+      if (!user) return '';
+      const fullName = `${user.vorname || ''} ${user.nachname || ''}`.trim();
+      return fullName || user.name || user.username || `ID ${user.id}`;
+    }
+
+    function populateUserSelect() {
+      const select = document.getElementById('userSelect');
+      if (!select) return;
+      const previousValue = select.value;
+      const users = getPortalUsers();
+      const options = ['<option value="">Bitte Person auswaehlen</option>']
+        .concat(users.map((u) => `<option value="${String(u.id)}">${getDisplayName(u)}</option>`));
+      select.innerHTML = options.join('');
+      if (previousValue && users.some((u) => String(u.id) === String(previousValue))) {
+        select.value = String(previousValue);
+      } else if (users.length > 0) {
+        select.value = String(users[0].id);
+      }
+    }
+
+    function handlePortalSwitch(targetPortal) {
+      if (targetPortal === 'mitarbeiter') {
+        window.location.href = 'mitarbeiter.html';
+      }
+    }
+
+    function handleLogin(e) {
       e.preventDefault();
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
+      const selectedUserId = document.getElementById('userSelect').value;
       const errEl = document.getElementById('loginError');
       errEl.style.display = 'none';
 
-      if (window.DataSync) {
-        const res = await window.DataSync.serverLogin(username, password, 'insasse');
-        if (res.success) {
-          sessionManager.setSessionFromServer(res.user);
-          currentSession = sessionManager.getSession();
-          showPortal();
-          return;
-        }
-        // Server-Login fehlgeschlagen (z. B. User nur im Admin angelegt, noch nicht synced) – Fallback auf lokale Zugangsdaten
+      if (!selectedUserId) {
+        errEl.style.display = 'block';
+        return;
       }
-      const result = sessionManager.login(username, password, 'insasse');
+
+      const result = sessionManager.loginAsUser(selectedUserId, 'insasse');
       if (result.success) {
         currentSession = result.user;
         showPortal();
@@ -572,6 +609,10 @@
     }
     
     // Check if already logged in
+    populateUserSelect();
+    window.addEventListener('dataSyncLoaded', populateUserSelect);
+    window.addEventListener('dataReloaded', populateUserSelect);
+
     const existingSession = sessionManager.getSession();
     if (existingSession && existingSession.type === 'insasse') {
       currentSession = existingSession;

@@ -1663,6 +1663,31 @@ class SessionManager {
     return { success: false, message: 'Ungültige Zugangsdaten' };
   }
 
+  loginAsUser(userId, expectedType = null) {
+    const sid = String(userId);
+    const user = userSystem.users.find((u) =>
+      String(u.id) === sid &&
+      (expectedType === null || u.type === expectedType)
+    );
+
+    if (user) {
+      const session = {
+        userId: user.id,
+        type: user.type,
+        username: user.username,
+        name: `${user.vorname} ${user.nachname}`.trim() || user.name || user.username,
+        jva: user.jva,
+        station: user.station,
+        rolle: user.rolle || null,
+        jvas: user.jvas || null,
+        loginTime: new Date().toISOString()
+      };
+      sessionStorage.setItem(this.sessionKey, JSON.stringify(session));
+      return { success: true, user: session };
+    }
+    return { success: false, message: 'Benutzer nicht gefunden' };
+  }
+
   logout() {
     sessionStorage.removeItem(this.sessionKey);
   }
