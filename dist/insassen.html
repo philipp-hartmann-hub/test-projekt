@@ -60,6 +60,12 @@
         </div>
       </div>
       <div class="header-right">
+        <div class="form-group" style="margin: 0; min-width: 260px;">
+          <label for="headerUserSwitch" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Schnellwechsel</label>
+          <select id="headerUserSwitch" onchange="handleHeaderUserSwitch(this.value)">
+            <option value="">Person wechseln...</option>
+          </select>
+        </div>
         <div class="user-badge">
           <div>
             <div class="role" data-i18n="role.inmate">Insasse</div>
@@ -530,6 +536,55 @@
       }
     }
 
+    function getUsersByType(type) {
+      return (Array.isArray(userSystem?.users) ? userSystem.users : [])
+        .filter((u) => u && u.type === type)
+        .sort((a, b) => {
+          const an = `${a.nachname || ''} ${a.vorname || ''}`.trim().toLowerCase();
+          const bn = `${b.nachname || ''} ${b.vorname || ''}`.trim().toLowerCase();
+          return an.localeCompare(bn, 'de');
+        });
+    }
+
+    function populateHeaderUserSwitch() {
+      const select = document.getElementById('headerUserSwitch');
+      if (!select) return;
+      const currentValue = currentSession ? `${currentSession.type}:${String(currentSession.userId)}` : '';
+      const insassen = getUsersByType('insasse');
+      const mitarbeiter = getUsersByType('mitarbeiter');
+      const options = ['<option value="">Person wechseln...</option>'];
+
+      if (insassen.length > 0) {
+        options.push('<optgroup label="Insassen">');
+        insassen.forEach((u) => options.push(`<option value="insasse:${String(u.id)}">${getDisplayName(u)}</option>`));
+        options.push('</optgroup>');
+      }
+      if (mitarbeiter.length > 0) {
+        options.push('<optgroup label="Mitarbeiter">');
+        mitarbeiter.forEach((u) => options.push(`<option value="mitarbeiter:${String(u.id)}">${getDisplayName(u)}</option>`));
+        options.push('</optgroup>');
+      }
+
+      select.innerHTML = options.join('');
+      if (currentValue) {
+        select.value = currentValue;
+      }
+    }
+
+    function handleHeaderUserSwitch(value) {
+      if (!value) return;
+      const [targetType, targetUserId] = String(value).split(':');
+      if (!targetType || !targetUserId) return;
+      const result = sessionManager.loginAsUser(targetUserId, targetType);
+      if (!result.success) return;
+
+      if (targetType === 'mitarbeiter') {
+        window.location.href = 'mitarbeiter.html';
+        return;
+      }
+      location.reload();
+    }
+
     function handleLogin(e) {
       e.preventDefault();
       const selectedUserId = document.getElementById('userSelect').value;
@@ -560,6 +615,7 @@
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('portalSection').style.display = 'block';
       document.getElementById('userName').textContent = currentSession.name;
+      populateHeaderUserSwitch();
       
       // Moin-Begrüßung setzen
       document.getElementById('welcomeGreeting').textContent = 'Moin, ' + currentSession.name + '!';
@@ -612,6 +668,8 @@
     populateUserSelect();
     window.addEventListener('dataSyncLoaded', populateUserSelect);
     window.addEventListener('dataReloaded', populateUserSelect);
+    window.addEventListener('dataSyncLoaded', populateHeaderUserSwitch);
+    window.addEventListener('dataReloaded', populateHeaderUserSwitch);
 
     const existingSession = sessionManager.getSession();
     if (existingSession && existingSession.type === 'insasse') {
