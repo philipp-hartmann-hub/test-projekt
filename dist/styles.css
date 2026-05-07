@@ -1350,6 +1350,21 @@ body.hamburg-start {
   border-left: 4px solid var(--jhh-primary);
 }
 
+.jvp-stat-card[role="button"] {
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.jvp-stat-card[role="button"]:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(0, 65, 130, 0.14);
+}
+
+.jvp-stat-card[role="button"]:focus-visible {
+  outline: 3px solid rgba(0, 112, 201, 0.35);
+  outline-offset: 2px;
+}
+
 .jvp-stat-meldungen {
   border-left-color: var(--jhh-secondary);
 }
