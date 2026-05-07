@@ -5,39 +5,54 @@
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Hamburg.de Farbpalette */
-  --hamburg-rot: #e2001a;
+  /* FHH / JVP Design-Tokens */
+  --jhh-primary: #003063;
+  --jhh-secondary: #005ca9;
+  --jhh-accent: #e10019;
+  --jhh-bg: #eef0f3;
+  --jhh-text: #1a1a1a;
+  --jhh-text-light: #5a6472;
+  --jhh-border: #c8cdd5;
+  --jhh-success: #2e7d32;
+  --jhh-warning: #e65100;
+  --jhh-danger: #e10019;
+  --jhh-info: #005ca9;
+
+  /* Legacy-Variablen auf neue Tokens gemappt */
+  --hamburg-rot: var(--jhh-accent);
   --hamburg-rot-dark: #b8001a;
   --hamburg-rot-light: #ff1a33;
-  --hamburg-blau: #004b93;
-  --hamburg-blau-light: #0066cc;
+  --hamburg-blau: var(--jhh-primary);
+  --hamburg-blau-light: var(--jhh-secondary);
   --hamburg-tuerkis: #00a5b5;
   
   /* Hintergründe - Hell und freundlich */
-  --bg-primary: #f5f5f5;
+  --bg-primary: var(--jhh-bg);
   --bg-secondary: #ffffff;
   --bg-card: #ffffff;
   --bg-card-hover: #fafafa;
   --bg-header: #ffffff;
+  --bg-tertiary: #f7f9fb;
   
   /* Akzentfarben */
-  --accent-primary: #e2001a;
-  --accent-secondary: #004b93;
-  --accent-success: #00a651;
-  --accent-warning: #f5a623;
-  --accent-danger: #e2001a;
-  --accent-info: #004b93;
+  --accent-primary: var(--jhh-secondary);
+  --accent-secondary: var(--jhh-primary);
+  --accent-success: var(--jhh-success);
+  --accent-warning: var(--jhh-warning);
+  --accent-danger: var(--jhh-danger);
+  --accent-info: var(--jhh-info);
   --accent-turquoise: #00a5b5;
   
   /* Textfarben */
-  --text-primary: #333333;
-  --text-secondary: #666666;
+  --text-primary: var(--jhh-text);
+  --text-secondary: var(--jhh-text-light);
   --text-muted: #999999;
   --text-light: #ffffff;
+  --text-tertiary: #7a8594;
   
   /* Rahmen und Schatten */
-  --border-color: #e0e0e0;
-  --border-subtle: #f0f0f0;
+  --border-color: var(--jhh-border);
+  --border-subtle: #e3e7ed;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
@@ -59,7 +74,7 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 /* Sauberer Hintergrund ohne Muster */
@@ -90,8 +105,8 @@ body::before {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 2rem;
-  background: var(--hamburg-blau);
+  padding: 1rem 2rem;
+  background: var(--jhh-primary);
   border-bottom: none;
   margin-bottom: 0;
   box-shadow: var(--shadow);
@@ -128,7 +143,7 @@ body::before {
 }
 
 .header-title h1 {
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: white;
   margin: 0;
@@ -136,7 +151,7 @@ body::before {
 }
 
 .header-subtitle {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.85);
   font-weight: 500;
 }
@@ -192,19 +207,20 @@ body::before {
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: var(--radius);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 .user-badge .role {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .user-badge .name {
+  color: #ffffff;
   font-weight: 500;
 }
 
@@ -951,16 +967,24 @@ body.hamburg-start {
 }
 
 .data-table th {
-  background: var(--bg-secondary);
+  background: var(--jhh-primary);
   font-weight: 600;
-  color: var(--text-secondary);
+  color: #ffffff;
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .data-table tbody tr:hover {
-  background: var(--bg-secondary);
+  background: #e8eef5;
+}
+
+.data-table tbody tr:nth-child(even) {
+  background: #f7f9fb;
+}
+
+.data-table tbody tr:nth-child(even):hover {
+  background: #e8eef5;
 }
 
 .data-table .role-badge {
@@ -1048,21 +1072,22 @@ body.hamburg-start {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.85rem;
   border-bottom: 1px solid var(--border-color);
 }
 
 .section-header h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.2rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  color: var(--jhh-primary);
 }
 
 .section-header .count {
-  background: var(--accent-primary);
+  background: var(--jhh-primary);
   color: white;
   font-size: 0.8rem;
   padding: 0.2rem 0.6rem;
@@ -1079,24 +1104,25 @@ body.hamburg-start {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  padding: 0.625rem 1.5rem;
   font-size: 0.95rem;
   font-weight: 600;
   font-family: inherit;
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.15s ease;
   text-decoration: none;
+  min-height: 44px;
 }
 
 .btn-primary {
-  background: var(--hamburg-blau);
+  background: var(--jhh-primary);
   color: white;
 }
 
 .btn-primary:hover {
-  background: var(--hamburg-blau-light);
+  background: var(--jhh-secondary);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 75, 147, 0.3);
 }
@@ -1129,25 +1155,25 @@ body.hamburg-start {
 }
 
 .btn-secondary {
-  background: #f5f5f5;
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
+  background: #ffffff;
+  color: var(--jhh-primary);
+  border: 2px solid var(--jhh-primary);
 }
 
 .btn-secondary:hover {
-  background: #ebebeb;
-  border-color: #ccc;
+  background: #eef4fb;
+  border-color: var(--jhh-secondary);
 }
 
 .btn-outline {
   background: transparent;
-  color: var(--hamburg-rot);
-  border: 2px solid var(--hamburg-rot);
+  color: var(--jhh-accent);
+  border: 2px solid var(--jhh-accent);
 }
 
 .btn-outline:hover {
-  background: rgba(161, 135, 209, 0.1);
-  border-color: #b99de0;
+  background: rgba(225, 0, 25, 0.08);
+  border-color: var(--jhh-accent);
 }
 
 .btn-sm {
@@ -1169,16 +1195,16 @@ body.hamburg-start {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-  padding: 1.25rem;
+  padding: 1rem 1.1rem;
   transition: all 0.2s ease;
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .antrag-card:hover {
-  box-shadow: var(--shadow);
-  border-color: var(--hamburg-blau);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 48, 99, 0.12);
+  border-color: var(--jhh-secondary);
+  transform: translateY(-1px);
 }
 
 .antrag-card.entwurf {
@@ -1236,22 +1262,22 @@ body.hamburg-start {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .status-badge.entwurf {
-  background: rgba(161, 135, 209, 0.15);
-  color: #a187d1;
-  border: 1px solid rgba(161, 135, 209, 0.3);
+  background: rgba(90, 100, 114, 0.14);
+  color: var(--jhh-text-light);
+  border: 1px solid rgba(90, 100, 114, 0.28);
 }
 
 .status-badge.offen {
-  background: rgba(0, 75, 147, 0.1);
-  color: var(--hamburg-blau);
-  border: 1px solid rgba(0, 75, 147, 0.25);
+  background: rgba(0, 92, 169, 0.12);
+  color: var(--jhh-info);
+  border: 1px solid rgba(0, 92, 169, 0.28);
 }
 
 .status-badge.teilweise-genehmigt {
@@ -1261,27 +1287,27 @@ body.hamburg-start {
 }
 
 .status-badge.in-bearbeitung {
-  background: rgba(0, 75, 147, 0.12);
-  color: var(--hamburg-blau);
-  border: 1px solid rgba(0, 75, 147, 0.3);
+  background: rgba(0, 92, 169, 0.12);
+  color: var(--jhh-info);
+  border: 1px solid rgba(0, 92, 169, 0.3);
 }
 
 .status-badge.genehmigt {
-  background: rgba(46, 184, 114, 0.15);
-  color: var(--accent-success);
-  border: 1px solid rgba(46, 184, 114, 0.3);
+  background: rgba(46, 125, 50, 0.14);
+  color: var(--jhh-success);
+  border: 1px solid rgba(46, 125, 50, 0.28);
 }
 
 .status-badge.abgelehnt {
-  background: rgba(229, 72, 77, 0.15);
-  color: var(--accent-danger);
-  border: 1px solid rgba(229, 72, 77, 0.3);
+  background: rgba(225, 0, 25, 0.12);
+  color: var(--jhh-danger);
+  border: 1px solid rgba(225, 0, 25, 0.28);
 }
 
 .status-badge.zurueckgegeben {
-  background: rgba(240, 165, 0, 0.15);
-  color: var(--accent-warning);
-  border: 1px solid rgba(240, 165, 0, 0.3);
+  background: rgba(230, 81, 0, 0.12);
+  color: var(--jhh-warning);
+  border: 1px solid rgba(230, 81, 0, 0.26);
 }
 
 /* ============================================
@@ -1313,7 +1339,7 @@ body.hamburg-start {
 .modal {
   background: var(--bg-card);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
@@ -1331,13 +1357,13 @@ body.hamburg-start {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.25rem 1.5rem;
+  padding: 1rem 1.5rem;
   border-bottom: none;
-  background: var(--hamburg-blau);
+  background: var(--jhh-primary);
 }
 
 .modal-header h3 {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: white;
 }
@@ -1358,14 +1384,14 @@ body.hamburg-start {
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
 }
 
 .modal-footer {
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
-  padding: 1rem 1.5rem;
+  padding: 0.9rem 1.5rem 1.1rem;
   border-top: 1px solid var(--border-color);
   flex-wrap: wrap;
 }
@@ -1388,31 +1414,33 @@ body.hamburg-start {
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  color: var(--jhh-text-light);
+  font-size: 0.92rem;
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 0.75rem 1rem;
-  font-size: 1rem;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.95rem;
   font-family: inherit;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   transition: border-color 0.2s, box-shadow 0.2s;
+  min-height: 44px;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(61, 139, 253, 0.15);
+  border-color: var(--jhh-secondary);
+  box-shadow: 0 0 0 2px rgba(0, 92, 169, 0.25);
 }
 
 .form-group textarea {
@@ -1575,9 +1603,9 @@ body.hamburg-start {
 .eroeffnung-info {
   margin-top: 0.75rem;
   padding: 0.75rem;
-  background: rgba(161, 135, 209, 0.1);
+  background: rgba(0, 92, 169, 0.08);
   border-radius: var(--radius-sm);
-  border-left: 3px solid #a187d1;
+  border-left: 3px solid var(--jhh-secondary);
 }
 
 .eroeffnung-ergebnis {
@@ -1603,12 +1631,13 @@ body.hamburg-start {
 
 /* Hinweistext in Sektionen */
 .section-hint {
-  font-size: 0.9rem;
-  color: var(--text-muted);
+  font-size: 0.88rem;
+  color: var(--jhh-text-light);
   margin-bottom: 1rem;
-  padding: 0.75rem;
-  background: var(--bg-secondary);
+  padding: 0.7rem 0.85rem;
+  background: #f7f9fb;
   border-radius: var(--radius-sm);
+  border: 1px solid var(--jhh-border);
 }
 
 /* Hinweis unter Formularfeldern */
@@ -1619,10 +1648,10 @@ body.hamburg-start {
 }
 
 .persoenlich-eroeffnen {
-  background: rgba(161, 135, 209, 0.1);
+  background: rgba(0, 92, 169, 0.08);
   padding: 0.75rem 1rem;
   border-radius: var(--radius-sm);
-  border: 1px dashed #a187d1;
+  border: 1px dashed var(--jhh-secondary);
 }
 
 /* Header-Right für User-Badge + Buttons */
@@ -1667,9 +1696,9 @@ body.hamburg-start {
   position: relative;
   width: 100%;
   background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--jhh-border);
   border-radius: var(--radius);
-  padding: 0.75rem;
+  padding: 0.7rem;
   margin-bottom: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -1697,8 +1726,8 @@ body.hamburg-start {
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--jhh-border);
   flex-shrink: 0;
 }
 
@@ -1720,7 +1749,8 @@ body.hamburg-start {
 
 .notification-header h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
+  color: var(--jhh-primary);
 }
 
 .notification-header .count {
@@ -1827,20 +1857,23 @@ body.hamburg-start {
   align-items: flex-start;
   gap: 0.6rem;
   padding: 0.6rem;
-  background: var(--bg-secondary);
+  background: #ffffff;
   border-radius: var(--radius-sm);
-  border-left: 3px solid var(--border-color);
+  border-left: 3px solid var(--jhh-border);
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
+  border: 1px solid #e6eaf0;
 }
 
 .notification-card:hover {
-  background: var(--bg-card-hover);
+  background: #f7f9fb;
+  border-color: #d5dce6;
 }
 
 .notification-card.unread {
-  background: rgba(61, 139, 253, 0.08);
+  background: rgba(0, 92, 169, 0.08);
+  border-color: rgba(0, 92, 169, 0.24);
 }
 
 .notification-card.genehmigt {
@@ -1925,13 +1958,14 @@ body.hamburg-start {
 
 .notification-card-title {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   margin-bottom: 0.15rem;
+  color: var(--jhh-text);
 }
 
 .notification-card-message {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+  font-size: 0.78rem;
+  color: var(--jhh-text-light);
   margin-bottom: 0.25rem;
   line-height: 1.3;
   /* Textabschneiden nach 2 Zeilen */
@@ -1942,15 +1976,15 @@ body.hamburg-start {
 }
 
 .notification-card-time {
-  font-size: 0.7rem;
-  color: var(--text-muted);
+  font-size: 0.68rem;
+  color: #7a8594;
 }
 
 .notification-card-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--accent-primary);
+  background: var(--jhh-secondary);
   flex-shrink: 0;
   position: absolute;
   top: 0.5rem;
@@ -1981,7 +2015,7 @@ body.hamburg-start {
 
 .entwuerfe-section {
   background: var(--bg-card);
-  border: 2px dashed #a187d1;
+  border: 2px dashed var(--jhh-border);
   border-radius: var(--radius);
   padding: 1rem;
 }
@@ -2050,18 +2084,18 @@ body.hamburg-start {
   display: flex;
   gap: 0;
   margin-bottom: 1.5rem;
-  border-bottom: 2px solid var(--border-color);
-  background: var(--bg-card);
+  border-bottom: 1px solid var(--jhh-border);
+  background: #ffffff;
 }
 
 .tab {
-  padding: 0.85rem 1.5rem;
+  padding: 0.75rem 1.5rem;
   background: none;
   border: none;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -2px;
-  color: var(--text-secondary);
-  font-size: 0.95rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--jhh-text-light);
+  font-size: 0.92rem;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
@@ -2069,20 +2103,20 @@ body.hamburg-start {
 }
 
 .tab:hover {
-  background: rgba(0, 75, 147, 0.05);
-  color: var(--hamburg-blau);
+  background: #eef4fb;
+  color: var(--jhh-secondary);
 }
 
 .tab.active {
   background: transparent;
-  color: var(--hamburg-blau);
-  border-bottom-color: var(--hamburg-blau);
+  color: var(--jhh-primary);
+  border-bottom-color: var(--jhh-primary);
 }
 
 /* Tab-Zähler */
 .tab-count {
   display: inline-block;
-  background: var(--hamburg-blau);
+  background: var(--jhh-primary);
   color: white;
   font-size: 0.75rem;
   font-weight: 600;
@@ -2453,11 +2487,11 @@ body.hamburg-start {
   align-items: center;
   gap: 0.75rem;
   padding: 1rem;
-  background: rgba(0, 75, 147, 0.08);
-  border: 1px solid var(--hamburg-blau);
+  background: rgba(0, 92, 169, 0.1);
+  border: 1px solid rgba(0, 92, 169, 0.35);
   border-radius: var(--radius-sm);
   margin-bottom: 1rem;
-  color: var(--hamburg-blau);
+  color: var(--jhh-primary);
   font-weight: 500;
 }
 
@@ -2527,7 +2561,7 @@ body.hamburg-start {
 }
 
 .btn-success:hover {
-  background: #27ae60;
+  background: #25a366;
 }
 
 /* Vollzug Kontrollkästchen */
@@ -2729,11 +2763,11 @@ body.hamburg-start {
 
 .verlauf-sort-select:focus {
   outline: none;
-  border-color: var(--primary-color);
+  border-color: var(--jhh-secondary);
 }
 
 .verlauf-sort-select:hover {
-  border-color: var(--primary-color);
+  border-color: var(--jhh-secondary);
 }
 
 .verlauf-liste {
@@ -3654,11 +3688,11 @@ body.hamburg-start {
   align-items: center;
   gap: 0.75rem;
   padding: 1rem;
-  background: rgba(240, 165, 0, 0.1);
-  border: 1px solid var(--accent-warning);
+  background: rgba(230, 81, 0, 0.1);
+  border: 1px solid rgba(230, 81, 0, 0.35);
   border-radius: var(--radius-sm);
   margin-bottom: 1rem;
-  color: var(--accent-warning);
+  color: var(--jhh-warning);
   font-weight: 500;
 }
 
@@ -3674,7 +3708,8 @@ body.hamburg-start {
   margin-bottom: 2rem;
   background: var(--bg-card);
   border-radius: var(--radius);
-  padding: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--jhh-border);
 }
 
 .kalender-header-bar {
@@ -3685,7 +3720,7 @@ body.hamburg-start {
   gap: 1rem;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--jhh-border);
   position: relative;
   z-index: 1;
 }
@@ -3728,7 +3763,7 @@ body.hamburg-start {
 }
 
 .view-btn.active {
-  background: var(--hamburg-blau);
+  background: var(--jhh-primary);
   color: white;
 }
 
@@ -3751,9 +3786,9 @@ body.hamburg-start {
 }
 
 .nav-btn:hover {
-  background: var(--accent-primary);
+  background: var(--jhh-secondary);
   color: white;
-  border-color: var(--accent-primary);
+  border-color: var(--jhh-secondary);
 }
 
 .heute-btn {
@@ -3764,7 +3799,7 @@ body.hamburg-start {
   font-weight: 600;
   min-width: 180px;
   text-align: center;
-  color: var(--text-primary);
+  color: var(--jhh-primary);
 }
 
 .kalender-content {
@@ -3774,10 +3809,11 @@ body.hamburg-start {
 }
 
 .kalender-main {
-  background: var(--bg-primary);
+  background: #f7f9fb;
   border-radius: var(--radius);
   padding: 1rem;
   min-height: 300px;
+  border: 1px solid #e6eaf0;
 }
 
 .termine-sidebar {
@@ -3844,8 +3880,8 @@ body.hamburg-start {
 }
 
 .kalender-tag.heute {
-  background: rgba(61, 139, 253, 0.2);
-  border: 2px solid var(--accent-primary);
+  background: rgba(0, 92, 169, 0.14);
+  border: 2px solid var(--jhh-secondary);
 }
 
 .kalender-tag.hat-termine {
@@ -3859,13 +3895,13 @@ body.hamburg-start {
 }
 
 .kalender-tag.heute .tag-nummer {
-  color: var(--accent-primary);
+  color: var(--jhh-primary);
   font-weight: 700;
 }
 
 .kalender-tag.ausgewaehlt {
-  background: rgba(61, 139, 253, 0.15);
-  border: 2px solid var(--accent-primary);
+  background: rgba(0, 92, 169, 0.12);
+  border: 2px solid var(--jhh-secondary);
 }
 
 .termin-markers {
