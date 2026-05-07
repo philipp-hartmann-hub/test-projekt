@@ -124,6 +124,9 @@ body::before {
 .hamburg-logo {
   display: flex;
   align-items: center;
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 0.25rem 0.45rem;
 }
 
 .hamburg-wappen-img {
@@ -253,6 +256,9 @@ body.hamburg-start {
 .hamburg-logo-large {
   display: flex;
   align-items: center;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 0.35rem 0.55rem;
 }
 
 .hamburg-wappen-img-large {
