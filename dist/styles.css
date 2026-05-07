@@ -1245,6 +1245,7 @@ body.hamburg-start {
   background: #ffffff;
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .jvp-kachel:hover {
@@ -1279,6 +1280,101 @@ body.hamburg-start {
 
 .jvp-kachel-disabled {
   opacity: 0.85;
+}
+
+.jvp-kachel-badge {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  background: var(--jhh-danger);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+}
+
+.jvp-kachel-footer {
+  margin-top: 0.7rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--jhh-border);
+  color: var(--jhh-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.jvp-hero-card {
+  background: linear-gradient(90deg, var(--jhh-primary) 0%, #0a427f 65%, var(--jhh-secondary) 100%);
+  color: #fff;
+  border: none;
+}
+
+.jvp-hero-headline {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+  margin-bottom: 0.35rem;
+}
+
+.jvp-hero-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.jvp-hero-subtitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.95rem;
+}
+
+.jvp-hero-date {
+  margin-top: 0.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.jvp-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.jvp-stat-card {
+  border-left: 4px solid var(--jhh-primary);
+}
+
+.jvp-stat-meldungen {
+  border-left-color: var(--jhh-secondary);
+}
+
+.jvp-stat-urgent {
+  border-left-color: var(--jhh-danger);
+}
+
+.jvp-stat-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--jhh-primary);
+  line-height: 1.1;
+}
+
+.jvp-stat-label {
+  margin-top: 0.2rem;
+  color: var(--jhh-text-light);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 900px) {
+  .jvp-stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .antrag-card .incomplete {

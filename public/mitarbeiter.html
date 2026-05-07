@@ -86,27 +86,33 @@
 
       <!-- JVP-Auswahl (neu) -->
       <div class="dashboard" id="jvpHubView">
+        <section class="section jvp-hero-card">
+          <div class="jvp-hero-headline">Willkommen zurück</div>
+          <h2 id="jvpGreeting" class="jvp-hero-title">Moin!</h2>
+          <p id="jvpRoleLine" class="jvp-hero-subtitle">Justizvollzugsplattform Hamburg</p>
+          <div id="jvpDateLine" class="jvp-hero-date"></div>
+        </section>
+
+        <section class="jvp-stats-grid" aria-label="Kennzahlenübersicht">
+          <div class="section jvp-stat-card jvp-stat-antraege">
+            <div class="jvp-stat-value" id="jvpStatAntraege">0</div>
+            <div class="jvp-stat-label">offene Gefangenenanträge</div>
+          </div>
+          <div class="section jvp-stat-card jvp-stat-meldungen">
+            <div class="jvp-stat-value" id="jvpStatMeldungen">0</div>
+            <div class="jvp-stat-label">Meldungen in Bearbeitung</div>
+          </div>
+          <div class="section jvp-stat-card jvp-stat-urgent">
+            <div class="jvp-stat-value" id="jvpStatUrgent">0</div>
+            <div class="jvp-stat-label">überfällig (&gt;5 Tage)</div>
+          </div>
+        </section>
+
         <section class="section">
           <div class="section-header">
-            <h2>Justizvollzugsplattform</h2>
+            <h2>Fachverfahren</h2>
           </div>
-          <p class="section-hint">Bitte wählen Sie das gewünschte Fachverfahren.</p>
-          <div class="jvp-kachel-grid">
-            <button type="button" class="jvp-kachel" onclick="openFachverfahren('antraege')">
-              <div class="jvp-kachel-icon">📋</div>
-              <div class="jvp-kachel-content">
-                <h3>eGefangenenanträge</h3>
-                <p>Bestehendes Antragswesen öffnen und weiterarbeiten.</p>
-              </div>
-            </button>
-            <button type="button" class="jvp-kachel jvp-kachel-disabled" onclick="openFachverfahren('meldungen')">
-              <div class="jvp-kachel-icon">📨</div>
-              <div class="jvp-kachel-content">
-                <h3>eMeldewesen</h3>
-                <p>Platzhalteransicht: Inhalte folgen.</p>
-              </div>
-            </button>
-          </div>
+          <div class="jvp-kachel-grid" id="jvpFachverfahrenGrid"></div>
         </section>
       </div>
       
@@ -1434,6 +1440,102 @@
       document.getElementById('jvpHubView').style.display = 'grid';
       document.getElementById('dashboardView').style.display = 'none';
       document.getElementById('antragDetailView').style.display = 'none';
+      renderJvpHub();
+    }
+
+    const JVP_FACHVERFAHREN = [
+      {
+        id: 'antraege',
+        titel: 'eGefangenenanträge',
+        beschreibung: 'Digitale Erfassung, Bearbeitung und Nachverfolgung von Gefangenenanträgen.',
+        icon: '📋',
+        aktiv: true,
+        offenCount: null
+      },
+      {
+        id: 'meldungen',
+        titel: 'eMeldewesen',
+        beschreibung: 'Digitales Meldewesen: Strafanzeigen, interne Vorfälle und externe Berichte.',
+        icon: '📨',
+        aktiv: true,
+        offenCount: 3
+      },
+      {
+        id: 'statistik',
+        titel: 'Statistik & Auswertungen',
+        beschreibung: 'Übergreifende Berichte, Bearbeitungszeiten und Kennzahlen.',
+        icon: '📈',
+        aktiv: false,
+        offenCount: null
+      },
+      {
+        id: 'urlaub',
+        titel: 'Urlaubsanträge (Bedienstete)',
+        beschreibung: 'Digitale Beantragung und Genehmigung von Urlaub und Dienstbefreiungen.',
+        icon: '🏖️',
+        aktiv: false,
+        offenCount: null
+      }
+    ];
+
+    const JVP_STATS = {
+      mitarbeiter: { antraege: 8, meldungen: 3, urgent: 2 },
+      stationsleitung: { antraege: 24, meldungen: 11, urgent: 5 },
+      hausleitung: { antraege: 147, meldungen: 38, urgent: 12 },
+      'haus-leitung': { antraege: 147, meldungen: 38, urgent: 12 },
+      'jva-leitung': { antraege: 147, meldungen: 38, urgent: 12 },
+      sozialdienst: { antraege: 12, meldungen: 1, urgent: 1 },
+      medizin: { antraege: 5, meldungen: 2, urgent: 0 },
+      pforte: { antraege: 0, meldungen: 4, urgent: 0 },
+      kammer: { antraege: 6, meldungen: 2, urgent: 1 },
+      zahlstelle: { antraege: 5, meldungen: 1, urgent: 0 },
+      arbeitskoordination: { antraege: 4, meldungen: 1, urgent: 0 }
+    };
+
+    function getJvpRoleKey() {
+      return String(currentSession?.rolle || 'mitarbeiter').toLowerCase();
+    }
+
+    function getJvpGreeting() {
+      const h = new Date().getHours();
+      if (h < 12) return 'Guten Morgen';
+      if (h < 18) return 'Guten Tag';
+      return 'Guten Abend';
+    }
+
+    function renderJvpHub() {
+      if (!currentSession) return;
+      const displayName = document.getElementById('userName')?.textContent || currentSession.name || 'Mitarbeiter';
+      const roleText = getRolleText(currentSession.rolle || 'mitarbeiter');
+      const hausText = getHausAnzeigeText(currentSession.jvas || currentSession.jva) || '-';
+      const roleKey = getJvpRoleKey();
+      const stats = JVP_STATS[roleKey] || JVP_STATS.mitarbeiter;
+
+      document.getElementById('jvpGreeting').textContent = `${getJvpGreeting()}, ${displayName}`;
+      document.getElementById('jvpRoleLine').innerHTML = `Angemeldet als <strong>${roleText}</strong> · ${hausText}`;
+      document.getElementById('jvpDateLine').textContent = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      document.getElementById('jvpStatAntraege').textContent = String(stats.antraege || 0);
+      document.getElementById('jvpStatMeldungen').textContent = String(stats.meldungen || 0);
+      document.getElementById('jvpStatUrgent').textContent = String(stats.urgent || 0);
+
+      const grid = document.getElementById('jvpFachverfahrenGrid');
+      if (!grid) return;
+      grid.innerHTML = JVP_FACHVERFAHREN.map((fv) => {
+        const badge = fv.offenCount !== null ? `<span class="jvp-kachel-badge">${fv.offenCount}</span>` : '';
+        const disabledClass = fv.aktiv ? '' : ' jvp-kachel-disabled';
+        const statusText = fv.aktiv ? 'Öffnen' : 'Demnächst';
+        return `
+          <button type="button" class="jvp-kachel${disabledClass}" onclick="openFachverfahren('${fv.id}')">
+            ${badge}
+            <div class="jvp-kachel-icon">${fv.icon}</div>
+            <div class="jvp-kachel-content">
+              <h3>${fv.titel}</h3>
+              <p>${fv.beschreibung}</p>
+              <div class="jvp-kachel-footer">${statusText} <span>→</span></div>
+            </div>
+          </button>
+        `;
+      }).join('');
     }
 
     function openFachverfahren(key) {
@@ -1447,7 +1549,7 @@
         renderKalender();
         return;
       }
-      showAlert('eMeldewesen ist aktuell noch nicht hinterlegt.');
+      showAlert('Dieses Fachverfahren ist aktuell noch nicht hinterlegt.');
     }
 
     // ============================================
