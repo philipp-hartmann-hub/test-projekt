@@ -89,7 +89,7 @@
         <section class="jvp-stats-grid" aria-label="Kennzahlenübersicht">
           <div class="section jvp-stat-card jvp-stat-antraege">
             <div class="jvp-stat-value" id="jvpStatAntraege">0</div>
-            <div class="jvp-stat-label">offene Gefangenenanträge</div>
+            <div class="jvp-stat-label">Meine Gefangenenanträge</div>
           </div>
           <div class="section jvp-stat-card jvp-stat-meldungen">
             <div class="jvp-stat-value" id="jvpStatMeldungen">0</div>
@@ -1439,8 +1439,8 @@
     const JVP_FACHVERFAHREN = [
       {
         id: 'antraege',
-        titel: 'eGefangenenanträge',
-        beschreibung: 'Digitale Erfassung, Bearbeitung und Nachverfolgung von Gefangenenanträgen.',
+        titel: 'Meine Gefangenenanträge',
+        beschreibung: 'Anträge, bei denen Sie aktuell als Hauptbearbeiter eingetragen sind.',
         icon: '📋',
         aktiv: true,
         offenCount: null
@@ -1501,10 +1501,14 @@
     }
 
     function getJvpGreeting() {
-      const h = new Date().getHours();
-      if (h < 12) return 'Guten Morgen';
-      if (h < 18) return 'Guten Tag';
-      return 'Guten Abend';
+      return 'Moin';
+    }
+
+    function getMeineHauptbearbeitungsAntraegeCount() {
+      if (!currentSession) return 0;
+      const effektiverMitarbeiter = getEffektiverMitarbeiter();
+      const inBearbeitung = antragSystem.getInBearbeitungAntraege(effektiverMitarbeiter) || [];
+      return inBearbeitung.filter((antrag) => String(antrag.bearbeiterId) === String(currentSession.userId)).length;
     }
 
     function renderJvpHub() {
@@ -1514,17 +1518,19 @@
       const hausText = getHausAnzeigeText(currentSession.jvas || currentSession.jva) || '-';
       const roleKey = getJvpRoleKey();
       const stats = JVP_STATS[roleKey] || JVP_STATS.mitarbeiter;
+      const meineHauptbearbeitungCount = getMeineHauptbearbeitungsAntraegeCount();
 
       document.getElementById('welcomeGreeting').textContent = `${getJvpGreeting()}, ${displayName}!`;
       document.getElementById('welcomeMessage').innerHTML = `Angemeldet als <strong>${roleText}</strong> · ${hausText}`;
-      document.getElementById('jvpStatAntraege').textContent = String(stats.antraege || 0);
+      document.getElementById('jvpStatAntraege').textContent = String(meineHauptbearbeitungCount);
       document.getElementById('jvpStatMeldungen').textContent = String(stats.meldungen || 0);
       document.getElementById('jvpStatUrgent').textContent = String(stats.urgent || 0);
 
       const grid = document.getElementById('jvpFachverfahrenGrid');
       if (!grid) return;
       grid.innerHTML = JVP_FACHVERFAHREN.map((fv) => {
-        const badge = fv.offenCount !== null ? `<span class="jvp-kachel-badge">${fv.offenCount}</span>` : '';
+        const badgeCount = fv.id === 'antraege' ? meineHauptbearbeitungCount : fv.offenCount;
+        const badge = badgeCount !== null ? `<span class="jvp-kachel-badge">${badgeCount}</span>` : '';
         const disabledClass = fv.aktiv ? '' : ' jvp-kachel-disabled';
         const statusText = fv.aktiv ? 'Öffnen' : 'Demnächst';
         return `
