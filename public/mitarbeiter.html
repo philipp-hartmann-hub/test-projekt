@@ -87,7 +87,7 @@
       <!-- JVP-Auswahl (neu) -->
       <div class="dashboard" id="jvpHubView">
         <section class="jvp-stats-grid" aria-label="Kennzahlenübersicht">
-          <div class="section jvp-stat-card jvp-stat-antraege">
+          <div class="section jvp-stat-card jvp-stat-antraege" role="button" tabindex="0" onclick="openMeineAntraegeHub()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMeineAntraegeHub();}">
             <div class="jvp-stat-value" id="jvpStatAntraege">0</div>
             <div class="jvp-stat-label">Meine Gefangenenanträge</div>
           </div>
@@ -1552,13 +1552,23 @@
         document.getElementById('jvpHubView').style.display = 'none';
         document.getElementById('dashboardView').style.display = 'grid';
         document.getElementById('antragDetailView').style.display = 'none';
-        switchTab('bearbeitung');
+        switchTab('offen');
         renderAntraege();
         renderNotifications();
         renderKalender();
         return;
       }
       showAlert('Dieses Fachverfahren ist aktuell noch nicht hinterlegt.');
+    }
+
+    function openMeineAntraegeHub() {
+      document.getElementById('jvpHubView').style.display = 'none';
+      document.getElementById('dashboardView').style.display = 'grid';
+      document.getElementById('antragDetailView').style.display = 'none';
+      switchTab('bearbeitung');
+      renderAntraege();
+      renderNotifications();
+      renderKalender();
     }
 
     // ============================================
