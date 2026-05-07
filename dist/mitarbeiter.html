@@ -1163,8 +1163,16 @@
     function getDisplayName(user) {
       if (!user) return '';
       const fullName = `${user.vorname || ''} ${user.nachname || ''}`.trim();
-      const rolle = user.rolle ? ` (${getRolleText(user.rolle)})` : '';
-      return `${fullName || user.name || user.username || `ID ${user.id}`}${rolle}`;
+      const name = fullName || user.name || user.username || `ID ${user.id}`;
+      const haus = user.jva || (Array.isArray(user.jvas) && user.jvas.length > 0 ? user.jvas[0] : '-') || '-';
+      const station = (user.station !== undefined && user.station !== null && String(user.station).trim() !== '')
+        ? String(user.station)
+        : '-';
+      if (user.type === 'mitarbeiter') {
+        const rolle = user.rolle ? getRolleText(user.rolle) : '-';
+        return `${name} - Rolle: ${rolle} | Haus: ${haus} | Station: ${station}`;
+      }
+      return `${name} - Haus: ${haus} | Station: ${station}`;
     }
 
     function populateUserSelect() {
