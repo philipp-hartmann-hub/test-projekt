@@ -86,13 +86,6 @@
 
       <!-- JVP-Auswahl (neu) -->
       <div class="dashboard" id="jvpHubView">
-        <section class="section jvp-hero-card">
-          <div class="jvp-hero-headline">Willkommen zurück</div>
-          <h2 id="jvpGreeting" class="jvp-hero-title">Moin!</h2>
-          <p id="jvpRoleLine" class="jvp-hero-subtitle">Justizvollzugsplattform Hamburg</p>
-          <div id="jvpDateLine" class="jvp-hero-date"></div>
-        </section>
-
         <section class="jvp-stats-grid" aria-label="Kennzahlenübersicht">
           <div class="section jvp-stat-card jvp-stat-antraege">
             <div class="jvp-stat-value" id="jvpStatAntraege">0</div>
@@ -1496,6 +1489,17 @@
       return String(currentSession?.rolle || 'mitarbeiter').toLowerCase();
     }
 
+    function getHausAnzeigeText(jvasOrJva) {
+      if (Array.isArray(jvasOrJva)) {
+        const labels = jvasOrJva
+          .map((j) => getHausName(j))
+          .filter((x, i, arr) => !!x && arr.indexOf(x) === i);
+        return labels.join(', ');
+      }
+      if (!jvasOrJva) return '';
+      return getHausName(jvasOrJva) || String(jvasOrJva);
+    }
+
     function getJvpGreeting() {
       const h = new Date().getHours();
       if (h < 12) return 'Guten Morgen';
@@ -1511,9 +1515,8 @@
       const roleKey = getJvpRoleKey();
       const stats = JVP_STATS[roleKey] || JVP_STATS.mitarbeiter;
 
-      document.getElementById('jvpGreeting').textContent = `${getJvpGreeting()}, ${displayName}`;
-      document.getElementById('jvpRoleLine').innerHTML = `Angemeldet als <strong>${roleText}</strong> · ${hausText}`;
-      document.getElementById('jvpDateLine').textContent = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      document.getElementById('welcomeGreeting').textContent = `${getJvpGreeting()}, ${displayName}!`;
+      document.getElementById('welcomeMessage').innerHTML = `Angemeldet als <strong>${roleText}</strong> · ${hausText}`;
       document.getElementById('jvpStatAntraege').textContent = String(stats.antraege || 0);
       document.getElementById('jvpStatMeldungen').textContent = String(stats.meldungen || 0);
       document.getElementById('jvpStatUrgent').textContent = String(stats.urgent || 0);
