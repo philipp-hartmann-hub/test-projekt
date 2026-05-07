@@ -3225,8 +3225,16 @@ class AntragSystem {
         benutzerName: bearbeiterName
       });
       
-      // Wenn auch Vollzug vor Bekanntgabe gesetzt ist, warten wir darauf
+      // Wenn auch Vollzug vor Bekanntgabe gesetzt ist:
+      // Bekanntgabe ist erledigt, daher Ergebnisstatus bereits setzen,
+      // aber noch NICHT als erledigt markieren. Der Antrag geht damit
+      // in die Phase "Vollzug" und erst nach Vollzugsbestätigung weiter.
       if (antrag.wartetAufVollzug) {
+        antrag.status = status;
+        antrag.bearbeitetAm = new Date().toISOString();
+        if (begruendung) {
+          antrag.begruendung = begruendung;
+        }
         const insasseIdEroeffnungInfo = this._getInsasseIdFuerBenachrichtigung(antrag);
         if (insasseIdEroeffnungInfo) {
           notificationSystem.createNotification(
@@ -3237,7 +3245,7 @@ class AntragSystem {
             antrag.id
           );
         }
-        // Noch nicht abschließen - erst wenn beide bestätigt sind
+        // Noch nicht abschließen - erst wenn Vollzug bestätigt ist.
         this.saveAntraege();
         return antrag;
       }
@@ -3608,8 +3616,10 @@ class AntragSystem {
   // Historie für Mitarbeiter (abgeschlossene oder veraktete Anträge)
   getHistorieMitarbeiter(mitarbeiter) {
     return this.antraege.filter(a => {
-      // Abgeschlossene Anträge gehören in die Historie (auch vor Veraktung)
-      if (!(a.veraktet === true || a.erledigt === true)) return false;
+      // CRITICAL: Im Mitarbeiterportal gehört ein Antrag erst dann in "Erledigt",
+      // wenn die Phase "Abschluss" wirklich abgeschlossen ist (= veraktet).
+      // Ein nur "erledigter" Antrag nach Bekanntgabe reicht dafür nicht aus.
+      if (a.veraktet !== true) return false;
       
       // VAL sieht alle verakteten Anträge ihres Hauses
       if (mitarbeiter.rolle === 'jva-leitung' || mitarbeiter.rolle === 'haus-leitung' || mitarbeiter.rolle === 'hausleitung') {

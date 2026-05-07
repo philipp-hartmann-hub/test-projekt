@@ -2409,9 +2409,10 @@ Persönlich eröffnet
       const aufgabeMussErstErledigtWerden = hatOffeneAufgabe;
       
       // Der aktuelle Bearbeiter hat IMMER Zugriff (bis zur Veraktung).
-      // Bei Weiterleitungen zählt nur die LETZTE Richtung:
-      // wenn nach einer Abgabe an andere später wieder an mich zugewiesen/übernommen wurde,
-      // bin ich wieder gültiger Hauptbearbeiter.
+      // WICHTIG für VAL-Übernahmen:
+      // Sobald bearbeiterId auf den aktuellen Nutzer zeigt (inkl. Übernahme mit Begründung),
+      // gelten die regulären Phasen-Schaltflächen. Historische Weiterleitungen dürfen das
+      // NICHT mehr blockieren.
       const weiterleitungen = (antrag.weiterleitungen || []).filter(Boolean);
       const parseWeiterleitungsZeit = (w) => {
         const raw = w?.erstelltAm || w?.datum || w?.am || null;
@@ -2424,7 +2425,15 @@ Persönlich eröffnet
       const letzteRueckleitungZuMir = weiterleitungen
         .filter((w) => w && w.anId && String(w.anId) === String(currentSession.userId) && String(w.vonId) !== String(currentSession.userId))
         .reduce((max, w) => Math.max(max, parseWeiterleitungsZeit(w)), 0);
-      const hattePersoenlicheWeiterleitungWeg = letzteAbgabeWeg > 0 && letzteAbgabeWeg > letzteRueckleitungZuMir;
+      const uebernahmeVonMir = String(antrag.uebernahmeVonId || '') === String(currentSession.userId);
+      const uebernahmeZeit = (() => {
+        const ts = antrag.uebernahmeAm ? new Date(antrag.uebernahmeAm).getTime() : NaN;
+        return Number.isFinite(ts) ? ts : 0;
+      })();
+      const hattePersoenlicheWeiterleitungWeg =
+        letzteAbgabeWeg > 0 &&
+        letzteAbgabeWeg > letzteRueckleitungZuMir &&
+        (!uebernahmeVonMir || uebernahmeZeit <= letzteAbgabeWeg);
       const istBearbeiter =
         String(antrag.bearbeiterId) === String(currentSession.userId) && !hattePersoenlicheWeiterleitungWeg;
       
