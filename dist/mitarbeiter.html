@@ -2362,7 +2362,7 @@ Persönlich eröffnet
                             currentSession.rolle === 'haus-leitung' || 
                             currentSession.rolle === 'hausleitung';
       const istImSelbenHaus = antragSystem._matchesHaus(currentSession.jvas, antrag.insasseJva);
-      const kannValUebernehmen = istHausleitung && istImSelbenHaus && antrag.bearbeiterId !== currentSession.userId && !antrag.veraktet;
+      const kannValUebernehmen = istHausleitung && istImSelbenHaus && String(antrag.bearbeiterId) !== String(currentSession.userId) && !antrag.veraktet;
       
       // Kann der Mitarbeiter diesen Antrag/Aufgabe übernehmen?
       const kannUebernehmen = istOffen || hatGruppenaufgaben || hatWartendeUebergabe || kannValUebernehmen;
@@ -2412,7 +2412,7 @@ Persönlich eröffnet
       // Schutz vor veraltetem Snapshot: wer schon persönlich an einen anderen Mitarbeiter weitergeleitet hat,
       // gilt nicht mehr als Hauptbearbeiter — auch wenn bearbeiterId lokal noch auf „mich“ steht.
       const hattePersoenlicheWeiterleitungWeg = (antrag.weiterleitungen || []).some(
-        (w) => w && w.anId && w.vonId === currentSession.userId && w.anId !== currentSession.userId
+        (w) => w && w.anId && String(w.vonId) === String(currentSession.userId) && String(w.anId) !== String(currentSession.userId)
       );
       const istBearbeiter =
         String(antrag.bearbeiterId) === String(currentSession.userId) && !hattePersoenlicheWeiterleitungWeg;
