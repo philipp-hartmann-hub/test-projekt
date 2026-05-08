@@ -77,6 +77,34 @@ body {
   line-height: 1.5;
 }
 
+/* Globaler Prototyp-Hinweis */
+body.has-prototype-banner {
+  padding-top: 38px;
+}
+
+.prototype-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1200;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  background: #f6c542;
+  color: #222222;
+  border-bottom: 1px solid #c49a16;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+body.has-prototype-banner .header {
+  top: 38px;
+}
+
 /* Sauberer Hintergrund ohne Muster */
 body::before {
   display: none;
