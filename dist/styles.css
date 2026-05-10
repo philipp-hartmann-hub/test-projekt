@@ -235,7 +235,7 @@ body::before {
 
 .welcome-banner-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem 1.25rem;
   flex-wrap: wrap;
 }
@@ -261,6 +261,11 @@ body::before {
   background: rgba(255, 255, 255, 0.32);
   border-color: rgba(255, 255, 255, 0.75);
   color: #fff;
+}
+
+/* Alte Platzierung des Zurück-Buttons (unter Info-Box): nicht mehr anzeigen (ggf. gecachtes HTML) */
+#dashboardView > .back-navigation {
+  display: none !important;
 }
 
 .user-badge {
