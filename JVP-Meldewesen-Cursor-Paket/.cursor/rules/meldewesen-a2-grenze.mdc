@@ -1,0 +1,31 @@
+---
+description: A2-Grenzen; maßgeblich ggü. HEUREKA-A1 Gesamtbeschreibung
+alwaysApply: true
+---
+
+# eMeldewesen (A2) — Projektgrenze
+
+**Maßgeblichkeit:** Abgrenzung A1/A2 und „keine Duplikation“ folgt **dieser Regel** — nicht uneingeschränkt aus älteren Team-Dokumenten, die A1 und A2 gemischt beschreiben.
+
+- **Meldewesen** wird in einem **eigenen** Projekt umgesetzt, nicht als volles Fachverfahren in diesem HTML-Prototypen.
+- **Visuelle und fachliche Referenz** für A2: dieser Prototyp (**Tokens** aus `public/styles.css`, **Portal-/Rollen-Idee** aus `public/app.js`, **kein** Übersteuern durch das React-Starter-Rollenmodell aus der Zulieferung).
+- **Layout & Hub-Logik** zum Nachbau: **`jvp-hub-dashboard-spezifikation.mdc`** — gleiche Schale (Hub/Kacheln/Breadcrumb), **Meldewesen** als ausgewähltes Fachverfahren (Titel, Landing, Routen), keine A1-Datenmodelle.
+- **Design & Berechtigungsmuster** (Shell, Farben, Rollentabelle): **`rollen-berechtigungen-und-design.mdc`** — für A2 optisch konsistent; fachliche Matrix für Meldungen **neu** definieren.
+- In diesem Repo höchstens **Verweise** (z. B. Kachel/Link zur späteren A2-URL per `VITE_A2_URL`), **keine** doppelte Meldewesen-Domainlogik.
+- Unterschied A1 vs. A2 fachlich (Initiant, Außenwirkung, Ausgang) **im Meldewesen-Projekt** dokumentieren; der Antrags-Prozess hier bleibt an `PROZESSMODELL.md` gekoppelt.
+
+---
+
+## Technik-Phasen eMeldewesen (maßgeblich für Aufbau)
+
+1. **Erste Ausbaustufe — HTML im Docker (ohne Pflicht zum React-Starter)**  
+   Meldewesen wird **zunächst** als **statische Web-Oberfläche** (HTML/CSS/JS) umgesetzt — im gleichen **Gestaltungsrahmen** wie der HTML-Prototyp (`styles.css`-Tokens, Hub-IA laut `jvp-hub-dashboard-spezifikation.mdc`).  
+   Laufzeit z. B. **Docker-Image** mit **nginx** (oder vergleichbar), das gebaute Statik ausliefert; so kann das Team lokal/behördenintern testen, **bevor** ein öffentliches Deployment ansteht.
+
+2. **Deployment**  
+   Öffentliches oder behördenweites Hosting kommt **später**, wenn der Stand stimmt — typisch **statisches Hosting** oder bestehende Pipeline; keine technische Bindung aus diesem Regelwerk.
+
+3. **`jvp-starter/` im Paket**  
+   Der Ordner **React + Node + Prisma** ist **Referenz und spätere Option** (Hub-Muster `JVPDashboard.jsx`, Tailwind-`jhh-*`, Mock-Auth-Muster) — **keine Voraussetzung** für Phase 1. Eine spätere Umstellung oder Parallelentwicklung bleibt möglich.
+
+**Kurz:** Phase 1 = **HTML + Docker**; **Deploy** separater Schritt; **Lukas-Starter** = optional / später.

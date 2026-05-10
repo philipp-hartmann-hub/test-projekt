@@ -1,0 +1,164 @@
+---
+description: Design & Shell + Rollenbezeichner; maßgeblich ggü. Lukas Styleguide-Ausschnitten
+alwaysApply: true
+---
+
+# Rollen & Design — allgemein vs. Antragswesen
+
+**Maßgeblichkeit:** Farben, Logo-Kontext, Header-Shell und Rollen-Anzeigenamen (§1–3) folgen **dieser Datei** — nicht der Pflicht zu HamburgSans oder anderen Detailvorgaben aus `cursorrules-A1-v2`, wenn sie davon abweichen.
+
+**Abschnitte 1–3** gelten für **jede** JVP-Oberfläche inkl. **eMeldewesen** (Look, Shell, typische Bediensteten-Rollen, Haus/Station als organisatorischer Kontext).
+
+**Anhang „Antragswesen (A1)“** dokumentiert **nur** den Prototyp **eGefangenenanträge** (`public/app.js` …). **eMeldewesen** braucht diese Listen-, Gruppen- und Antrags-Callbacks **nicht** — dort eine **eigene** fachliche Berechtigungsmatrix definieren (optional ähnliche Dimensionen: Haus, Station, Rolle).
+
+Maßgeblich bei Detailfragen: **`public/app.js`**, **`mitarbeiter.html`**, **`styles.css`**. Hub: **`jvp-hub-dashboard-spezifikation.mdc`**.
+
+---
+
+## 1. Corporate Design & Shell
+
+### 1.1 Prototyp-Hinweis
+
+- **`body`** mit **`has-prototype-banner`**; darunter **`div.prototype-banner`** (Prototyp, nicht Produktiv).
+
+### 1.2 Farben & Typografie
+
+- **`public/styles.css`**, **`:root`**: `--jhh-primary`, `--jhh-secondary`, `--jhh-accent`, `--jhh-bg`, `--jhh-text`, `--jhh-text-light`, `--jhh-border`, `--jhh-success`, `--jhh-warning`, `--jhh-danger`, `--jhh-info`.
+- **Open Sans** (Import in `styles.css`); Buttons **`.btn`**, **`.btn-primary`**, **`.btn-secondary`**, **`.btn-sm`**; sinnvolle Mindesthöhe für Bedienung (~44px) wo passend.
+
+### 1.3 Header (Mitarbeiter-Portal)
+
+- **`header.header`**; **`.hamburg-logo`** + **`.hamburg-wappen-img`** (Logo-URL wie in HTML oder lokal; **`alt`** setzen, **keine** CSS-Filter auf Logos).
+- **`h1`** (z. B. Mitarbeiter-Portal), **`.header-subtitle`**: BJV.
+- Rechts: **`user-badge`** (Rollentext + Name), Abmelden — sowie der **Schnellwechsel** (siehe **§1.4**).
+
+### 1.4 Schnellwechsel — Rollen/Person (Prototyp)
+
+**Zweck:** Im **Validierungs-Prototyp** ohne echte IAM-Anmeldung zwischen **Demo-Nutzern** wechseln — jeweils mit deren **`rolle`**, **`jvas`/`jva`**, **`station`** usw. Alle Berechtigungen und Listen beziehen sich auf **`currentSession`** nach dem Wechsel.
+
+**Umsetzung (Referenz `public/mitarbeiter.html` / `insassen.html`):**
+
+| Element | Beschreibung |
+|---------|----------------|
+| **`#headerUserSwitch`** | `<select>` mit Label **„Schnellwechsel“** |
+| **`populateHeaderUserSwitch()`** | Füllt Optionen; **`optgroup`** z. B. „Insassen“, „Mitarbeiter“, „Administration“ |
+| **Optionswert** | Schema **`portal:userId`** (`insasse:…`, `mitarbeiter:…`, `admin:…`) |
+| **`handleHeaderUserSwitch(value)`** | **`sessionManager.loginAsUser`**, dann Redirect: **`insassen.html`** / **`admin.html`** oder **`location.reload()`** (Mitarbeiter bleibt auf derselben Seite mit neuer Session) |
+
+**Wichtig für Nachbau (inkl. Meldewesen):**
+
+- Schnellwechsel ist **kein** Produktiv-Login — gleiches UX-Muster nur für **Workshops/Demos**.
+- Nach Wechsel gilt **vollständig** die Rolle/Haus/Station des gewählten Datensatzes (wie in **`UserSystem`**).
+- **React-Starter:** Analog **`RollenContext`** / Prototyp-Banner-Rollenwechsel — funktional dasselbe Konzept (aktive Rolle steuert Sicht).
+
+### 1.5 Login / Portale
+
+- **`.login-card`**, Portalwahl, Personenauswahl; Link **`index.html`**.
+- **Admin**: Rolle/Portal → **`admin.html`** (eigenes Layout).
+
+---
+
+## 2. Nutzer-Modell (organisatorisch — auch für Meldewesen als Analogie)
+
+| Feld | Bedeutung |
+|------|-----------|
+| **`type`** | `'mitarbeiter'` \| `'insasse'` (Meldewesen typischerweise nur Bediensteten-Kontext) |
+| **`rolle`** | Fachrolle (kleingeschrieben), siehe §3 |
+| **`jvas`** / **`jva`** | Haus(e); **`jva*`** → **`haus*`** normalisieren |
+| **`station`** | Stationsbezug für filigrane Sichten |
+| **`userId` / `id`** | Identifikatoren Session/API |
+
+**VAL-Äquivalenz:** `hausleitung`, `jva-leitung`, `haus-leitung`.
+
+### 2.1 Häuser und Stationen (kanonischer Stand Prototyp)
+
+Im Code liegt die **Definition** in **`public/app.js`** als **`HAUS_CONFIG`** (Alias **`JVA_CONFIG`**). Das ist die Referenz für Namen und erlaubte Stations-Strings:
+
+| Haus-ID | Anzeigename | Stationen (`station` als String) |
+|---------|-------------|-------------------------------------|
+| `haus1` | Haus 1 | `1`, `2` |
+| `haus2` | Haus 2 | `1`, `2`, `3`, `4` |
+| `haus3` | Haus 3 | `1` |
+
+- **`jva1`** / **`haus1`** werden bei Vergleichen normalisiert (`jva` → `haus`); Nutzer tragen typischerweise **`jvas: ['haus1', …]`** oder **`jva: 'haus1'`**.
+- **Station** bleibt ein **String** (z. B. `'1'`), konsistent mit **`insasseStation`** auf Anträgen und **`station`** am Bediensteten.
+- Lesbare Namen: **`getHausName()`** / **`getJvaName()`** in `app.js`.
+
+**eMeldewesen:** Nutzt dieselbe **logische Aufteilung** (mehrere Häuser, Stationsbezug für eingeschränkte Sicht), wenn ihr Behördenparallelität wollt — die **konkrete Tabelle** kann fachlich erweitert werden; Änderungen dann **einheitlich** im Daten-/Seed-Modell und in dieser Referenz dokumentieren.
+
+---
+
+## 3. Anzeigenamen Rollen (`getRolleText` in `app.js`)
+
+| `rolle` | UI-Label |
+|---------|----------|
+| `mitarbeiter` | AVD |
+| `jva-leitung`, `haus-leitung`, `hausleitung` | VAL |
+| `stationsleitung` | Stationsleitung |
+| `zahlstelle` | Zahlstelle |
+| `arbeitskoordination` | Arbeitskoordination |
+| `kammer` | Kammer |
+| *(sonst)* | Rohstring |
+
+Admin-Zuordnung über **`isAdminUser`** / **`getPortalForUser`** (`admin`, `administrator`, `itadmin`, Username `admin`) → **`admin.html`**.
+
+### 3.1 Rollen — gleiche Idee wie bei Häusern/Stationen
+
+**Ja:** Für Rollen gilt dasselbe Prinzip wie bei **`HAUS_CONFIG`**: Die **maßgebliche kanonische Liste** der verwendeten **`rolle`-Strings** steht im Code (**`public/app.js`**, Seed-Nutzer, Vergleiche in `AntragSystem` / UI). Die Tabelle in **§3** ist die Referenz für **UI-Labels** (`getRolleText`).
+
+Ergänzend — **alle im Prototyp relevanten technischen Werte** (kleingeschrieben):
+
+| `rolle` | Einordnung |
+|---------|------------|
+| `mitarbeiter` | AVD / Bediensteter (stationsbezogen wenn `station` gesetzt) |
+| `stationsleitung` | Stationsleitung (Haus + Station in Sichtfiltern) |
+| `hausleitung`, `jva-leitung`, `haus-leitung` | VAL — **drei Schreibweisen, eine Berechtigungslogik** |
+| `kammer`, `zahlstelle`, `arbeitskoordination` | Fachrollen (u. a. Gruppenzuweisungen an Anträge) |
+| `admin` | Admin-Portal |
+| `insasse` | Insassen-Portal |
+
+**Neue oder umbenannte Rolle:** immer **`getRolleText`**, Seed/Demo, Login-Auswahl und Berechtigungsvergleiche (`=== '…'`) **konsistent** erweitern — wie bei neuen Häusern/Stationen in **`HAUS_CONFIG`**.
+
+**eMeldewesen:** Ihr könnt dieselbe **Rollendimension** nutzen oder verkleinern; dann diese Tabelle und den Code **gemeinsam** anpassen — keine stillen Zusatzstrings ohne Dokumentation hier.
+
+---
+
+## Anhang A — Nur eGefangenenanträge (A1), nicht für Meldewesen
+
+Der folgende Block beschreibt **Antragsobjekte**, **Antrag listen**, **Gruppenzuweisung am Antrag** und **Insassen als Antragsteller**. **eMeldewesen** implementiert **keine** dieser Regeln 1:1.
+
+### A.1 Gruppenzuweisung am Antrag (`_mitarbeiterGehoertZuGruppe`)
+
+Gilt nur für **`zugewiesenAnGruppe`** an **Anträgen**:
+
+| `gruppe.typ` | Kurzregel |
+|--------------|-----------|
+| `kammer` | Nur Rolle Kammer (ohne Hauszwang). |
+| `hausleitung` | Nur VAL + gleiches Haus. |
+| `station` / `avd` | Gleiches Haus; VAL ausgeschlossen; Station muss passen. |
+| `zahlstelle` / `arbeitskoordination` | Rolle + Haus. |
+
+### A.2 Antragslisten (`AntragSystem`)
+
+- **Offene Anträge** (`getOffeneAntraegeMitarbeiter`): VAL sieht Haus-offen; Gruppenfilter; AVD/Stationsleitung stationsbezogen.
+- **In Bearbeitung** (`getInBearbeitungAntraege`): persönlicher Bezug / Station / VAL-Regeln wie im Code.
+- **Historie** (`getHistorieMitarbeiter`): Gate **`veraktet`**, dann VAL/Stationsleitung/sonst wie im Code.
+
+### A.3 VAL am Antrag
+
+Übernahme, Bearbeiter, „abgegeben“, Aufgabenketten — **siehe `app.js` / `mitarbeiter.html`**.
+
+### A.4 Kalender / Termine (`TerminSystem`)
+
+Im **Antrags-Mitarbeiterportal** eingebunden; **Meldewesen** übernimmt das **nur**, wenn fachlich gewünscht (nicht Pflicht).
+
+### A.5 Insassen-Portal
+
+Nur **Anträge des eigenen Kontos**; kein Meldewesen-Bearbeitungsmodell.
+
+---
+
+## Umsetzungshinweis
+
+- **Meldewesen-Projekt**: **§1–3** + **`jvp-hub-dashboard-spezifikation.mdc`** + **`meldewesen-a2-grenze.mdc`**; **Anhang A ignorieren** für Fachlogik.
+- **Antrags-Prototyp**: Anhang A bleibt Referenz für Nachbau/Refactoring im Repo.

@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   HEUREKA 2.0 – Globale Basis-Styles (FHH Hamburg Styleguide)
+   NICHT VERÄNDERN
+   ============================================================ */
+
+@layer base {
+  html {
+    font-family: 'HamburgSans', 'Segoe UI', Arial, sans-serif;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-jhh-bg text-jhh-text;
+    min-height: 100vh;
+  }
+
+  h1 { @apply text-2xl font-bold text-jhh-primary; }
+  h2 { @apply text-xl font-bold text-jhh-primary; }
+  h3 { @apply text-lg font-semibold text-jhh-primary; }
+
+  /* Fokus-Indikator – WCAG 2.1 AA */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-jhh-secondary ring-offset-1;
+  }
+}
+
+@layer components {
+  /* ---- Buttons ---- */
+  .btn-primary {
+    @apply bg-jhh-primary text-white font-semibold px-6 py-2.5 rounded-sm
+           hover:bg-blue-900 transition-colors duration-150
+           focus-visible:ring-2 focus-visible:ring-jhh-secondary
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply border-2 border-jhh-primary text-jhh-primary font-semibold px-6 py-2.5 rounded-sm
+           bg-transparent hover:bg-jhh-hover transition-colors duration-150;
+  }
+
+  .btn-danger {
+    @apply bg-jhh-danger text-white font-semibold px-6 py-2.5 rounded-sm
+           hover:bg-red-700 transition-colors duration-150;
+  }
+
+  /* ---- Status-Badges ---- */
+  .status-badge {
+    @apply inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap;
+  }
+  .status-draft      { @apply status-badge bg-gray-100 text-jhh-text-light; }
+  .status-submitted  { @apply status-badge bg-blue-50 text-jhh-info; }
+  .status-progress   { @apply status-badge bg-orange-50 text-jhh-warning; }
+  .status-approved   { @apply status-badge bg-green-50 text-jhh-success; }
+  .status-rejected   { @apply status-badge bg-red-50 text-jhh-danger; }
+  .status-forwarded  { @apply status-badge bg-purple-50 text-purple-700; }
+  .status-archived   { @apply status-badge bg-gray-100 text-gray-600; }
+
+  /* ---- Karten ---- */
+  .card {
+    @apply bg-jhh-white rounded shadow-sm border border-jhh-border;
+  }
+
+  /* ---- Formular-Labels ---- */
+  .form-label {
+    @apply block text-sm font-semibold text-jhh-text mb-1;
+  }
+  .form-label-required::after {
+    content: ' *';
+    @apply text-jhh-danger;
+  }
+
+  /* ---- Formular-Inputs ---- */
+  .form-input {
+    @apply w-full border border-jhh-border rounded-sm px-3 py-2 text-base text-jhh-text
+           focus-visible:ring-2 focus-visible:ring-jhh-secondary focus-visible:border-jhh-secondary
+           placeholder:text-jhh-text-light;
+  }
+
+  /* ---- Tabellen ---- */
+  .table-header th {
+    @apply bg-jhh-primary text-white text-sm font-semibold text-left px-4 py-3 whitespace-nowrap;
+  }
+  .table-row {
+    @apply border-b border-jhh-border hover:bg-jhh-hover transition-colors cursor-pointer;
+    min-height: 44px;
+  }
+  .table-row:nth-child(even) { @apply bg-jhh-stripe; }
+  .table-cell { @apply px-4 py-3 text-sm; }
+}

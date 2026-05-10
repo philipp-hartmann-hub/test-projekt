@@ -1,0 +1,147 @@
+---
+description: JVP-Hub & Dashboard — IA & Layout; maßgeblich ggü. Lukas Hub-Beschreibungen
+alwaysApply: true
+---
+
+# JVP-Hub & Dashboard — Pflichtaufbau (Referenz + Ableitung Meldewesen)
+
+**Maßgeblichkeit:** Diese Regel definiert Hub/Dashboard **vor** abweichenden Formulierungen in älteren Team-Dokumenten; Umsetzung am **HTML-Prototyp** und der Struktur von `JVPDashboard.jsx` im Starter.
+
+Diese Spezifikation beschreibt den **gemeinsamen Rahmen** der Justizvollzugsplattform: **Hub-Ebene** (Kennzahlen + Fachverfahren-Kacheln) und **Wechsel** in eine Fachverfahren-Ansicht. Sie ist am **HTML-Prototyp** (`public/mitarbeiter.html` + `public/styles.css`) und dem **React-Starter** (`Zulieferung Lukas/jvp-starter`, `JVPDashboard.jsx`) festgemacht. Neue Arbeiten (insbesondere **eMeldewesen**) sollen dieselbe **Schalenlogik** nutzen und sich nur in **Inhalt, Routen und Breadcrumb-Labels** unterscheiden.
+
+---
+
+## 1. Informationsarchitektur (zwei Ebenen)
+
+| Ebene | Zweck | Nutzererfahrung |
+|-------|--------|------------------|
+| **1 – JVP-Hub** | Einstieg Justizvollzugsplattform | Kennzahl-Karten + Bereich „Fachverfahren“ mit Kacheln (A1, A2, Platzhalter) |
+| **2 – Fachverfahren** | Konkrete Anwendung | z. B. Antragsliste (`dashboardView` im HTML-Prototyp) bzw. später **Meldungsliste** in der A2-App |
+
+**Regeln**
+
+- Von Ebene 2 **immer** eine kontrollierte Rückkehr zur Hub-Ebene (Button „Zurück zum Dashboard“ / Hub-Link im Header analog Starter).
+- **Hub** zeigt **keine** fachliche Detailbearbeitung — nur Übersicht und Sprungmarken.
+- Kennzahlen sind **übergreifend** (Anträge / Meldungen / Überfällig); die genauen Zahlen können mock oder API sein, **Layout bleibt**.
+
+---
+
+## 2. Referenz: HTML-Prototyp (`public/mitarbeiter.html`)
+
+### 2.1 Zentrale Container-IDs (Sichtbarkeit per `display`)
+
+- **`jvpHubView`** — Hub (`.dashboard`): Kennzahlen, Fachverfahren-Grid, Postfach, Kalender.
+- **`dashboardView`** — Antrags­über­sicht nach Sprung **„Gefangenenanträge“** (nicht der JVP-Hub).
+- **`antragDetailView`** — Antragsdetail (wechselt mit den anderen).
+
+**Navigation**
+
+- `openJvpHub()` — zeigt `jvpHubView`, blendet `dashboardView` und `antragDetailView` aus, ruft `renderJvpHub()`.
+- `openMeineAntraegeHub()` / `openFachverfahren('antraege')` — Hub aus, **Antrags-Dashboard** (`dashboardView`) ein.
+- `openFachverfahren('meldungen')` — im aktuellen Stand Platzhalter; für **Meldewesen-Nachbau**: hier analog zu `antraege` eine **eigene View** einschalten (z. B. `meldewesenDashboardView`), **nicht** die Antragsliste.
+
+### 2.2 Reihenfolge der Hub-Sektionen (von oben nach unten)
+
+1. **`welcome-banner`** — Begrüßung (Name, Rolle, Haus).
+2. **`jvp-stats-grid`** — drei Karten:
+   - „Meine Gefangenenanträge“ (klickbar → `openMeineAntraegeHub()`),
+   - „Meldungen in Bearbeitung“ (Anzeige),
+   - „überfällig“ (Anzeige).
+3. **Abschnitt „Fachverfahren“** — `section-header` + **`jvpFachverfahrenGrid`** (per `renderJvpHub()` aus Array gefüllt).
+4. **Postfach** (`notificationSection`) — optional eingeklappt.
+5. **Kalender** (`kalenderSection`) — optional eingeklappt.
+
+### 2.3 Datenstruktur Fachverfahren-Kacheln (Prototyp)
+
+Konstante **`JVP_FACHVERFAHREN`** (im `<script>` von `mitarbeiter.html`): Objekte mit mindestens:
+
+- `id` (`'antraege' | 'meldungen' | …`)
+- `titel`, `beschreibung`, `icon` (Emoji in Prototyp), `aktiv` (boolean), `offenCount` (number | null)
+
+Rendering: Buttons `.jvp-kachel` / `.jvp-kachel-disabled`, Badge `.jvp-kachel-badge`, Fußzeile `.jvp-kachel-footer`.
+
+Kennzahlen oben: Objekt **`JVP_STATS`** mit Schlüssel pro **Rolle** (`getJvpRoleKey()` aus `currentSession.rolle`).
+
+---
+
+## 3. Referenz: CSS (`public/styles.css`)
+
+**Hub/Dashboard-Layout**
+
+- **`.dashboard`** — `display: grid`, eine Spalte, `gap: 2rem`.
+- **`.section`** — Kartencontainer: weißer Hintergrund, Rahmen, `border-radius`, Padding.
+
+**Kennzahlen**
+
+- **`.jvp-stats-grid`** — 3 Spalten Desktop, ≤900px eine Spalte.
+- **`.jvp-stat-card`**, **`.jvp-stat-value`**, **`.jvp-stat-label`**
+- Akzentlinien: Standard links Primärblau; **`.jvp-stat-meldungen`** Sekundärblau links; **`.jvp-stat-urgent`** Rot links.
+
+**Fachverfahren-Kacheln**
+
+- **`.jvp-kachel-grid`** — `repeat(auto-fit, minmax(260px, 1fr))`, `gap: 1rem`.
+- **`.jvp-kachel`**, **`.jvp-kachel-icon`**, **`.jvp-kachel-content`**, **`.jvp-kachel-footer`**, **`.jvp-kachel-badge`**, **`.jvp-kachel-disabled`**.
+
+Tokens ausschließlich **`--jhh-*`** aus `:root` (siehe Regel `prototyp-jvp-cursor-regeln.mdc`).
+
+---
+
+## 4. Referenz: React-Starter (`jvp-starter/frontend`) — optional
+
+**eMeldewesen Phase 1** kann rein **HTML** sein (s. `meldewesen-a2-grenze.mdc`); dann entspricht §2–3 diesem Dokument. Dieser Abschnitt gilt, wenn ihr den **React-Starter** nutzt — gleiche IA wie Hub/Kacheln im HTML-Prototyp.
+
+### 4.1 Route
+
+- **`/`** → Redirect auf **`/dashboard`**.
+- **`/dashboard`** rendert **`JVPDashboard`** (`src/pages/JVPDashboard.jsx`).
+
+### 4.2 Aufbau `JVPDashboard` (Bedienstete)
+
+1. **`PageLayout`** mit `plattformTitel=""` auf Hub-Seite (nur „Justizvollzugsplattform“ im Header — siehe `Header`/`Breadcrumb`).
+2. **Willkommens-Sektion** — Gradient `from-jhh-primary`, Name, Rolle, JVA, Datum.
+3. **Drei Kennzahl-Karten** (`grid-cols-3`, ab Tablet/Desktop): Anträge / Meldungen in Bearbeitung / Überfällig — Farbakzente `border-jhh-primary`, `border-jhh-secondary`, `border-jhh-danger`.
+4. **Überschrift „Fachverfahren“** mit kleinem Icon-Quadrat.
+5. **Raster** `grid-cols-1 md:grid-cols-2 lg:grid-cols-3` — Kacheln als `<a href={fv.url}>` bzw. deaktiviert.
+
+Konstante **`FACHVERFAHREN`**: u. a. `id: 'a1'`, `id: 'a2'`, `url: VITE_A1_URL` / `VITE_A2_URL`, `rollenFilter`, `offenCount`.
+
+**Gefangenen-Sicht** (`istGefangener`): vereinfachte Karte „Meine Anträge“, Link nach `A1_URL`.
+
+### 4.3 `PageLayout` (Shell)
+
+Reihenfolge: **PrototypBanner** → **Header** → **Breadcrumb** → **`<main>`** (`max-w-content`, `px-8 py-7`) → **Footer**.
+
+Für **Unterseiten** eines Fachverfahrens: `plattformTitel` und `fachverfahren={{ label, href }}` sowie `seiten={[…]}` setzen (siehe Kommentar in `PageLayout.jsx`).
+
+### 4.4 Umgebungsvariablen (externe Deployments)
+
+- **`VITE_A1_URL`** — eGefangenenanträge-App.
+- **`VITE_A2_URL`** — eMeldewesen-App.
+
+Hub-Kacheln verlinken auf diese Basis-URLs.
+
+---
+
+## 5. Ableitung: eigenständige **eMeldewesen**-App (A2)
+
+**Gleich wie Referenz**
+
+- Zwei-Ebenen-Denken: optional **Mini-Hub** oder **sofort Fachverfahren-Inhalt** — wenn **nur A2** deployed wird, **gleiche visuelle Schale** wie Hub (`PageLayout`, Tokens, Kennzahl-Zeile möglich).
+- **Design**: identische `jhh-*`-Farben, Typografie, Karten/Stepper-Muster wie Team-Vorgaben.
+
+**Abweichungen zum Antrags-Prototyp**
+
+- **Breadcrumb zweite Stufe**: Label **„eMeldewesen“** (nicht „eGefangenenanträge“); `href` auf die **Startroute der A2-App** (z. B. `/dashboard` oder `/meldewesen`).
+- **`plattformTitel` im Header**: „Justizvollzugsplattform – **eMeldewesen**“ (oder vereinbarter Kurztitel).
+- **Standard-Landing**: Nutzer landet in der **Meldungsübersicht**, nicht in einer Antragsliste; Hub-Kachel „eMeldewesen“ der Gesamt-JVP verweist auf diese App (`VITE_A2_URL`).
+- **Keine** Antrags-Datenmodelle/Endpunkte aus A1 duplizieren — nur gemeinsame **Navigations- und Layoutkonventionen**.
+
+---
+
+## 6. Checkliste für Cursor-Umsetzung
+
+- [ ] Hub: drei Kennzahl-Karten + Bereich „Fachverfahren“ mit responsive Grid.
+- [ ] Kacheln: Badge optional, Footer „Öffnen →“, deaktivierte Kacheln sichtbar abgeschwächt.
+- [ ] Tokens und Abstände aus bestehendem CSS / Tailwind `jhh-*`.
+- [ ] Rücknavigation von Fachverfahren-Inhalt zur Hub-Ansicht (oder externer Link zurück zur JVP-URL).
+- [ ] A2: Breadcrumb und Titel durchgängig **Meldewesen**; keine Vermischung mit Antrags-Fachlichkeit.

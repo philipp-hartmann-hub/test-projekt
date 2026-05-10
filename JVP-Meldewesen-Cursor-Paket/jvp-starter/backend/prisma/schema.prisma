@@ -1,0 +1,196 @@
+// ============================================================
+// schema.prisma – HEUREKA 2.0
+// Datenbankschema = Datenwörterbuch für das Lastenheft
+// Feldnamen entsprechen BASIS-Web- und AD-Vorgaben
+// NICHT VERÄNDERN ohne Abstimmung mit Projektleitung
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -------------------------------------------------------
+// GEFANGENE
+// Mock-Tabelle: Im Produktivsystem aus BASIS-Web (lesend)
+// Feldnamen = Schnittstellenspezifikation Lastenheft
+// -------------------------------------------------------
+model Gefangene {
+  id                   String    @id @default(uuid())
+  gefangenenNr         String    @unique   // z.B. "GEF-021"
+  nachname             String
+  vorname              String
+  geburtsdatum         DateTime?
+  staatsangehoerigkeit String?
+  muttersprache        String?
+  jva                  String              // z.B. "JVA Billwerder"
+  haftraum             String?             // z.B. "B2-14"
+  haftart              String?             // "Strafhaft", "Untersuchungshaft"
+  strafende            DateTime?
+  vollzugsabteilung    String?
+  betreuenderBeamter   String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  antraege             Antrag[]
+
+  @@map("gefangene")
+}
+
+// -------------------------------------------------------
+// BEDIENSTETE
+// Mock-Tabelle: Im Produktivsystem aus Active Directory
+// -------------------------------------------------------
+model Bedienstete {
+  id                    String   @id @default(uuid())
+  bediensteterID        String   @unique  // z.B. "BD-001" (= AD sAMAccountName)
+  bediensteterName      String
+  bediensteterRolle     Rolle
+  bediensteterJVA       String
+  bediensteterAbteilung String?
+  createdAt             DateTime @default(now())
+
+  zugewieseneAntraege   Antrag[]        @relation("Zustaendig")
+  statusAenderungen     StatusVerlauf[]
+  veraktungen           Veraktung[]
+
+  @@map("bedienstete")
+}
+
+// -------------------------------------------------------
+// ANTRAG – Kerntabelle A1 eGefangenenanträge
+// clusterTyp: generischer Antragscluster (nicht 1:1 Antragsart)
+// metadaten:  flexibles JSON für clustersspezifische Felder
+//             → wird nach Validierungsworkshops konkretisiert
+// -------------------------------------------------------
+model Antrag {
+  id             String        @id @default(uuid())
+  antragNr       String        @unique     // z.B. "ANT-047", auto-generiert
+  clusterTyp     ClusterTyp
+  status         AntragStatus  @default(DRAFT)
+  begruendung    String?                   // Freitext-Begründung
+  metadaten      Json?                     // Cluster-spezifische Felder (flexibel)
+  prioritaet     Int           @default(0) // 0=normal, 1=dringend
+  erstelltAm     DateTime      @default(now())
+  aktualisiertAm DateTime      @updatedAt
+
+  gefangeneId    String
+  gefangene      Gefangene     @relation(fields: [gefangeneId], references: [id])
+
+  zustaendigId   String?
+  zustaendig     Bedienstete?  @relation("Zustaendig", fields: [zustaendigId], references: [id])
+
+  statusVerlauf  StatusVerlauf[]
+  anhaenge       Anhang[]
+  veraktungen    Veraktung[]
+
+  @@map("antraege")
+}
+
+// -------------------------------------------------------
+// STATUS-VERLAUF
+// Jede Statusänderung wird protokolliert (Anforderung A1+A2)
+// -------------------------------------------------------
+model StatusVerlauf {
+  id            String       @id @default(uuid())
+  status        AntragStatus
+  kommentar     String?
+  erstelltAm    DateTime     @default(now())
+
+  antragId      String
+  antrag        Antrag       @relation(fields: [antragId], references: [id])
+
+  bediensteteId String?
+  bedienstete   Bedienstete? @relation(fields: [bediensteteId], references: [id])
+
+  @@map("status_verlauf")
+}
+
+// -------------------------------------------------------
+// ANHANG – Dateireferenzen pro Antrag
+// -------------------------------------------------------
+model Anhang {
+  id         String   @id @default(uuid())
+  dateiname  String
+  dateityp   String
+  pfad       String
+  erstelltAm DateTime @default(now())
+
+  antragId   String
+  antrag     Antrag   @relation(fields: [antragId], references: [id])
+
+  @@map("anhaenge")
+}
+
+// -------------------------------------------------------
+// VERAKTUNG – eGPA-Übermittlung protokollieren
+// Im Produktivsystem: REST-API oder Dateieinwurf (noch offen)
+// -------------------------------------------------------
+model Veraktung {
+  id               String          @id @default(uuid())
+  erstelltAm       DateTime        @default(now())
+  pdfPfad          String
+  egpaAktenzeichen String?         // Rückantwort eGPA (im Mock: fiktiv)
+  status           VeraktungStatus @default(AUSSTEHEND)
+  fehlerMeldung    String?
+
+  antragId         String
+  antrag           Antrag          @relation(fields: [antragId], references: [id])
+
+  ausgefuehrtVonId String?
+  ausgefuehrtVon   Bedienstete?    @relation(fields: [ausgefuehrtVonId], references: [id])
+
+  @@map("veraktungen")
+}
+
+// -------------------------------------------------------
+// ENUMS – gemeinsam für A1 und A2
+// -------------------------------------------------------
+enum AntragStatus {
+  DRAFT        // Entwurf
+  SUBMITTED    // Eingereicht
+  IN_PROGRESS  // In Bearbeitung
+  APPROVED     // Genehmigt
+  REJECTED     // Abgelehnt
+  FORWARDED    // Weitergeleitet
+  ARCHIVED     // Archiviert
+}
+
+enum ClusterTyp {
+  AUSGANG_URLAUB           // Ausgang & Urlaub – digitalisiert
+  BESUCH_KOMMUNIKATION     // Besuch & Kommunikation – digitalisiert
+  EINKAUF_FINANZEN         // Einkauf & Finanzen – digitalisiert
+  GESUNDHEIT_SOZIALES      // In Planung
+  ARBEIT_BILDUNG           // In Planung
+  RECHTLICHES              // In Planung
+  UNTERBRINGUNG_VERLEGUNG  // In Planung
+}
+
+enum Rolle {
+  BEAMTER
+  ABTL
+  ANSTL
+  SOZIAL
+  MEDIZIN
+  PFORTE
+  ITADMIN
+  GEFANGENER
+}
+
+enum VeraktungStatus {
+  AUSSTEHEND    // PDF generiert, noch nicht an eGPA übermittelt
+  UEBERMITTELT  // Erfolgreich übermittelt
+  FEHLGESCHLAGEN
+}
+
+enum SchrittStatus {
+  OFFEN
+  AKTIV
+  ABGESCHLOSSEN
+  GESPERRT
+  UEBERSPRUNGEN
+}

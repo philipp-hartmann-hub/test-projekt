@@ -1,0 +1,94 @@
+---
+description: HEUREKA/JVP – Referenz dieses Repos (HTML-Prototyp); maßgeblich ggü. Lukas-cursorrules
+alwaysApply: true
+---
+
+# Cursor Rules – Justizvollzugsplattform Prototyp (dieses Repo)
+
+**Maßgeblichkeit:** Diese `.mdc`-Sammlung steht **über** älteren Team-Dokumenten (`cursorrules-A1-v2`, Abschnitte zu Rollen `BEAMTER`/`ABTL`/…, HamburgSans-Pflicht usw.), soweit **Design, Tokens, Rollenlabels aus dem HTML-Prototyp, Hub-IA oder Meldewesen-Grenzen** betroffen sind. Bei Widerspruch gilt **dieses Regelwerk**, nicht die Lukas-Vollfassung.
+
+**Maßgeblich ist der Codestand** (`public/`, `app.js`, `styles.css`). Die **Gliederung** orientiert sich nur lose an Team-Cursorrules — **ohne** React-Starter oder HEUREKA-A1-Rollen als Vorbild für **diesen** HTML-Prototyp. Das Paket `jvp-starter` bleibt separates Lieferobjekt.
+
+---
+
+## 1. Projektkontext
+
+- Funktionaler **Prototyp** zur Bearbeitung von Gefangenenanträgen (Hamburger JVP-Kontext); dient Validierung und Anforderungsklärung.
+- **Zwei Portale** (Bedienstete vs. Insassen) sind in **einer** Anwendung erreichbar (Rollen-/Portalwechsel); produktiv wären das getrennte Deployments — hier nur Simulation.
+
+---
+
+## 2. Architektur (dieses Repos)
+
+| Bereich | Ort |
+|--------|-----|
+| Globale Styles, Design-Tokens | `public/styles.css` (Build: `dist/styles.css`) |
+| Client-Logik, Daten, Rollen | `public/app.js` |
+| Portale / Seiten | `public/mitarbeiter.html`, `public/insassen.html`, `public/admin.html`, `public/index.html`, … |
+| Prozessbeschreibung Antragswesen | `PROZESSMODELL.md` |
+
+**JVP-Hub, Dashboard-Hierarchie, Kacheln, React-Parallele (`JVPDashboard`), Ableitung Meldewesen:** ausführlich in **`jvp-hub-dashboard-spezifikation.mdc`** — dort beim Nachbau in Cursor strikt folgen.
+
+**Design, Shell, Rollenbezeichner:** **`rollen-berechtigungen-und-design.mdc`** (§1–3). **Antragsspezifische Berechtigungen** stehen dort nur im **Anhang A (nur A1)** — für **eMeldewesen** nicht verwenden; dort eigene Fachmatrix definieren.
+
+Nach Änderungen an `public/` bei Bedarf **`node scripts/copy-public-to-dist.js`** ausführen, damit `dist/` für statisches Hosting (z. B. Vercel) aktuell bleibt.
+
+---
+
+## 3. Design & UI (canonical)
+
+- **Tokens**: ausschließlich die CSS-Variablen unter `:root` in `public/styles.css` (`--jhh-primary`, `--jhh-secondary`, `--jhh-accent`, `--jhh-bg`, `--jhh-text`, …). Keine parallelen Hex-Paletten ohne Abstimmung.
+- **Schrift**: wie im Prototyp — `Open Sans` (Import steht in `styles.css`).
+- **Prototyp-Kennzeichnung**: `body.has-prototype-banner`, `.prototype-banner` — bei neuen Seiten gleiche Mechanik wie bestehende HTML-Seiten verwenden.
+- **Barrierefreiheit**: sichtbare Labels, Fokuszustände, Status nicht nur farbcodiert; ausreichende Klick-/Touch-Flächen wo sinnvoll.
+
+---
+
+## 4. Portale, Rollen, Zuständigkeit (dieser Prototyp)
+
+- Nutzer modelliert in **`public/app.js`**: u. a. `type: 'mitarbeiter' | 'insasse'`, Feld **`rolle`** (z. B. `mitarbeiter`, `hausleitung`, `stationsleitung`, `kammer`, `zahlstelle`, `arbeitskoordination`, `admin`, `insasse`).
+- **Haus-/JVA-Bezug**: `jvas` / `jva` / `haus*` — Legacy-Namen tolerant behandeln (Normalisierung `jva` ↔ `haus` wo im Code bereits vorgesehen).
+- **Insassen** vs. **Mitarbeiter**: getrennte Datenpfade; keine Vermischung von Bearbeiterlogik mit Insassen-Stammdaten.
+- Berechtigungen und Sichten **am bestehenden Code orientieren** — nicht das Rollen-Enum aus dem React-Starter (`RollenContext.jsx`) auf diesen Prototyp „umbiegen“.
+
+---
+
+## 5. Prozesslogik Antragswesen
+
+- Phasen und Akteure: **`PROZESSMODELL.md`**. Änderungen am fachlichen Ablauf dort oder im UI konsistent nachziehen.
+
+---
+
+## 6. Sprache & Konventionen
+
+- UI-Texte und Nutzerkommunikation: **Deutsch**; formelles **Sie** wo passend.
+- Code-Kommentare: **Deutsch** möglich, technische Bezeichner nach bestehendem Stil im Repo (**Englisch** für APIs/Variablen, wenn schon so etabliert).
+
+---
+
+## 7. Naming-Konventionen (aus diesem Codebase abgeleitet)
+
+| Element | Konvention | Beispiele / Ort |
+|--------|------------|------------------|
+| HTML-Seiten (öffentlich) | kleingeschrieben, `.html` | `mitarbeiter.html`, `insassen.html`, `admin.html`, `index.html` |
+| JS-Module im Client | `camelCase` oder `kebab-case` für Dateinamen wie im Repo | `app.js`, `data-sync.js`, `api-client.js` |
+| Globales Stylesheet | fest `styles.css` | `public/styles.css` |
+| CSS-Variablen (Tokens) | `kebab-case`, Präfix `--jhh-` | `--jhh-primary`, `--jhh-secondary`, `--jhh-bg` |
+| CSS-Klassen | überwiegend `kebab-case` / BEM-artige Blöcke wie in `styles.css` | `.prototype-banner`, `.has-prototype-banner` |
+| Nutzer `type` | Literale wie im Code | `'mitarbeiter'`, `'insasse'` |
+| Nutzer `rolle` | kleingeschrieben; VAL-Varianten parallel erlaubt | `mitarbeiter`, `hausleitung`, `jva-leitung`, `haus-leitung`, `stationsleitung`, `kammer`, `zahlstelle`, `arbeitskoordination`, `admin`, `insasse` |
+| Haus-/Standort-IDs | Präfix `haus` oder Legacy `jva`; im Code normalisieren | `haus1`, `_normalisiereHausId()` in `app.js` |
+| Nutzer-IDs (generiert) | Präfix je Typ | `INS-…`, `MIT-…` via `generateId()` |
+| Insassennummer (generiert) | Schema `I-` + vier Ziffern | `I-0001` (`generateInsassenNummer`) — Legacy-Daten können z. B. `INS-001` enthalten |
+| Antragsnummer | Präfix `ANT-` | `generateAntragsNummer()` in `app.js` |
+| Objektfelder / API | `camelCase` wie bestehend | `antragId`, `antragsNummer`, `insassenNummer`, `zugewiesenAnId` |
+| Übersetzungs-/Locale-Keys in `app.js` | oft deutsch oder phrase keys | wie in den bestehenden Maps — neue Einträge konsistent halten |
+
+Neue Rollen- oder Status-Strings: **immer** mit bestehenden Vergleichen in `public/app.js` und den HTML-Ansichten abstimmen (keine zweite parallele Schreibweise ohne Normalisierung).
+
+---
+
+## 8. Was dieser Prototyp nicht ersetzt
+
+- Keine produktive Behörden-Authentifizierung, keine finale Schnittstelle zu BASIS-Web/eGPA — Simulation/Mocks wie im Code dokumentiert.
+- **eMeldewesen (A2)** ist **kein** Implementierungsziel in diesem Repo; siehe separate Regel `meldewesen-a2-grenze.mdc`.

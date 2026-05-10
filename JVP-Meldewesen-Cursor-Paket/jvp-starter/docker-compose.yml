@@ -1,0 +1,68 @@
+version: '3.9'
+# ============================================================
+# docker-compose.yml – HEUREKA 2.0
+# Lokale Entwicklungsumgebung: Frontend + Backend + PostgreSQL
+# Start: docker compose up
+# ============================================================
+
+services:
+
+  db:
+    image: postgres:15-alpine
+    container_name: jvp_db
+    environment:
+      POSTGRES_DB:       jvp_heureka
+      POSTGRES_USER:     jvp_user
+      POSTGRES_PASSWORD: jvp_dev_2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jvp_user -d jvp_heureka"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jvp_backend
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://jvp_user:jvp_dev_2026@db:5432/jvp_heureka
+      PORT:         3001
+      NODE_ENV:     development
+      FRONTEND_URL: http://localhost:5173
+      EGPA_MODUS:   REST   # REST oder DATEIEINWURF
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: jvp_frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:3001
+      VITE_JVP_URL: http://localhost:5173   # URL der JVP (für A1/A2)
+      VITE_A1_URL:  http://localhost:5174   # URL A1-Prototyp
+      VITE_A2_URL:  http://localhost:5175   # URL A2-Prototyp
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host
+
+volumes:
+  postgres_data:

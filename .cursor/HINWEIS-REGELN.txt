@@ -1,0 +1,9 @@
+Die Cursor-Projektregeln (*.mdc) für JVP/Meldewesen liegen ausschließlich unter:
+
+  JVP-Meldewesen-Cursor-Paket/.cursor/rules/
+
+Siehe auch:
+  JVP-Meldewesen-Cursor-Paket/CURSOR-REGELN-AKTIVIEREN.md
+  JVP-Meldewesen-Cursor-Paket/KEINE-AUSWIRKUNG-AUF-DIE-ANWENDUNG.md
+
+Dieser Hinweis ist keine Cursor Rule — er ändert nichts an public/, server.js oder der Anwendung.
