@@ -2505,6 +2505,20 @@ Persönlich eröffnet
           </div>
         `;
       } else if (antrag.type === 'eigentum') {
+        const verfuegungTitel =
+          currentLanguage === 'en'
+            ? 'Suggested procedure sequence (reference Ist process)'
+            : currentLanguage === 'fr'
+              ? 'Suggestion de séquence (processus cible)'
+              : 'Verfügungsvorschlag';
+        const verfuegungHinweis =
+          currentLanguage === 'en'
+            ? 'This is a suggestion only; it does not replace a professional decision.'
+            : currentLanguage === 'fr'
+              ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle."
+              : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
+        const verfuegungKetteKammer =
+          'Station zur Vorprüfung → Zahlstelle → Kammer → GPA';
         const aktionText = antrag.aktion === 'aufstocken' 
           ? (currentLanguage === 'en' ? 'Add clothing' : currentLanguage === 'fr' ? 'Ajouter des vêtements' : 'Kleidung aufstocken')
           : (currentLanguage === 'en' ? 'Exchange clothing' : currentLanguage === 'fr' ? 'Échanger des vêtements' : 'Kleidung tauschen');
@@ -2525,6 +2539,11 @@ Persönlich eröffnet
                 <span class="detail-value">${getTranslatedUserText(antrag.antragBegruendung)}</span>
               </div>
             ` : ''}
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitel}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKetteKammer}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
           </div>
         `;
       }
