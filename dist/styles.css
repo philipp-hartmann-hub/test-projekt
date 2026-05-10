@@ -149,10 +149,12 @@ body::before {
   gap: 1rem;
   flex-wrap: wrap;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .header-back-wrap {
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .btn.header-dashboard-back-btn {
