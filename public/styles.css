@@ -233,6 +233,36 @@ body::before {
   opacity: 0.9;
 }
 
+.welcome-banner-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem 1.25rem;
+  flex-wrap: wrap;
+}
+
+.welcome-banner-back-wrap {
+  flex-shrink: 0;
+}
+
+.welcome-banner-main {
+  flex: 1;
+  min-width: 200px;
+}
+
+.btn.welcome-banner-back-btn {
+  margin: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn.welcome-banner-back-btn:hover {
+  background: rgba(255, 255, 255, 0.32);
+  border-color: rgba(255, 255, 255, 0.75);
+  color: #fff;
+}
+
 .user-badge {
   display: flex;
   align-items: center;

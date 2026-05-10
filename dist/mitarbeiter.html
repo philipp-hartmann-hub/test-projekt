@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mitarbeiter-Portal - Antragswesen</title>
-  <link rel="stylesheet" href="styles.css?v=jvp-kachel-muted-1">
+  <link rel="stylesheet" href="styles.css?v=jvp-banner-back-1">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="has-prototype-banner">
@@ -81,8 +81,15 @@
     <main class="container">
       <!-- Begrüßung -->
       <div class="welcome-banner" id="welcomeBanner">
-        <h2 id="welcomeGreeting">Moin!</h2>
-        <p id="welcomeMessage">Willkommen im Mitarbeiter-Portal.</p>
+        <div class="welcome-banner-row">
+          <div class="welcome-banner-back-wrap" id="welcomeBannerBackWrap" style="display: none;">
+            <button type="button" class="btn btn-sm welcome-banner-back-btn" onclick="openJvpHub()">← Zurück zum Dashboard</button>
+          </div>
+          <div class="welcome-banner-main">
+            <h2 id="welcomeGreeting">Moin!</h2>
+            <p id="welcomeMessage">Willkommen im Mitarbeiter-Portal.</p>
+          </div>
+        </div>
       </div>
 
       <!-- JVP-Auswahl (neu) -->
@@ -175,10 +182,6 @@
         <!-- Info-Box für Zuständigkeitsbereich -->
         <div class="info-banner" id="zustaendigkeitInfo">
           <!-- Wird dynamisch gefüllt -->
-        </div>
-
-        <div class="back-navigation">
-          <button class="btn btn-secondary btn-sm" onclick="openJvpHub()">← Zurück zum Dashboard</button>
         </div>
 
         <!-- Tabs -->
@@ -1434,10 +1437,16 @@
       }
     }
 
+    function setWelcomeBannerDashboardBackVisible(show) {
+      const wrap = document.getElementById('welcomeBannerBackWrap');
+      if (wrap) wrap.style.display = show ? 'flex' : 'none';
+    }
+
     function openJvpHub() {
       document.getElementById('jvpHubView').style.display = 'grid';
       document.getElementById('dashboardView').style.display = 'none';
       document.getElementById('antragDetailView').style.display = 'none';
+      setWelcomeBannerDashboardBackVisible(false);
       renderJvpHub();
     }
 
@@ -1561,6 +1570,7 @@
         document.getElementById('jvpHubView').style.display = 'none';
         document.getElementById('dashboardView').style.display = 'grid';
         document.getElementById('antragDetailView').style.display = 'none';
+        setWelcomeBannerDashboardBackVisible(true);
         switchTab('offen');
         renderAntraege();
         renderNotifications();
@@ -1574,6 +1584,7 @@
       document.getElementById('jvpHubView').style.display = 'none';
       document.getElementById('dashboardView').style.display = 'grid';
       document.getElementById('antragDetailView').style.display = 'none';
+      setWelcomeBannerDashboardBackVisible(true);
       switchTab('bearbeitung');
       renderAntraege();
       renderNotifications();
@@ -2993,6 +3004,7 @@ ${t('action.archive')}
       document.getElementById('antragDetailContent').innerHTML = html;
       document.getElementById('dashboardView').style.display = 'none';
       document.getElementById('antragDetailView').style.display = 'block';
+      setWelcomeBannerDashboardBackVisible(false);
     }
     
     // Sortierung des Bearbeitungsverlaufs ändern
@@ -3009,6 +3021,7 @@ ${t('action.archive')}
     function closeAntragDetail() {
       document.getElementById('antragDetailView').style.display = 'none';
       document.getElementById('dashboardView').style.display = 'block';
+      setWelcomeBannerDashboardBackVisible(true);
       currentAntragId = null;
       renderAntraege();
     }
