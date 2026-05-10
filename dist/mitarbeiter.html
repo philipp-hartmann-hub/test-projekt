@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mitarbeiter-Portal - Antragswesen</title>
-  <link rel="stylesheet" href="styles.css?v=jvp-banner-sync-1">
+  <link rel="stylesheet" href="styles.css?v=jvp-header-back-1">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="has-prototype-banner">
@@ -53,6 +53,9 @@
   <div id="portalSection" style="display: none;">
     <header class="header">
       <div class="header-left">
+        <div class="header-back-wrap" id="welcomeBannerBackWrap" style="display: none;">
+          <button type="button" class="btn btn-sm header-dashboard-back-btn" onclick="openJvpHub()">← Zurück zum Dashboard</button>
+        </div>
         <div class="hamburg-logo">
           <img src="https://pem-center.de/wp-content/uploads/Logo-Stadt-Hamburg.jpg" alt="Hamburg - Behoerde fuer Justiz und Verbraucherschutz" class="hamburg-wappen-img">
         </div>
@@ -81,15 +84,8 @@
     <main class="container">
       <!-- Begrüßung -->
       <div class="welcome-banner" id="welcomeBanner">
-        <div class="welcome-banner-row">
-          <div class="welcome-banner-back-wrap" id="welcomeBannerBackWrap" style="display: none;">
-            <button type="button" class="btn btn-sm welcome-banner-back-btn" onclick="openJvpHub()">← Zurück zum Dashboard</button>
-          </div>
-          <div class="welcome-banner-main">
-            <h2 id="welcomeGreeting">Moin!</h2>
-            <p id="welcomeMessage">Willkommen im Mitarbeiter-Portal.</p>
-          </div>
-        </div>
+        <h2 id="welcomeGreeting">Moin!</h2>
+        <p id="welcomeMessage">Willkommen im Mitarbeiter-Portal.</p>
       </div>
 
       <!-- JVP-Auswahl (neu) -->
