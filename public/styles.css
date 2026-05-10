@@ -2460,6 +2460,32 @@ body.hamburg-start {
   color: var(--accent-primary);
 }
 
+/* Teilhabegeld: Verfügungsvorschlag (nur Mitarbeiterportal Antragsdetail) */
+.verfuegungsvorschlag-box {
+  margin-top: 1rem;
+  border-left: 4px solid var(--jhh-secondary);
+  background: var(--bg-card);
+}
+
+.verfuegungsvorschlag-box h4 {
+  color: var(--jhh-primary);
+}
+
+.verfuegungsreihenfolge {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.verfuegungs-hinweis {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
 .detail-row {
   display: flex;
   justify-content: space-between;

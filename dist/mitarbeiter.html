@@ -2476,6 +2476,20 @@ Persönlich eröffnet
       // Antragstyp-spezifische Details (übersetzt in die Sprache des Mitarbeiters)
       let anliegenHtml = '';
       if (antrag.type === 'teilhabegeld') {
+        const verfuegungTitel =
+          currentLanguage === 'en'
+            ? 'Suggested procedure sequence (reference Ist process)'
+            : currentLanguage === 'fr'
+              ? 'Suggestion de séquence (processus cible)'
+              : 'Verfügungsvorschlag';
+        const verfuegungHinweis =
+          currentLanguage === 'en'
+            ? 'Reference from HEUREKA overview — Accounts payable (FV der Zahlstelle).'
+            : currentLanguage === 'fr'
+              ? 'Référence HEUREKA — service des paiements.'
+              : 'Orientierung am Ist-Prozess (Excel HEUREKA). Es ersetzt keine fachliche Entscheidung; FV der Zahlstelle / BASIS-Web.';
+        const verfuegungKette =
+          'AVD → Arbeitsabteilung → Zahlstelle (Lohndatenübernahme) → AVD (Eröffnung) → GPA';
         anliegenHtml = `
           <div class="detail-box">
             <h4>${t('application.type.teilhabegeld')}</h4>
@@ -2483,6 +2497,11 @@ Persönlich eröffnet
               <span class="detail-label">${t('month.january').split(' ')[0] ? t('calendar.month') : 'Monat'}:</span>
               <span class="detail-value">${formatMonat(antrag.monat)}</span>
             </div>
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitel}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKette}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
           </div>
         `;
       } else if (antrag.type === 'eigentum') {
