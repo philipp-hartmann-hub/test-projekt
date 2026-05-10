@@ -1306,35 +1306,56 @@ body.hamburg-start {
   font-size: 0.85rem;
 }
 
-.jvp-kachel-disabled {
-  opacity: 0.58;
-  filter: grayscale(0.92);
-  cursor: not-allowed;
-  pointer-events: none;
-  background: #f3f5f7 !important;
-  border-color: #d8dde3 !important;
+/* Deaktivierte Fachverfahren-Kacheln (nicht lieferbar): explizite Grautöne,
+   damit Darstellung auch ohne Filter und nach CDN-/Browser-Cache zuverlässig wirkt */
+button.jvp-kachel.jvp-kachel-disabled,
+.jvp-kachel.jvp-kachel-disabled {
+  opacity: 1 !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  background: #e4e8ec !important;
+  background-color: #e4e8ec !important;
+  border-color: #b8c0ca !important;
   box-shadow: none !important;
   transform: none !important;
+  color: #5c646d !important;
 }
 
-.jvp-kachel-disabled:hover {
-  border-color: #d8dde3 !important;
+button.jvp-kachel.jvp-kachel-disabled:hover,
+.jvp-kachel.jvp-kachel-disabled:hover {
+  border-color: #b8c0ca !important;
   box-shadow: none !important;
   transform: none !important;
+  background: #dde2e7 !important;
 }
 
 .jvp-kachel-disabled .jvp-kachel-icon {
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(80, 90, 100, 0.12) !important;
+  opacity: 0.85;
 }
 
-.jvp-kachel-disabled .jvp-kachel-content h3,
-.jvp-kachel-disabled .jvp-kachel-content p,
+.jvp-kachel-disabled .jvp-kachel-content h3 {
+  color: #5a6169 !important;
+}
+
+.jvp-kachel-disabled .jvp-kachel-content p {
+  color: #6f7780 !important;
+}
+
 .jvp-kachel-disabled .jvp-kachel-footer {
-  color: #8a9199;
+  color: #6f7780 !important;
+  border-top-color: #c5cdd6 !important;
+}
+
+.jvp-kachel-disabled .jvp-kachel-footer span {
+  color: #8e96a0 !important;
 }
 
 .jvp-kachel-disabled .jvp-kachel-badge {
-  opacity: 0.65;
+  opacity: 0.55;
+  filter: grayscale(1);
 }
 
 .jvp-kachel-badge {
