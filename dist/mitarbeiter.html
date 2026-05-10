@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mitarbeiter-Portal - Antragswesen</title>
-  <link rel="stylesheet" href="styles.css?v=jvp-header-back-3">
+  <link rel="stylesheet" href="styles.css?v=jvp-header-toolbar-1">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="has-prototype-banner">
@@ -67,9 +67,9 @@
         </div>
       </div>
       <div class="header-right">
-        <div class="form-group" style="margin: 0; min-width: 300px;">
-          <label for="headerUserSwitch" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Schnellwechsel</label>
-          <select id="headerUserSwitch" onchange="handleHeaderUserSwitch(this.value)">
+        <div class="header-quick-switch">
+          <label for="headerUserSwitch" class="header-quick-switch-label">Schnellwechsel</label>
+          <select id="headerUserSwitch" class="header-quick-switch-select" onchange="handleHeaderUserSwitch(this.value)">
             <option value="">Person wechseln...</option>
           </select>
         </div>

@@ -168,25 +168,6 @@ body::before {
   align-self: center;
 }
 
-.btn.header-dashboard-back-btn {
-  margin: 0;
-  min-height: 0;
-  padding: 0.22rem 0.55rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  line-height: 1.25;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  color: #fff;
-  white-space: nowrap;
-}
-
-.btn.header-dashboard-back-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.75);
-  color: #fff;
-}
-
 .hamburg-logo {
   display: flex;
   align-items: center;
@@ -248,7 +229,103 @@ body::before {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.65rem 0.85rem;
+  flex-shrink: 0;
+}
+
+/* Schnellwechsel: Label und Dropdown in einer Zeile (kein Versatz durch Label über dem Select) */
+.header-quick-switch {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem 0.55rem;
+  margin: 0;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.header-quick-switch-label {
+  margin: 0;
+  padding: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.header-quick-switch-select {
+  margin: 0;
+  width: auto;
+  min-width: min(280px, 28vw);
+  max-width: min(380px, 42vw);
+  height: 34px;
+  min-height: 34px !important;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: var(--radius-sm);
+  color: var(--jhh-primary);
+  font-family: inherit;
+}
+
+.header-quick-switch-select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+}
+
+/* Gleiche Mittellinie: Badge kompakter, Abmelden gleiche Höhe wie Select */
+.header .user-badge {
+  padding: 0.26rem 0.7rem;
+  flex-shrink: 0;
+}
+
+.header .user-badge .role {
+  font-size: 0.65rem;
+  line-height: 1.15;
+}
+
+.header .user-badge .name {
+  font-size: 0.8rem;
+  line-height: 1.15;
+}
+
+.header .btn.btn-secondary.btn-sm {
+  min-height: 34px;
+  height: 34px;
+  padding: 0 0.85rem;
+  font-size: 0.8rem;
+  box-sizing: border-box;
+  align-self: center;
+}
+
+.btn.header-dashboard-back-btn {
+  margin: 0;
+  height: 34px;
+  min-height: 34px !important;
+  padding: 0 0.65rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.btn.header-dashboard-back-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.75);
+  color: #fff;
 }
 
 /* Begrüßungs-Banner - Hamburg.de Style */
