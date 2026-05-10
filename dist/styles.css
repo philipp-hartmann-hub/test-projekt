@@ -1307,7 +1307,34 @@ body.hamburg-start {
 }
 
 .jvp-kachel-disabled {
-  opacity: 0.85;
+  opacity: 0.58;
+  filter: grayscale(0.92);
+  cursor: not-allowed;
+  pointer-events: none;
+  background: #f3f5f7 !important;
+  border-color: #d8dde3 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.jvp-kachel-disabled:hover {
+  border-color: #d8dde3 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.jvp-kachel-disabled .jvp-kachel-icon {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.jvp-kachel-disabled .jvp-kachel-content h3,
+.jvp-kachel-disabled .jvp-kachel-content p,
+.jvp-kachel-disabled .jvp-kachel-footer {
+  color: #8a9199;
+}
+
+.jvp-kachel-disabled .jvp-kachel-badge {
+  opacity: 0.65;
 }
 
 .jvp-kachel-badge {

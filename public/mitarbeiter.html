@@ -1536,10 +1536,13 @@
       grid.innerHTML = JVP_FACHVERFAHREN.map((fv) => {
         const badgeCount = fv.id === 'antraege' ? meineHauptbearbeitungCount : fv.offenCount;
         const badge = badgeCount !== null ? `<span class="jvp-kachel-badge">${badgeCount}</span>` : '';
-        const disabledClass = fv.aktiv ? '' : ' jvp-kachel-disabled';
-        const statusText = fv.aktiv ? 'Öffnen' : 'Demnächst';
+        // Nur Statistik & Urlaubs-Kachel ausgrauen (nicht lieferbar / Demnächst)
+        const isAusgegraut = fv.id === 'statistik' || fv.id === 'urlaub';
+        const disabledClass = isAusgegraut ? ' jvp-kachel-disabled' : '';
+        const statusText = isAusgegraut ? 'Demnächst' : 'Öffnen';
+        const clickHandler = isAusgegraut ? '' : ` onclick="openFachverfahren('${fv.id}')"`;
         return `
-          <button type="button" class="jvp-kachel${disabledClass}" onclick="openFachverfahren('${fv.id}')">
+          <button type="button" class="jvp-kachel${disabledClass}"${clickHandler}${isAusgegraut ? ' aria-disabled="true" tabindex="-1"' : ''}>
             ${badge}
             <div class="jvp-kachel-icon">${fv.icon}</div>
             <div class="jvp-kachel-content">
@@ -1553,6 +1556,7 @@
     }
 
     function openFachverfahren(key) {
+      if (key === 'statistik' || key === 'urlaub') return;
       if (key === 'antraege') {
         document.getElementById('jvpHubView').style.display = 'none';
         document.getElementById('dashboardView').style.display = 'grid';
