@@ -1509,7 +1509,7 @@
       arbeitskoordination: { antraege: 4, meldungen: 1, urgent: 0 }
     };
 
-    /** Digitales Postfach im JVP-Hub nur für diese Rollen (nicht anstaltsweit für alle vorgesehen). */
+    /** Digitales Postfach im JVP-Hub nur für diese Rollen (Kammer/Revision z. B. ausgeschlossen; Zahlstelle/Arbeitskoordination eingeschlossen). */
     const JVP_HUB_POSTFACH_ROLLEN = new Set([
       'mitarbeiter',
       'hausleitung',
@@ -1520,7 +1520,9 @@
       'anstaltsleitung',
       'sozialdienst',
       'medizin',
-      'pforte'
+      'pforte',
+      'zahlstelle',
+      'arbeitskoordination'
     ]);
 
     function mitarbeiterRolleHatHubPostfach(rolle) {
@@ -1732,20 +1734,22 @@
       const markAllBtn = document.getElementById('markAllReadBtn');
       markAllBtn.style.display = unreadCount > 0 ? 'inline-block' : 'none';
       
+      section.style.display = 'flex';
+
       if (inboxItems.length === 0) {
-        section.style.display = 'none';
+        const emptyText = typeof t === 'function' ? t('inbox.noMessages') : 'Keine Nachrichten';
+        const emptyHtml = `<div class="keine-ergebnisse">${emptyText}</div>`;
+        preview.innerHTML = emptyHtml;
+        list.innerHTML = emptyHtml;
         return;
       }
-      
-      section.style.display = 'flex';
-      
-      // Vorschau: Nur neueste Nachricht
-      if (inboxItems.length > 0) {
-        const newest = inboxItems[0];
-        const typeClass = newest.type || 'info';
-        const unreadClass = newest.source === 'task' ? 'read' : (newest.gelesen ? 'read' : 'unread');
-        
-        preview.innerHTML = `
+
+      // Vorschau: neueste Nachricht
+      const newest = inboxItems[0];
+      const typeClass = newest.type || 'info';
+      const unreadClass = newest.source === 'task' ? 'read' : (newest.gelesen ? 'read' : 'unread');
+
+      preview.innerHTML = `
           <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${newest.source === 'task' ? '' : newest.id}', '${newest.antragId || ''}'); event.stopPropagation();">
             <div class="notification-card-icon">${getNotificationIcon(newest.type)}</div>
             <div class="notification-card-content">
@@ -1757,7 +1761,6 @@
           </div>
           ${inboxItems.length > 1 ? `<div class="notification-more-hint">+ ${inboxItems.length - 1} weitere Nachrichten</div>` : ''}
         `;
-      }
       
       // Vollständige Liste
       list.innerHTML = inboxItems.map(n => {
