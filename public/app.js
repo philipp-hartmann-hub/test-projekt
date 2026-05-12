@@ -3587,6 +3587,10 @@ class AntragSystem {
       return rolleNorm === 'revision';
     }
 
+    if (gruppeTypNorm === 'anstaltsleitung') {
+      return rolleNorm === 'anstaltsleitung';
+    }
+
     const istValKlassisch = this._istKlassischeValRolle(mitarbeiter.rolle);
     const istValWeit = this._istValWeitMitarbeiter(mitarbeiter);
 
@@ -3615,6 +3619,13 @@ class AntragSystem {
       imSelbenHaus,
       istValWeit
     });
+
+    if (gruppeTypNorm === 'stationsleitung') {
+      if (rolleNorm !== 'stationsleitung') return false;
+      if (!normHausId) return false;
+      if (!imSelbenHaus) return false;
+      return String(mitarbeiter.station ?? '') === String(gruppe.station ?? '');
+    }
 
     if (!normHausId) return false;
     if (!imSelbenHaus && !anstaltsGanzeAnstalt) return false;
@@ -4102,7 +4113,7 @@ class AntragSystem {
       const typNorm = (gruppe && gruppe.typ != null) ? String(gruppe.typ).toLowerCase() : '';
       const normierteGruppe = {
         typ: typNorm || gruppe.typ,
-        hausId: (typNorm === 'kammer' || typNorm === 'revision') ? null : (gruppe.hausId ?? null),
+        hausId: (typNorm === 'kammer' || typNorm === 'revision' || typNorm === 'anstaltsleitung') ? null : (gruppe.hausId ?? null),
         station: gruppe.station ?? null
       };
       // Gruppenzuweisung speichern

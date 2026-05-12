@@ -3466,11 +3466,20 @@ ${t('action.archive')}
       // Kammer / Revision (hausunabhängig)
       select.innerHTML += `<option value="kammer|">Kammer</option>`;
       select.innerHTML += `<option value="revision|">Revision</option>`;
+      select.innerHTML += `<option value="anstaltsleitung|">Anstaltsleitung</option>`;
       
       // Hausleitung als Option (pro Haus)
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
         const hausName = HAUS_CONFIG[hausKey].name;
         select.innerHTML += `<option value="hausleitung|${hausKey}">VAL ${hausName}</option>`;
+      });
+      
+      // Stationsleitung (pro Station)
+      Object.keys(HAUS_CONFIG).forEach(hausKey => {
+        const haus = HAUS_CONFIG[hausKey];
+        haus.stationen.forEach(station => {
+          select.innerHTML += `<option value="stationsleitung|${hausKey}|${station}">Stationsleitung ${haus.name} Station ${station}</option>`;
+        });
       });
       
       // Zahlstelle als Option (pro Haus)
@@ -3527,6 +3536,13 @@ ${t('action.archive')}
       } else if (gruppeTyp === 'revision') {
         document.getElementById('aufgabeGruppeTyp').value = 'revision';
         document.getElementById('aufgabeGruppeHaus').value = '';
+      } else if (gruppeTyp === 'anstaltsleitung') {
+        document.getElementById('aufgabeGruppeTyp').value = 'anstaltsleitung';
+        document.getElementById('aufgabeGruppeHaus').value = '';
+      } else if (gruppeTyp === 'stationsleitung') {
+        document.getElementById('aufgabeGruppeTyp').value = 'stationsleitung';
+        document.getElementById('aufgabeGruppeHaus').value = parts[1];
+        document.getElementById('aufgabeGruppeStation').value = parts[2];
       } else if (gruppeTyp === 'hausleitung') {
         document.getElementById('aufgabeGruppeTyp').value = 'hausleitung';
         document.getElementById('aufgabeGruppeHaus').value = parts[1];
@@ -3569,6 +3585,17 @@ ${t('action.archive')}
         mitarbeiter = mitarbeiter.filter(m => m.rolle === 'kammer');
       } else if (gruppeTyp === 'revision') {
         mitarbeiter = mitarbeiter.filter(m => m.rolle === 'revision');
+      } else if (gruppeTyp === 'anstaltsleitung') {
+        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'anstaltsleitung');
+      } else if (gruppeTyp === 'stationsleitung') {
+        const normH = (h) => String(h || '').replace('jva', 'haus');
+        const hk = normH(hausKey);
+        mitarbeiter = mitarbeiter.filter(m =>
+          m.rolle === 'stationsleitung' &&
+          m.jvas &&
+          m.jvas.some(h => normH(h) === hk) &&
+          String(m.station ?? '') === String(station ?? '')
+        );
       } else if (gruppeTyp === 'hausleitung') {
         const normH = (h) => String(h || '').replace('jva', 'haus');
         const hk = normH(hausKey);
@@ -4033,9 +4060,10 @@ ${t('action.archive')}
           }
           // Aufgabe geht an die Gruppe
           zugewiesenAnTyp = 'gruppe';
+          const hausFreiA = gruppeTyp === 'kammer' || gruppeTyp === 'revision' || gruppeTyp === 'anstaltsleitung';
           zugewiesenAnGruppe = {
             typ: gruppeTyp,
-            hausId: gruppeHaus,
+            hausId: hausFreiA ? null : (gruppeHaus || null),
             station: gruppeStation || null
           };
           
@@ -4049,6 +4077,12 @@ ${t('action.archive')}
           const hausName = HAUS_CONFIG[gruppeHaus]?.name || gruppeHaus;
           if (gruppeTyp === 'kammer') {
             zugewiesenAnName = 'Kammer';
+          } else if (gruppeTyp === 'revision') {
+            zugewiesenAnName = 'Revision';
+          } else if (gruppeTyp === 'anstaltsleitung') {
+            zugewiesenAnName = 'Anstaltsleitung';
+          } else if (gruppeTyp === 'stationsleitung') {
+            zugewiesenAnName = `Stationsleitung ${hausName} Station ${gruppeStation}`;
           } else if (gruppeTyp === 'hausleitung') {
             zugewiesenAnName = `VAL ${hausName}`;
           } else if (gruppeTyp === 'zahlstelle') {
@@ -4550,11 +4584,20 @@ ${t('action.archive')}
       // Kammer / Revision (hausunabhängig)
       select.innerHTML += `<option value="kammer|">Kammer</option>`;
       select.innerHTML += `<option value="revision|">Revision</option>`;
+      select.innerHTML += `<option value="anstaltsleitung|">Anstaltsleitung</option>`;
       
       // Hausleitung als Option (pro Haus)
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
         const hausName = HAUS_CONFIG[hausKey].name;
         select.innerHTML += `<option value="hausleitung|${hausKey}">VAL ${hausName}</option>`;
+      });
+      
+      // Stationsleitung (pro Station)
+      Object.keys(HAUS_CONFIG).forEach(hausKey => {
+        const haus = HAUS_CONFIG[hausKey];
+        haus.stationen.forEach(station => {
+          select.innerHTML += `<option value="stationsleitung|${hausKey}|${station}">Stationsleitung ${haus.name} Station ${station}</option>`;
+        });
       });
       
       // Zahlstelle als Option (pro Haus)
@@ -4609,6 +4652,13 @@ ${t('action.archive')}
       } else if (gruppeTyp === 'revision') {
         document.getElementById('weiterleitenGruppeTyp').value = 'revision';
         document.getElementById('weiterleitenGruppeHaus').value = '';
+      } else if (gruppeTyp === 'anstaltsleitung') {
+        document.getElementById('weiterleitenGruppeTyp').value = 'anstaltsleitung';
+        document.getElementById('weiterleitenGruppeHaus').value = '';
+      } else if (gruppeTyp === 'stationsleitung') {
+        document.getElementById('weiterleitenGruppeTyp').value = 'stationsleitung';
+        document.getElementById('weiterleitenGruppeHaus').value = parts[1];
+        document.getElementById('weiterleitenGruppeStation').value = parts[2];
       } else if (gruppeTyp === 'hausleitung') {
         document.getElementById('weiterleitenGruppeTyp').value = 'hausleitung';
         document.getElementById('weiterleitenGruppeHaus').value = parts[1];
@@ -4669,6 +4719,17 @@ ${t('action.archive')}
         mitarbeiter = mitarbeiter.filter(m => m.rolle === 'kammer');
       } else if (gruppeTyp === 'revision') {
         mitarbeiter = mitarbeiter.filter(m => m.rolle === 'revision');
+      } else if (gruppeTyp === 'anstaltsleitung') {
+        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'anstaltsleitung');
+      } else if (gruppeTyp === 'stationsleitung') {
+        const normH = (h) => String(h || '').replace('jva', 'haus');
+        const hk = normH(hausKey);
+        mitarbeiter = mitarbeiter.filter(m =>
+          m.rolle === 'stationsleitung' &&
+          m.jvas &&
+          m.jvas.some(h => normH(h) === hk) &&
+          String(m.station ?? '') === String(station ?? '')
+        );
       } else if (gruppeTyp === 'hausleitung') {
         const normH = (h) => String(h || '').replace('jva', 'haus');
         const hk = normH(hausKey);
@@ -4885,9 +4946,10 @@ ${t('action.archive')}
             return;
           }
           
+          const hausFrei = gruppeTyp === 'kammer' || gruppeTyp === 'revision' || gruppeTyp === 'anstaltsleitung';
           const gruppe = {
             typ: gruppeTyp,
-            hausId: gruppeTyp === 'kammer' ? null : (gruppeHaus || null),
+            hausId: hausFrei ? null : (gruppeHaus || null),
             station: gruppeStation || null
           };
           
@@ -4896,6 +4958,12 @@ ${t('action.archive')}
           let gruppeName;
           if (gruppeTyp === 'kammer') {
             gruppeName = 'Kammer';
+          } else if (gruppeTyp === 'revision') {
+            gruppeName = 'Revision';
+          } else if (gruppeTyp === 'anstaltsleitung') {
+            gruppeName = 'Anstaltsleitung';
+          } else if (gruppeTyp === 'stationsleitung') {
+            gruppeName = `Stationsleitung ${hausName} Station ${gruppeStation}`;
           } else if (gruppeTyp === 'hausleitung') {
             gruppeName = `VAL ${hausName}`;
           } else if (gruppeTyp === 'zahlstelle') {
