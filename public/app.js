@@ -1224,7 +1224,7 @@ class UserSystem {
       { id: 'zahlstelle-1', type: 'mitarbeiter', username: 'zahlstelle1', password: 'zahlstelle1', vorname: 'Zahlstelle', nachname: 'Mitarbeiter', rolle: 'zahlstelle', jvas: ['haus1'], station: null },
       { id: 'arbeit-1', type: 'mitarbeiter', username: 'arbeit1', password: 'arbeit1', vorname: 'Arbeitskoordination', nachname: '', rolle: 'arbeitskoordination', jvas: ['haus1'], station: null },
       { id: 'anstalt-1', type: 'mitarbeiter', username: 'anstalt1', password: 'anstalt1', vorname: 'Alex', nachname: 'Anstaltsleitung', rolle: 'anstaltsleitung', jvas: [], station: null },
-      { id: 'statval-1', type: 'mitarbeiter', username: 'statval1', password: 'statval1', vorname: 'Sven', nachname: 'Stations-Hausleitung', rolle: 'stationshausleitung', jvas: ['haus1'], station: '1' },
+      { id: 'statval-1', type: 'mitarbeiter', username: 'statval1', password: 'statval1', vorname: 'Stations', nachname: 'Hausleitung', rolle: 'stationshausleitung', jvas: ['haus1'], station: '1' },
       { id: 'revision-1', type: 'mitarbeiter', username: 'revision1', password: 'revision1', vorname: 'Rita', nachname: 'Revision', rolle: 'revision', jvas: [], station: null },
       { id: 'insasse-1', type: 'insasse', username: 'insasse1', password: 'insasse1', vorname: 'Hans', nachname: 'Mueller', rolle: 'insasse', jvas: [], station: '1', jva: 'haus1', insassenNummer: 'INS-001', geburtsdatum: '1985-03-15' },
       { id: 'insasse-2', type: 'insasse', username: 'insasse2', password: 'insasse2', vorname: 'Klaus', nachname: 'Fischer', rolle: 'insasse', jvas: [], station: '2', jva: 'haus2', insassenNummer: 'INS-002', geburtsdatum: '1990-07-22' }
@@ -3422,7 +3422,7 @@ class AntragSystem {
     return r === 'hausleitung' || r === 'jva-leitung' || r === 'haus-leitung';
   }
 
-  /** VAL, Anstaltsleitung oder Stations-/Hausleitungsleitung (VAL-Umfang) */
+  /** VAL, Anstaltsleitung oder Stations/Hausleitung (VAL-Umfang) */
   _istValWeitMitarbeiter(mitarbeiter) {
     const r = this._rolleNorm(mitarbeiter?.rolle);
     return this._istKlassischeValRolle(r) || r === 'anstaltsleitung' || r === 'stationshausleitung';
@@ -4337,7 +4337,7 @@ function getRolleText(rolle) {
     'haus-leitung': 'VAL',
     'hausleitung': 'VAL',
     'anstaltsleitung': 'Anstaltsleitung',
-    'stationshausleitung': 'Stations-/Hausleitungsleitung',
+    'stationshausleitung': 'Stations/Hausleitung',
     'stationsleitung': 'Stationsleitung',
     'zahlstelle': 'Zahlstelle',
     'arbeitskoordination': 'Arbeitskoordination',
@@ -4347,7 +4347,7 @@ function getRolleText(rolle) {
   return rollen[rolle] || rolle;
 }
 
-/** VAL-Umfang inkl. Anstalts- und Stations-/Hausleitungsleitung (für UI / Portal-Logik) */
+/** VAL-Umfang inkl. Anstalts- und Stations/Hausleitung (für UI / Portal-Logik) */
 function istValWeitPortalRolle(rolle) {
   const r = String(rolle || '').toLowerCase();
   return (
