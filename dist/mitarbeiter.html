@@ -806,7 +806,7 @@
       </div>
       <div class="modal-body">
         <div class="info-box warning">
-          <p>Sie sind dabei, diesen Antrag als VAL zu übernehmen. Der aktuelle Bearbeiter verliert seinen Zugriff auf den Antrag und wird über die Übernahme informiert.</p>
+          <p id="hausleitungUebernahmeIntro"></p>
         </div>
         <div id="hausleitungUebernahmeInfo">
           <!-- Wird dynamisch gefüllt -->
@@ -814,7 +814,7 @@
         <div class="form-group">
           <label for="hausleitungUebernahmeBegruendung">Begründung für die Übernahme <span class="required">*</span></label>
           <textarea id="hausleitungUebernahmeBegruendung" placeholder="Bitte begründen Sie, warum Sie diesen Antrag übernehmen..." rows="4" required></textarea>
-          <p class="field-hint">Diese Begründung wird im Bearbeitungsverlauf dokumentiert und dem bisherigen Bearbeiter mitgeteilt.</p>
+          <p class="field-hint" id="hausleitungUebernahmeBegruendungHint">Diese Begründung wird im Bearbeitungsverlauf dokumentiert und dem bisherigen Bearbeiter mitgeteilt.</p>
         </div>
         <input type="hidden" id="hausleitungUebernahmeAntragId">
       </div>
@@ -2933,13 +2933,13 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
               
               <div class="action-buttons">
                 ${kannUebernehmen && !istBearbeiter ? `
-                  <button class="btn btn-primary btn-large" onclick="${istHausleitung ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
+                  <button class="btn btn-primary btn-large" onclick="${istHausleitung() ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
                     ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : 
                       hatGruppenaufgaben ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche') : 
                       t('button.takeApplication')}
                   </button>
                 ` : ''}
-                ${!kannUebernehmen && !istBearbeiter && istHausleitung && antrag.status === 'in-bearbeitung' ? `
+                ${!kannUebernehmen && !istBearbeiter && istHausleitung() && antrag.status === 'in-bearbeitung' ? `
                   <button class="btn btn-warning btn-large" onclick="openHausleitungUebernahmeModal('${antrag.id}')">
                     Antrag übernehmen
                   </button>
@@ -5343,6 +5343,11 @@ ${t('action.archive')}
       try {
         console.log('openHausleitungUebernahmeModal aufgerufen für:', antragId);
         
+        if (!istHausleitung()) {
+          showAlert('Diese Übernahme mit Begründungspflicht steht nur Leitungsrollen (z. B. VAL) zur Verfügung.');
+          return;
+        }
+        
         if (typeof antragSystem === 'undefined') {
           console.error('antragSystem nicht verfügbar');
           showAlert('Fehler: Antragssystem nicht geladen. Bitte Seite neu laden.');
@@ -5359,11 +5364,36 @@ ${t('action.archive')}
         const antragIdEl = document.getElementById('hausleitungUebernahmeAntragId');
         const begruendungEl = document.getElementById('hausleitungUebernahmeBegruendung');
         const infoEl = document.getElementById('hausleitungUebernahmeInfo');
+        const introEl = document.getElementById('hausleitungUebernahmeIntro');
+        const begruendungHintEl = document.getElementById('hausleitungUebernahmeBegruendungHint');
         
         if (!antragIdEl || !begruendungEl || !infoEl) {
           console.error('Modal-Elemente nicht gefunden');
           showAlert('Fehler: Modal-Elemente nicht gefunden.');
           return;
+        }
+        
+        const rollenName =
+          typeof getRolleText === 'function' && currentSession
+            ? getRolleText(currentSession.rolle)
+            : 'Leitung';
+        const fremderBearbeiter =
+          antrag.bearbeiterId &&
+          currentSession &&
+          String(antrag.bearbeiterId) !== String(currentSession.userId);
+        if (introEl) {
+          if (fremderBearbeiter) {
+            introEl.textContent =
+              `Sie sind dabei, diesen Antrag als ${rollenName} zu übernehmen. Der aktuelle Bearbeiter verliert seinen Zugriff auf den Antrag und wird über die Übernahme informiert.`;
+          } else {
+            introEl.textContent =
+              `Sie sind dabei, diesen Antrag als ${rollenName} zu übernehmen und die Hauptbearbeitung zu führen.`;
+          }
+        }
+        if (begruendungHintEl) {
+          begruendungHintEl.textContent = fremderBearbeiter
+            ? 'Diese Begründung wird im Bearbeitungsverlauf dokumentiert und dem bisherigen Bearbeiter mitgeteilt.'
+            : 'Diese Begründung wird im Bearbeitungsverlauf dokumentiert.';
         }
         
         antragIdEl.value = antragId;
