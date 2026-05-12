@@ -1221,8 +1221,8 @@ class UserSystem {
       { id: 'avd-1', type: 'mitarbeiter', username: 'avd1', password: 'avd1', vorname: 'Anna', nachname: 'Schmidt (AVD)', rolle: 'mitarbeiter', jvas: ['haus1'], station: '1' },
       { id: 'avd-2', type: 'mitarbeiter', username: 'avd2', password: 'avd2', vorname: 'Peter', nachname: 'Weber (AVD)', rolle: 'mitarbeiter', jvas: ['haus2'], station: '2' },
       { id: 'kammer-1', type: 'mitarbeiter', username: 'kammer1', password: 'kammer1', vorname: 'Kammer', nachname: 'Mitarbeiter', rolle: 'kammer', jvas: [], station: null },
-      { id: 'zahlstelle-1', type: 'mitarbeiter', username: 'zahlstelle1', password: 'zahlstelle1', vorname: 'Zahlstelle', nachname: 'Mitarbeiter', rolle: 'zahlstelle', jvas: ['haus1'], station: null },
-      { id: 'arbeit-1', type: 'mitarbeiter', username: 'arbeit1', password: 'arbeit1', vorname: 'Arbeitskoordination', nachname: '', rolle: 'arbeitskoordination', jvas: ['haus1'], station: null },
+      { id: 'zahlstelle-1', type: 'mitarbeiter', username: 'zahlstelle1', password: 'zahlstelle1', vorname: 'Zahlstelle', nachname: 'Mitarbeiter', rolle: 'zahlstelle', jvas: [], station: null },
+      { id: 'arbeit-1', type: 'mitarbeiter', username: 'arbeit1', password: 'arbeit1', vorname: 'Arbeitskoordination', nachname: '', rolle: 'arbeitskoordination', jvas: [], station: null },
       { id: 'anstalt-1', type: 'mitarbeiter', username: 'anstalt1', password: 'anstalt1', vorname: 'Alex', nachname: 'Anstaltsleitung', rolle: 'anstaltsleitung', jvas: [], station: null },
       { id: 'statval-1', type: 'mitarbeiter', username: 'statval1', password: 'statval1', vorname: 'Stationsleitung', nachname: 'Wohngruppenleitung', rolle: 'stationshausleitung', jvas: ['haus1'], station: '1' },
       { id: 'revision-1', type: 'mitarbeiter', username: 'revision1', password: 'revision1', vorname: 'Rita', nachname: 'Revision', rolle: 'revision', jvas: [], station: null },
@@ -1288,6 +1288,14 @@ class UserSystem {
         });
         if (JSON.stringify(neuJvas) !== JSON.stringify(user.jvas)) {
           user.jvas = neuJvas;
+          changed = true;
+        }
+      }
+      // Zahlstelle / Arbeitskoordination: anstaltsweit (wie Kammer/Revision), keine Hauszuordnung
+      if (user.type === 'mitarbeiter') {
+        const r = (user.rolle || '').toString().toLowerCase();
+        if ((r === 'zahlstelle' || r === 'arbeitskoordination') && user.jvas && user.jvas.length > 0) {
+          user.jvas = [];
           changed = true;
         }
       }
@@ -2122,6 +2130,7 @@ class AufgabenSystem {
   constructor() {
     this.storageKey = 'gefaengnis_aufgaben';
     this.aufgaben = this.loadAufgaben();
+    this.migrateZahlstelleArbeitskoordinationGruppen();
   }
 
   loadAufgaben() {
@@ -2131,6 +2140,28 @@ class AufgabenSystem {
 
   saveAufgaben() {
     localStorage.setItem(this.storageKey, JSON.stringify(this.aufgaben));
+  }
+
+  // Zahlstelle / Arbeitskoordination: Gruppenzuweisungen anstaltsweit (hausId entfällt)
+  migrateZahlstelleArbeitskoordinationGruppen() {
+    let changed = false;
+    const stdName = { zahlstelle: 'Zahlstelle', arbeitskoordination: 'Arbeitskoordination' };
+    this.aufgaben.forEach((auf) => {
+      const g = auf.zugewiesenAnGruppe;
+      if (!g || !g.typ) return;
+      const tn = String(g.typ).toLowerCase();
+      if (tn !== 'zahlstelle' && tn !== 'arbeitskoordination') return;
+      if (g.hausId != null && String(g.hausId).trim() !== '') {
+        g.hausId = null;
+        changed = true;
+      }
+      const want = stdName[tn];
+      if (want && auf.zugewiesenAnName && auf.zugewiesenAnName !== want) {
+        auf.zugewiesenAnName = want;
+        changed = true;
+      }
+    });
+    if (changed) this.saveAufgaben();
   }
 
   generateId() {
@@ -2579,6 +2610,22 @@ class AntragSystem {
       if (antrag.insasseJva && antrag.insasseJva.startsWith('jva')) {
         antrag.insasseJva = antrag.insasseJva.replace('jva', 'haus');
         changed = true;
+      }
+      const g = antrag.zugewiesenAnGruppe;
+      if (g && g.typ) {
+        const tn = String(g.typ).toLowerCase();
+        if ((tn === 'zahlstelle' || tn === 'arbeitskoordination') && g.hausId != null && String(g.hausId).trim() !== '') {
+          g.hausId = null;
+          changed = true;
+        }
+        if (tn === 'zahlstelle' && antrag.zugewiesenAnGruppeName && antrag.zugewiesenAnGruppeName !== 'Zahlstelle') {
+          antrag.zugewiesenAnGruppeName = 'Zahlstelle';
+          changed = true;
+        }
+        if (tn === 'arbeitskoordination' && antrag.zugewiesenAnGruppeName && antrag.zugewiesenAnGruppeName !== 'Arbeitskoordination') {
+          antrag.zugewiesenAnGruppeName = 'Arbeitskoordination';
+          changed = true;
+        }
       }
     });
     if (changed) {
@@ -3591,6 +3638,13 @@ class AntragSystem {
       return rolleNorm === 'anstaltsleitung';
     }
 
+    if (gruppeTypNorm === 'zahlstelle') {
+      return rolleNorm === 'zahlstelle';
+    }
+    if (gruppeTypNorm === 'arbeitskoordination') {
+      return rolleNorm === 'arbeitskoordination';
+    }
+
     const istValKlassisch = this._istKlassischeValRolle(mitarbeiter.rolle);
     const istValWeit = this._istValWeitMitarbeiter(mitarbeiter);
 
@@ -3638,12 +3692,6 @@ class AntragSystem {
       const mStation = String(mitarbeiter.station ?? '');
       const gStation = String(gruppe.station ?? '');
       return mStation === gStation || (mStation === '' && gStation === '');
-    }
-    if (gruppeTypNorm === 'zahlstelle') {
-      return rolleNorm === 'zahlstelle';
-    }
-    if (gruppeTypNorm === 'arbeitskoordination') {
-      return rolleNorm === 'arbeitskoordination';
     }
 
     return false;
@@ -4113,7 +4161,7 @@ class AntragSystem {
       const typNorm = (gruppe && gruppe.typ != null) ? String(gruppe.typ).toLowerCase() : '';
       const normierteGruppe = {
         typ: typNorm || gruppe.typ,
-        hausId: (typNorm === 'kammer' || typNorm === 'revision' || typNorm === 'anstaltsleitung') ? null : (gruppe.hausId ?? null),
+        hausId: (typNorm === 'kammer' || typNorm === 'revision' || typNorm === 'anstaltsleitung' || typNorm === 'zahlstelle' || typNorm === 'arbeitskoordination') ? null : (gruppe.hausId ?? null),
         station: gruppe.station ?? null
       };
       // Gruppenzuweisung speichern
@@ -4193,6 +4241,7 @@ function reloadDataFromStorage() {
     const rawUsers = localStorage.getItem('gefaengnis_users');
     if (rawUsers && typeof userSystem !== 'undefined') {
       userSystem.users = JSON.parse(rawUsers);
+      userSystem.migrateUsers();
     }
     const rawNotifications = localStorage.getItem('gefaengnis_notifications');
     if (rawNotifications) notificationSystem.notifications = JSON.parse(rawNotifications);
@@ -4201,9 +4250,15 @@ function reloadDataFromStorage() {
     const rawTermine = localStorage.getItem('gefaengnis_termine');
     if (rawTermine) terminSystem.termine = JSON.parse(rawTermine);
     const rawAufgaben = localStorage.getItem('gefaengnis_aufgaben');
-    if (rawAufgaben) aufgabenSystem.aufgaben = JSON.parse(rawAufgaben);
+    if (rawAufgaben) {
+      aufgabenSystem.aufgaben = JSON.parse(rawAufgaben);
+      aufgabenSystem.migrateZahlstelleArbeitskoordinationGruppen();
+    }
     const rawAntraege = localStorage.getItem('gefaengnis_antraege');
-    if (rawAntraege) antragSystem.antraege = JSON.parse(rawAntraege);
+    if (rawAntraege) {
+      antragSystem.antraege = JSON.parse(rawAntraege);
+      antragSystem.migrateAntraege();
+    }
     if (typeof terminSystem !== 'undefined' && typeof aufgabenSystem !== 'undefined') {
       terminSystem.syncAufgabenFristenFromAufgaben(aufgabenSystem.aufgaben);
     }

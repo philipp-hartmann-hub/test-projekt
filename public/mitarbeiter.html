@@ -1453,6 +1453,7 @@
       document.getElementById('dashboardView').style.display = 'none';
       document.getElementById('antragDetailView').style.display = 'none';
       renderJvpHub();
+      renderNotifications();
       syncWelcomeBannerBackButton();
     }
 
@@ -1507,6 +1508,24 @@
       zahlstelle: { antraege: 5, meldungen: 1, urgent: 0 },
       arbeitskoordination: { antraege: 4, meldungen: 1, urgent: 0 }
     };
+
+    /** Digitales Postfach im JVP-Hub nur für diese Rollen (nicht anstaltsweit für alle vorgesehen). */
+    const JVP_HUB_POSTFACH_ROLLEN = new Set([
+      'mitarbeiter',
+      'hausleitung',
+      'jva-leitung',
+      'haus-leitung',
+      'stationsleitung',
+      'stationshausleitung',
+      'anstaltsleitung',
+      'sozialdienst',
+      'medizin',
+      'pforte'
+    ]);
+
+    function mitarbeiterRolleHatHubPostfach(rolle) {
+      return JVP_HUB_POSTFACH_ROLLEN.has(String(rolle || 'mitarbeiter').toLowerCase());
+    }
 
     function getJvpRoleKey() {
       return String(currentSession?.rolle || 'mitarbeiter').toLowerCase();
@@ -1652,6 +1671,20 @@
       
       const list = document.getElementById('notificationList');
       const preview = document.getElementById('notificationPreview');
+      const section = document.getElementById('notificationSection');
+
+      if (!mitarbeiterRolleHatHubPostfach(currentSession.rolle)) {
+        if (section) {
+          section.style.display = 'none';
+          section.classList.remove('expanded');
+          section.classList.add('collapsed');
+          postfachExpanded = false;
+          const icon = document.getElementById('postfachToggleIcon');
+          if (icon) icon.textContent = '▶';
+        }
+        return;
+      }
+
       const notifications = notificationSystem.getAllNotifications(currentSession.userId);
       const aufgabenZugewiesen = aufgabenSystem.getAlleAufgaben(currentSession.userId) || [];
       const aufgabenErstellt = (aufgabenSystem.aufgaben || []).filter(
@@ -1691,7 +1724,6 @@
       });
       const inboxItems = [...notifications, ...aufgabenInboxItems]
         .sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
-      const section = document.getElementById('notificationSection');
       const unreadCount = notificationSystem.getUnreadCount(currentSession.userId);
       
       document.getElementById('notificationCount').textContent = String(inboxItems.length);
@@ -1966,14 +1998,14 @@
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>Zahlstelle</strong> (${hausName}) sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Zahlstelle zugewiesen wurden</span>
+            <span>Als <strong>Zahlstelle</strong> sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Zahlstelle zugewiesen wurden (anstaltsweit)</span>
           </div>
         `;
       } else if (currentSession.rolle === 'arbeitskoordination') {
         info.innerHTML = `
           <div class="info-content">
             <span class="info-icon"></span>
-            <span>Als <strong>Arbeitskoordination</strong> (${hausName}) sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Arbeitskoordination zugewiesen wurden</span>
+            <span>Als <strong>Arbeitskoordination</strong> sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Arbeitskoordination zugewiesen wurden (anstaltsweit)</span>
           </div>
         `;
       } else {
@@ -3482,17 +3514,9 @@ ${t('action.archive')}
         });
       });
       
-      // Zahlstelle als Option (pro Haus)
-      Object.keys(HAUS_CONFIG).forEach(hausKey => {
-        const hausName = HAUS_CONFIG[hausKey].name;
-        select.innerHTML += `<option value="zahlstelle|${hausKey}">Zahlstelle ${hausName}</option>`;
-      });
-      
-      // Arbeitskoordination als Option (pro Haus)
-      Object.keys(HAUS_CONFIG).forEach(hausKey => {
-        const hausName = HAUS_CONFIG[hausKey].name;
-        select.innerHTML += `<option value="arbeitskoordination|${hausKey}">Arbeitskoordination ${hausName}</option>`;
-      });
+      // Zahlstelle / Arbeitskoordination (anstaltsweit)
+      select.innerHTML += `<option value="zahlstelle|">Zahlstelle</option>`;
+      select.innerHTML += `<option value="arbeitskoordination|">Arbeitskoordination</option>`;
       
       // Stationen als Option
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
@@ -3548,10 +3572,10 @@ ${t('action.archive')}
         document.getElementById('aufgabeGruppeHaus').value = parts[1];
       } else if (gruppeTyp === 'zahlstelle') {
         document.getElementById('aufgabeGruppeTyp').value = 'zahlstelle';
-        document.getElementById('aufgabeGruppeHaus').value = parts[1];
+        document.getElementById('aufgabeGruppeHaus').value = '';
       } else if (gruppeTyp === 'arbeitskoordination') {
         document.getElementById('aufgabeGruppeTyp').value = 'arbeitskoordination';
-        document.getElementById('aufgabeGruppeHaus').value = parts[1];
+        document.getElementById('aufgabeGruppeHaus').value = '';
       } else if (gruppeTyp === 'station') {
         document.getElementById('aufgabeGruppeTyp').value = 'station';
         document.getElementById('aufgabeGruppeHaus').value = parts[1];
@@ -3610,17 +3634,9 @@ ${t('action.archive')}
           );
         });
       } else if (gruppeTyp === 'zahlstelle') {
-        // Nur Zahlstellen-Mitarbeiter dieses Hauses
-        mitarbeiter = mitarbeiter.filter(m => 
-          m.rolle === 'zahlstelle' &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
+        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'zahlstelle');
       } else if (gruppeTyp === 'arbeitskoordination') {
-        // Nur Arbeitskoordinations-Mitarbeiter dieses Hauses
-        mitarbeiter = mitarbeiter.filter(m => 
-          m.rolle === 'arbeitskoordination' &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
+        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'arbeitskoordination');
       } else if (gruppeTyp === 'station') {
         // Nur AVD (Mitarbeiter) dieser Station - VAL gehört NICHT dazu
         mitarbeiter = mitarbeiter.filter(m => {
@@ -4060,7 +4076,7 @@ ${t('action.archive')}
           }
           // Aufgabe geht an die Gruppe
           zugewiesenAnTyp = 'gruppe';
-          const hausFreiA = gruppeTyp === 'kammer' || gruppeTyp === 'revision' || gruppeTyp === 'anstaltsleitung';
+          const hausFreiA = gruppeTyp === 'kammer' || gruppeTyp === 'revision' || gruppeTyp === 'anstaltsleitung' || gruppeTyp === 'zahlstelle' || gruppeTyp === 'arbeitskoordination';
           zugewiesenAnGruppe = {
             typ: gruppeTyp,
             hausId: hausFreiA ? null : (gruppeHaus || null),
@@ -4086,9 +4102,9 @@ ${t('action.archive')}
           } else if (gruppeTyp === 'hausleitung') {
             zugewiesenAnName = `VAL ${hausName}`;
           } else if (gruppeTyp === 'zahlstelle') {
-            zugewiesenAnName = `Zahlstelle ${hausName}`;
+            zugewiesenAnName = 'Zahlstelle';
           } else if (gruppeTyp === 'arbeitskoordination') {
-            zugewiesenAnName = `Arbeitskoordination ${hausName}`;
+            zugewiesenAnName = 'Arbeitskoordination';
           } else {
             zugewiesenAnName = `AVD ${hausName} Station ${gruppeStation}`;
           }
@@ -4600,17 +4616,9 @@ ${t('action.archive')}
         });
       });
       
-      // Zahlstelle als Option (pro Haus)
-      Object.keys(HAUS_CONFIG).forEach(hausKey => {
-        const hausName = HAUS_CONFIG[hausKey].name;
-        select.innerHTML += `<option value="zahlstelle|${hausKey}">Zahlstelle ${hausName}</option>`;
-      });
-      
-      // Arbeitskoordination als Option (pro Haus)
-      Object.keys(HAUS_CONFIG).forEach(hausKey => {
-        const hausName = HAUS_CONFIG[hausKey].name;
-        select.innerHTML += `<option value="arbeitskoordination|${hausKey}">Arbeitskoordination ${hausName}</option>`;
-      });
+      // Zahlstelle / Arbeitskoordination (anstaltsweit)
+      select.innerHTML += `<option value="zahlstelle|">Zahlstelle</option>`;
+      select.innerHTML += `<option value="arbeitskoordination|">Arbeitskoordination</option>`;
       
       // Stationen als Option
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
@@ -4664,10 +4672,10 @@ ${t('action.archive')}
         document.getElementById('weiterleitenGruppeHaus').value = parts[1];
       } else if (gruppeTyp === 'zahlstelle') {
         document.getElementById('weiterleitenGruppeTyp').value = 'zahlstelle';
-        document.getElementById('weiterleitenGruppeHaus').value = parts[1];
+        document.getElementById('weiterleitenGruppeHaus').value = '';
       } else if (gruppeTyp === 'arbeitskoordination') {
         document.getElementById('weiterleitenGruppeTyp').value = 'arbeitskoordination';
-        document.getElementById('weiterleitenGruppeHaus').value = parts[1];
+        document.getElementById('weiterleitenGruppeHaus').value = '';
       } else if (gruppeTyp === 'station') {
         document.getElementById('weiterleitenGruppeTyp').value = 'station';
         document.getElementById('weiterleitenGruppeHaus').value = parts[1];
@@ -4744,15 +4752,9 @@ ${t('action.archive')}
           );
         });
       } else if (gruppeTyp === 'zahlstelle') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          m.rolle === 'zahlstelle' &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
+        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'zahlstelle');
       } else if (gruppeTyp === 'arbeitskoordination') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          m.rolle === 'arbeitskoordination' &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
+        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'arbeitskoordination');
       } else if (gruppeTyp === 'station') {
         // Nur AVD (Mitarbeiter) dieser Station - VAL gehört NICHT dazu
         mitarbeiter = mitarbeiter.filter(m => {
@@ -4946,7 +4948,7 @@ ${t('action.archive')}
             return;
           }
           
-          const hausFrei = gruppeTyp === 'kammer' || gruppeTyp === 'revision' || gruppeTyp === 'anstaltsleitung';
+          const hausFrei = gruppeTyp === 'kammer' || gruppeTyp === 'revision' || gruppeTyp === 'anstaltsleitung' || gruppeTyp === 'zahlstelle' || gruppeTyp === 'arbeitskoordination';
           const gruppe = {
             typ: gruppeTyp,
             hausId: hausFrei ? null : (gruppeHaus || null),
@@ -4967,9 +4969,9 @@ ${t('action.archive')}
           } else if (gruppeTyp === 'hausleitung') {
             gruppeName = `VAL ${hausName}`;
           } else if (gruppeTyp === 'zahlstelle') {
-            gruppeName = `Zahlstelle ${hausName}`;
+            gruppeName = 'Zahlstelle';
           } else if (gruppeTyp === 'arbeitskoordination') {
-            gruppeName = `Arbeitskoordination ${hausName}`;
+            gruppeName = 'Arbeitskoordination';
           } else {
             gruppeName = `AVD ${hausName} Station ${gruppeStation}`;
           }

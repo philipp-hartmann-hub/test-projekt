@@ -781,20 +781,11 @@
         stationGroup.style.display = 'none';
         hausGroup.style.display = 'block';
         hausHint.textContent = '(Ein Haus auswählen)';
-      } else if (rolle === 'kammer' || rolle === 'revision' || rolle === 'anstaltsleitung') {
-        // Kammer / Revision / Anstaltsleitung: hausunabhängig
+      } else if (rolle === 'kammer' || rolle === 'revision' || rolle === 'anstaltsleitung' || rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
+        // Kammer / Revision / Anstaltsleitung / Zahlstelle / Arbeitskoordination: hausunabhängig
         stationGroup.style.display = 'none';
         hausGroup.style.display = 'none';
       } else if (rolle === 'stationshausleitung') {
-        stationGroup.style.display = 'block';
-        hausGroup.style.display = 'block';
-        hausHint.textContent = '(Genau ein Haus, dann Station)';
-      } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
-        // Zahlstelle und Arbeitskoordination sind keiner Station zugeordnet
-        stationGroup.style.display = 'none';
-        hausGroup.style.display = 'block';
-        hausHint.textContent = '(Mehrfachauswahl möglich)';
-      } else if (rolle === 'stationsleitung') {
         stationGroup.style.display = 'block';
         hausHint.textContent = '(Mehrfachauswahl möglich)';
       } else {
@@ -952,6 +943,14 @@
           return;
         }
         
+        if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
+          us.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
+          closeModal('newMitarbeiterModal');
+          renderUsers();
+          if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
+          return;
+        }
+        
         if (selectedHaeuser.length === 0) {
           await showAlert('Bitte mindestens ein Haus auswählen.');
           return;
@@ -995,9 +994,6 @@
             await showAlert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine VAL.`);
             return;
           }
-          us.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
-        } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
-          // Zahlstelle und Arbeitskoordination - keine Station erforderlich
           us.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
         } else if (rolle === 'stationsleitung') {
           // Stationsleitung - Einschränkungen prüfen
@@ -1118,19 +1114,10 @@
           stationGroup.style.display = 'none';
           hausGroup.style.display = 'block';
           if (hausHint) hausHint.textContent = '(Ein Haus auswählen)';
-        } else if (rolle === 'kammer' || rolle === 'revision' || rolle === 'anstaltsleitung') {
+        } else if (rolle === 'kammer' || rolle === 'revision' || rolle === 'anstaltsleitung' || rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
           stationGroup.style.display = 'none';
           hausGroup.style.display = 'none';
         } else if (rolle === 'stationshausleitung') {
-          stationGroup.style.display = 'block';
-          hausGroup.style.display = 'block';
-          if (hausHint) hausHint.textContent = '(Genau ein Haus, dann Station)';
-        } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
-          // Zahlstelle und Arbeitskoordination sind keiner Station zugeordnet
-          stationGroup.style.display = 'none';
-          hausGroup.style.display = 'block';
-          if (hausHint) hausHint.textContent = '(Mehrfachauswahl möglich)';
-        } else {
           stationGroup.style.display = 'block';
           hausGroup.style.display = 'block';
           if (hausHint) hausHint.textContent = '(Mehrfachauswahl möglich)';
@@ -1288,6 +1275,14 @@
         return;
       }
       
+      if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
+        getUserSystem()?.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
+        closeModal('editMitarbeiterModal');
+        renderUsers();
+        if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
+        return;
+      }
+      
       if (selectedHaeuser.length === 0) {
         showAlert('Bitte mindestens ein Haus auswählen.');
         return;
@@ -1331,9 +1326,6 @@
           showAlert(`Für ${getHausName(selectedHaeuser[0])} existiert bereits eine VAL.`);
           return;
         }
-        getUserSystem()?.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
-      } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
-        // Zahlstelle und Arbeitskoordination - keine Station erforderlich
         getUserSystem()?.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: selectedHaeuser, station: null });
       } else if (rolle === 'stationsleitung') {
         // Stationsleitung - Einschränkungen prüfen

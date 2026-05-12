@@ -48,7 +48,7 @@ Diese Spezifikation beschreibt den **gemeinsamen Rahmen** der Justizvollzugsplat
    - „Meldungen in Bearbeitung“ (Anzeige),
    - „überfällig“ (Anzeige).
 3. **Abschnitt „Fachverfahren“** — `section-header` + **`jvpFachverfahrenGrid`** (per `renderJvpHub()` aus Array gefüllt).
-4. **Postfach** (`notificationSection`) — optional eingeklappt.
+4. **Postfach** (`notificationSection`) — optional eingeklappt; **nur für ausgewählte Mitarbeiterrollen** sichtbar (Whitelist `JVP_HUB_POSTFACH_ROLLEN` in `mitarbeiter.html`, z. B. ohne Kammer/Revision/Zahlstelle/Arbeitskoordination).
 5. **Kalender** (`kalenderSection`) — optional eingeklappt.
 
 ### 2.3 Datenstruktur Fachverfahren-Kacheln (Prototyp)
