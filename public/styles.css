@@ -3902,6 +3902,21 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
    RESPONSIVE
    ============================================ */
 
+/* Antragsdetail: schmale Viewports — feste 350px-Spalte würde mit 1fr kollidieren */
+@media (max-width: 1024px) {
+  .detail-two-column {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .detail-sidebar {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+    align-self: stretch;
+  }
+}
+
 @media (max-width: 768px) {
   .header {
     display: flex;
@@ -3990,15 +4005,24 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
     padding: 0.1rem 0.4rem;
   }
   
-  /* Detailansicht auf mobilen Geräten */
+  /* Detailansicht: eine Spalte; kein sticky (überlagert beim Scrollen auf dem Handy) */
   .detail-two-column {
     grid-template-columns: 1fr;
+    gap: 1.25rem;
   }
-  
+
   .detail-sidebar {
-    order: -1;
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+    align-self: stretch;
   }
-  
+
+  .detail-view-container {
+    padding: 1rem;
+  }
+
   .detail-sidebar .verlauf-liste {
     max-height: 300px;
   }
