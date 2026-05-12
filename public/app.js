@@ -1223,6 +1223,9 @@ class UserSystem {
       { id: 'kammer-1', type: 'mitarbeiter', username: 'kammer1', password: 'kammer1', vorname: 'Kammer', nachname: 'Mitarbeiter', rolle: 'kammer', jvas: [], station: null },
       { id: 'zahlstelle-1', type: 'mitarbeiter', username: 'zahlstelle1', password: 'zahlstelle1', vorname: 'Zahlstelle', nachname: 'Mitarbeiter', rolle: 'zahlstelle', jvas: ['haus1'], station: null },
       { id: 'arbeit-1', type: 'mitarbeiter', username: 'arbeit1', password: 'arbeit1', vorname: 'Arbeitskoordination', nachname: '', rolle: 'arbeitskoordination', jvas: ['haus1'], station: null },
+      { id: 'anstalt-1', type: 'mitarbeiter', username: 'anstalt1', password: 'anstalt1', vorname: 'Alex', nachname: 'Anstaltsleitung', rolle: 'anstaltsleitung', jvas: [], station: null },
+      { id: 'statval-1', type: 'mitarbeiter', username: 'statval1', password: 'statval1', vorname: 'Sven', nachname: 'Stations-Hausleitung', rolle: 'stationshausleitung', jvas: ['haus1'], station: '1' },
+      { id: 'revision-1', type: 'mitarbeiter', username: 'revision1', password: 'revision1', vorname: 'Rita', nachname: 'Revision', rolle: 'revision', jvas: [], station: null },
       { id: 'insasse-1', type: 'insasse', username: 'insasse1', password: 'insasse1', vorname: 'Hans', nachname: 'Mueller', rolle: 'insasse', jvas: [], station: '1', jva: 'haus1', insassenNummer: 'INS-001', geburtsdatum: '1985-03-15' },
       { id: 'insasse-2', type: 'insasse', username: 'insasse2', password: 'insasse2', vorname: 'Klaus', nachname: 'Fischer', rolle: 'insasse', jvas: [], station: '2', jva: 'haus2', insassenNummer: 'INS-002', geburtsdatum: '1990-07-22' }
     ];
@@ -1475,6 +1478,27 @@ class UserSystem {
     if (!hausId || !hausArray) return false;
     const normalisiert = this._normalisiereHausId(hausId);
     return hausArray.some(h => this._normalisiereHausId(h) === normalisiert);
+  }
+
+  hasStationshausleitung(hausId, stationId, excludeUserId = null) {
+    const normalisiert = this._normalisiereHausId(hausId);
+    return this.users.some((u) =>
+      u.type === 'mitarbeiter' &&
+      u.rolle === 'stationshausleitung' &&
+      (excludeUserId == null || u.id !== excludeUserId) &&
+      u.jvas &&
+      u.jvas.some((h) => this._normalisiereHausId(h) === normalisiert) &&
+      String(u.station ?? '') === String(stationId ?? '')
+    );
+  }
+
+  hasAnstaltsleitung(excludeUserId = null) {
+    return this.users.some(
+      (u) =>
+        u.type === 'mitarbeiter' &&
+        u.rolle === 'anstaltsleitung' &&
+        (excludeUserId == null || u.id !== excludeUserId)
+    );
   }
 
   // Prüfen ob Hausleitung existiert
@@ -1927,7 +1951,13 @@ class TerminSystem {
   // Termine für einen Mitarbeiter abrufen (basierend auf Sichtbarkeit)
   getTermineFuerMitarbeiter(mitarbeiter) {
     const normalisiereHaus = (h) => h ? h.replace('jva', 'haus') : h;
-    const istHausleitung = mitarbeiter.rolle === 'hausleitung';
+    const r = String(mitarbeiter.rolle || '').toLowerCase();
+    const istValFuerTermin =
+      r === 'hausleitung' ||
+      r === 'jva-leitung' ||
+      r === 'haus-leitung' ||
+      r === 'anstaltsleitung' ||
+      r === 'stationshausleitung';
     
     return this.termine.filter(t => {
       // Admin-Termine: Für alle sichtbar
@@ -1946,8 +1976,8 @@ class TerminSystem {
       
       // Haus-Termine: Für alle Mitarbeiter des Hauses (inkl. Ersteller)
       if (t.typ === 'haus') {
-        // Ersteller sieht immer seinen eigenen Termin
         if (t.erstelltVonId === mitarbeiter.userId) return true;
+        if (r === 'anstaltsleitung') return true;
         if (!mitarbeiter.jvas) return false;
         return mitarbeiter.jvas.some(j => normalisiereHaus(j) === normalisiereHaus(t.hausId));
       }
@@ -1961,8 +1991,11 @@ class TerminSystem {
         
         const imSelbenHaus = mitarbeiter.jvas.some(j => normalisiereHaus(j) === normalisiereHaus(t.hausId));
         
-        // Hausleitung sieht alle Stationstermine ihres Hauses
-        if (istHausleitung && imSelbenHaus) {
+        if (istValFuerTermin && imSelbenHaus) {
+          if (r === 'anstaltsleitung') return true;
+          if (r === 'stationshausleitung') {
+            return String(mitarbeiter.station ?? '') === String(t.stationId ?? '');
+          }
           return true;
         }
         
@@ -2829,32 +2862,32 @@ class AntragSystem {
         
         // Fall 3b: Hausleitung kann Antrag übernehmen, auch wenn keine Gruppenaufgaben vorhanden
         // Dies gilt für alle Status außer offen und veraktet
-        const istHausleitung = mitarbeiter.rolle === 'jva-leitung' || 
-                               mitarbeiter.rolle === 'haus-leitung' || 
-                               mitarbeiter.rolle === 'hausleitung';
-        
+        const istValWeit = this._istValWeitMitarbeiter(mitarbeiter);
         const erlaubteStatus = ['in-bearbeitung', 'genehmigt', 'abgelehnt', 'teilweise-genehmigt'];
-        if (istHausleitung && erlaubteStatus.includes(antrag.status) && antrag.bearbeiterId !== mitarbeiter.userId) {
-          console.log('[Debug] nehmeAntrag Fall 3b: Hausleitung übernimmt Antrag (Status: ' + antrag.status + ')');
+        if (istValWeit && erlaubteStatus.includes(antrag.status) && antrag.bearbeiterId !== mitarbeiter.userId) {
+          if (!this._valAntragSichtbar(mitarbeiter, antrag)) {
+            console.log('[Debug] nehmeAntrag Fall 3b: nicht im Sichtfeld');
+          } else {
+            console.log('[Debug] nehmeAntrag Fall 3b: VAL-ähnliche Rolle übernimmt Antrag (Status: ' + antrag.status + ')');
           
-          const alterBearbeiter = antrag.bearbeiterName;
-          const alterBearbeiterId = antrag.bearbeiterId;
-          antrag.bearbeiterId = mitarbeiter.userId;
-          antrag.bearbeiterName = mitarbeiter.name;
-          this.saveAntraege();
+            const alterBearbeiter = antrag.bearbeiterName;
+            const alterBearbeiterId = antrag.bearbeiterId;
+            antrag.bearbeiterId = mitarbeiter.userId;
+            antrag.bearbeiterName = mitarbeiter.name;
+            this.saveAntraege();
           
-          // Aktivität protokollieren
-          aktivitaetenSystem.logAktivitaet({
-            antragId: antragId,
-            typ: 'uebernommen',
-            beschreibung: `Antrag übernommen von ${alterBearbeiter || 'unbekannt'} (VAL)`,
-            benutzerTyp: 'mitarbeiter',
-            benutzerId: mitarbeiter.userId,
-            benutzerName: mitarbeiter.name
-          });
-          maybeNotifyVorherigerBearbeiter(alterBearbeiterId, alterBearbeiter);
+            aktivitaetenSystem.logAktivitaet({
+              antragId: antragId,
+              typ: 'uebernommen',
+              beschreibung: `Antrag übernommen von ${alterBearbeiter || 'unbekannt'} (VAL)`,
+              benutzerTyp: 'mitarbeiter',
+              benutzerId: mitarbeiter.userId,
+              benutzerName: mitarbeiter.name
+            });
+            maybeNotifyVorherigerBearbeiter(alterBearbeiterId, alterBearbeiter);
           
-          return antrag;
+            return antrag;
+          }
         }
       }
     }
@@ -3379,19 +3412,47 @@ class AntragSystem {
     return mitarbeiterJvas.some(j => normalisiereHaus(j) === antragHausNormalisiert);
   }
 
+  _rolleNorm(rolle) {
+    return String(rolle || '').toLowerCase();
+  }
+
+  /** Klassische VAL (ein oder mehrere Häuser) */
+  _istKlassischeValRolle(rolle) {
+    const r = this._rolleNorm(rolle);
+    return r === 'hausleitung' || r === 'jva-leitung' || r === 'haus-leitung';
+  }
+
+  /** VAL, Anstaltsleitung oder Stations-/Hausleitungsleitung (VAL-Umfang) */
+  _istValWeitMitarbeiter(mitarbeiter) {
+    const r = this._rolleNorm(mitarbeiter?.rolle);
+    return this._istKlassischeValRolle(r) || r === 'anstaltsleitung' || r === 'stationshausleitung';
+  }
+
+  /** Ob der Antrag im Sichtfeld dieser VAL-ähnlichen Rolle liegt */
+  _valAntragSichtbar(mitarbeiter, antrag) {
+    const r = this._rolleNorm(mitarbeiter?.rolle);
+    if (r === 'anstaltsleitung') return !!(antrag && (antrag.insasseJva || antrag.insasseId));
+    if (r === 'stationshausleitung') {
+      return !!(antrag &&
+        this._matchesHaus(mitarbeiter.jvas, antrag.insasseJva) &&
+        String(antrag.insasseStation ?? '') === String(mitarbeiter.station ?? ''));
+    }
+    if (this._istKlassischeValRolle(r)) {
+      return this._matchesHaus(mitarbeiter.jvas, antrag.insasseJva);
+    }
+    return false;
+  }
+
   // Anträge und Aufgaben der Gruppe für Mitarbeiter (basierend auf Haus/Station)
   getOffeneAntraegeMitarbeiter(mitarbeiter) {
-    // Prüfen ob Mitarbeiter Hausleitung ist
-    const istHausleitung = mitarbeiter.rolle === 'jva-leitung' || 
-                           mitarbeiter.rolle === 'haus-leitung' || 
-                           mitarbeiter.rolle === 'hausleitung';
+    const istValWeit = this._istValWeitMitarbeiter(mitarbeiter);
     
     // Vorab alle Antrags-IDs mit Gruppenaufgaben für diesen Mitarbeiter ermitteln
     const antragsIdsMitGruppenaufgaben = aufgabenSystem.getAntragsIdsMitGruppenaufgaben(mitarbeiter);
     
     console.log('[Debug] getOffeneAntraegeMitarbeiter:', {
       mitarbeiterId: mitarbeiter.userId,
-      istHausleitung: istHausleitung,
+      istValWeit: istValWeit,
       jvas: mitarbeiter.jvas,
       antragsIdsMitGruppenaufgaben: antragsIdsMitGruppenaufgaben,
       gesamtAntraege: this.antraege.length,
@@ -3410,7 +3471,7 @@ class AntragSystem {
       // 1. Offene Anträge (noch kein Bearbeiter)
       if (a.status === 'offen') {
         // VAL sieht IMMER alle Anträge ihres Hauses, auch wenn sie einer Gruppe zugewiesen sind
-        if (istHausleitung && this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) {
+        if (istValWeit && this._valAntragSichtbar(mitarbeiter, a)) {
           return true;
         }
         
@@ -3434,7 +3495,7 @@ class AntragSystem {
           return false;
         }
         // VAL sieht alle Anträge ihres Hauses, auch mit wartender Hauptbearbeitungsübergabe
-        if (istHausleitung && this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) {
+        if (istValWeit && this._valAntragSichtbar(mitarbeiter, a)) {
           return true;
         }
         // Nur Mitglieder der zugewiesenen Gruppe sehen den Antrag
@@ -3459,9 +3520,8 @@ class AntragSystem {
       // 4. VAL sieht ALLE Anträge des Hauses in "Anträge und Aufgaben meiner Gruppe"
       // VAL kann alle Anträge sehen und jederzeit übernehmen, auch wenn sie bereits einem anderen Bearbeiter zugewiesen sind
       // WICHTIG: VAL sieht auch Anträge die bereits einem Bearbeiter zugewiesen sind (z.B. AVD)
-      if (istHausleitung && !a.veraktet) {
-        // Muss im selben Haus sein
-        if (!this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) return false;
+      if (istValWeit && !a.veraktet) {
+        if (!this._valAntragSichtbar(mitarbeiter, a)) return false;
         
         // Nicht anzeigen wenn VAL bereits der Bearbeiter ist (erscheint dann in "Meine Anträge")
         if (String(a.bearbeiterId) === String(mitarbeiter.userId)) return false;
@@ -3494,7 +3554,7 @@ class AntragSystem {
         bearbeiterId: a.bearbeiterId,
         insasseJva: a.insasseJva,
         veraktet: a.veraktet,
-        matchesHaus: istHausleitung ? this._matchesHaus(mitarbeiter.jvas, a.insasseJva) : false,
+        matchesHaus: istValWeit ? this._valAntragSichtbar(mitarbeiter, a) : false,
         istEigenerBearbeiter: a.bearbeiterId === mitarbeiter.userId
       }))
     });
@@ -3508,67 +3568,73 @@ class AntragSystem {
       console.log('[Debug] _mitarbeiterGehoertZuGruppe: gruppe ist null/undefined');
       return false;
     }
-    
-    const istHausleitung = mitarbeiter.rolle === 'jva-leitung' || 
-                           mitarbeiter.rolle === 'haus-leitung' || 
-                           mitarbeiter.rolle === 'hausleitung';
-    
-    // Kammer ist hausunabhängig - Prüfung VOR der Haus-Prüfung (typ/rolle case-insensitive für Sync-Toleranz)
+
     const gruppeTypNorm = (gruppe.typ || '').toString().toLowerCase();
+    const rolleNorm = (mitarbeiter.rolle || '').toString().toLowerCase();
+
     if (gruppeTypNorm === 'kammer') {
-      const istKammer = (mitarbeiter.rolle || '').toString().toLowerCase() === 'kammer';
-      console.log('[Debug] Kammer-Prüfung:', { 
-        mitarbeiterRolle: mitarbeiter.rolle, 
-        istKammer: istKammer, 
+      const istKammer = rolleNorm === 'kammer';
+      console.log('[Debug] Kammer-Prüfung:', {
+        mitarbeiterRolle: mitarbeiter.rolle,
+        istKammer,
         gruppeTyp: gruppe.typ,
-        gruppe: gruppe
+        gruppe
       });
       return istKammer;
     }
-    
-    // Normalisiere Haus-ID der Gruppe (nur für nicht-Kammer Gruppen)
+
+    if (gruppeTypNorm === 'revision') {
+      return rolleNorm === 'revision';
+    }
+
+    const istValKlassisch = this._istKlassischeValRolle(mitarbeiter.rolle);
+    const istValWeit = this._istValWeitMitarbeiter(mitarbeiter);
+
     const normHausId = gruppe.hausId ? gruppe.hausId.replace('jva', 'haus') : null;
-    
-    // Mitarbeiter-Häuser: Berücksichtige sowohl jvas (Array) als auch jva (String, Legacy)
+
     let mitarbeiterHaeuser = [];
     if (mitarbeiter.jvas && Array.isArray(mitarbeiter.jvas)) {
-      mitarbeiterHaeuser = mitarbeiter.jvas.map(h => h?.replace('jva', 'haus'));
+      mitarbeiterHaeuser = mitarbeiter.jvas.map((h) => {
+        const id = typeof h === 'string' ? h : (h && h.id);
+        return id ? id.replace('jva', 'haus') : null;
+      }).filter(Boolean);
     } else if (mitarbeiter.jva) {
-      // Legacy: Einzelnes Haus
       mitarbeiterHaeuser = [mitarbeiter.jva.replace('jva', 'haus')];
     }
-    
-    // Haus-Vergleich typentolerant (z. B. "haus1" vs "jva1" nach Normalisierung)
-    const imSelbenHaus = normHausId && mitarbeiterHaeuser.some(h => (h || '') == (normHausId || ''));
-    
+
+    const imSelbenHaus = normHausId && mitarbeiterHaeuser.some((h) => (h || '') === (normHausId || ''));
+    const anstaltsGanzeAnstalt = rolleNorm === 'anstaltsleitung' && !!normHausId;
+
     console.log('[Debug] _mitarbeiterGehoertZuGruppe:', {
       mitarbeiterRolle: mitarbeiter.rolle,
-      mitarbeiterHaeuser: mitarbeiterHaeuser,
+      mitarbeiterHaeuser,
       mitarbeiterStation: mitarbeiter.station,
       gruppeTyp: gruppe.typ,
       gruppeHausId: normHausId,
       gruppeStation: gruppe.station,
-      imSelbenHaus: imSelbenHaus,
-      istHausleitung: istHausleitung
+      imSelbenHaus,
+      istValWeit
     });
-    
-    // Für alle anderen Gruppen muss der Mitarbeiter im selben Haus sein
-    if (!normHausId || !imSelbenHaus) return false;
-    
-    const rolleNorm = (mitarbeiter.rolle || '').toString().toLowerCase();
+
+    if (!normHausId) return false;
+    if (!imSelbenHaus && !anstaltsGanzeAnstalt) return false;
+
     if (gruppeTypNorm === 'hausleitung') {
-      return istHausleitung;
-    } else if (gruppeTypNorm === 'station' || gruppeTypNorm === 'avd') {
-      if (istHausleitung) return false;
+      return istValKlassisch || rolleNorm === 'anstaltsleitung' || rolleNorm === 'stationshausleitung';
+    }
+    if (gruppeTypNorm === 'station' || gruppeTypNorm === 'avd') {
+      if (istValKlassisch || rolleNorm === 'anstaltsleitung' || rolleNorm === 'stationshausleitung') return false;
       const mStation = String(mitarbeiter.station ?? '');
       const gStation = String(gruppe.station ?? '');
       return mStation === gStation || (mStation === '' && gStation === '');
-    } else if (gruppeTypNorm === 'zahlstelle') {
+    }
+    if (gruppeTypNorm === 'zahlstelle') {
       return rolleNorm === 'zahlstelle';
-    } else if (gruppeTypNorm === 'arbeitskoordination') {
+    }
+    if (gruppeTypNorm === 'arbeitskoordination') {
       return rolleNorm === 'arbeitskoordination';
     }
-    
+
     return false;
   }
 
@@ -3594,9 +3660,8 @@ class AntragSystem {
       // 2. Sie persönlich (nicht über Gruppe) eine Aufgabe erhalten hat
       // 3. Sie am Antrag gearbeitet hat (z.B. Aufgabe erstellt)
       // Alle anderen Anträge des Hauses erscheinen in "Anträge und Aufgaben meiner Gruppe"
-      if (mitarbeiter.rolle === 'jva-leitung' || mitarbeiter.rolle === 'haus-leitung' || mitarbeiter.rolle === 'hausleitung') {
-        // Muss im selben Haus sein
-        if (!this._matchesHaus(mitarbeiter.jvas, a.insasseJva)) return false;
+      if (this._istValWeitMitarbeiter(mitarbeiter)) {
+        if (!this._valAntragSichtbar(mitarbeiter, a)) return false;
         
         // Nur wenn persönlicher Bezug besteht
         return istBearbeiter || hatAufgabenbezug;
@@ -3622,8 +3687,8 @@ class AntragSystem {
       if (a.veraktet !== true) return false;
       
       // VAL sieht alle verakteten Anträge ihres Hauses
-      if (mitarbeiter.rolle === 'jva-leitung' || mitarbeiter.rolle === 'haus-leitung' || mitarbeiter.rolle === 'hausleitung') {
-        return this._matchesHaus(mitarbeiter.jvas, a.insasseJva);
+      if (this._istValWeitMitarbeiter(mitarbeiter)) {
+        return this._valAntragSichtbar(mitarbeiter, a);
       }
       
       // Stationsleitung sieht alle verakteten Anträge ihrer Station
@@ -4037,7 +4102,7 @@ class AntragSystem {
       const typNorm = (gruppe && gruppe.typ != null) ? String(gruppe.typ).toLowerCase() : '';
       const normierteGruppe = {
         typ: typNorm || gruppe.typ,
-        hausId: typNorm === 'kammer' ? null : (gruppe.hausId ?? null),
+        hausId: (typNorm === 'kammer' || typNorm === 'revision') ? null : (gruppe.hausId ?? null),
         station: gruppe.station ?? null
       };
       // Gruppenzuweisung speichern
@@ -4271,12 +4336,27 @@ function getRolleText(rolle) {
     'jva-leitung': 'VAL',
     'haus-leitung': 'VAL',
     'hausleitung': 'VAL',
+    'anstaltsleitung': 'Anstaltsleitung',
+    'stationshausleitung': 'Stations-/Hausleitungsleitung',
     'stationsleitung': 'Stationsleitung',
     'zahlstelle': 'Zahlstelle',
     'arbeitskoordination': 'Arbeitskoordination',
-    'kammer': 'Kammer'
+    'kammer': 'Kammer',
+    'revision': 'Revision'
   };
   return rollen[rolle] || rolle;
+}
+
+/** VAL-Umfang inkl. Anstalts- und Stations-/Hausleitungsleitung (für UI / Portal-Logik) */
+function istValWeitPortalRolle(rolle) {
+  const r = String(rolle || '').toLowerCase();
+  return (
+    r === 'hausleitung' ||
+    r === 'jva-leitung' ||
+    r === 'haus-leitung' ||
+    r === 'anstaltsleitung' ||
+    r === 'stationshausleitung'
+  );
 }
 
 // Modal-Funktionen

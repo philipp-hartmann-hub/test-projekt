@@ -242,9 +242,21 @@
               <input type="radio" name="mitRolle" value="kammer" onchange="updateMitarbeiterFields()">
               <span class="radio-label">Kammer</span>
             </label>
+            <label class="radio-option">
+              <input type="radio" name="mitRolle" value="revision" onchange="updateMitarbeiterFields()">
+              <span class="radio-label">Revision</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="mitRolle" value="anstaltsleitung" onchange="updateMitarbeiterFields()">
+              <span class="radio-label">Anstaltsleitung</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="mitRolle" value="stationshausleitung" onchange="updateMitarbeiterFields()">
+              <span class="radio-label">Stations-/Hausleitungsleitung</span>
+            </label>
           </div>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="mitJvaGroup">
           <label>Haus/Häuser <span id="mitJvaHint" class="hint">(Mehrfachauswahl möglich)</span></label>
           <div class="checkbox-group" id="mitJvaCheckboxes">
             <label class="checkbox-option">
@@ -327,9 +339,21 @@
               <input type="radio" name="editMitRolle" value="kammer" onchange="updateEditMitarbeiterFields()">
               <span class="radio-label">Kammer</span>
             </label>
+            <label class="radio-option">
+              <input type="radio" name="editMitRolle" value="revision" onchange="updateEditMitarbeiterFields()">
+              <span class="radio-label">Revision</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="editMitRolle" value="anstaltsleitung" onchange="updateEditMitarbeiterFields()">
+              <span class="radio-label">Anstaltsleitung</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="editMitRolle" value="stationshausleitung" onchange="updateEditMitarbeiterFields()">
+              <span class="radio-label">Stations-/Hausleitungsleitung</span>
+            </label>
           </div>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="editMitJvaGroup">
           <label>Haus/Häuser <span id="editMitJvaHint" class="hint">(Mehrfachauswahl möglich)</span></label>
           <div class="checkbox-group" id="editMitJvaCheckboxes">
             <label class="checkbox-option">
@@ -757,10 +781,14 @@
         stationGroup.style.display = 'none';
         hausGroup.style.display = 'block';
         hausHint.textContent = '(Ein Haus auswählen)';
-      } else if (rolle === 'kammer') {
-        // Kammer ist hausunabhängig - keine Station, kein Haus nötig
+      } else if (rolle === 'kammer' || rolle === 'revision' || rolle === 'anstaltsleitung') {
+        // Kammer / Revision / Anstaltsleitung: hausunabhängig
         stationGroup.style.display = 'none';
         hausGroup.style.display = 'none';
+      } else if (rolle === 'stationshausleitung') {
+        stationGroup.style.display = 'block';
+        hausGroup.style.display = 'block';
+        hausHint.textContent = '(Genau ein Haus, dann Station)';
       } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
         // Zahlstelle und Arbeitskoordination sind keiner Station zugeordnet
         stationGroup.style.display = 'none';
@@ -799,8 +827,30 @@
         }
       }
       
-      // Bei Hausleitung, Zahlstelle, Arbeitskoordination und Kammer keine Station nötig
-      if (rolle === 'haus-leitung' || rolle === 'jva-leitung' || rolle === 'zahlstelle' || rolle === 'arbeitskoordination' || rolle === 'kammer') {
+      if (rolle === 'anstaltsleitung' && hausWarning) {
+        if (getUserSystem()?.hasAnstaltsleitung()) {
+          hausWarning.textContent = 'Es existiert bereits eine Anstaltsleitung.';
+          hausWarning.style.display = 'block';
+        }
+      }
+      
+      if (rolle === 'stationshausleitung' && hausWarning) {
+        if (selectedHaeuser.length > 1) {
+          hausWarning.textContent = 'Stations-/Hausleitungsleitung: bitte nur ein Haus auswählen.';
+          hausWarning.style.display = 'block';
+        }
+      }
+      
+      // Bei Hausleitung, Zahlstelle, Arbeitskoordination, Kammer, Revision und Anstaltsleitung keine Station nötig
+      if (
+        rolle === 'haus-leitung' ||
+        rolle === 'jva-leitung' ||
+        rolle === 'zahlstelle' ||
+        rolle === 'arbeitskoordination' ||
+        rolle === 'kammer' ||
+        rolle === 'revision' ||
+        rolle === 'anstaltsleitung'
+      ) {
         stationSelect.innerHTML = '<option value="">Nicht erforderlich</option>';
         stationSelect.disabled = true;
         return;
@@ -808,6 +858,12 @@
       
       if (selectedHaeuser.length === 0) {
         stationSelect.innerHTML = '<option value="">Erst Haus wählen...</option>';
+        stationSelect.disabled = true;
+        return;
+      }
+      
+      if (rolle === 'stationshausleitung' && selectedHaeuser.length > 1) {
+        stationSelect.innerHTML = '<option value="">Bitte nur ein Haus wählen...</option>';
         stationSelect.disabled = true;
         return;
       }
@@ -826,6 +882,14 @@
       stationSelect.innerHTML = '<option value="">Bitte wählen...</option>' +
         allStationen.map(s => `<option value="${s.key}">${s.label}</option>`).join('');
       stationSelect.disabled = false;
+      
+      if (rolle === 'stationshausleitung' && hausWarning && selectedHaeuser.length === 1 && stationSelect.value) {
+        const [h, st] = stationSelect.value.split('-');
+        if (h && st && getUserSystem()?.hasStationshausleitung(h, st)) {
+          hausWarning.textContent = `Für ${getHausName(h)} Station ${st} existiert bereits eine Stations-/Hausleitungsleitung.`;
+          hausWarning.style.display = 'block';
+        }
+      }
     }
     
     async function createMitarbeiter(event) {
@@ -867,8 +931,20 @@
           await showAlert('Bitte Geburtsdatum eingeben.');
           return;
         }
-        // Kammer braucht kein Haus (hausunabhängig)
-        if (rolle === 'kammer') {
+        // Kammer / Revision: hausunabhängig
+        if (rolle === 'kammer' || rolle === 'revision') {
+          us.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
+          closeModal('newMitarbeiterModal');
+          renderUsers();
+          if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
+          return;
+        }
+        
+        if (rolle === 'anstaltsleitung') {
+          if (us.hasAnstaltsleitung()) {
+            await showAlert('Es existiert bereits eine Anstaltsleitung.');
+            return;
+          }
           us.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
           closeModal('newMitarbeiterModal');
           renderUsers();
@@ -878,6 +954,34 @@
         
         if (selectedHaeuser.length === 0) {
           await showAlert('Bitte mindestens ein Haus auswählen.');
+          return;
+        }
+        
+        if (rolle === 'stationshausleitung') {
+          if (selectedHaeuser.length !== 1) {
+            await showAlert('Stations-/Hausleitungsleitung: bitte genau ein Haus auswählen.');
+            return;
+          }
+          if (!stationValue) {
+            await showAlert('Bitte eine Station auswählen.');
+            return;
+          }
+          const [shHaus, shStation] = stationValue.split('-');
+          if (us.hasStationshausleitung(shHaus, shStation)) {
+            await showAlert(`Für ${getHausName(shHaus)} Station ${shStation} existiert bereits eine Stations-/Hausleitungsleitung.`);
+            return;
+          }
+          us.createMitarbeiter({
+            vorname,
+            nachname,
+            geburtsdatum,
+            rolle,
+            jvas: [selectedHaeuser[0]],
+            station: shStation
+          });
+          closeModal('newMitarbeiterModal');
+          renderUsers();
+          if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
           return;
         }
         
@@ -970,7 +1074,11 @@
         updateEditMitarbeiterFields();
         
         // Station setzen (falls vorhanden)
-        if (user.rolle === 'stationsleitung' && user.station && jvaIds.length > 0) {
+        if (
+          (user.rolle === 'stationsleitung' || user.rolle === 'stationshausleitung') &&
+          user.station &&
+          jvaIds.length > 0
+        ) {
           setTimeout(() => {
             const stationValue = `${jvaIds[0]}-${user.station}`;
             const stationEl = document.getElementById('editMitStation');
@@ -1010,10 +1118,13 @@
           stationGroup.style.display = 'none';
           hausGroup.style.display = 'block';
           if (hausHint) hausHint.textContent = '(Ein Haus auswählen)';
-        } else if (rolle === 'kammer') {
-          // Kammer ist hausunabhängig
+        } else if (rolle === 'kammer' || rolle === 'revision' || rolle === 'anstaltsleitung') {
           stationGroup.style.display = 'none';
           hausGroup.style.display = 'none';
+        } else if (rolle === 'stationshausleitung') {
+          stationGroup.style.display = 'block';
+          hausGroup.style.display = 'block';
+          if (hausHint) hausHint.textContent = '(Genau ein Haus, dann Station)';
         } else if (rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
           // Zahlstelle und Arbeitskoordination sind keiner Station zugeordnet
           stationGroup.style.display = 'none';
@@ -1064,8 +1175,30 @@
           }
         }
         
-        // Bei Hausleitung, Zahlstelle, Arbeitskoordination und Kammer keine Station nötig
-        if (rolle === 'haus-leitung' || rolle === 'jva-leitung' || rolle === 'zahlstelle' || rolle === 'arbeitskoordination' || rolle === 'kammer') {
+        if (rolle === 'anstaltsleitung' && hausWarning) {
+          if (getUserSystem()?.hasAnstaltsleitung(userId)) {
+            hausWarning.textContent = 'Es existiert bereits eine andere Anstaltsleitung.';
+            hausWarning.style.display = 'block';
+          }
+        }
+        
+        if (rolle === 'stationshausleitung' && hausWarning) {
+          if (selectedHaeuser.length > 1) {
+            hausWarning.textContent = 'Stations-/Hausleitungsleitung: bitte nur ein Haus auswählen.';
+            hausWarning.style.display = 'block';
+          }
+        }
+        
+        // Bei Hausleitung, Zahlstelle, Arbeitskoordination, Kammer, Revision und Anstaltsleitung keine Station nötig
+        if (
+          rolle === 'haus-leitung' ||
+          rolle === 'jva-leitung' ||
+          rolle === 'zahlstelle' ||
+          rolle === 'arbeitskoordination' ||
+          rolle === 'kammer' ||
+          rolle === 'revision' ||
+          rolle === 'anstaltsleitung'
+        ) {
           stationSelect.innerHTML = '<option value="">Nicht erforderlich</option>';
           stationSelect.disabled = true;
           return;
@@ -1073,6 +1206,12 @@
         
         if (selectedHaeuser.length === 0) {
           stationSelect.innerHTML = '<option value="">Erst Haus wählen...</option>';
+          stationSelect.disabled = true;
+          return;
+        }
+        
+        if (rolle === 'stationshausleitung' && selectedHaeuser.length > 1) {
+          stationSelect.innerHTML = '<option value="">Bitte nur ein Haus wählen...</option>';
           stationSelect.disabled = true;
           return;
         }
@@ -1092,6 +1231,14 @@
         stationSelect.innerHTML = '<option value="">Bitte wählen...</option>' +
           allStationen.map(s => `<option value="${s.key}">${s.label}</option>`).join('');
         stationSelect.disabled = false;
+        
+        if (rolle === 'stationshausleitung' && hausWarning && selectedHaeuser.length === 1 && stationSelect.value) {
+          const [h, st] = stationSelect.value.split('-');
+          if (h && st && getUserSystem()?.hasStationshausleitung(h, st, userId)) {
+            hausWarning.textContent = `Für ${getHausName(h)} Station ${st} existiert bereits eine andere Stations-/Hausleitungsleitung.`;
+            hausWarning.style.display = 'block';
+          }
+        }
       } catch (error) {
         console.error('Fehler in updateEditMitarbeiterStationen:', error);
       }
@@ -1120,8 +1267,20 @@
         return;
       }
       
-      // Kammer braucht kein Haus (hausunabhängig)
-      if (rolle === 'kammer') {
+      // Kammer / Revision: hausunabhängig
+      if (rolle === 'kammer' || rolle === 'revision') {
+        getUserSystem()?.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
+        closeModal('editMitarbeiterModal');
+        renderUsers();
+        if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
+        return;
+      }
+      
+      if (rolle === 'anstaltsleitung') {
+        if (getUserSystem()?.hasAnstaltsleitung(id)) {
+          showAlert('Es existiert bereits eine andere Anstaltsleitung.');
+          return;
+        }
         getUserSystem()?.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
         closeModal('editMitarbeiterModal');
         renderUsers();
@@ -1131,6 +1290,34 @@
       
       if (selectedHaeuser.length === 0) {
         showAlert('Bitte mindestens ein Haus auswählen.');
+        return;
+      }
+      
+      if (rolle === 'stationshausleitung') {
+        if (selectedHaeuser.length !== 1) {
+          showAlert('Stations-/Hausleitungsleitung: bitte genau ein Haus auswählen.');
+          return;
+        }
+        if (!stationValue) {
+          showAlert('Bitte eine Station auswählen.');
+          return;
+        }
+        const [shHaus, shStation] = stationValue.split('-');
+        if (getUserSystem()?.hasStationshausleitung(shHaus, shStation, id)) {
+          showAlert(`Für ${getHausName(shHaus)} Station ${shStation} existiert bereits eine andere Stations-/Hausleitungsleitung.`);
+          return;
+        }
+        getUserSystem()?.updateUser(id, {
+          vorname,
+          nachname,
+          geburtsdatum,
+          rolle,
+          jvas: [selectedHaeuser[0]],
+          station: shStation
+        });
+        closeModal('editMitarbeiterModal');
+        renderUsers();
+        if (window.DataSync && window.DataSync.syncUsersNow) await window.DataSync.syncUsersNow();
         return;
       }
       
@@ -1307,7 +1494,13 @@
                 return getHausName(hausId);
               }).join(', ')
             : '-';
-          const stationInfo = (user.rolle === 'stationsleitung' || user.rolle === 'mitarbeiter') && user.station ? ` - Station ${user.station}` : '';
+          const stationInfo =
+            (user.rolle === 'stationsleitung' ||
+              user.rolle === 'mitarbeiter' ||
+              user.rolle === 'stationshausleitung') &&
+            user.station
+              ? ` - Station ${user.station}`
+              : '';
           
           // Icon basierend auf Rolle
           let roleIcon = '';

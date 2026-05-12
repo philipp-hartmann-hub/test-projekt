@@ -1501,6 +1501,9 @@
       medizin: { antraege: 5, meldungen: 2, urgent: 0 },
       pforte: { antraege: 0, meldungen: 4, urgent: 0 },
       kammer: { antraege: 6, meldungen: 2, urgent: 1 },
+      'anstaltsleitung': { antraege: 200, meldungen: 40, urgent: 15 },
+      'stationshausleitung': { antraege: 40, meldungen: 10, urgent: 3 },
+      'revision': { antraege: 6, meldungen: 2, urgent: 1 },
       zahlstelle: { antraege: 5, meldungen: 1, urgent: 0 },
       arbeitskoordination: { antraege: 4, meldungen: 1, urgent: 0 }
     };
@@ -1924,6 +1927,20 @@
             <span>Als <strong>VAL</strong> sehen Sie alle Anträge des <strong>${hausName}</strong> (alle Stationen)</span>
           </div>
         `;
+      } else if (currentSession.rolle === 'anstaltsleitung') {
+        info.innerHTML = `
+          <div class="info-content">
+            <span class="info-icon"></span>
+            <span>Als <strong>Anstaltsleitung</strong> sehen Sie alle Anträge der gesamten Anstalt (alle Häuser und Stationen)</span>
+          </div>
+        `;
+      } else if (currentSession.rolle === 'stationshausleitung') {
+        info.innerHTML = `
+          <div class="info-content">
+            <span class="info-icon"></span>
+            <span>Als <strong>Stations-/Hausleitungsleitung</strong> sehen Sie alle Anträge von <strong>${hausName} – Station ${station || '-'}</strong> (wie VAL, nur für Ihre Station)</span>
+          </div>
+        `;
       } else if (currentSession.rolle === 'stationsleitung') {
         info.innerHTML = `
           <div class="info-content">
@@ -1936,6 +1953,13 @@
           <div class="info-content">
             <span class="info-icon"></span>
             <span>Als <strong>Kammer</strong> sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Kammer zugewiesen wurden</span>
+          </div>
+        `;
+      } else if (currentSession.rolle === 'revision') {
+        info.innerHTML = `
+          <div class="info-content">
+            <span class="info-icon"></span>
+            <span>Als <strong>Revision</strong> sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Revision zugewiesen wurden (hausunabhängig)</span>
           </div>
         `;
       } else if (currentSession.rolle === 'zahlstelle') {
@@ -2379,12 +2403,9 @@ Persönlich eröffnet
                                     antrag.zugewiesenAnGruppe && 
                                     antragSystem._mitarbeiterGehoertZuGruppe(currentSession, antrag.zugewiesenAnGruppe);
       
-      // VAL kann alle Anträge ihres Hauses übernehmen
-      const istHausleitung = currentSession.rolle === 'jva-leitung' || 
-                            currentSession.rolle === 'haus-leitung' || 
-                            currentSession.rolle === 'hausleitung';
-      const istImSelbenHaus = antragSystem._matchesHaus(currentSession.jvas, antrag.insasseJva);
-      const kannValUebernehmen = istHausleitung && istImSelbenHaus && String(antrag.bearbeiterId) !== String(currentSession.userId) && !antrag.veraktet;
+      const istValWeit = typeof istValWeitPortalRolle === 'function' && istValWeitPortalRolle(currentSession.rolle);
+      const valSichtAufAntrag = antragSystem._valAntragSichtbar(currentSession, antrag);
+      const kannValUebernehmen = istValWeit && valSichtAufAntrag && String(antrag.bearbeiterId) !== String(currentSession.userId) && !antrag.veraktet;
       
       // Kann der Mitarbeiter diesen Antrag/Aufgabe übernehmen?
       const kannUebernehmen = istOffen || hatGruppenaufgaben || hatWartendeUebergabe || kannValUebernehmen;
@@ -3442,8 +3463,9 @@ ${t('action.archive')}
       const select = document.getElementById('aufgabeGruppeSelect');
       select.innerHTML = '<option value="">-- Bitte Gruppe wählen --</option>';
       
-      // Kammer als Option (hausunabhängig)
+      // Kammer / Revision (hausunabhängig)
       select.innerHTML += `<option value="kammer|">Kammer</option>`;
+      select.innerHTML += `<option value="revision|">Revision</option>`;
       
       // Hausleitung als Option (pro Haus)
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
@@ -3502,6 +3524,9 @@ ${t('action.archive')}
       if (gruppeTyp === 'kammer') {
         document.getElementById('aufgabeGruppeTyp').value = 'kammer';
         document.getElementById('aufgabeGruppeHaus').value = '';
+      } else if (gruppeTyp === 'revision') {
+        document.getElementById('aufgabeGruppeTyp').value = 'revision';
+        document.getElementById('aufgabeGruppeHaus').value = '';
       } else if (gruppeTyp === 'hausleitung') {
         document.getElementById('aufgabeGruppeTyp').value = 'hausleitung';
         document.getElementById('aufgabeGruppeHaus').value = parts[1];
@@ -3542,12 +3567,21 @@ ${t('action.archive')}
       if (gruppeTyp === 'kammer') {
         // Nur Kammer-Mitarbeiter (hausunabhängig)
         mitarbeiter = mitarbeiter.filter(m => m.rolle === 'kammer');
+      } else if (gruppeTyp === 'revision') {
+        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'revision');
       } else if (gruppeTyp === 'hausleitung') {
-        // Nur Hausleitungen dieses Hauses
-        mitarbeiter = mitarbeiter.filter(m => 
-          (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
+        const normH = (h) => String(h || '').replace('jva', 'haus');
+        const hk = normH(hausKey);
+        mitarbeiter = mitarbeiter.filter(m => {
+          if (m.rolle === 'anstaltsleitung') return true;
+          if (m.rolle === 'stationshausleitung') {
+            return m.jvas && m.jvas.some(h => normH(h) === hk);
+          }
+          return (
+            (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
+            m.jvas && m.jvas.some(h => normH(h) === hk)
+          );
+        });
       } else if (gruppeTyp === 'zahlstelle') {
         // Nur Zahlstellen-Mitarbeiter dieses Hauses
         mitarbeiter = mitarbeiter.filter(m => 
@@ -3566,8 +3600,14 @@ ${t('action.archive')}
           const imHaus = m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'));
           if (!imHaus) return false;
           
-          // VAL gehört NICHT zur AVD-Gruppe
-          if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return false;
+          // VAL / Anstalts- und Stationsleitung gehören NICHT zur AVD-Gruppe
+          if (
+            m.rolle === 'hausleitung' ||
+            m.rolle === 'jva-leitung' ||
+            m.rolle === 'haus-leitung' ||
+            m.rolle === 'anstaltsleitung' ||
+            m.rolle === 'stationshausleitung'
+          ) return false;
           
           // Mitarbeiter muss auf dieser Station sein
           return m.station === station;
@@ -4507,8 +4547,9 @@ ${t('action.archive')}
       const select = document.getElementById('weiterleitenGruppeSelect');
       select.innerHTML = '<option value="">-- Bitte Gruppe wählen --</option>';
       
-      // Kammer als Option (hausunabhängig)
+      // Kammer / Revision (hausunabhängig)
       select.innerHTML += `<option value="kammer|">Kammer</option>`;
+      select.innerHTML += `<option value="revision|">Revision</option>`;
       
       // Hausleitung als Option (pro Haus)
       Object.keys(HAUS_CONFIG).forEach(hausKey => {
@@ -4564,6 +4605,9 @@ ${t('action.archive')}
       
       if (gruppeTyp === 'kammer') {
         document.getElementById('weiterleitenGruppeTyp').value = 'kammer';
+        document.getElementById('weiterleitenGruppeHaus').value = '';
+      } else if (gruppeTyp === 'revision') {
+        document.getElementById('weiterleitenGruppeTyp').value = 'revision';
         document.getElementById('weiterleitenGruppeHaus').value = '';
       } else if (gruppeTyp === 'hausleitung') {
         document.getElementById('weiterleitenGruppeTyp').value = 'hausleitung';
@@ -4623,11 +4667,21 @@ ${t('action.archive')}
       if (gruppeTyp === 'kammer') {
         // Nur Kammer-Mitarbeiter (hausunabhängig)
         mitarbeiter = mitarbeiter.filter(m => m.rolle === 'kammer');
+      } else if (gruppeTyp === 'revision') {
+        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'revision');
       } else if (gruppeTyp === 'hausleitung') {
-        mitarbeiter = mitarbeiter.filter(m => 
-          (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
-          m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'))
-        );
+        const normH = (h) => String(h || '').replace('jva', 'haus');
+        const hk = normH(hausKey);
+        mitarbeiter = mitarbeiter.filter(m => {
+          if (m.rolle === 'anstaltsleitung') return true;
+          if (m.rolle === 'stationshausleitung') {
+            return m.jvas && m.jvas.some(h => normH(h) === hk);
+          }
+          return (
+            (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') &&
+            m.jvas && m.jvas.some(h => normH(h) === hk)
+          );
+        });
       } else if (gruppeTyp === 'zahlstelle') {
         mitarbeiter = mitarbeiter.filter(m => 
           m.rolle === 'zahlstelle' &&
@@ -4643,8 +4697,14 @@ ${t('action.archive')}
         mitarbeiter = mitarbeiter.filter(m => {
           const imHaus = m.jvas && m.jvas.some(h => h.replace('jva', 'haus') === hausKey.replace('jva', 'haus'));
           if (!imHaus) return false;
-          // VAL gehört NICHT zur AVD-Gruppe
-          if (m.rolle === 'hausleitung' || m.rolle === 'jva-leitung' || m.rolle === 'haus-leitung') return false;
+          // VAL / Anstalts- und Stationsleitung gehören NICHT zur AVD-Gruppe
+          if (
+            m.rolle === 'hausleitung' ||
+            m.rolle === 'jva-leitung' ||
+            m.rolle === 'haus-leitung' ||
+            m.rolle === 'anstaltsleitung' ||
+            m.rolle === 'stationshausleitung'
+          ) return false;
           return m.station === station;
         });
       }
@@ -5362,7 +5422,16 @@ ${t('action.archive')}
     function istHausleitung() {
       if (!currentSession) return false;
       const rolle = currentSession.rolle;
-      return rolle === 'hausleitung' || rolle === 'jva-leitung' || rolle === 'haus-leitung';
+      if (typeof istValWeitPortalRolle === 'function') {
+        return istValWeitPortalRolle(rolle);
+      }
+      return (
+        rolle === 'hausleitung' ||
+        rolle === 'jva-leitung' ||
+        rolle === 'haus-leitung' ||
+        rolle === 'anstaltsleitung' ||
+        rolle === 'stationshausleitung'
+      );
     }
 
     async function bestaetigeEroeffnung(antragId) {
@@ -5886,8 +5955,16 @@ ${t('action.archive')}
       
       const hausOption = document.getElementById('terminHausOption');
       const stationOption = document.getElementById('terminStationOption');
+      const r = String(currentSession.rolle || '').toLowerCase();
+      const hatHauszuordnung = currentSession.jvas && currentSession.jvas.length > 0;
       
-      if (currentSession.rolle === 'jva-leitung' || currentSession.rolle === 'haus-leitung') {
+      if (
+        r === 'jva-leitung' ||
+        r === 'haus-leitung' ||
+        r === 'hausleitung' ||
+        (r === 'anstaltsleitung' && hatHauszuordnung) ||
+        r === 'stationshausleitung'
+      ) {
         hausOption.style.display = 'block';
         stationOption.style.display = 'none';
       } else if (currentSession.rolle === 'stationsleitung') {
@@ -5948,6 +6025,14 @@ ${t('action.archive')}
       } else if (sichtbarkeit === 'station' && currentSession.jvas && currentSession.jvas.length > 0) {
         terminData.hausId = currentSession.jvas[0];
         terminData.stationId = currentSession.station;
+      } else if (sichtbarkeit === 'haus' && String(currentSession.rolle || '').toLowerCase() === 'anstaltsleitung') {
+        const msg = currentLanguage === 'en'
+          ? 'Institution-wide appointments require a house assignment on your user account. Please use personal visibility or contact an administrator.'
+          : currentLanguage === 'fr'
+            ? 'Les rendez-vous au niveau du bâtiment nécessitent une affectation. Utilisez la visibilité personnelle ou contactez un administrateur.'
+            : 'Hausweite Termine sind für die Anstaltsleitung nur mit Hauszuordnung im Benutzerkonto möglich. Bitte wählen Sie „Nur für mich“ oder wenden Sie sich an die Administration.';
+        showAlert(msg);
+        return;
       }
       
       terminSystem.createTermin(terminData);
@@ -6105,10 +6190,14 @@ ${t('action.archive')}
     // Debug-Info für VAL: Zeige alle Anträge im UI
     function showVALDebugInfo() {
       if (!currentSession) return;
-      const istHausleitung = currentSession.rolle === 'hausleitung' || 
-                            currentSession.rolle === 'jva-leitung' || 
-                            currentSession.rolle === 'haus-leitung';
-      if (!istHausleitung) return;
+      const istValWeit =
+        (typeof istValWeitPortalRolle === 'function' && istValWeitPortalRolle(currentSession.rolle)) ||
+        currentSession.rolle === 'hausleitung' ||
+        currentSession.rolle === 'jva-leitung' ||
+        currentSession.rolle === 'haus-leitung' ||
+        currentSession.rolle === 'anstaltsleitung' ||
+        currentSession.rolle === 'stationshausleitung';
+      if (!istValWeit) return;
       
       const effektiverMitarbeiter = getEffektiverMitarbeiter();
       const offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(effektiverMitarbeiter);
@@ -6116,6 +6205,9 @@ ${t('action.archive')}
       const antraegeImHaus = alleAntraege.filter(a => {
         if (a.veraktet) return false;
         if (a.bearbeiterId === currentSession.userId) return false;
+        if (typeof antragSystem._valAntragSichtbar === 'function') {
+          return antragSystem._valAntragSichtbar(effektiverMitarbeiter, a);
+        }
         return antragSystem._matchesHaus(effektiverMitarbeiter.jvas, a.insasseJva);
       });
       
