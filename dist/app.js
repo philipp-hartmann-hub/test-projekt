@@ -2627,6 +2627,12 @@ class AntragSystem {
           changed = true;
         }
       }
+      // Nach Server-Sync fehlendes Flag reparieren (sonst erscheint Weiterleitung an Gruppe nicht in der Gruppenliste)
+      if (antrag.status === 'in-bearbeitung' && antrag.zugewiesenAnGruppe && antrag.bearbeiterId &&
+          (antrag.hauptbearbeitungWartetAufUebernahme === undefined || antrag.hauptbearbeitungWartetAufUebernahme === null)) {
+        antrag.hauptbearbeitungWartetAufUebernahme = true;
+        changed = true;
+      }
     });
     if (changed) {
       this.saveAntraege();
@@ -3534,18 +3540,17 @@ class AntragSystem {
                a.insasseStation === mitarbeiter.station;
       }
       
-      // 2. Anträge in Bearbeitung mit Gruppenzuweisung (Hauptbearbeitung wartet auf Übernahme)
-      // Der aktuelle Bearbeiter bleibt noch Hauptbearbeiter, aber der Antrag erscheint für die Gruppe
-      if (a.status === 'in-bearbeitung' && a.zugewiesenAnGruppe && a.hauptbearbeitungWartetAufUebernahme) {
-        // Nicht für den aktuellen Hauptbearbeiter anzeigen (der sieht ihn in "Meine Anträge")
-        if (String(a.bearbeiterId) === String(mitarbeiter.userId)) {
+      // 2. Anträge in Bearbeitung mit Gruppenzuweisung (Weiterleitung an Gruppe)
+      // Hinweis: hauptbearbeitungWartetAufUebernahme darf nicht Pflicht sein — nach Sync/Import oft undefined,
+      // sonst sieht z. B. die Zahlstelle nichts. Bearbeiter wird weiterhin über bearbeiterId ausgeschlossen.
+      if (a.status === 'in-bearbeitung' && a.zugewiesenAnGruppe) {
+        const selfId = String(mitarbeiter.userId ?? mitarbeiter.id ?? '');
+        if (a.bearbeiterId != null && a.bearbeiterId !== '' && String(a.bearbeiterId) === selfId) {
           return false;
         }
-        // VAL sieht alle Anträge ihres Hauses, auch mit wartender Hauptbearbeitungsübergabe
         if (istValWeit && this._valAntragSichtbar(mitarbeiter, a)) {
           return true;
         }
-        // Nur Mitglieder der zugewiesenen Gruppe sehen den Antrag
         return this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
       }
       
