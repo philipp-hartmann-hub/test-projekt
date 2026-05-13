@@ -2820,11 +2820,23 @@ class AntragSystem {
       return antrag;
     }
     
-    // Fall 2: Antrag in Bearbeitung mit wartender Hauptbearbeitungsübergabe
-    // (Weiterleitung an Gruppe mit Option "Hauptbearbeitung übertragen")
-    if (antrag.status === 'in-bearbeitung' && antrag.hauptbearbeitungWartetAufUebernahme && antrag.zugewiesenAnGruppe) {
+    // Fall 2: In Bearbeitung mit Gruppenzuweisung (Weiterleitung an Gruppe)
+    // Gleiche Voraussetzung wie Gruppenliste: zugewiesenAnGruppe reicht; Flag darf nicht mehr Pflicht sein (Sync).
+    if (antrag.status === 'in-bearbeitung' && antrag.zugewiesenAnGruppe) {
+      const selfId = String(mitarbeiter.userId ?? mitarbeiter.id ?? '');
+      if (antrag.bearbeiterId != null && antrag.bearbeiterId !== '' && String(antrag.bearbeiterId) === selfId) {
+        return antrag;
+      }
       const alterBearbeiterId = antrag.bearbeiterId;
       const alterBearbeiterName = antrag.bearbeiterName;
+
+      const darfAlsGruppenmitglied = this._mitarbeiterGehoertZuGruppe(mitarbeiter, antrag.zugewiesenAnGruppe);
+      const darfAlsValPool =
+        this._istValWeitMitarbeiter(mitarbeiter) && this._valAntragSichtbar(mitarbeiter, antrag);
+      if (!darfAlsGruppenmitglied && !darfAlsValPool) {
+        console.warn('[nehmeAntrag] Fall 2: keine Berechtigung zur Übernahme');
+        return null;
+      }
       
       // Alten Bearbeiter als "abgegeben" markieren
       if (!antrag.abgegebenVon) {
