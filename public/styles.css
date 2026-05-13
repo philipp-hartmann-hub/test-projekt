@@ -1489,7 +1489,7 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   position: absolute;
   top: 0.65rem;
   right: 0.65rem;
-  background: var(--jhh-danger);
+  background: var(--jhh-primary);
   color: #fff;
   font-size: 0.7rem;
   font-weight: 700;
