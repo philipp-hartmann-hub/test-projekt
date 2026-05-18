@@ -198,6 +198,10 @@
               <input type="radio" name="antragType" value="gespraechstermin" onchange="toggleAntragFields()">
               <span class="radio-label">Gesprächstermine</span>
             </label>
+            <label class="radio-option">
+              <input type="radio" name="antragType" value="gesundheit-medizin" onchange="toggleAntragFields()">
+              <span class="radio-label">Gesundheit: Termin medizinischer Dienst</span>
+            </label>
           </div>
         </div>
 
@@ -310,6 +314,17 @@
             <textarea id="gespraechBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
           </div>
         </div>
+
+        <!-- Gesundheit: Termin medizinischer Dienst -->
+        <div id="gesundheitMedizinFields" style="display: none;">
+          <div class="form-group">
+            <label class="checkbox-option">
+              <input type="checkbox" id="gesundheitMedizinischerDienst">
+              <span class="checkbox-label">Ich beantrage einen Termin beim medizinischen Dienst</span>
+            </label>
+            <p class="field-hint">Aus datenschutzrechtlichen Gründen sind hier keine weiteren Angaben erforderlich.</p>
+          </div>
+        </div>
       </div>
       <div class="modal-footer modal-footer-triple">
         <button class="btn btn-secondary" onclick="closeModal('newAntragModal')">Abbrechen</button>
@@ -345,6 +360,10 @@
             <label class="radio-option">
               <input type="radio" name="entwurfType" value="gespraechstermin" onchange="toggleEntwurfFields()">
               <span class="radio-label">Gesprächstermine</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="entwurfType" value="gesundheit-medizin" onchange="toggleEntwurfFields()">
+              <span class="radio-label">Gesundheit: Termin medizinischer Dienst</span>
             </label>
           </div>
         </div>
@@ -456,6 +475,17 @@
           <div class="form-group">
             <label for="entwurfGespraechBegruendung">Begründung <span class="required">*</span></label>
             <textarea id="entwurfGespraechBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
+          </div>
+        </div>
+
+        <!-- Gesundheit: Termin medizinischer Dienst -->
+        <div id="entwurfGesundheitMedizinFields" style="display: none;">
+          <div class="form-group">
+            <label class="checkbox-option">
+              <input type="checkbox" id="entwurfGesundheitMedizinischerDienst">
+              <span class="checkbox-label">Ich beantrage einen Termin beim medizinischen Dienst</span>
+            </label>
+            <p class="field-hint">Aus datenschutzrechtlichen Gründen sind hier keine weiteren Angaben erforderlich.</p>
           </div>
         </div>
 
@@ -610,6 +640,7 @@
         'eigentum': 'Eigentum in der Kammer',
         'beratung-unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
         'gespraechstermin': 'Gesprächstermine',
+        'gesundheit-medizin': 'Gesundheit: Termin medizinischer Dienst',
         'sonstiges': 'Sonstiges'
       };
       return typeMap[type] || type;
@@ -990,6 +1021,7 @@
       document.getElementById('eigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
       document.getElementById('beratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
       document.getElementById('gespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
+      document.getElementById('gesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
     }
 
     function toggleEntwurfFields() {
@@ -998,6 +1030,29 @@
       document.getElementById('entwurfEigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
       document.getElementById('entwurfBeratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
       document.getElementById('entwurfGespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
+      document.getElementById('entwurfGesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
+    }
+
+    function readGesundheitMedizinForm(prefix) {
+      const checkbox = document.getElementById(prefix ? 'entwurfGesundheitMedizinischerDienst' : 'gesundheitMedizinischerDienst');
+      return { medizinischerDienstTermin: checkbox ? checkbox.checked : false };
+    }
+
+    function validateGesundheitMedizinData(data) {
+      if (!data.medizinischerDienstTermin) {
+        return { valid: false, error: 'Bitte bestätigen Sie, dass Sie einen Termin beim medizinischen Dienst beantragen.' };
+      }
+      return { valid: true, error: null };
+    }
+
+    function resetGesundheitMedizinForm(prefix) {
+      const checkbox = document.getElementById(prefix ? 'entwurfGesundheitMedizinischerDienst' : 'gesundheitMedizinischerDienst');
+      if (checkbox) checkbox.checked = false;
+    }
+
+    function setGesundheitMedizinForm(prefix, antrag) {
+      const checkbox = document.getElementById(prefix ? 'entwurfGesundheitMedizinischerDienst' : 'gesundheitMedizinischerDienst');
+      if (checkbox) checkbox.checked = antrag.medizinischerDienstTermin === true;
     }
 
     function formatGespraechOrtText(antrag) {
@@ -1212,6 +1267,10 @@
         const data = readGespraechsterminForm('');
         const check = validateGespraechsterminData(data);
         return { type, data, valid: check.valid, error: check.error };
+      } else if (type === 'gesundheit-medizin') {
+        const data = readGesundheitMedizinForm('');
+        const check = validateGesundheitMedizinData(data);
+        return { type, data, valid: check.valid, error: check.error };
       } else if (type === 'eigentum') {
         const aktion = document.querySelector('input[name="eigentumAktion"]:checked').value;
         const kleidungCheckboxes = document.querySelectorAll('input[name="kleidung"]:checked');
@@ -1402,6 +1461,7 @@
       resetTeilhabegeldEinkommenForm('');
       resetBeratungUnterstuetzungForm('');
       resetGespraechsterminForm('');
+      resetGesundheitMedizinForm('');
       document.querySelectorAll('input[name="kleidung"]').forEach(cb => cb.checked = false);
       document.getElementById('eigentumBegruendung').value = '';
       document.querySelector('input[name="antragType"][value="teilhabegeld"]').checked = true;
@@ -1432,6 +1492,8 @@
         document.getElementById('entwurfBeratungBegruendung').value = entwurf.antragBegruendung || '';
       } else if (entwurf.type === 'gespraechstermin') {
         setGespraechsterminForm('entwurf', entwurf);
+      } else if (entwurf.type === 'gesundheit-medizin') {
+        setGesundheitMedizinForm('entwurf', entwurf);
       } else if (entwurf.type === 'eigentum') {
         if (entwurf.aktion) {
           document.querySelector(`input[name="entwurfEigentumAktion"][value="${entwurf.aktion}"]`).checked = true;
@@ -1478,6 +1540,10 @@
       } else if (type === 'gespraechstermin') {
         const data = readGespraechsterminForm('entwurf');
         const check = validateGespraechsterminData(data);
+        return { type, ...data, valid: check.valid, error: check.error };
+      } else if (type === 'gesundheit-medizin') {
+        const data = readGesundheitMedizinForm('entwurf');
+        const check = validateGesundheitMedizinData(data);
         return { type, ...data, valid: check.valid, error: check.error };
       } else if (type === 'eigentum') {
         const aktionRadio = document.querySelector('input[name="entwurfEigentumAktion"]:checked');
@@ -1615,6 +1681,11 @@
           ${ortText ? `<p><strong>Ort:</strong> ${ortText}</p>` : '<p class="incomplete"><em>Ort noch nicht gewählt</em></p>'}
           ${begruendungText ? `<p><strong>Begründung:</strong> ${begruendungText}</p>` : '<p class="incomplete"><em>Begründung noch nicht angegeben</em></p>'}
         `;
+      } else if (antrag.type === 'gesundheit-medizin') {
+        typeLabel = 'Gesundheit: Termin medizinischer Dienst';
+        detailsHtml = antrag.medizinischerDienstTermin === true
+          ? '<p><strong>Termin beim medizinischen Dienst</strong> beantragt</p>'
+          : '<p class="incomplete"><em>Bestätigung noch nicht erteilt</em></p>';
       } else {
         // Unbekannter Typ - trotzdem anzeigen
         typeLabel = antrag.type || 'Antrag';

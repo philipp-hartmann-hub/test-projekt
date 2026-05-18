@@ -85,6 +85,7 @@ const TRANSLATIONS = {
     'application.type.eigentum': 'Eigentum aus der Kammer',
     'application.type.beratung_unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
     'application.type.gespraechstermin': 'Gesprächstermine',
+    'application.type.gesundheit_medizin': 'Gesundheit: Termin medizinischer Dienst',
     'application.type.sonstiges': 'Sonstiges Anliegen',
     
     // Status
@@ -243,6 +244,7 @@ const TRANSLATIONS = {
     'apptype.eigentum': 'Eigentum in der Kammer',
     'apptype.beratung_unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
     'apptype.gespraechstermin': 'Gesprächstermine',
+    'apptype.gesundheit_medizin': 'Gesundheit: Termin medizinischer Dienst',
     
     // Prozesskette
     'process.receipt': 'Eingang',
@@ -380,6 +382,7 @@ const TRANSLATIONS = {
     'application.type.eigentum': 'Property from Storage',
     'application.type.beratung_unterstuetzung': 'Counselling and support services',
     'application.type.gespraechstermin': 'Conversation appointments',
+    'application.type.gesundheit_medizin': 'Health: medical service appointment',
     'application.type.sonstiges': 'Other Concerns',
     
     // Status
@@ -555,6 +558,7 @@ const TRANSLATIONS = {
     'apptype.eigentum': 'Property from storage',
     'apptype.beratung_unterstuetzung': 'Counselling and support services',
     'apptype.gespraechstermin': 'Conversation appointments',
+    'apptype.gesundheit_medizin': 'Health: medical service appointment',
     
     // Sorting
     'sort.label': 'Sort',
@@ -667,6 +671,7 @@ const TRANSLATIONS = {
     'application.type.eigentum': 'Propriété du dépôt',
     'application.type.beratung_unterstuetzung': 'Services de conseil et de soutien',
     'application.type.gespraechstermin': 'Rendez-vous de conversation',
+    'application.type.gesundheit_medizin': 'Santé : rendez-vous au service médical',
     'application.type.sonstiges': 'Autres préoccupations',
     
     // Statut
@@ -842,6 +847,7 @@ const TRANSLATIONS = {
     'apptype.eigentum': 'Biens du dépôt',
     'apptype.beratung_unterstuetzung': 'Services de conseil et de soutien',
     'apptype.gespraechstermin': 'Rendez-vous de conversation',
+    'apptype.gesundheit_medizin': 'Santé : rendez-vous au service médical',
     
     // Tri
     'sort.label': 'Trier',
@@ -2680,7 +2686,8 @@ class AntragSystem {
       teilhabegeld: 'Teilhabegeld',
       eigentum: 'Eigentum in der Kammer',
       'beratung-unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
-      gespraechstermin: 'Gesprächstermine'
+      gespraechstermin: 'Gesprächstermine',
+      'gesundheit-medizin': 'Gesundheit: Termin medizinischer Dienst'
     };
     return labels[type] || 'Antrag';
   }

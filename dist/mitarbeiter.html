@@ -1072,6 +1072,7 @@
         'eigentum': t('application.type.eigentum'),
         'beratung-unterstuetzung': t('application.type.beratung_unterstuetzung'),
         'gespraechstermin': t('application.type.gespraechstermin'),
+        'gesundheit-medizin': t('application.type.gesundheit_medizin'),
         'sonstiges': t('application.type.sonstiges')
       };
       return typeMap[type] || type;
@@ -1089,6 +1090,8 @@
             ? t('apptype.teilhabegeld')
             : aktivitaet.beschreibung.includes('Gesprächstermin')
               ? t('apptype.gespraechstermin')
+            : aktivitaet.beschreibung.includes('medizinischer Dienst')
+              ? t('apptype.gesundheit_medizin')
             : aktivitaet.beschreibung.includes('Beratungs')
               ? t('apptype.beratung_unterstuetzung')
               : t('apptype.eigentum');
@@ -2103,6 +2106,9 @@
           <p><strong>Ort:</strong> ${ortParts.length ? ortParts.join(', ') : '–'}</p>
           ${antrag.antragBegruendung ? `<p><strong>Begründung:</strong> ${getTranslatedUserText(antrag.antragBegruendung)}</p>` : ''}
         `;
+      } else if (antrag.type === 'gesundheit-medizin') {
+        typeLabel = t('application.type.gesundheit_medizin');
+        detailsHtml = `<p><strong>Anliegen:</strong> ${antrag.medizinischerDienstTermin === true ? 'Termin beim medizinischen Dienst beantragt' : '–'}</p>`;
       }
       
       // Antrags-Nummer anzeigen
@@ -2614,6 +2620,36 @@ Persönlich eröffnet
           <div class="detail-box verfuegungsvorschlag-box">
             <h4>${verfuegungTitel}</h4>
             <p class="verfuegungsreihenfolge">${verfuegungKette}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
+          </div>
+        `;
+      } else if (antrag.type === 'gesundheit-medizin') {
+        const verfuegungTitel =
+          currentLanguage === 'en'
+            ? 'Suggested procedure sequence (reference Ist process)'
+            : currentLanguage === 'fr'
+              ? 'Suggestion de séquence (processus cible)'
+              : 'Verfügungsvorschlag';
+        const verfuegungHinweis =
+          currentLanguage === 'en'
+            ? 'This is a suggestion only; it does not replace a professional decision.'
+            : currentLanguage === 'fr'
+              ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle."
+              : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
+        const verfuegungKetteGesundheit = 'AVD → medizinischer Dienst';
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>${t('application.type.gesundheit_medizin')}</h4>
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Request' : currentLanguage === 'fr' ? 'Demande' : 'Anliegen'}:</span>
+              <span class="detail-value">${antrag.medizinischerDienstTermin === true
+                ? (currentLanguage === 'en' ? 'Medical service appointment requested' : currentLanguage === 'fr' ? 'Rendez-vous au service médical demandé' : 'Termin beim medizinischen Dienst beantragt')
+                : '–'}</span>
+            </div>
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitel}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKetteGesundheit}</p>
             <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
           </div>
         `;
@@ -3451,6 +3487,8 @@ ${t('action.archive')}
         if (antrag.gespraechInnerhalbVollzug) ortParts.push('innerhalb des Vollzugs');
         if (antrag.gespraechAusserhalbVollzug) ortParts.push('außerhalb des Vollzugs');
         anliegenText = `${t('notice.applicationFor')} ${t('application.type.gespraechstermin')} (${antrag.gespraechspartner || '–'}, ${ortParts.join(' und ') || '–'})`;
+      } else if (antrag.type === 'gesundheit-medizin') {
+        anliegenText = `${t('notice.applicationFor')} ${t('application.type.gesundheit_medizin')}`;
       }
       
       // Entscheidungstext (übersetzt)
@@ -5236,6 +5274,10 @@ ${t('action.archive')}
         } else {
           yPos += 21;
         }
+      } else if (antrag.type === 'gesundheit-medizin') {
+        doc.text('Art: Gesundheit – Termin medizinischer Dienst', 25, yPos);
+        doc.text(antrag.medizinischerDienstTermin === true ? 'Termin beim medizinischen Dienst beantragt' : '–', 25, yPos + 7);
+        yPos += 14;
       }
       
       // Sachliche/fachliche Prüfung (wenn erfolgt)
