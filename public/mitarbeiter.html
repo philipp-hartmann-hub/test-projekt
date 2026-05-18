@@ -800,7 +800,7 @@
     </div>
   </div>
 
-  <!-- Modal: Termin vereinbaren (Phase Bekanntgabe) -->
+  <!-- Modal: Termin vereinbaren (Phasen Bekanntgabe & Vollzug) -->
   <div class="modal-overlay" id="terminVereinbarenModal">
     <div class="modal modal-large">
       <div class="modal-header">
@@ -3546,7 +3546,7 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
 ${t('task.create')}
                   </button>
                 ` : ''}
-                ${!aufgabeMussErstErledigtWerden && prozessStatus.bekanntgabe === 'aktiv' && istBearbeiter ? `
+                ${!aufgabeMussErstErledigtWerden && (prozessStatus.bekanntgabe === 'aktiv' || prozessStatus.vollzug === 'aktiv') && istBearbeiter ? `
                   <button class="btn btn-primary btn-large" onclick="openTerminVereinbarenModal('${antrag.id}')">
                     Termin vereinbaren
                   </button>
@@ -6376,7 +6376,7 @@ ${t('action.archive')}
     }
 
     // ============================================
-    // TERMIN VEREINBAREN (Phase Bekanntgabe)
+    // TERMIN VEREINBAREN (Phasen Bekanntgabe & Vollzug)
     // ============================================
 
     function openTerminVereinbarenModal(antragId) {
