@@ -1268,6 +1268,8 @@ class UserSystem {
       { id: 'anstalt-1', type: 'mitarbeiter', username: 'anstalt1', password: 'anstalt1', vorname: 'Alex', nachname: 'Anstaltsleitung', rolle: 'anstaltsleitung', jvas: [], station: null },
       { id: 'statval-1', type: 'mitarbeiter', username: 'statval1', password: 'statval1', vorname: 'Stationsleitung', nachname: 'Wohngruppenleitung', rolle: 'stationshausleitung', jvas: ['haus1'], station: '1' },
       { id: 'revision-1', type: 'mitarbeiter', username: 'revision1', password: 'revision1', vorname: 'Rita', nachname: 'Revision', rolle: 'revision', jvas: [], station: null },
+      { id: 'medizin-1', type: 'mitarbeiter', username: 'medizin1', password: 'medizin1', vorname: 'Maria', nachname: 'Medizinischer Dienst', rolle: 'medizinischer-dienst', jvas: [], station: null },
+      { id: 'psychologe-1', type: 'mitarbeiter', username: 'psychologe1', password: 'psychologe1', vorname: 'Paul', nachname: 'Psychologe', rolle: 'psychologe', jvas: [], station: null },
       { id: 'insasse-1', type: 'insasse', username: 'insasse1', password: 'insasse1', vorname: 'Hans', nachname: 'Mueller', rolle: 'insasse', jvas: [], station: '1', jva: 'haus1', insassenNummer: 'INS-001', geburtsdatum: '1985-03-15' },
       { id: 'insasse-2', type: 'insasse', username: 'insasse2', password: 'insasse2', vorname: 'Klaus', nachname: 'Fischer', rolle: 'insasse', jvas: [], station: '2', jva: 'haus2', insassenNummer: 'INS-002', geburtsdatum: '1990-07-22' }
     ];
@@ -1333,11 +1335,15 @@ class UserSystem {
           changed = true;
         }
       }
-      // Zahlstelle / Arbeitskoordination: anstaltsweit (wie Kammer/Revision), keine Hauszuordnung
+      // Anstaltsweite Rollen: keine Hauszuordnung (wie Kammer/Revision)
       if (user.type === 'mitarbeiter') {
         const r = (user.rolle || '').toString().toLowerCase();
-        if ((r === 'zahlstelle' || r === 'arbeitskoordination') && user.jvas && user.jvas.length > 0) {
+        if (istAnstaltsweiteJvaGruppeRolle(r) && user.jvas && user.jvas.length > 0) {
           user.jvas = [];
+          changed = true;
+        }
+        if (istAnstaltsweiteSpezialrolle(r) && user.station) {
+          user.station = null;
           changed = true;
         }
       }
@@ -1932,6 +1938,12 @@ const aktivitaetenSystem = new AktivitaetenSystem();
 // TERMINSYSTEM
 // ============================================
 
+const EXTERNE_KONTAKTE = [
+  { id: 'pastor', label: 'Pastor', name: 'Pfarrer Thomas Meyer', email: 'pastor.meyer@jva-prototyp.de' },
+  { id: 'suchtberater', label: 'Suchtberater', name: 'Dr. Anna Weber', email: 'a.weber@suchtberatung-prototyp.de' },
+  { id: 'uebergangsmanager', label: 'Übergangsmanager', name: 'Marc Hoffmann', email: 'm.hoffmann@uebergang-prototyp.de' }
+];
+
 class TerminSystem {
   constructor() {
     this.storageKey = 'gefaengnis_termine';
@@ -2020,6 +2032,12 @@ class TerminSystem {
       
       // Aufgaben-Termine: Für die in sichtbarFuer eingetragenen User (Hausleitung sieht fremde Aufgaben-Termine nicht)
       if (t.typ === 'aufgabe') {
+        const uid = String(mitarbeiter.userId);
+        return Array.isArray(t.sichtbarFuer) && t.sichtbarFuer.some((id) => String(id) === uid);
+      }
+
+      // Vereinbarungstermine (Bekanntgabe): nur für eingeladene Mitarbeitende
+      if (t.typ === 'vereinbarung') {
         const uid = String(mitarbeiter.userId);
         return Array.isArray(t.sichtbarFuer) && t.sichtbarFuer.some((id) => String(id) === uid);
       }
@@ -2158,6 +2176,44 @@ class TerminSystem {
   // Alle Admin-Termine abrufen (für Admin-Portal)
   getAlleAdminTermine() {
     return this.termine.filter(t => t.typ === 'admin')
+      .sort((a, b) => new Date(a.datum) - new Date(b.datum));
+  }
+
+  createVereinbarungsTermin(data) {
+    const termin = {
+      id: this.generateId(),
+      typ: 'vereinbarung',
+      titel: data.betreff,
+      betreff: data.betreff,
+      beschreibung: data.beschreibung || '',
+      datum: data.datum,
+      uhrzeit: data.uhrzeit || null,
+      ort: data.ort || '',
+      teamsLink: data.teamsLink || null,
+      antragId: data.antragId || null,
+      insasseId: data.insasseId,
+      insasseName: data.insasseName || '',
+      teilnehmerArt: data.teilnehmerArt,
+      externKontakt: data.externKontakt || null,
+      zugewiesenAnTyp: data.zugewiesenAnTyp || null,
+      zugewiesenAnId: data.zugewiesenAnId || null,
+      zugewiesenAnName: data.zugewiesenAnName || null,
+      zugewiesenAnGruppe: data.zugewiesenAnGruppe || null,
+      sichtbarFuer: data.sichtbarFuer || [],
+      erstelltVonId: data.erstelltVonId,
+      erstelltVonName: data.erstelltVonName,
+      erstelltAm: new Date().toISOString(),
+      einladungVersendetAm: new Date().toISOString()
+    };
+    this.termine.push(termin);
+    this.saveTermine();
+    return termin;
+  }
+
+  getTermineFuerInsasse(insasseId) {
+    const id = String(insasseId);
+    return this.termine
+      .filter((t) => t.typ === 'vereinbarung' && String(t.insasseId) === id)
       .sort((a, b) => new Date(a.datum) - new Date(b.datum));
   }
 }
@@ -3693,19 +3749,8 @@ class AntragSystem {
     const gruppeTypNorm = (gruppe.typ || '').toString().toLowerCase();
     const rolleNorm = (mitarbeiter.rolle || '').toString().toLowerCase();
 
-    if (gruppeTypNorm === 'kammer') {
-      const istKammer = rolleNorm === 'kammer';
-      console.log('[Debug] Kammer-Prüfung:', {
-        mitarbeiterRolle: mitarbeiter.rolle,
-        istKammer,
-        gruppeTyp: gruppe.typ,
-        gruppe
-      });
-      return istKammer;
-    }
-
-    if (gruppeTypNorm === 'revision') {
-      return rolleNorm === 'revision';
+    if (istAnstaltsweiteSpezialGruppeTyp(gruppeTypNorm)) {
+      return rolleNorm === gruppeTypNorm;
     }
 
     if (gruppeTypNorm === 'anstaltsleitung') {
@@ -4235,7 +4280,7 @@ class AntragSystem {
       const typNorm = (gruppe && gruppe.typ != null) ? String(gruppe.typ).toLowerCase() : '';
       const normierteGruppe = {
         typ: typNorm || gruppe.typ,
-        hausId: (typNorm === 'kammer' || typNorm === 'revision' || typNorm === 'anstaltsleitung' || typNorm === 'zahlstelle' || typNorm === 'arbeitskoordination') ? null : (gruppe.hausId ?? null),
+        hausId: istAnstaltsweiteJvaGruppeTyp(typNorm) ? null : (gruppe.hausId ?? null),
         station: gruppe.station ?? null
       };
       // Gruppenzuweisung speichern
@@ -4357,7 +4402,13 @@ function getAntragTypeFilterChips() {
 function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
   const selected = selectedValue || 'teilhabegeld';
   const onChange = onChangeHandler ? ` onchange="${onChangeHandler}()"` : '';
-  return ANTRAG_TYPE_GRUPPEN.map((gruppe) => {
+  return `<div class="antrag-type-accordion">${ANTRAG_TYPE_GRUPPEN.map((gruppe) => {
+    const hasSelected = gruppe.typen.includes(selected);
+    const expanded = hasSelected ? ' expanded' : '';
+    const selectedLabel = hasSelected ? antragSystem.getAntragTypLabel(selected) : '';
+    const hint = hasSelected
+      ? selectedLabel
+      : `${gruppe.typen.length} ${gruppe.typen.length === 1 ? 'Antragsart' : 'Antragsarten'}`;
     const options = gruppe.typen.map((type) => {
       const label = antragSystem.getAntragTypLabel(type);
       const checked = type === selected ? ' checked' : '';
@@ -4366,14 +4417,213 @@ function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
           <span class="radio-label">${label}</span>
         </label>`;
     }).join('');
-    return `<fieldset class="antrag-type-group">
-        <legend>${gruppe.titel}</legend>
-        <motion class="radio-group">${options}</motion>
-      </fieldset>`;
-  }).join('').replace(/motion/g, 'div');
+    return `<div class="antrag-type-accordion-item${expanded}" data-gruppe="${gruppe.id}">
+        <button type="button" class="antrag-type-accordion-trigger" aria-expanded="${hasSelected ? 'true' : 'false'}">
+          <span class="antrag-type-accordion-heading">
+            <span class="antrag-type-accordion-title">${gruppe.titel}</span>
+            <span class="antrag-type-accordion-hint">${hint}</span>
+          </span>
+          <span class="antrag-type-accordion-icon" aria-hidden="true"></span>
+        </button>
+        <div class="antrag-type-accordion-panel">
+          <div class="radio-group">${options}</div>
+        </div>
+      </div>`;
+  }).join('')}</div>`;
+}
+
+function initAntragTypePickerAccordion(containerId, inputName, onChangeHandler) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const items = container.querySelectorAll('.antrag-type-accordion-item');
+
+  const setExpanded = (item, expanded) => {
+    if (!item) return;
+    item.classList.toggle('expanded', expanded);
+    const trigger = item.querySelector('.antrag-type-accordion-trigger');
+    if (trigger) trigger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  };
+
+  items.forEach((item) => {
+    const trigger = item.querySelector('.antrag-type-accordion-trigger');
+    if (!trigger) return;
+    trigger.addEventListener('click', () => {
+      const willExpand = !item.classList.contains('expanded');
+      items.forEach((other) => setExpanded(other, false));
+      setExpanded(item, willExpand);
+    });
+  });
+
+  container.querySelectorAll(`input[name="${inputName}"]`).forEach((radio) => {
+    radio.addEventListener('change', () => {
+      const parent = radio.closest('.antrag-type-accordion-item');
+      if (!parent) return;
+      items.forEach((other) => setExpanded(other, false));
+      setExpanded(parent, true);
+      const hint = parent.querySelector('.antrag-type-accordion-hint');
+      if (hint) hint.textContent = antragSystem.getAntragTypLabel(radio.value);
+    });
+  });
+}
+
+function renderAntragFilterBarHtml(listKey, activeFilterId, setFilterFn) {
+  const chips = getAntragTypeFilterChips().map((chip) => `
+    <button type="button" class="antrag-filter-chip${chip.id === activeFilterId ? ' active' : ''}"
+      onclick="${setFilterFn}('${listKey}', '${chip.id}')">${chip.titel}</button>
+  `).join('');
+  const activeChip = getAntragTypeFilterChips().find((c) => c.id === activeFilterId);
+  const summarySuffix = activeFilterId !== 'alle' && activeChip ? ` · ${activeChip.titel}` : '';
+  return `<details class="antrag-filter-details"${activeFilterId !== 'alle' ? ' open' : ''}>
+    <summary class="antrag-filter-summary">Nach Thema filtern${summarySuffix}</summary>
+    <div class="antrag-filter-bar">${chips}</div>
+  </details>`;
 }
 
 const antragSystem = new AntragSystem();
+
+function getMitarbeiterIdsFuerGruppe(gruppe) {
+  if (!gruppe || typeof userSystem === 'undefined') return [];
+  return userSystem.users
+    .filter((u) => u.type === 'mitarbeiter' && antragSystem._mitarbeiterGehoertZuGruppe(u, gruppe))
+    .map((u) => String(u.id));
+}
+
+/**
+ * Termin in Phase Bekanntgabe vereinbaren: Kalendereinträge, Benachrichtigungen, Dummy-E-Mail.
+ */
+function vereinbareTerminAusAntrag(params) {
+  const {
+    antragId,
+    insasseId,
+    insasseName,
+    betreff,
+    datum,
+    uhrzeit,
+    ort,
+    teamsLink,
+    teilnehmerArt,
+    externKontaktId,
+    zugewiesenAnTyp,
+    zugewiesenAnId,
+    zugewiesenAnName,
+    zugewiesenAnGruppe,
+    erstelltVonId,
+    erstelltVonName
+  } = params;
+
+  let externKontakt = null;
+  if (teilnehmerArt === 'extern' && externKontaktId) {
+    externKontakt = EXTERNE_KONTAKTE.find((k) => k.id === externKontaktId) || null;
+  }
+
+  const sichtbarFuer = new Set([String(insasseId), String(erstelltVonId)]);
+  const emailEmpfaenger = [];
+
+  if (teilnehmerArt === 'intern') {
+    if (zugewiesenAnTyp === 'mitarbeiter' && zugewiesenAnId) {
+      sichtbarFuer.add(String(zugewiesenAnId));
+      const person = userSystem.users.find((u) => String(u.id) === String(zugewiesenAnId));
+      emailEmpfaenger.push({
+        name: zugewiesenAnName || (person ? `${person.vorname} ${person.nachname}` : 'Mitarbeiter'),
+        email: (person && person.email) || 'mitarbeiter@jva-prototyp.de',
+        typ: 'intern'
+      });
+    } else if (zugewiesenAnTyp === 'gruppe' && zugewiesenAnGruppe) {
+      getMitarbeiterIdsFuerGruppe(zugewiesenAnGruppe).forEach((id) => sichtbarFuer.add(id));
+    }
+  } else if (externKontakt) {
+    emailEmpfaenger.push({
+      name: externKontakt.name,
+      email: externKontakt.email,
+      typ: 'extern'
+    });
+  }
+
+  const termin = terminSystem.createVereinbarungsTermin({
+    betreff,
+    datum,
+    uhrzeit,
+    ort,
+    teamsLink,
+    antragId,
+    insasseId,
+    insasseName,
+    teilnehmerArt,
+    externKontakt,
+    zugewiesenAnTyp,
+    zugewiesenAnId,
+    zugewiesenAnName,
+    zugewiesenAnGruppe,
+    sichtbarFuer: Array.from(sichtbarFuer),
+    erstelltVonId,
+    erstelltVonName
+  });
+
+  const datumFmt = new Date(termin.datum).toLocaleDateString('de-DE');
+  const zeitInfo = termin.uhrzeit ? ` um ${termin.uhrzeit} Uhr` : '';
+  const ortInfo = termin.ort ? ` · Ort: ${termin.ort}` : '';
+  const msgBase = `Termin „${termin.betreff}“ am ${datumFmt}${zeitInfo}${ortInfo}`;
+
+  notificationSystem.createNotification(
+    insasseId,
+    'termin-vereinbart',
+    'Termin vereinbart',
+    msgBase,
+    antragId
+  );
+
+  if (teilnehmerArt === 'intern') {
+    if (zugewiesenAnTyp === 'mitarbeiter' && zugewiesenAnId) {
+      notificationSystem.createNotification(
+        zugewiesenAnId,
+        'termin-vereinbart',
+        'Termin vereinbart',
+        `${msgBase} (Insasse: ${insasseName})`,
+        antragId
+      );
+    } else if (zugewiesenAnGruppe) {
+      getMitarbeiterIdsFuerGruppe(zugewiesenAnGruppe).forEach((mid) => {
+        notificationSystem.createNotification(
+          mid,
+          'termin-vereinbart',
+          'Termin vereinbart',
+          `${msgBase} (Insasse: ${insasseName})`,
+          antragId
+        );
+        const person = userSystem.users.find((u) => String(u.id) === mid);
+        if (person) {
+          emailEmpfaenger.push({
+            name: `${person.vorname} ${person.nachname}`,
+            email: person.email || 'mitarbeiter@jva-prototyp.de',
+            typ: 'intern'
+          });
+        }
+      });
+    }
+  }
+
+  if (typeof aktivitaetenSystem !== 'undefined') {
+    aktivitaetenSystem.logAktivitaet({
+      antragId,
+      typ: 'termin-vereinbart',
+      beschreibung: `Termin vereinbart: ${termin.betreff}`,
+      details: {
+        terminId: termin.id,
+        teilnehmerArt,
+        datum: termin.datum,
+        uhrzeit: termin.uhrzeit,
+        ort: termin.ort,
+        extern: externKontakt ? externKontakt.label : null
+      },
+      benutzerTyp: 'mitarbeiter',
+      benutzerId: erstelltVonId,
+      benutzerName: erstelltVonName
+    });
+  }
+
+  return { termin, emailEmpfaenger };
+}
 
 // Nachladen aus localStorage (wird von data-sync.js nach Server-Sync aufgerufen)
 function reloadDataFromStorage() {
@@ -4536,6 +4786,46 @@ function getJvaName(jvaKey) {
   return getHausName(jvaKey);
 }
 
+/** Kammer, Revision, Medizinischer Dienst, Psychologe – hausunabhängig, eigene Gruppe */
+function istAnstaltsweiteSpezialrolle(rolle) {
+  return ['kammer', 'revision', 'medizinischer-dienst', 'psychologe'].includes(String(rolle || '').toLowerCase());
+}
+
+function istAnstaltsweiteSpezialGruppeTyp(typ) {
+  return istAnstaltsweiteSpezialrolle(typ);
+}
+
+/** Alle anstaltsweiten Gruppenzuweisungen (ohne Haus-ID in der Gruppe) */
+function istAnstaltsweiteJvaGruppeTyp(typ) {
+  return [
+    'kammer',
+    'revision',
+    'medizinischer-dienst',
+    'psychologe',
+    'anstaltsleitung',
+    'zahlstelle',
+    'arbeitskoordination'
+  ].includes(String(typ || '').toLowerCase());
+}
+
+function istAnstaltsweiteJvaGruppeRolle(rolle) {
+  return istAnstaltsweiteJvaGruppeTyp(rolle);
+}
+
+function getJvaGruppeDisplayName(typ) {
+  const key = String(typ || '').toLowerCase();
+  const names = {
+    kammer: 'Kammer',
+    revision: 'Revision',
+    'medizinischer-dienst': 'Medizinischer Dienst',
+    psychologe: 'Psychologe',
+    anstaltsleitung: 'Anstaltsleitung',
+    zahlstelle: 'Zahlstelle',
+    arbeitskoordination: 'Arbeitskoordination'
+  };
+  return names[key] || typ;
+}
+
 function getRolleText(rolle) {
   const rollen = {
     'mitarbeiter': 'AVD',
@@ -4548,7 +4838,9 @@ function getRolleText(rolle) {
     'zahlstelle': 'Zahlstelle',
     'arbeitskoordination': 'Arbeitskoordination',
     'kammer': 'Kammer',
-    'revision': 'Revision'
+    'revision': 'Revision',
+    'medizinischer-dienst': 'Medizinischer Dienst',
+    'psychologe': 'Psychologe'
   };
   return rollen[rolle] || rolle;
 }

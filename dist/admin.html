@@ -247,6 +247,14 @@
               <span class="radio-label">Revision</span>
             </label>
             <label class="radio-option">
+              <input type="radio" name="mitRolle" value="medizinischer-dienst" onchange="updateMitarbeiterFields()">
+              <span class="radio-label">Medizinischer Dienst</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="mitRolle" value="psychologe" onchange="updateMitarbeiterFields()">
+              <span class="radio-label">Psychologe</span>
+            </label>
+            <label class="radio-option">
               <input type="radio" name="mitRolle" value="anstaltsleitung" onchange="updateMitarbeiterFields()">
               <span class="radio-label">Anstaltsleitung</span>
             </label>
@@ -342,6 +350,14 @@
             <label class="radio-option">
               <input type="radio" name="editMitRolle" value="revision" onchange="updateEditMitarbeiterFields()">
               <span class="radio-label">Revision</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="editMitRolle" value="medizinischer-dienst" onchange="updateEditMitarbeiterFields()">
+              <span class="radio-label">Medizinischer Dienst</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="editMitRolle" value="psychologe" onchange="updateEditMitarbeiterFields()">
+              <span class="radio-label">Psychologe</span>
             </label>
             <label class="radio-option">
               <input type="radio" name="editMitRolle" value="anstaltsleitung" onchange="updateEditMitarbeiterFields()">
@@ -781,8 +797,7 @@
         stationGroup.style.display = 'none';
         hausGroup.style.display = 'block';
         hausHint.textContent = '(Ein Haus auswählen)';
-      } else if (rolle === 'kammer' || rolle === 'revision' || rolle === 'anstaltsleitung' || rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
-        // Kammer / Revision / Anstaltsleitung / Zahlstelle / Arbeitskoordination: hausunabhängig
+      } else if (typeof istAnstaltsweiteJvaGruppeRolle === 'function' && istAnstaltsweiteJvaGruppeRolle(rolle)) {
         stationGroup.style.display = 'none';
         hausGroup.style.display = 'none';
       } else if (rolle === 'stationshausleitung') {
@@ -838,9 +853,7 @@
         rolle === 'jva-leitung' ||
         rolle === 'zahlstelle' ||
         rolle === 'arbeitskoordination' ||
-        rolle === 'kammer' ||
-        rolle === 'revision' ||
-        rolle === 'anstaltsleitung'
+        (typeof istAnstaltsweiteJvaGruppeRolle === 'function' && istAnstaltsweiteJvaGruppeRolle(rolle))
       ) {
         stationSelect.innerHTML = '<option value="">Nicht erforderlich</option>';
         stationSelect.disabled = true;
@@ -922,8 +935,8 @@
           await showAlert('Bitte Geburtsdatum eingeben.');
           return;
         }
-        // Kammer / Revision: hausunabhängig
-        if (rolle === 'kammer' || rolle === 'revision') {
+        // Kammer, Revision, Medizinischer Dienst, Psychologe: hausunabhängig
+        if (typeof istAnstaltsweiteSpezialrolle === 'function' && istAnstaltsweiteSpezialrolle(rolle)) {
           us.createMitarbeiter({ vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
           closeModal('newMitarbeiterModal');
           renderUsers();
@@ -1114,7 +1127,7 @@
           stationGroup.style.display = 'none';
           hausGroup.style.display = 'block';
           if (hausHint) hausHint.textContent = '(Ein Haus auswählen)';
-        } else if (rolle === 'kammer' || rolle === 'revision' || rolle === 'anstaltsleitung' || rolle === 'zahlstelle' || rolle === 'arbeitskoordination') {
+        } else if (typeof istAnstaltsweiteJvaGruppeRolle === 'function' && istAnstaltsweiteJvaGruppeRolle(rolle)) {
           stationGroup.style.display = 'none';
           hausGroup.style.display = 'none';
         } else if (rolle === 'stationshausleitung') {
@@ -1254,8 +1267,7 @@
         return;
       }
       
-      // Kammer / Revision: hausunabhängig
-      if (rolle === 'kammer' || rolle === 'revision') {
+      if (typeof istAnstaltsweiteSpezialrolle === 'function' && istAnstaltsweiteSpezialrolle(rolle)) {
         getUserSystem()?.updateUser(id, { vorname, nachname, geburtsdatum, rolle, jvas: [], station: null });
         closeModal('editMitarbeiterModal');
         renderUsers();

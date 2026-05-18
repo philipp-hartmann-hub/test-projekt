@@ -205,7 +205,7 @@
               </select>
             </div>
           </div>
-          <div class="antrag-filter-bar" id="offenTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
+          <div class="antrag-filter-wrap" id="offenTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
           <div class="antrag-list" id="offenList">
             <!-- Dynamisch gefüllt -->
           </div>
@@ -225,7 +225,7 @@
               </select>
             </div>
           </div>
-          <div class="antrag-filter-bar" id="bearbeitungTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
+          <div class="antrag-filter-wrap" id="bearbeitungTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
           <div class="antrag-list" id="bearbeitungList">
             <!-- Dynamisch gefüllt -->
           </div>
@@ -246,7 +246,7 @@
               </select>
             </div>
           </div>
-          <div class="antrag-filter-bar" id="historieTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
+          <div class="antrag-filter-wrap" id="historieTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
           <div class="antrag-list" id="historieList">
             <!-- Dynamisch gefüllt -->
           </div>
@@ -800,6 +800,111 @@
     </div>
   </div>
 
+  <!-- Modal: Termin vereinbaren (Phase Bekanntgabe) -->
+  <div class="modal-overlay" id="terminVereinbarenModal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3>Termin vereinbaren</h3>
+        <button class="modal-close" onclick="closeModal('terminVereinbarenModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="info-box" id="tvInsasseInfo"></div>
+        <div class="form-group">
+          <label>Teilnehmer</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="tvTeilnehmerArt" value="intern" checked onchange="toggleTvTeilnehmerArt()">
+              <span class="radio-label">Intern (Mitarbeitende)</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="tvTeilnehmerArt" value="extern" onchange="toggleTvTeilnehmerArt()">
+              <span class="radio-label">Extern</span>
+            </label>
+          </div>
+        </div>
+        <div id="tvInternBereich">
+          <div class="form-group">
+            <label>Zuweisung an: *</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="tvZuweisungTyp" value="gruppe" checked onchange="toggleTvZuweisungTyp()">
+                <span class="radio-label">Gruppe</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="tvZuweisungTyp" value="person" onchange="toggleTvZuweisungTyp()">
+                <span class="radio-label">Konkrete Person</span>
+              </label>
+            </div>
+          </div>
+          <div id="tvGruppeContainer" class="form-group">
+            <label for="tvGruppeSelect">Gruppe auswählen: *</label>
+            <select id="tvGruppeSelect" onchange="onTvGruppeChange()">
+              <option value="">-- Bitte Gruppe wählen --</option>
+            </select>
+            <input type="hidden" id="tvGruppeTyp">
+            <input type="hidden" id="tvGruppeHaus">
+            <input type="hidden" id="tvGruppeStation">
+          </div>
+          <div id="tvPersonContainer" class="form-group" style="display: none;">
+            <label for="tvMitarbeiterSuche">Mitarbeiter suchen</label>
+            <input type="text" id="tvMitarbeiterSuche" placeholder="Name eingeben..." oninput="filterTvMitarbeiterListe()">
+            <div class="mitarbeiter-liste" id="tvMitarbeiterListe" style="max-height: 200px; overflow-y: auto;"></div>
+            <input type="hidden" id="tvPersonId">
+            <div class="selected-person" id="tvSelectedPersonDisplay" style="display: none;">
+              <span class="selected-label">Ausgewählt:</span>
+              <span class="selected-name" id="tvSelectedPersonName"></span>
+              <button type="button" class="btn-clear" onclick="clearTvSelectedPerson()">&times;</button>
+            </div>
+          </div>
+        </div>
+        <div id="tvExternBereich" style="display: none;">
+          <div class="form-group">
+            <label for="tvExternKontakt">Externer Kontakt: *</label>
+            <select id="tvExternKontakt" onchange="onTvExternKontaktChange()">
+              <option value="">-- Bitte wählen --</option>
+            </select>
+          </div>
+          <div id="tvExternKontaktDetails" class="detail-box" style="display: none;">
+            <p><strong>Name:</strong> <span id="tvExternName">–</span></p>
+            <p><strong>E-Mail:</strong> <span id="tvExternEmail">–</span></p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="tvBetreff">Betreff des Termins <span class="required">*</span></label>
+          <input type="text" id="tvBetreff" placeholder="z. B. Gespräch zur Entscheidung">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="tvDatum">Datum <span class="required">*</span></label>
+            <input type="date" id="tvDatum" required>
+          </div>
+          <div class="form-group">
+            <label for="tvUhrzeit">Uhrzeit</label>
+            <input type="time" id="tvUhrzeit">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="tvOrt">Ort <span class="required">*</span></label>
+          <input type="text" id="tvOrt" placeholder="z. B. Besprechungsraum Station 3">
+        </div>
+        <div class="form-group">
+          <label>Teams-Link (optional)</label>
+          <div class="teams-link-row">
+            <input type="url" id="tvTeamsLink" placeholder="https://teams.microsoft.com/..." readonly>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="setTvDummyTeamsLink()">Dummy-Teams-Link</button>
+          </div>
+        </div>
+        <input type="hidden" id="tvAntragId">
+        <input type="hidden" id="tvInsasseId">
+        <input type="hidden" id="tvInsasseName">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('terminVereinbarenModal')">Abbrechen</button>
+        <button type="button" class="btn btn-primary" onclick="sendeTerminEinladung()">Einladung absenden</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Antrag durch VAL übernehmen -->
   <div class="modal-overlay" id="hausleitungUebernahmeModal">
     <div class="modal">
@@ -1126,11 +1231,7 @@
     function renderMitarbeiterAntragFilterBar(containerId, listKey) {
       const container = document.getElementById(containerId);
       if (!container) return;
-      const active = mitarbeiterAntragFilter[listKey];
-      container.innerHTML = getAntragTypeFilterChips().map((chip) => `
-        <button type="button" class="antrag-filter-chip${chip.id === active ? ' active' : ''}"
-          onclick="setMitarbeiterAntragFilter('${listKey}', '${chip.id}')">${chip.titel}</button>
-      `).join('');
+      container.innerHTML = renderAntragFilterBarHtml(listKey, mitarbeiterAntragFilter[listKey], 'setMitarbeiterAntragFilter');
     }
 
     function setMitarbeiterAntragFilter(listKey, filterId) {
@@ -2087,6 +2188,20 @@
           <div class="info-content">
             <span class="info-icon"></span>
             <span>Als <strong>Revision</strong> sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Revision zugewiesen wurden (hausunabhängig)</span>
+          </div>
+        `;
+      } else if (currentSession.rolle === 'medizinischer-dienst') {
+        info.innerHTML = `
+          <div class="info-content">
+            <span class="info-icon"></span>
+            <span>Als <strong>Medizinischer Dienst</strong> sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Medizinischer Dienst zugewiesen wurden (anstaltsweit)</span>
+          </div>
+        `;
+      } else if (currentSession.rolle === 'psychologe') {
+        info.innerHTML = `
+          <div class="info-content">
+            <span class="info-icon"></span>
+            <span>Als <strong>Psychologe</strong> sehen Sie nur Anträge und Aufgaben, die Ihnen oder der Gruppe Psychologe zugewiesen wurden (anstaltsweit)</span>
           </div>
         `;
       } else if (currentSession.rolle === 'zahlstelle') {
@@ -3431,6 +3546,11 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
 ${t('task.create')}
                   </button>
                 ` : ''}
+                ${!aufgabeMussErstErledigtWerden && prozessStatus.bekanntgabe === 'aktiv' && istBearbeiter ? `
+                  <button class="btn btn-primary btn-large" onclick="openTerminVereinbarenModal('${antrag.id}')">
+                    Termin vereinbaren
+                  </button>
+                ` : ''}
                 ${!aufgabeMussErstErledigtWerden && antrag.entscheidungGetroffen && !antrag.erledigt && istBearbeiter ? `
                   <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
 ${t('task.create')}
@@ -3946,6 +4066,8 @@ ${t('action.archive')}
       // Kammer / Revision (hausunabhängig)
       select.innerHTML += `<option value="kammer|">Kammer</option>`;
       select.innerHTML += `<option value="revision|">Revision</option>`;
+      select.innerHTML += `<option value="medizinischer-dienst|">Medizinischer Dienst</option>`;
+      select.innerHTML += `<option value="psychologe|">Psychologe</option>`;
       select.innerHTML += `<option value="anstaltsleitung|">Anstaltsleitung</option>`;
       
       // Hausleitung als Option (pro Haus)
@@ -4002,12 +4124,10 @@ ${t('action.archive')}
       const parts = value.split('|');
       const gruppeTyp = parts[0];
       
-      if (gruppeTyp === 'kammer') {
-        document.getElementById('aufgabeGruppeTyp').value = 'kammer';
+      if (typeof istAnstaltsweiteSpezialGruppeTyp === 'function' && istAnstaltsweiteSpezialGruppeTyp(gruppeTyp)) {
+        document.getElementById('aufgabeGruppeTyp').value = gruppeTyp;
         document.getElementById('aufgabeGruppeHaus').value = '';
-      } else if (gruppeTyp === 'revision') {
-        document.getElementById('aufgabeGruppeTyp').value = 'revision';
-        document.getElementById('aufgabeGruppeHaus').value = '';
+        document.getElementById('aufgabeGruppeStation').value = '';
       } else if (gruppeTyp === 'anstaltsleitung') {
         document.getElementById('aufgabeGruppeTyp').value = 'anstaltsleitung';
         document.getElementById('aufgabeGruppeHaus').value = '';
@@ -4052,11 +4172,8 @@ ${t('action.archive')}
     function loadMitarbeiterFuerGruppe(gruppeTyp, hausKey, station) {
       let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter');
       
-      if (gruppeTyp === 'kammer') {
-        // Nur Kammer-Mitarbeiter (hausunabhängig)
-        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'kammer');
-      } else if (gruppeTyp === 'revision') {
-        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'revision');
+      if (typeof istAnstaltsweiteSpezialGruppeTyp === 'function' && istAnstaltsweiteSpezialGruppeTyp(gruppeTyp)) {
+        mitarbeiter = mitarbeiter.filter((m) => String(m.rolle || '').toLowerCase() === gruppeTyp);
       } else if (gruppeTyp === 'anstaltsleitung') {
         mitarbeiter = mitarbeiter.filter(m => m.rolle === 'anstaltsleitung');
       } else if (gruppeTyp === 'stationsleitung') {
@@ -4524,7 +4641,7 @@ ${t('action.archive')}
           }
           // Aufgabe geht an die Gruppe
           zugewiesenAnTyp = 'gruppe';
-          const hausFreiA = gruppeTyp === 'kammer' || gruppeTyp === 'revision' || gruppeTyp === 'anstaltsleitung' || gruppeTyp === 'zahlstelle' || gruppeTyp === 'arbeitskoordination';
+          const hausFreiA = typeof istAnstaltsweiteJvaGruppeTyp === 'function' && istAnstaltsweiteJvaGruppeTyp(gruppeTyp);
           zugewiesenAnGruppe = {
             typ: gruppeTyp,
             hausId: hausFreiA ? null : (gruppeHaus || null),
@@ -4539,10 +4656,8 @@ ${t('action.archive')}
           
           // Gruppennamen generieren
           const hausName = HAUS_CONFIG[gruppeHaus]?.name || gruppeHaus;
-          if (gruppeTyp === 'kammer') {
-            zugewiesenAnName = 'Kammer';
-          } else if (gruppeTyp === 'revision') {
-            zugewiesenAnName = 'Revision';
+          if (typeof istAnstaltsweiteJvaGruppeTyp === 'function' && istAnstaltsweiteJvaGruppeTyp(gruppeTyp)) {
+            zugewiesenAnName = typeof getJvaGruppeDisplayName === 'function' ? getJvaGruppeDisplayName(gruppeTyp) : gruppeTyp;
           } else if (gruppeTyp === 'anstaltsleitung') {
             zugewiesenAnName = 'Anstaltsleitung';
           } else if (gruppeTyp === 'stationsleitung') {
@@ -5048,6 +5163,8 @@ ${t('action.archive')}
       // Kammer / Revision (hausunabhängig)
       select.innerHTML += `<option value="kammer|">Kammer</option>`;
       select.innerHTML += `<option value="revision|">Revision</option>`;
+      select.innerHTML += `<option value="medizinischer-dienst|">Medizinischer Dienst</option>`;
+      select.innerHTML += `<option value="psychologe|">Psychologe</option>`;
       select.innerHTML += `<option value="anstaltsleitung|">Anstaltsleitung</option>`;
       
       // Hausleitung als Option (pro Haus)
@@ -5102,12 +5219,10 @@ ${t('action.archive')}
       const parts = value.split('|');
       const gruppeTyp = parts[0];
       
-      if (gruppeTyp === 'kammer') {
-        document.getElementById('weiterleitenGruppeTyp').value = 'kammer';
+      if (typeof istAnstaltsweiteSpezialGruppeTyp === 'function' && istAnstaltsweiteSpezialGruppeTyp(gruppeTyp)) {
+        document.getElementById('weiterleitenGruppeTyp').value = gruppeTyp;
         document.getElementById('weiterleitenGruppeHaus').value = '';
-      } else if (gruppeTyp === 'revision') {
-        document.getElementById('weiterleitenGruppeTyp').value = 'revision';
-        document.getElementById('weiterleitenGruppeHaus').value = '';
+        document.getElementById('weiterleitenGruppeStation').value = '';
       } else if (gruppeTyp === 'anstaltsleitung') {
         document.getElementById('weiterleitenGruppeTyp').value = 'anstaltsleitung';
         document.getElementById('weiterleitenGruppeHaus').value = '';
@@ -5170,11 +5285,8 @@ ${t('action.archive')}
     function loadWeiterleitenMitarbeiterFuerGruppe(gruppeTyp, hausKey, station) {
       let mitarbeiter = userSystem.users.filter(u => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
       
-      if (gruppeTyp === 'kammer') {
-        // Nur Kammer-Mitarbeiter (hausunabhängig)
-        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'kammer');
-      } else if (gruppeTyp === 'revision') {
-        mitarbeiter = mitarbeiter.filter(m => m.rolle === 'revision');
+      if (typeof istAnstaltsweiteSpezialGruppeTyp === 'function' && istAnstaltsweiteSpezialGruppeTyp(gruppeTyp)) {
+        mitarbeiter = mitarbeiter.filter((m) => String(m.rolle || '').toLowerCase() === gruppeTyp);
       } else if (gruppeTyp === 'anstaltsleitung') {
         mitarbeiter = mitarbeiter.filter(m => m.rolle === 'anstaltsleitung');
       } else if (gruppeTyp === 'stationsleitung') {
@@ -5396,7 +5508,7 @@ ${t('action.archive')}
             return;
           }
           
-          const hausFrei = gruppeTyp === 'kammer' || gruppeTyp === 'revision' || gruppeTyp === 'anstaltsleitung' || gruppeTyp === 'zahlstelle' || gruppeTyp === 'arbeitskoordination';
+          const hausFrei = typeof istAnstaltsweiteJvaGruppeTyp === 'function' && istAnstaltsweiteJvaGruppeTyp(gruppeTyp);
           const gruppe = {
             typ: gruppeTyp,
             hausId: hausFrei ? null : (gruppeHaus || null),
@@ -5406,10 +5518,8 @@ ${t('action.archive')}
           // Gruppennamen generieren
           const hausName = HAUS_CONFIG[gruppeHaus]?.name || gruppeHaus;
           let gruppeName;
-          if (gruppeTyp === 'kammer') {
-            gruppeName = 'Kammer';
-          } else if (gruppeTyp === 'revision') {
-            gruppeName = 'Revision';
+          if (typeof istAnstaltsweiteJvaGruppeTyp === 'function' && istAnstaltsweiteJvaGruppeTyp(gruppeTyp)) {
+            gruppeName = typeof getJvaGruppeDisplayName === 'function' ? getJvaGruppeDisplayName(gruppeTyp) : gruppeTyp;
           } else if (gruppeTyp === 'anstaltsleitung') {
             gruppeName = 'Anstaltsleitung';
           } else if (gruppeTyp === 'stationsleitung') {
@@ -6266,6 +6376,287 @@ ${t('action.archive')}
     }
 
     // ============================================
+    // TERMIN VEREINBAREN (Phase Bekanntgabe)
+    // ============================================
+
+    function openTerminVereinbarenModal(antragId) {
+      const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag) return;
+
+      document.getElementById('tvAntragId').value = antragId;
+      document.getElementById('tvInsasseId').value = antrag.insasseId || '';
+      document.getElementById('tvInsasseName').value = antrag.insasseName || 'Unbekannt';
+      document.getElementById('tvInsasseInfo').innerHTML = `
+        <p><strong>Insasse:</strong> ${antrag.insasseName || 'Unbekannt'}</p>
+        <p><strong>Antrag:</strong> ${antrag.antragsNummer || antrag.id} · ${antragSystem.getAntragTypLabel(antrag.type)}</p>
+      `;
+
+      document.querySelector('input[name="tvTeilnehmerArt"][value="intern"]').checked = true;
+      document.querySelector('input[name="tvZuweisungTyp"][value="gruppe"]').checked = true;
+      document.getElementById('tvBetreff').value = `Termin: ${antrag.insasseName || 'Insasse'} – ${antragSystem.getAntragTypLabel(antrag.type)}`;
+      document.getElementById('tvDatum').value = '';
+      document.getElementById('tvUhrzeit').value = '';
+      document.getElementById('tvOrt').value = '';
+      document.getElementById('tvTeamsLink').value = '';
+      document.getElementById('tvGruppeSelect').value = '';
+      document.getElementById('tvGruppeTyp').value = '';
+      document.getElementById('tvGruppeHaus').value = '';
+      document.getElementById('tvGruppeStation').value = '';
+      document.getElementById('tvPersonId').value = '';
+      document.getElementById('tvSelectedPersonDisplay').style.display = 'none';
+      document.getElementById('tvMitarbeiterSuche').value = '';
+      document.getElementById('tvExternKontakt').value = '';
+      document.getElementById('tvExternKontaktDetails').style.display = 'none';
+
+      loadTvGruppen();
+      loadTvExterneKontakte();
+      toggleTvTeilnehmerArt();
+      toggleTvZuweisungTyp();
+      openModal('terminVereinbarenModal');
+    }
+
+    function loadTvExterneKontakte() {
+      const select = document.getElementById('tvExternKontakt');
+      const kontakte = typeof EXTERNE_KONTAKTE !== 'undefined' ? EXTERNE_KONTAKTE : [];
+      select.innerHTML = '<option value="">-- Bitte wählen --</option>' +
+        kontakte.map((k) => `<option value="${k.id}">${k.label}</option>`).join('');
+    }
+
+    function onTvExternKontaktChange() {
+      const id = document.getElementById('tvExternKontakt').value;
+      const kontakt = (typeof EXTERNE_KONTAKTE !== 'undefined' ? EXTERNE_KONTAKTE : []).find((k) => k.id === id);
+      const box = document.getElementById('tvExternKontaktDetails');
+      if (!kontakt) {
+        box.style.display = 'none';
+        return;
+      }
+      document.getElementById('tvExternName').textContent = kontakt.name;
+      document.getElementById('tvExternEmail').textContent = kontakt.email;
+      box.style.display = 'block';
+    }
+
+    function toggleTvTeilnehmerArt() {
+      const art = document.querySelector('input[name="tvTeilnehmerArt"]:checked')?.value;
+      document.getElementById('tvInternBereich').style.display = art === 'intern' ? 'block' : 'none';
+      document.getElementById('tvExternBereich').style.display = art === 'extern' ? 'block' : 'none';
+    }
+
+    function toggleTvZuweisungTyp() {
+      const typ = document.querySelector('input[name="tvZuweisungTyp"]:checked')?.value;
+      document.getElementById('tvGruppeContainer').style.display = typ === 'gruppe' ? 'block' : 'none';
+      document.getElementById('tvPersonContainer').style.display = typ === 'person' ? 'block' : 'none';
+      if (typ === 'person') loadAlleMitarbeiterFuerTv();
+    }
+
+    function loadTvGruppen() {
+      const select = document.getElementById('tvGruppeSelect');
+      select.innerHTML = '<option value="">-- Bitte Gruppe wählen --</option>';
+      select.innerHTML += '<option value="kammer|">Kammer</option>';
+      select.innerHTML += '<option value="revision|">Revision</option>';
+      select.innerHTML += '<option value="medizinischer-dienst|">Medizinischer Dienst</option>';
+      select.innerHTML += '<option value="psychologe|">Psychologe</option>';
+      select.innerHTML += '<option value="anstaltsleitung|">Anstaltsleitung</option>';
+      Object.keys(HAUS_CONFIG).forEach((hausKey) => {
+        const hausName = HAUS_CONFIG[hausKey].name;
+        select.innerHTML += `<option value="hausleitung|${hausKey}">VAL ${hausName}</option>`;
+      });
+      Object.keys(HAUS_CONFIG).forEach((hausKey) => {
+        const haus = HAUS_CONFIG[hausKey];
+        haus.stationen.forEach((station) => {
+          select.innerHTML += `<option value="stationsleitung|${hausKey}|${station}">Stationsleitung ${haus.name} Station ${station}</option>`;
+        });
+      });
+      select.innerHTML += '<option value="zahlstelle|">Zahlstelle</option>';
+      select.innerHTML += '<option value="arbeitskoordination|">Arbeitskoordination</option>';
+      Object.keys(HAUS_CONFIG).forEach((hausKey) => {
+        const haus = HAUS_CONFIG[hausKey];
+        haus.stationen.forEach((station) => {
+          select.innerHTML += `<option value="station|${hausKey}|${station}">AVD ${haus.name} Station ${station}</option>`;
+        });
+      });
+    }
+
+    function onTvGruppeChange() {
+      const value = document.getElementById('tvGruppeSelect').value;
+      document.getElementById('tvGruppeTyp').value = '';
+      document.getElementById('tvGruppeHaus').value = '';
+      document.getElementById('tvGruppeStation').value = '';
+      if (!value) return;
+      const parts = value.split('|');
+      const gruppeTyp = parts[0];
+      if (typeof istAnstaltsweiteJvaGruppeTyp === 'function' && istAnstaltsweiteJvaGruppeTyp(gruppeTyp)) {
+        document.getElementById('tvGruppeTyp').value = gruppeTyp;
+        document.getElementById('tvGruppeHaus').value = '';
+        document.getElementById('tvGruppeStation').value = '';
+      } else if (gruppeTyp === 'stationsleitung' || gruppeTyp === 'station') {
+        document.getElementById('tvGruppeTyp').value = gruppeTyp;
+        document.getElementById('tvGruppeHaus').value = parts[1];
+        document.getElementById('tvGruppeStation').value = parts[2];
+      } else if (gruppeTyp === 'hausleitung') {
+        document.getElementById('tvGruppeTyp').value = gruppeTyp;
+        document.getElementById('tvGruppeHaus').value = parts[1];
+      }
+    }
+
+    function loadAlleMitarbeiterFuerTv() {
+      const alle = userSystem.users.filter((u) => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
+      alle.sort((a, b) => `${a.nachname} ${a.vorname}`.localeCompare(`${b.nachname} ${b.vorname}`, 'de'));
+      renderTvMitarbeiterListe(alle);
+    }
+
+    function filterTvMitarbeiterListe() {
+      const suchbegriff = document.getElementById('tvMitarbeiterSuche').value.toLowerCase().trim();
+      let mitarbeiter = userSystem.users.filter((u) => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
+      if (suchbegriff) {
+        mitarbeiter = mitarbeiter.filter((m) => {
+          const vollName = `${m.vorname} ${m.nachname}`.toLowerCase();
+          return vollName.includes(suchbegriff) || getRolleText(m.rolle).toLowerCase().includes(suchbegriff);
+        });
+      }
+      mitarbeiter.sort((a, b) => `${a.nachname} ${a.vorname}`.localeCompare(`${b.nachname} ${b.vorname}`, 'de'));
+      renderTvMitarbeiterListe(mitarbeiter);
+    }
+
+    function renderTvMitarbeiterListe(mitarbeiter) {
+      const liste = document.getElementById('tvMitarbeiterListe');
+      const selectedId = document.getElementById('tvPersonId').value;
+      if (mitarbeiter.length === 0) {
+        liste.innerHTML = '<div class="keine-ergebnisse">Keine Mitarbeiter gefunden</div>';
+        return;
+      }
+      liste.innerHTML = mitarbeiter.map((m) => {
+        const isSelected = String(m.id) === String(selectedId);
+        return `
+          <div class="mitarbeiter-item ${isSelected ? 'selected' : ''}" onclick="selectTvMitarbeiter('${m.id}', '${m.vorname} ${m.nachname}')">
+            <div class="mitarbeiter-item-name">${m.vorname} ${m.nachname}</div>
+            <div class="mitarbeiter-item-info">${getRolleText(m.rolle)}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function selectTvMitarbeiter(id, name) {
+      document.getElementById('tvPersonId').value = id;
+      document.getElementById('tvSelectedPersonName').textContent = name;
+      document.getElementById('tvSelectedPersonDisplay').style.display = 'flex';
+      filterTvMitarbeiterListe();
+    }
+
+    function clearTvSelectedPerson() {
+      document.getElementById('tvPersonId').value = '';
+      document.getElementById('tvSelectedPersonDisplay').style.display = 'none';
+      filterTvMitarbeiterListe();
+    }
+
+    function setTvDummyTeamsLink() {
+      document.getElementById('tvTeamsLink').value = 'https://teams.microsoft.com/l/meetup-join/19%3ameeting-prototyp-jvp/0?context={"Tid":"prototyp"}';
+    }
+
+    function buildTvGruppeObject() {
+      const typ = document.getElementById('tvGruppeTyp').value;
+      if (!typ) return null;
+      const gruppe = { typ };
+      const haus = document.getElementById('tvGruppeHaus').value;
+      const station = document.getElementById('tvGruppeStation').value;
+      if (haus) gruppe.hausId = haus;
+      if (station) gruppe.stationId = station;
+      return gruppe;
+    }
+
+    function sendeTerminEinladung() {
+      const antragId = document.getElementById('tvAntragId').value;
+      const insasseId = document.getElementById('tvInsasseId').value;
+      const insasseName = document.getElementById('tvInsasseName').value;
+      const teilnehmerArt = document.querySelector('input[name="tvTeilnehmerArt"]:checked')?.value;
+      const betreff = document.getElementById('tvBetreff').value.trim();
+      const datum = document.getElementById('tvDatum').value;
+      const uhrzeit = document.getElementById('tvUhrzeit').value;
+      const ort = document.getElementById('tvOrt').value.trim();
+      const teamsLink = document.getElementById('tvTeamsLink').value.trim();
+
+      if (!betreff) {
+        showAlert('Bitte geben Sie einen Betreff ein.');
+        return;
+      }
+      if (!datum) {
+        showAlert('Bitte wählen Sie ein Datum.');
+        return;
+      }
+      if (!ort) {
+        showAlert('Bitte geben Sie einen Ort an.');
+        return;
+      }
+
+      let zugewiesenAnTyp = null;
+      let zugewiesenAnId = null;
+      let zugewiesenAnName = null;
+      let zugewiesenAnGruppe = null;
+      let externKontaktId = null;
+
+      if (teilnehmerArt === 'intern') {
+        const zuweisungTyp = document.querySelector('input[name="tvZuweisungTyp"]:checked')?.value;
+        if (zuweisungTyp === 'person') {
+          zugewiesenAnId = document.getElementById('tvPersonId').value;
+          if (!zugewiesenAnId) {
+            showAlert('Bitte wählen Sie eine Person aus.');
+            return;
+          }
+          zugewiesenAnTyp = 'mitarbeiter';
+          zugewiesenAnName = document.getElementById('tvSelectedPersonName').textContent;
+        } else {
+          zugewiesenAnGruppe = buildTvGruppeObject();
+          if (!zugewiesenAnGruppe) {
+            showAlert('Bitte wählen Sie eine Gruppe aus.');
+            return;
+          }
+          zugewiesenAnTyp = 'gruppe';
+          zugewiesenAnName = document.getElementById('tvGruppeSelect').selectedOptions[0]?.text || 'Gruppe';
+        }
+      } else {
+        externKontaktId = document.getElementById('tvExternKontakt').value;
+        if (!externKontaktId) {
+          showAlert('Bitte wählen Sie einen externen Kontakt.');
+          return;
+        }
+      }
+
+      const result = vereinbareTerminAusAntrag({
+        antragId,
+        insasseId,
+        insasseName,
+        betreff,
+        datum,
+        uhrzeit: uhrzeit || null,
+        ort,
+        teamsLink: teamsLink || null,
+        teilnehmerArt,
+        externKontaktId,
+        zugewiesenAnTyp,
+        zugewiesenAnId,
+        zugewiesenAnName,
+        zugewiesenAnGruppe,
+        erstelltVonId: currentSession.userId,
+        erstelltVonName: currentSession.name
+      });
+
+      closeModal('terminVereinbarenModal');
+
+      const mailText = (result.emailEmpfaenger || [])
+        .map((e) => `• ${e.name} <${e.email}>`)
+        .join('\n');
+      const mailHinweis = mailText
+        ? `\n\nDummy-E-Mail versendet an:\n${mailText}`
+        : '\n\nKeine externe E-Mail (nur Portal-Benachrichtigungen).';
+
+      showAlert(
+        `Termin wurde vereinbart. Insasse und beteiligte Personen wurden benachrichtigt.${mailHinweis}`
+      );
+
+      renderKalender();
+      renderNotifications();
+      if (currentAntragId === antragId) openAntragDetail(antragId);
+    }
+
+    // ============================================
     // KALENDER-FUNKTIONEN
     // ============================================
     
@@ -6539,6 +6930,7 @@ ${t('action.archive')}
         case 'admin': return '#e5484d';
         case 'persoenlich': return '#3d8bfd';
         case 'aufgabe': return '#f0a500';
+        case 'vereinbarung': return '#0d9488';
         case 'haus': return '#2eb872';
         case 'station': return '#a187d1';
         default: return '#7c8da6';
@@ -6550,6 +6942,7 @@ ${t('action.archive')}
         case 'admin': return 'Allgemein';
         case 'persoenlich': return 'Persönlich';
         case 'aufgabe': return 'Aufgabe';
+        case 'vereinbarung': return 'Vereinbarung';
         case 'haus': return 'Haus';
         case 'station': return 'Station';
         default: return 'Termin';
@@ -6580,6 +6973,10 @@ ${t('action.archive')}
         <div class="termin-detail-body">
           <p><strong>${dateLabel}:</strong> ${formatDatum}</p>
           ${termin.uhrzeit ? `<p><strong>${timeLabel}:</strong> ${termin.uhrzeit}</p>` : `<p><strong>${timeLabel}:</strong> ${allDayText}</p>`}
+          ${termin.ort ? `<p><strong>Ort:</strong> ${termin.ort}</p>` : ''}
+          ${termin.teamsLink ? `<p><strong>Teams:</strong> <a href="${termin.teamsLink}" target="_blank" rel="noopener">Meeting-Link öffnen</a></p>` : ''}
+          ${termin.insasseName ? `<p><strong>Insasse:</strong> ${termin.insasseName}</p>` : ''}
+          ${termin.externKontakt ? `<p><strong>Extern:</strong> ${termin.externKontakt.label} (${termin.externKontakt.email})</p>` : ''}
           ${termin.beschreibung ? `<p><strong>${descLabel}:</strong> ${getTranslatedUserText(termin.beschreibung)}</p>` : ''}
           <p><strong>${createdByLabel}:</strong> ${termin.erstelltVonName}</p>
           ${termin.antragId ? `<p><strong>${forAppLabel}:</strong> <a href="#" onclick="closeModal('terminDetailModal'); openAntragDetail('${termin.antragId}'); return false;">${openAppText}</a></p>` : ''}

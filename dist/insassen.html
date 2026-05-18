@@ -113,6 +113,19 @@
           </button>
         </div>
 
+        <!-- Termine (vereinbarte Termine) -->
+        <section class="section kalender-section collapsed" id="insasseTermineSection" style="display: none;">
+          <div class="kalender-toggle-header" onclick="toggleInsasseTermine()">
+            <div class="kalender-toggle-left">
+              <span class="kalender-toggle-icon" id="insasseTermineToggleIcon">▶</span>
+              <h2>Meine Termine <span class="count" id="insasseTermineCount">0</span></h2>
+            </div>
+          </div>
+          <div class="kalender-collapsible-content" id="insasseTermineListe">
+            <!-- Dynamisch gefüllt -->
+          </div>
+        </section>
+
         <!-- Aufgaben-Bereich für Insassen -->
         <section class="section aufgaben-section" id="aufgabenSection" style="display: none;">
           <div class="section-header">
@@ -139,7 +152,7 @@
               <div class="section-header">
                 <h2>Eingereichte Anträge <span class="count" id="aktivCount">0</span></h2>
               </div>
-              <div class="antrag-filter-bar" id="aktivTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
+              <div class="antrag-filter-wrap" id="aktivTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
               <div class="antrag-list" id="aktivList">
                 <!-- Dynamisch gefüllt -->
               </div>
@@ -150,7 +163,7 @@
               <div class="section-header">
                 <h2>Abgeschlossene Anträge <span class="count" id="historieCount">0</span></h2>
               </div>
-              <div class="antrag-filter-bar" id="historieTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
+              <div class="antrag-filter-wrap" id="historieTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
               <div class="antrag-list" id="historieList">
                 <!-- Dynamisch gefüllt -->
               </div>
@@ -163,7 +176,7 @@
               <div class="section-header">
                 <h2>Entwürfe <span class="count" id="entwuerfeCount">0</span></h2>
               </div>
-              <div class="antrag-filter-bar" id="entwuerfeTypeFilterBar" aria-label="Entwürfe nach Thema filtern"></div>
+              <div class="antrag-filter-wrap" id="entwuerfeTypeFilterBar" aria-label="Entwürfe nach Thema filtern"></div>
               <div class="antrag-list" id="entwuerfeList">
                 <!-- Dynamisch gefüllt -->
               </div>
@@ -184,7 +197,7 @@
       <div class="modal-body">
         <div class="form-group">
           <label>Antragsart</label>
-          <div id="newAntragTypePicker" class="antrag-type-groups"></div>
+          <div id="newAntragTypePicker" class="antrag-type-picker"></div>
         </div>
 
         <!-- Teilhabegeld Felder -->
@@ -471,7 +484,7 @@
       <div class="modal-body">
         <div class="form-group">
           <label>Antragsart</label>
-          <div id="entwurfAntragTypePicker" class="antrag-type-groups"></div>
+          <div id="entwurfAntragTypePicker" class="antrag-type-picker"></div>
         </div>
 
         <!-- Teilhabegeld Felder -->
@@ -911,16 +924,13 @@
       const el = document.getElementById(containerId);
       if (!el) return;
       el.innerHTML = renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler);
+      initAntragTypePickerAccordion(containerId, inputName, onChangeHandler);
     }
 
     function renderAntragFilterBar(containerId, listKey) {
       const container = document.getElementById(containerId);
       if (!container) return;
-      const active = antragListeFilter[listKey];
-      container.innerHTML = getAntragTypeFilterChips().map((chip) => `
-        <button type="button" class="antrag-filter-chip${chip.id === active ? ' active' : ''}"
-          onclick="setAntragListeFilter('${listKey}', '${chip.id}')">${chip.titel}</button>
-      `).join('');
+      container.innerHTML = renderAntragFilterBarHtml(listKey, antragListeFilter[listKey], 'setAntragListeFilter');
     }
 
     function setAntragListeFilter(listKey, filterId) {
@@ -1200,6 +1210,67 @@
         section.classList.add('collapsed');
         icon.textContent = '▶';
       }
+    }
+
+    let insasseTermineExpanded = false;
+
+    function toggleInsasseTermine() {
+      const section = document.getElementById('insasseTermineSection');
+      const icon = document.getElementById('insasseTermineToggleIcon');
+      insasseTermineExpanded = !insasseTermineExpanded;
+      if (insasseTermineExpanded) {
+        section.classList.remove('collapsed');
+        section.classList.add('expanded');
+        icon.textContent = '▼';
+      } else {
+        section.classList.remove('expanded');
+        section.classList.add('collapsed');
+        icon.textContent = '▶';
+      }
+    }
+
+    function renderInsasseTermine() {
+      if (!currentSession || typeof terminSystem === 'undefined') return;
+      const section = document.getElementById('insasseTermineSection');
+      const liste = document.getElementById('insasseTermineListe');
+      const termine = terminSystem.getTermineFuerInsasse(currentSession.userId);
+      const jetzt = new Date();
+      jetzt.setHours(0, 0, 0, 0);
+      const kommende = termine.filter((t) => new Date(t.datum) >= jetzt);
+
+      document.getElementById('insasseTermineCount').textContent = kommende.length;
+
+      if (kommende.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+
+      section.style.display = 'block';
+      liste.innerHTML = kommende.map((t) => {
+        const d = new Date(t.datum);
+        const datumStr = d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+        const zeitStr = t.uhrzeit ? ` · ${t.uhrzeit} Uhr` : '';
+        const ortStr = t.ort ? `<p class="termin-meta"><strong>Ort:</strong> ${t.ort}</p>` : '';
+        const teamsStr = t.teamsLink
+          ? `<p class="termin-meta"><a href="${t.teamsLink}" target="_blank" rel="noopener">Teams-Meeting öffnen</a></p>`
+          : '';
+        const teilnehmerStr = t.teilnehmerArt === 'extern' && t.externKontakt
+          ? `<p class="termin-meta"><strong>Mit:</strong> ${t.externKontakt.label}</p>`
+          : t.zugewiesenAnName
+            ? `<p class="termin-meta"><strong>Mit:</strong> ${t.zugewiesenAnName}</p>`
+            : '';
+        return `
+          <div class="termin-item insasse-termin-item" style="border-left-color: #0d9488;">
+            <div class="termin-item-header">
+              <span class="termin-typ-badge" style="background: #0d9488;">Termin</span>
+              <strong>${t.betreff || t.titel}</strong>
+            </div>
+            <p class="termin-meta">${datumStr}${zeitStr}</p>
+            ${ortStr}
+            ${teilnehmerStr}
+            ${teamsStr}
+          </div>`;
+      }).join('');
     }
     
     function renderNotifications() {
@@ -2832,6 +2903,7 @@
       renderAntragFilterBar('entwuerfeTypeFilterBar', 'entwuerfe');
       renderAntragFilterBar('aktivTypeFilterBar', 'aktiv');
       renderAntragFilterBar('historieTypeFilterBar', 'historie');
+      renderInsasseTermine();
 
       const entwuerfeGefiltert = filterAntraegeByThema(entwuerfe, 'entwuerfe');
       const aktiveGefiltert = filterAntraegeByThema(aktiveAntraege, 'aktiv');
