@@ -190,6 +190,10 @@
               <input type="radio" name="antragType" value="eigentum" onchange="toggleAntragFields()">
               <span class="radio-label">Eigentum in der Kammer</span>
             </label>
+            <label class="radio-option">
+              <input type="radio" name="antragType" value="beratung-unterstuetzung" onchange="toggleAntragFields()">
+              <span class="radio-label">Beratungs- und Unterstützungsleistungen</span>
+            </label>
           </div>
         </div>
 
@@ -263,6 +267,19 @@
             <p class="field-hint">Eine Begründung ist für diesen Antrag erforderlich.</p>
           </div>
         </div>
+
+        <!-- Beratungs- und Unterstützungsleistungen -->
+        <div id="beratungUnterstuetzungFields" style="display: none;">
+          <div class="form-group">
+            <label for="beratungLeistungsart">Gewünschte Beratungs- und Unterstützungsleistungen <span class="required">*</span></label>
+            <textarea id="beratungLeistungsart" rows="3" placeholder="z. B. Suchtberatung, Entlassungsvorbereitung, psychosoziale Unterstützung..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="beratungBegruendung">Begründung <span class="required">*</span></label>
+            <textarea id="beratungBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
+            <p class="field-hint">Art der Leistungen und Begründung sind für die Einreichung erforderlich.</p>
+          </div>
+        </div>
       </div>
       <div class="modal-footer modal-footer-triple">
         <button class="btn btn-secondary" onclick="closeModal('newAntragModal')">Abbrechen</button>
@@ -290,6 +307,10 @@
             <label class="radio-option">
               <input type="radio" name="entwurfType" value="eigentum" onchange="toggleEntwurfFields()">
               <span class="radio-label">Eigentum in der Kammer</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="entwurfType" value="beratung-unterstuetzung" onchange="toggleEntwurfFields()">
+              <span class="radio-label">Beratungs- und Unterstützungsleistungen</span>
             </label>
           </div>
         </div>
@@ -362,6 +383,19 @@
             <label for="entwurfEigentumBegruendung">Begründung <span class="required">*</span></label>
             <textarea id="entwurfEigentumBegruendung" placeholder="Bitte begründen Sie Ihren Antrag..." rows="3" required></textarea>
             <p class="field-hint">Eine Begründung ist für diesen Antrag erforderlich.</p>
+          </div>
+        </div>
+
+        <!-- Beratungs- und Unterstützungsleistungen -->
+        <div id="entwurfBeratungUnterstuetzungFields" style="display: none;">
+          <div class="form-group">
+            <label for="entwurfBeratungLeistungsart">Gewünschte Beratungs- und Unterstützungsleistungen <span class="required">*</span></label>
+            <textarea id="entwurfBeratungLeistungsart" rows="3" placeholder="z. B. Suchtberatung, Entlassungsvorbereitung, psychosoziale Unterstützung..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="entwurfBeratungBegruendung">Begründung <span class="required">*</span></label>
+            <textarea id="entwurfBeratungBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
+            <p class="field-hint">Art der Leistungen und Begründung sind für die Einreichung erforderlich.</p>
           </div>
         </div>
 
@@ -514,6 +548,7 @@
       const typeMap = {
         'teilhabegeld': 'Teilhabegeld',
         'eigentum': 'Eigentum in der Kammer',
+        'beratung-unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
         'sonstiges': 'Sonstiges'
       };
       return typeMap[type] || type;
@@ -892,12 +927,40 @@
       const type = document.querySelector('input[name="antragType"]:checked').value;
       document.getElementById('teilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
       document.getElementById('eigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
+      document.getElementById('beratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
     }
 
     function toggleEntwurfFields() {
       const type = document.querySelector('input[name="entwurfType"]:checked').value;
       document.getElementById('entwurfTeilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
       document.getElementById('entwurfEigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
+      document.getElementById('entwurfBeratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
+    }
+
+    function readBeratungUnterstuetzungForm(prefix) {
+      const leistungsArtEl = document.getElementById(prefix ? 'entwurfBeratungLeistungsart' : 'beratungLeistungsart');
+      const begruendungEl = document.getElementById(prefix ? 'entwurfBeratungBegruendung' : 'beratungBegruendung');
+      return {
+        leistungsArt: leistungsArtEl ? leistungsArtEl.value.trim() : '',
+        antragBegruendung: begruendungEl ? begruendungEl.value.trim() : ''
+      };
+    }
+
+    function validateBeratungUnterstuetzungData(data) {
+      if (!data.leistungsArt) {
+        return { valid: false, error: 'Bitte geben Sie die gewünschte Art der Beratungs- und Unterstützungsleistungen an.' };
+      }
+      if (!data.antragBegruendung) {
+        return { valid: false, error: 'Bitte geben Sie eine Begründung für Ihren Antrag an.' };
+      }
+      return { valid: true, error: null };
+    }
+
+    function resetBeratungUnterstuetzungForm(prefix) {
+      const leistungsArtEl = document.getElementById(prefix ? 'entwurfBeratungLeistungsart' : 'beratungLeistungsart');
+      const begruendungEl = document.getElementById(prefix ? 'entwurfBeratungBegruendung' : 'beratungBegruendung');
+      if (leistungsArtEl) leistungsArtEl.value = '';
+      if (begruendungEl) begruendungEl.value = '';
     }
 
     function teilhabegeldEinkommenIds(prefix) {
@@ -1023,7 +1086,11 @@
         }
         const einkommen = readTeilhabegeldEinkommen('');
         return { type, data: { monat, ...einkommen }, valid: true, error: null };
-      } else {
+      } else if (type === 'beratung-unterstuetzung') {
+        const data = readBeratungUnterstuetzungForm('');
+        const check = validateBeratungUnterstuetzungData(data);
+        return { type, data, valid: check.valid, error: check.error };
+      } else if (type === 'eigentum') {
         const aktion = document.querySelector('input[name="eigentumAktion"]:checked').value;
         const kleidungCheckboxes = document.querySelectorAll('input[name="kleidung"]:checked');
         const kleidung = Array.from(kleidungCheckboxes).map(cb => cb.value);
@@ -1038,6 +1105,7 @@
         }
         return { type, data: { aktion, kleidung, antragBegruendung }, valid: true, error: null };
       }
+      return { type, data: {}, valid: false, error: 'Unbekannter Antragstyp.' };
     }
 
     async function submitNewAntrag() {
@@ -1210,6 +1278,7 @@
       populateMonatSelect('monatSelect');
       document.getElementById('monatSelect').value = '';
       resetTeilhabegeldEinkommenForm('');
+      resetBeratungUnterstuetzungForm('');
       document.querySelectorAll('input[name="kleidung"]').forEach(cb => cb.checked = false);
       document.getElementById('eigentumBegruendung').value = '';
       document.querySelector('input[name="antragType"][value="teilhabegeld"]').checked = true;
@@ -1235,7 +1304,10 @@
       if (entwurf.type === 'teilhabegeld') {
         document.getElementById('entwurfMonatSelect').value = istErlaubterMonat(entwurf.monat || '') ? (entwurf.monat || '') : '';
         setTeilhabegeldEinkommenForm('entwurf', entwurf);
-      } else {
+      } else if (entwurf.type === 'beratung-unterstuetzung') {
+        document.getElementById('entwurfBeratungLeistungsart').value = entwurf.leistungsArt || '';
+        document.getElementById('entwurfBeratungBegruendung').value = entwurf.antragBegruendung || '';
+      } else if (entwurf.type === 'eigentum') {
         if (entwurf.aktion) {
           document.querySelector(`input[name="entwurfEigentumAktion"][value="${entwurf.aktion}"]`).checked = true;
         }
@@ -1274,7 +1346,11 @@
         }
         const einkommen = readTeilhabegeldEinkommen('entwurf');
         return { type, monat, ...einkommen, valid: true, error: null };
-      } else {
+      } else if (type === 'beratung-unterstuetzung') {
+        const data = readBeratungUnterstuetzungForm('entwurf');
+        const check = validateBeratungUnterstuetzungData(data);
+        return { type, ...data, valid: check.valid, error: check.error };
+      } else if (type === 'eigentum') {
         const aktionRadio = document.querySelector('input[name="entwurfEigentumAktion"]:checked');
         const aktion = aktionRadio ? aktionRadio.value : 'aufstocken';
         const kleidungCheckboxes = document.querySelectorAll('input[name="entwurfKleidung"]:checked');
@@ -1289,6 +1365,7 @@
         }
         return { type, aktion, kleidung, antragBegruendung, valid: true, error: null };
       }
+      return { type, valid: false, error: 'Unbekannter Antragstyp.' };
     }
 
     function updateEntwurf() {
@@ -1388,6 +1465,16 @@
             <p class="incomplete"><em>Keine Kleidungsstücke ausgewählt</em></p>
           `;
         }
+      } else if (antrag.type === 'beratung-unterstuetzung') {
+        typeLabel = 'Beratungs- und Unterstützungsleistungen';
+        const leistungsText = antrag.leistungsArt || '';
+        const begruendungText = antrag.antragBegruendung
+          ? (typeof antrag.antragBegruendung === 'object' ? (antrag.antragBegruendung.text || '') : antrag.antragBegruendung)
+          : '';
+        detailsHtml = `
+          ${leistungsText ? `<p><strong>Leistungen:</strong> ${leistungsText}</p>` : '<p class="incomplete"><em>Leistungen noch nicht angegeben</em></p>'}
+          ${begruendungText ? `<p><strong>Begründung:</strong> ${begruendungText}</p>` : '<p class="incomplete"><em>Begründung noch nicht angegeben</em></p>'}
+        `;
       } else {
         // Unbekannter Typ - trotzdem anzeigen
         typeLabel = antrag.type || 'Antrag';

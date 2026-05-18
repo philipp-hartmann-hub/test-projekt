@@ -1070,6 +1070,7 @@
       const typeMap = {
         'teilhabegeld': t('application.type.teilhabegeld'),
         'eigentum': t('application.type.eigentum'),
+        'beratung-unterstuetzung': t('application.type.beratung_unterstuetzung'),
         'sonstiges': t('application.type.sonstiges')
       };
       return typeMap[type] || type;
@@ -1083,7 +1084,11 @@
       
       switch (typ) {
         case 'erstellt':
-          const appType = aktivitaet.beschreibung.includes('Teilhabegeld') ? t('apptype.teilhabegeld') : t('apptype.eigentum');
+          const appType = aktivitaet.beschreibung.includes('Teilhabegeld')
+            ? t('apptype.teilhabegeld')
+            : aktivitaet.beschreibung.includes('Beratungs')
+              ? t('apptype.beratung_unterstuetzung')
+              : t('apptype.eigentum');
           const fromDraft = aktivitaet.beschreibung.includes('Entwurf') 
             ? (currentLanguage === 'en' ? ' (from draft)' : currentLanguage === 'fr' ? ' (depuis brouillon)' : ' (aus Entwurf)')
             : '';
@@ -2079,6 +2084,12 @@
           <p><strong>Aktion:</strong> ${aktionText}</p>
           <p><strong>Kleidung:</strong> ${antrag.kleidung.join(', ')}</p>
         `;
+      } else if (antrag.type === 'beratung-unterstuetzung') {
+        typeLabel = t('application.type.beratung_unterstuetzung');
+        detailsHtml = `
+          <p><strong>Leistungen:</strong> ${antrag.leistungsArt || '–'}</p>
+          ${antrag.antragBegruendung ? `<p><strong>Begründung:</strong> ${getTranslatedUserText(antrag.antragBegruendung)}</p>` : ''}
+        `;
       }
       
       // Antrags-Nummer anzeigen
@@ -2590,6 +2601,40 @@ Persönlich eröffnet
           <div class="detail-box verfuegungsvorschlag-box">
             <h4>${verfuegungTitel}</h4>
             <p class="verfuegungsreihenfolge">${verfuegungKette}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
+          </div>
+        `;
+      } else if (antrag.type === 'beratung-unterstuetzung') {
+        const verfuegungTitel =
+          currentLanguage === 'en'
+            ? 'Suggested procedure sequence (reference Ist process)'
+            : currentLanguage === 'fr'
+              ? 'Suggestion de séquence (processus cible)'
+              : 'Verfügungsvorschlag';
+        const verfuegungHinweis =
+          currentLanguage === 'en'
+            ? 'This is a suggestion only; it does not replace a professional decision.'
+            : currentLanguage === 'fr'
+              ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle."
+              : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
+        const verfuegungKetteBeratung = 'AVD → VAL → jeweiliger Ansprechpartner';
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>${t('application.type.beratung_unterstuetzung')}</h4>
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Requested services' : currentLanguage === 'fr' ? 'Prestations demandées' : 'Gewünschte Leistungen'}:</span>
+              <span class="detail-value">${getTranslatedUserText(antrag.leistungsArt)}</span>
+            </div>
+            ${antrag.antragBegruendung ? `
+              <div class="detail-row">
+                <span class="detail-label">${t('application.justification')}:</span>
+                <span class="detail-value">${getTranslatedUserText(antrag.antragBegruendung)}</span>
+              </div>
+            ` : ''}
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitel}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKetteBeratung}</p>
             <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
           </div>
         `;
@@ -3341,6 +3386,8 @@ ${t('action.archive')}
           : (currentLanguage === 'en' ? 'Exchange' : currentLanguage === 'fr' ? 'Échange' : 'Tausch');
         const eigentumsText = currentLanguage === 'en' ? 'of property in storage' : currentLanguage === 'fr' ? 'd\'articles personnels' : 'von Eigentum in der Kammer';
         anliegenText = `${aktionText} ${eigentumsText} (${antrag.kleidung.join(', ')})`;
+      } else if (antrag.type === 'beratung-unterstuetzung') {
+        anliegenText = `${t('notice.applicationFor')} ${t('application.type.beratung_unterstuetzung')}: ${getTranslatedUserText(antrag.leistungsArt)}`;
       }
       
       // Entscheidungstext (übersetzt)
@@ -5104,6 +5151,15 @@ ${t('action.archive')}
         doc.text(`Aktion: ${aktionText}`, 25, yPos + 7);
         doc.text(`Kleidung: ${antrag.kleidung.join(', ')}`, 25, yPos + 14);
         yPos += 27;
+      } else if (antrag.type === 'beratung-unterstuetzung') {
+        doc.text('Art: Beratungs- und Unterstützungsleistungen', 25, yPos);
+        doc.text(`Leistungen: ${antrag.leistungsArt || '–'}`, 25, yPos + 7);
+        if (antrag.antragBegruendung) {
+          doc.text(`Begründung: ${getTranslatedUserText(antrag.antragBegruendung)}`, 25, yPos + 14);
+          yPos += 21;
+        } else {
+          yPos += 14;
+        }
       }
       
       // Sachliche/fachliche Prüfung (wenn erfolgt)
@@ -5493,7 +5549,7 @@ ${t('action.archive')}
           <div class="detail-box" style="margin-bottom: 1rem;">
             <p><strong>Antrag:</strong> ${antrag.antragsNummer || antrag.id}</p>
             <p><strong>Antragsteller:</strong> ${antrag.insasseName || 'Unbekannt'}</p>
-            <p><strong>Antragstyp:</strong> ${antrag.type === 'teilhabegeld' ? 'Teilhabegeld' : antrag.type === 'eigentum' ? 'Eigentum in der Kammer' : 'Sonstiges'}</p>
+            <p><strong>Antragstyp:</strong> ${antragSystem.getAntragTypLabel(antrag.type)}</p>
             ${bearbeiterInfo}
           </div>
         `;

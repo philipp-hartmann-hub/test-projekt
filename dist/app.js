@@ -83,6 +83,7 @@ const TRANSLATIONS = {
     // Antragstypen
     'application.type.teilhabegeld': 'Teilhabegeld',
     'application.type.eigentum': 'Eigentum aus der Kammer',
+    'application.type.beratung_unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
     'application.type.sonstiges': 'Sonstiges Anliegen',
     
     // Status
@@ -239,6 +240,7 @@ const TRANSLATIONS = {
     // Antragstypen (für Aktivitäten)
     'apptype.teilhabegeld': 'Teilhabegeld',
     'apptype.eigentum': 'Eigentum in der Kammer',
+    'apptype.beratung_unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
     
     // Prozesskette
     'process.receipt': 'Eingang',
@@ -374,6 +376,7 @@ const TRANSLATIONS = {
     // Application types
     'application.type.teilhabegeld': 'Participation Allowance',
     'application.type.eigentum': 'Property from Storage',
+    'application.type.beratung_unterstuetzung': 'Counselling and support services',
     'application.type.sonstiges': 'Other Concerns',
     
     // Status
@@ -547,6 +550,7 @@ const TRANSLATIONS = {
     // Application types (for activities)
     'apptype.teilhabegeld': 'Participation allowance',
     'apptype.eigentum': 'Property from storage',
+    'apptype.beratung_unterstuetzung': 'Counselling and support services',
     
     // Sorting
     'sort.label': 'Sort',
@@ -657,6 +661,7 @@ const TRANSLATIONS = {
     // Types de demande
     'application.type.teilhabegeld': 'Allocation de participation',
     'application.type.eigentum': 'Propriété du dépôt',
+    'application.type.beratung_unterstuetzung': 'Services de conseil et de soutien',
     'application.type.sonstiges': 'Autres préoccupations',
     
     // Statut
@@ -830,6 +835,7 @@ const TRANSLATIONS = {
     // Types de demande (pour les activités)
     'apptype.teilhabegeld': 'Allocation de participation',
     'apptype.eigentum': 'Biens du dépôt',
+    'apptype.beratung_unterstuetzung': 'Services de conseil et de soutien',
     
     // Tri
     'sort.label': 'Trier',
@@ -2663,6 +2669,15 @@ class AntragSystem {
     );
   }
 
+  getAntragTypLabel(type) {
+    const labels = {
+      teilhabegeld: 'Teilhabegeld',
+      eigentum: 'Eigentum in der Kammer',
+      'beratung-unterstuetzung': 'Beratungs- und Unterstützungsleistungen'
+    };
+    return labels[type] || 'Antrag';
+  }
+
   // Antrag erstellen (mit Insassen-Daten)
   createAntrag(type, data, insasse, alsEntwurf = false) {
     // Insassen-Daten aus dem User-System holen
@@ -2694,7 +2709,7 @@ class AntragSystem {
     
     // Aktivität protokollieren
     if (!alsEntwurf) {
-      const typeText = type === 'teilhabegeld' ? 'Teilhabegeld' : 'Eigentum in der Kammer';
+      const typeText = this.getAntragTypLabel(type);
       aktivitaetenSystem.logAktivitaet({
         antragId: antrag.id,
         typ: 'erstellt',
@@ -2728,7 +2743,7 @@ class AntragSystem {
       this.saveAntraege();
       
       // Aktivität protokollieren
-      const typeText = antrag.type === 'teilhabegeld' ? 'Teilhabegeld' : 'Eigentum in der Kammer';
+      const typeText = this.getAntragTypLabel(antrag.type);
       aktivitaetenSystem.logAktivitaet({
         antragId: id,
         typ: 'erstellt',
@@ -3206,7 +3221,7 @@ class AntragSystem {
       });
 
       // Benachrichtigung für den Insassen erstellen
-      const antragsTyp = antrag.type === 'teilhabegeld' ? 'Teilhabegeld' : 'Eigentum in der Kammer';
+      const antragsTyp = this.getAntragTypLabel(antrag.type);
       let title, message;
       // Begründung als Text extrahieren (kann Objekt oder String sein)
       const begruendungText = begruendung ? (typeof begruendung === 'object' ? getTranslatedUserText(begruendung) : begruendung) : '';
@@ -3265,7 +3280,7 @@ class AntragSystem {
       });
 
       // Benachrichtigung für den Insassen erstellen (mit Vollzugs-Kommentar)
-      const antragsTyp = antrag.type === 'teilhabegeld' ? 'Teilhabegeld' : 'Eigentum in der Kammer';
+      const antragsTyp = this.getAntragTypLabel(antrag.type);
       let title, message;
       
       if (status === 'genehmigt') {
@@ -3363,7 +3378,7 @@ class AntragSystem {
       this.saveAntraege();
       
       // Benachrichtigung für den Insassen erstellen
-      const antragsTyp = antrag.type === 'teilhabegeld' ? 'Teilhabegeld' : 'Eigentum in der Kammer';
+      const antragsTyp = this.getAntragTypLabel(antrag.type);
       let title, message;
       
       if (status === 'genehmigt') {
