@@ -4798,3 +4798,72 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   display: flex;
   gap: 0.5rem;
 }
+
+/* Antragstypen: Themengruppen & Listenfilter */
+.antrag-type-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.antrag-type-group {
+  margin: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+}
+
+.antrag-type-group legend {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  padding: 0 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.antrag-type-group .radio-group {
+  gap: 0.4rem;
+}
+
+.antrag-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.antrag-filter-chip {
+  padding: 0.35rem 0.85rem;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.antrag-filter-chip:hover {
+  border-color: var(--accent-primary);
+}
+
+.antrag-filter-chip.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #fff;
+}
+
+.antrag-card-thema {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}

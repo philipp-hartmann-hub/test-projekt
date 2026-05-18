@@ -4307,6 +4307,72 @@ class AntragSystem {
 }
 
 // Globale Instanz
+/** Themengruppen für Antragsauswahl und Listenfilter (Insassen- und Mitarbeiterportal) */
+const ANTRAG_TYPE_GRUPPEN = [
+  {
+    id: 'finanzen-unterbringung',
+    titel: 'Finanzen & Unterbringung',
+    typen: ['teilhabegeld', 'eigentum']
+  },
+  {
+    id: 'beratung-gesundheit',
+    titel: 'Beratung, Gespräche & Gesundheit',
+    typen: ['beratung-unterstuetzung', 'gespraechstermin', 'gesundheit-medizin']
+  },
+  {
+    id: 'freizeit',
+    titel: 'Freizeit & Weiterbildung',
+    typen: ['freizeit-weiterbildung']
+  },
+  {
+    id: 'besuche',
+    titel: 'Besuche',
+    typen: ['besuch-langzeit', 'besuch-termin', 'besuch-video']
+  }
+];
+
+function getAntragTypeGruppeId(type) {
+  const gruppe = ANTRAG_TYPE_GRUPPEN.find((g) => g.typen.includes(type));
+  return gruppe ? gruppe.id : 'sonstiges';
+}
+
+function getAntragThemaLabel(type) {
+  const gruppe = ANTRAG_TYPE_GRUPPEN.find((g) => g.typen.includes(type));
+  return gruppe ? gruppe.titel : 'Sonstiges';
+}
+
+function antragTypPasstZuFilter(type, filterId) {
+  if (!filterId || filterId === 'alle') return true;
+  const gruppe = ANTRAG_TYPE_GRUPPEN.find((g) => g.id === filterId);
+  return gruppe ? gruppe.typen.includes(type) : true;
+}
+
+function getAntragTypeFilterChips() {
+  return [
+    { id: 'alle', titel: 'Alle' },
+    ...ANTRAG_TYPE_GRUPPEN.map((g) => ({ id: g.id, titel: g.titel }))
+  ];
+}
+
+function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
+  const selected = selectedValue || 'teilhabegeld';
+  const onChange = onChangeHandler ? ` onchange="${onChangeHandler}()"` : '';
+  return ANTRAG_TYPE_GRUPPEN.map((gruppe) => {
+    const options = gruppe.typen.map((type) => {
+      const label = antragSystem.getAntragTypLabel(type);
+      const checked = type === selected ? ' checked' : '';
+      return `<label class="radio-option">
+          <input type="radio" name="${inputName}" value="${type}"${checked}${onChange}>
+          <span class="radio-label">${label}</span>
+        </label>`;
+    }).join('');
+    return `<fieldset class="antrag-type-group">
+        <legend>${gruppe.titel}</legend>
+        <motion class="radio-group">${options}</motion>
+      </fieldset>`;
+  }).join('').replace(/motion/g, 'div');
+}
+
 const antragSystem = new AntragSystem();
 
 // Nachladen aus localStorage (wird von data-sync.js nach Server-Sync aufgerufen)

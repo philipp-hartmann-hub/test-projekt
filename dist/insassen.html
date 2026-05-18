@@ -139,6 +139,7 @@
               <div class="section-header">
                 <h2>Eingereichte Anträge <span class="count" id="aktivCount">0</span></h2>
               </div>
+              <div class="antrag-filter-bar" id="aktivTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
               <div class="antrag-list" id="aktivList">
                 <!-- Dynamisch gefüllt -->
               </div>
@@ -149,6 +150,7 @@
               <div class="section-header">
                 <h2>Abgeschlossene Anträge <span class="count" id="historieCount">0</span></h2>
               </div>
+              <div class="antrag-filter-bar" id="historieTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
               <div class="antrag-list" id="historieList">
                 <!-- Dynamisch gefüllt -->
               </div>
@@ -161,6 +163,7 @@
               <div class="section-header">
                 <h2>Entwürfe <span class="count" id="entwuerfeCount">0</span></h2>
               </div>
+              <div class="antrag-filter-bar" id="entwuerfeTypeFilterBar" aria-label="Entwürfe nach Thema filtern"></div>
               <div class="antrag-list" id="entwuerfeList">
                 <!-- Dynamisch gefüllt -->
               </div>
@@ -181,44 +184,7 @@
       <div class="modal-body">
         <div class="form-group">
           <label>Antragsart</label>
-          <div class="radio-group">
-            <label class="radio-option">
-              <input type="radio" name="antragType" value="teilhabegeld" checked onchange="toggleAntragFields()">
-              <span class="radio-label">Teilhabegeld</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="antragType" value="eigentum" onchange="toggleAntragFields()">
-              <span class="radio-label">Eigentum in der Kammer</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="antragType" value="beratung-unterstuetzung" onchange="toggleAntragFields()">
-              <span class="radio-label">Beratungs- und Unterstützungsleistungen</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="antragType" value="gespraechstermin" onchange="toggleAntragFields()">
-              <span class="radio-label">Gesprächstermine</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="antragType" value="gesundheit-medizin" onchange="toggleAntragFields()">
-              <span class="radio-label">Gesundheit: Termin medizinischer Dienst</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="antragType" value="freizeit-weiterbildung" onchange="toggleAntragFields()">
-              <span class="radio-label">Freizeitaktivitäten inkl. Weiterbildungskosten</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="antragType" value="besuch-langzeit" onchange="toggleAntragFields()">
-              <span class="radio-label">Langzeitbesuch (Genehmigung)</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="antragType" value="besuch-termin" onchange="toggleAntragFields()">
-              <span class="radio-label">Besuchstermin</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="antragType" value="besuch-video" onchange="toggleAntragFields()">
-              <span class="radio-label">Videobesuch</span>
-            </label>
-          </div>
+          <div id="newAntragTypePicker" class="antrag-type-groups"></div>
         </div>
 
         <!-- Teilhabegeld Felder -->
@@ -367,19 +333,38 @@
             <p class="field-hint">Der Tag muss im aktuellen oder im folgenden Monat liegen.</p>
           </div>
           <div class="form-group">
-            <label for="langzeitBesuchUhrzeit">Uhrzeit <span class="required">*</span></label>
-            <select id="langzeitBesuchUhrzeit">
-              <option value="">Bitte Uhrzeit wählen...</option>
-              <option value="09:00">09:00</option>
-              <option value="10:00">10:00</option>
-              <option value="11:00">11:00</option>
-              <option value="12:00">12:00</option>
-              <option value="13:00">13:00</option>
-              <option value="14:00">14:00</option>
-              <option value="15:00">15:00</option>
-              <option value="16:00">16:00</option>
-            </select>
-            <p class="field-hint">Mögliche Besuchszeiten: 9 bis 16 Uhr.</p>
+            <label>Besuchszeit <span class="required">*</span></label>
+            <div class="langzeit-uhrzeit-row" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+              <div>
+                <label for="langzeitBesuchUhrzeitVon" class="field-hint" style="display: block;">von</label>
+                <select id="langzeitBesuchUhrzeitVon">
+                  <option value="">Bitte wählen...</option>
+                  <option value="09:00">09:00</option>
+                  <option value="10:00">10:00</option>
+                  <option value="11:00">11:00</option>
+                  <option value="12:00">12:00</option>
+                  <option value="13:00">13:00</option>
+                  <option value="14:00">14:00</option>
+                  <option value="15:00">15:00</option>
+                  <option value="16:00">16:00</option>
+                </select>
+              </div>
+              <div>
+                <label for="langzeitBesuchUhrzeitBis" class="field-hint" style="display: block;">bis</label>
+                <select id="langzeitBesuchUhrzeitBis">
+                  <option value="">Bitte wählen...</option>
+                  <option value="09:00">09:00</option>
+                  <option value="10:00">10:00</option>
+                  <option value="11:00">11:00</option>
+                  <option value="12:00">12:00</option>
+                  <option value="13:00">13:00</option>
+                  <option value="14:00">14:00</option>
+                  <option value="15:00">15:00</option>
+                  <option value="16:00">16:00</option>
+                </select>
+              </div>
+            </div>
+            <p class="field-hint">Mögliche Besuchszeiten: 9 bis 16 Uhr. Die Endzeit muss nach der Startzeit liegen.</p>
           </div>
           <div class="form-group">
             <h4 class="subsection-title">Mittagessen – Insasse</h4>
@@ -407,8 +392,9 @@
             <input type="date" id="besuchTerminGeburtsdatum">
           </div>
           <div class="form-group">
-            <label for="besuchTerminKinder">Mitkommende Kinder</label>
-            <textarea id="besuchTerminKinder" rows="2" placeholder="Name und Alter der mitkommenden Kinder (falls zutreffend)"></textarea>
+            <label for="besuchTerminKinderAnzahl">Anzahl mitkommender Kinder</label>
+            <input type="number" id="besuchTerminKinderAnzahl" min="0" max="20" step="1" placeholder="0">
+            <p class="field-hint">Optional – nur die Anzahl der mitkommenden Kinder angeben.</p>
           </div>
           <div class="form-group">
             <label for="besuchTerminWunsch">Terminwunsch <span class="required">*</span></label>
@@ -485,44 +471,7 @@
       <div class="modal-body">
         <div class="form-group">
           <label>Antragsart</label>
-          <div class="radio-group">
-            <label class="radio-option">
-              <input type="radio" name="entwurfType" value="teilhabegeld" onchange="toggleEntwurfFields()">
-              <span class="radio-label">Teilhabegeld</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="entwurfType" value="eigentum" onchange="toggleEntwurfFields()">
-              <span class="radio-label">Eigentum in der Kammer</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="entwurfType" value="beratung-unterstuetzung" onchange="toggleEntwurfFields()">
-              <span class="radio-label">Beratungs- und Unterstützungsleistungen</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="entwurfType" value="gespraechstermin" onchange="toggleEntwurfFields()">
-              <span class="radio-label">Gesprächstermine</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="entwurfType" value="gesundheit-medizin" onchange="toggleEntwurfFields()">
-              <span class="radio-label">Gesundheit: Termin medizinischer Dienst</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="entwurfType" value="freizeit-weiterbildung" onchange="toggleEntwurfFields()">
-              <span class="radio-label">Freizeitaktivitäten inkl. Weiterbildungskosten</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="entwurfType" value="besuch-langzeit" onchange="toggleEntwurfFields()">
-              <span class="radio-label">Langzeitbesuch (Genehmigung)</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="entwurfType" value="besuch-termin" onchange="toggleEntwurfFields()">
-              <span class="radio-label">Besuchstermin</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="entwurfType" value="besuch-video" onchange="toggleEntwurfFields()">
-              <span class="radio-label">Videobesuch</span>
-            </label>
-          </div>
+          <div id="entwurfAntragTypePicker" class="antrag-type-groups"></div>
         </div>
 
         <!-- Teilhabegeld Felder -->
@@ -671,19 +620,38 @@
             <p class="field-hint">Der Tag muss im aktuellen oder im folgenden Monat liegen.</p>
           </div>
           <div class="form-group">
-            <label for="entwurfLangzeitBesuchUhrzeit">Uhrzeit <span class="required">*</span></label>
-            <select id="entwurfLangzeitBesuchUhrzeit">
-              <option value="">Bitte Uhrzeit wählen...</option>
-              <option value="09:00">09:00</option>
-              <option value="10:00">10:00</option>
-              <option value="11:00">11:00</option>
-              <option value="12:00">12:00</option>
-              <option value="13:00">13:00</option>
-              <option value="14:00">14:00</option>
-              <option value="15:00">15:00</option>
-              <option value="16:00">16:00</option>
-            </select>
-            <p class="field-hint">Mögliche Besuchszeiten: 9 bis 16 Uhr.</p>
+            <label>Besuchszeit <span class="required">*</span></label>
+            <div class="langzeit-uhrzeit-row" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+              <div>
+                <label for="entwurfLangzeitBesuchUhrzeitVon" class="field-hint" style="display: block;">von</label>
+                <select id="entwurfLangzeitBesuchUhrzeitVon">
+                  <option value="">Bitte wählen...</option>
+                  <option value="09:00">09:00</option>
+                  <option value="10:00">10:00</option>
+                  <option value="11:00">11:00</option>
+                  <option value="12:00">12:00</option>
+                  <option value="13:00">13:00</option>
+                  <option value="14:00">14:00</option>
+                  <option value="15:00">15:00</option>
+                  <option value="16:00">16:00</option>
+                </select>
+              </div>
+              <div>
+                <label for="entwurfLangzeitBesuchUhrzeitBis" class="field-hint" style="display: block;">bis</label>
+                <select id="entwurfLangzeitBesuchUhrzeitBis">
+                  <option value="">Bitte wählen...</option>
+                  <option value="09:00">09:00</option>
+                  <option value="10:00">10:00</option>
+                  <option value="11:00">11:00</option>
+                  <option value="12:00">12:00</option>
+                  <option value="13:00">13:00</option>
+                  <option value="14:00">14:00</option>
+                  <option value="15:00">15:00</option>
+                  <option value="16:00">16:00</option>
+                </select>
+              </div>
+            </div>
+            <p class="field-hint">Mögliche Besuchszeiten: 9 bis 16 Uhr. Die Endzeit muss nach der Startzeit liegen.</p>
           </div>
           <div class="form-group">
             <h4 class="subsection-title">Mittagessen – Insasse</h4>
@@ -711,8 +679,9 @@
             <input type="date" id="entwurfBesuchTerminGeburtsdatum">
           </div>
           <div class="form-group">
-            <label for="besuchTerminKinder">Mitkommende Kinder</label>
-            <textarea id="entwurfBesuchTerminKinder" rows="2" placeholder="Name und Alter der mitkommenden Kinder (falls zutreffend)"></textarea>
+            <label for="entwurfBesuchTerminKinderAnzahl">Anzahl mitkommender Kinder</label>
+            <input type="number" id="entwurfBesuchTerminKinderAnzahl" min="0" max="20" step="1" placeholder="0">
+            <p class="field-hint">Optional – nur die Anzahl der mitkommenden Kinder angeben.</p>
           </div>
           <div class="form-group">
             <label for="besuchTerminWunsch">Terminwunsch <span class="required">*</span></label>
@@ -931,6 +900,43 @@
       };
       return typeMap[type] || type;
     }
+
+    let antragListeFilter = {
+      aktiv: 'alle',
+      historie: 'alle',
+      entwuerfe: 'alle'
+    };
+
+    function mountAntragTypePicker(containerId, inputName, selectedValue, onChangeHandler) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      el.innerHTML = renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler);
+    }
+
+    function renderAntragFilterBar(containerId, listKey) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const active = antragListeFilter[listKey];
+      container.innerHTML = getAntragTypeFilterChips().map((chip) => `
+        <button type="button" class="antrag-filter-chip${chip.id === active ? ' active' : ''}"
+          onclick="setAntragListeFilter('${listKey}', '${chip.id}')">${chip.titel}</button>
+      `).join('');
+    }
+
+    function setAntragListeFilter(listKey, filterId) {
+      antragListeFilter[listKey] = filterId;
+      renderAntraege();
+    }
+
+    function filterAntraegeByThema(antraege, listKey) {
+      return antraege.filter((a) => antragTypPasstZuFilter(a.type, antragListeFilter[listKey]));
+    }
+
+    function formatAntragListenCount(gefiltert, gesamt) {
+      if (gesamt === 0) return '0';
+      if (gefiltert === gesamt) return String(gesamt);
+      return `${gefiltert} / ${gesamt}`;
+    }
     
     // Hilfsfunktion: Text aus Objekt oder String extrahieren
     // (für Übersetzungs-Objekte mit text-Property)
@@ -1148,6 +1154,8 @@
     populateMonatSelect('entwurfMonatSelect');
     populateMonatSelect('editMonatSelect');
     initLangzeitBesuchForm('', null);
+    mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
+    mountAntragTypePicker('entwurfAntragTypePicker', 'entwurfType', 'teilhabegeld', 'toggleEntwurfFields');
     window.addEventListener('dataSyncLoaded', populateUserSelect);
     window.addEventListener('dataReloaded', populateUserSelect);
     window.addEventListener('dataSyncLoaded', populateHeaderUserSwitch);
@@ -1307,7 +1315,8 @@
       const p = prefix ? 'entwurf' : '';
       return {
         datum: p ? 'entwurfLangzeitBesuchDatum' : 'langzeitBesuchDatum',
-        uhrzeit: p ? 'entwurfLangzeitBesuchUhrzeit' : 'langzeitBesuchUhrzeit',
+        uhrzeitVon: p ? 'entwurfLangzeitBesuchUhrzeitVon' : 'langzeitBesuchUhrzeitVon',
+        uhrzeitBis: p ? 'entwurfLangzeitBesuchUhrzeitBis' : 'langzeitBesuchUhrzeitBis',
         mittagessenInsasse: p ? 'entwurfLangzeitMittagessenInsasse' : 'langzeitMittagessenInsasse',
         besucherListe: p ? 'entwurfLangzeitBesucherListe' : 'langzeitBesucherListe'
       };
@@ -1341,12 +1350,40 @@
       return d >= start && d <= end;
     }
 
+    function parseLangzeitUhrzeitMinuten(uhrzeit) {
+      const m = /^(\d{1,2}):(\d{2})$/.exec(uhrzeit || '');
+      if (!m) return null;
+      return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+    }
+
     function istGueltigeLangzeitUhrzeit(uhrzeit) {
       if (!uhrzeit) return false;
-      const m = /^(\d{1,2}):(\d{2})$/.exec(uhrzeit);
-      if (!m) return false;
-      const h = parseInt(m[1], 10);
-      return h >= 9 && h <= 16;
+      const min = parseLangzeitUhrzeitMinuten(uhrzeit);
+      if (min === null) return false;
+      return min >= 9 * 60 && min <= 16 * 60;
+    }
+
+    function validateLangzeitUhrzeitSpan(von, bis) {
+      if (!von || !bis) {
+        return { valid: false, error: 'Bitte wählen Sie Besuchszeit von und bis (9–16 Uhr).' };
+      }
+      if (!istGueltigeLangzeitUhrzeit(von) || !istGueltigeLangzeitUhrzeit(bis)) {
+        return { valid: false, error: 'Besuchszeiten müssen zwischen 9 und 16 Uhr liegen.' };
+      }
+      const vonMin = parseLangzeitUhrzeitMinuten(von);
+      const bisMin = parseLangzeitUhrzeitMinuten(bis);
+      if (bisMin <= vonMin) {
+        return { valid: false, error: 'Die Endzeit (bis) muss nach der Startzeit (von) liegen.' };
+      }
+      return { valid: true, error: null };
+    }
+
+    function formatLangzeitBesuchszeit(antrag) {
+      if (antrag.besuchUhrzeitVon && antrag.besuchUhrzeitBis) {
+        return `${antrag.besuchUhrzeitVon} – ${antrag.besuchUhrzeitBis}`;
+      }
+      if (antrag.besuchUhrzeit) return antrag.besuchUhrzeit;
+      return '';
     }
 
     function mittagessenHtml() {
@@ -1484,7 +1521,8 @@
     function readLangzeitbesuchForm(prefix) {
       const ids = langzeitIds(prefix);
       const datumEl = document.getElementById(ids.datum);
-      const uhrzeitEl = document.getElementById(ids.uhrzeit);
+      const uhrzeitVonEl = document.getElementById(ids.uhrzeitVon);
+      const uhrzeitBisEl = document.getElementById(ids.uhrzeitBis);
       const insasseEl = document.getElementById(ids.mittagessenInsasse);
       const liste = document.getElementById(ids.besucherListe);
       const besucher = [];
@@ -1500,7 +1538,8 @@
       }
       return {
         besuchDatum: datumEl ? datumEl.value : '',
-        besuchUhrzeit: uhrzeitEl ? uhrzeitEl.value : '',
+        besuchUhrzeitVon: uhrzeitVonEl ? uhrzeitVonEl.value : '',
+        besuchUhrzeitBis: uhrzeitBisEl ? uhrzeitBisEl.value : '',
         mittagessenInsasse: readMittagessenFromContainer(insasseEl),
         besucher
       };
@@ -1513,9 +1552,8 @@
       if (!istErlaubtesLangzeitbesuchDatum(data.besuchDatum)) {
         return { valid: false, error: 'Der Besuchstag muss im aktuellen oder im folgenden Monat liegen.' };
       }
-      if (!istGueltigeLangzeitUhrzeit(data.besuchUhrzeit)) {
-        return { valid: false, error: 'Bitte wählen Sie eine Uhrzeit zwischen 9 und 16 Uhr.' };
-      }
+      const uhrzeitCheck = validateLangzeitUhrzeitSpan(data.besuchUhrzeitVon, data.besuchUhrzeitBis);
+      if (!uhrzeitCheck.valid) return uhrzeitCheck;
       const mInsasse = validateMittagessen(data.mittagessenInsasse, 'den Insassen');
       if (!mInsasse.valid) return mInsasse;
       if (!data.besucher || !data.besucher.length) {
@@ -1535,9 +1573,11 @@
     function resetLangzeitbesuchForm(prefix) {
       const ids = langzeitIds(prefix);
       const datumEl = document.getElementById(ids.datum);
-      const uhrzeitEl = document.getElementById(ids.uhrzeit);
+      const uhrzeitVonEl = document.getElementById(ids.uhrzeitVon);
+      const uhrzeitBisEl = document.getElementById(ids.uhrzeitBis);
       if (datumEl) datumEl.value = '';
-      if (uhrzeitEl) uhrzeitEl.value = '';
+      if (uhrzeitVonEl) uhrzeitVonEl.value = '';
+      if (uhrzeitBisEl) uhrzeitBisEl.value = '';
       initLangzeitBesuchForm(prefix, [{}]);
       setMittagessenContainer(document.getElementById(ids.mittagessenInsasse), {});
     }
@@ -1545,9 +1585,11 @@
     function setLangzeitbesuchForm(prefix, antrag) {
       const ids = langzeitIds(prefix);
       const datumEl = document.getElementById(ids.datum);
-      const uhrzeitEl = document.getElementById(ids.uhrzeit);
+      const uhrzeitVonEl = document.getElementById(ids.uhrzeitVon);
+      const uhrzeitBisEl = document.getElementById(ids.uhrzeitBis);
       if (datumEl) datumEl.value = antrag.besuchDatum || '';
-      if (uhrzeitEl) uhrzeitEl.value = antrag.besuchUhrzeit || '';
+      if (uhrzeitVonEl) uhrzeitVonEl.value = antrag.besuchUhrzeitVon || antrag.besuchUhrzeit || '';
+      if (uhrzeitBisEl) uhrzeitBisEl.value = antrag.besuchUhrzeitBis || '';
       initLangzeitBesuchForm(prefix, antrag.besucher || [{}]);
       setMittagessenContainer(document.getElementById(ids.mittagessenInsasse), antrag.mittagessenInsasse || {});
       const liste = document.getElementById(ids.besucherListe);
@@ -1582,26 +1624,49 @@
     }
 
     function besuchTerminIds(prefix) {
-      const p = prefix ? 'entwurf' : '';
+      if (prefix) {
+        return {
+          nachname: 'entwurfBesuchTerminNachname',
+          vorname: 'entwurfBesuchTerminVorname',
+          geburtsdatum: 'entwurfBesuchTerminGeburtsdatum',
+          kinderAnzahl: 'entwurfBesuchTerminKinderAnzahl',
+          wunsch: 'entwurfBesuchTerminWunsch',
+          ausweich: 'entwurfBesuchTerminAusweich'
+        };
+      }
       return {
-        nachname: `${p}BesuchTerminNachname`,
-        vorname: `${p}BesuchTerminVorname`,
-        geburtsdatum: `${p}BesuchTerminGeburtsdatum`,
-        kinder: `${p}BesuchTerminKinder`,
-        wunsch: `${p}BesuchTerminWunsch`,
-        ausweich: `${p}BesuchTerminAusweich`
+        nachname: 'besuchTerminNachname',
+        vorname: 'besuchTerminVorname',
+        geburtsdatum: 'besuchTerminGeburtsdatum',
+        kinderAnzahl: 'besuchTerminKinderAnzahl',
+        wunsch: 'besuchTerminWunsch',
+        ausweich: 'besuchTerminAusweich'
       };
+    }
+
+    function parseAnzahlMitkommendeKinder(raw) {
+      if (raw === '' || raw == null) return null;
+      const n = parseInt(String(raw).trim(), 10);
+      if (!Number.isFinite(n) || n < 0) return null;
+      return n;
+    }
+
+    function formatAnzahlMitkommendeKinder(antrag) {
+      const n = antrag.anzahlMitkommendeKinder ?? parseAnzahlMitkommendeKinder(antrag.mitkommendeKinder);
+      if (n == null || n <= 0) return '';
+      return n === 1 ? '1 Kind' : `${n} Kinder`;
     }
 
     function readBesuchTerminForm(prefix) {
       const ids = besuchTerminIds(prefix);
-      const kinder = document.getElementById(ids.kinder)?.value.trim() || '';
+      const kinderRaw = document.getElementById(ids.kinderAnzahl)?.value;
+      const anzahlMitkommendeKinder = parseAnzahlMitkommendeKinder(kinderRaw);
       const ausweich = document.getElementById(ids.ausweich)?.value || '';
       return {
         besucherNachname: document.getElementById(ids.nachname)?.value.trim() || '',
         besucherVorname: document.getElementById(ids.vorname)?.value.trim() || '',
         besucherGeburtsdatum: document.getElementById(ids.geburtsdatum)?.value || '',
-        mitkommendeKinder: kinder || null,
+        anzahlMitkommendeKinder,
         terminwunsch: document.getElementById(ids.wunsch)?.value || '',
         ausweichtermin: ausweich || null
       };
@@ -1613,6 +1678,9 @@
       }
       if (!data.terminwunsch) {
         return { valid: false, error: 'Bitte geben Sie einen Terminwunsch an.' };
+      }
+      if (data.anzahlMitkommendeKinder != null && data.anzahlMitkommendeKinder > 20) {
+        return { valid: false, error: 'Bitte geben Sie eine gültige Anzahl mitkommender Kinder an (0–20).' };
       }
       return { valid: true, error: null };
     }
@@ -1631,20 +1699,30 @@
       set(ids.nachname, antrag.besucherNachname);
       set(ids.vorname, antrag.besucherVorname);
       set(ids.geburtsdatum, antrag.besucherGeburtsdatum);
-      set(ids.kinder, antrag.mitkommendeKinder);
+      const kinderAnzahl = antrag.anzahlMitkommendeKinder ?? parseAnzahlMitkommendeKinder(antrag.mitkommendeKinder);
+      set(ids.kinderAnzahl, kinderAnzahl != null && kinderAnzahl > 0 ? String(kinderAnzahl) : '');
       set(ids.wunsch, antrag.terminwunsch);
       set(ids.ausweich, antrag.ausweichtermin);
     }
 
     function besuchVideoIds(prefix) {
-      const p = prefix ? 'entwurf' : '';
+      if (prefix) {
+        return {
+          nachname: 'entwurfBesuchVideoNachname',
+          vorname: 'entwurfBesuchVideoVorname',
+          geburtsdatum: 'entwurfBesuchVideoGeburtsdatum',
+          email: 'entwurfBesuchVideoEmail',
+          wochentag: 'entwurfBesuchVideoWochentag',
+          tageszeitName: 'entwurfBesuchVideoTageszeit'
+        };
+      }
       return {
-        nachname: `${p}BesuchVideoNachname`,
-        vorname: `${p}BesuchVideoVorname`,
-        geburtsdatum: `${p}BesuchVideoGeburtsdatum`,
-        email: `${p}BesuchVideoEmail`,
-        wochentag: `${p}BesuchVideoWochentag`,
-        tageszeitName: prefix ? 'entwurfBesuchVideoTageszeit' : 'besuchVideoTageszeit'
+        nachname: 'besuchVideoNachname',
+        vorname: 'besuchVideoVorname',
+        geburtsdatum: 'besuchVideoGeburtsdatum',
+        email: 'besuchVideoEmail',
+        wochentag: 'besuchVideoWochentag',
+        tageszeitName: 'besuchVideoTageszeit'
       };
     }
 
@@ -1711,7 +1789,14 @@
       document.getElementById('besuchLangzeitFields').style.display = type === 'besuch-langzeit' ? 'block' : 'none';
       document.getElementById('besuchTerminFields').style.display = type === 'besuch-termin' ? 'block' : 'none';
       document.getElementById('besuchVideoFields').style.display = type === 'besuch-video' ? 'block' : 'none';
-      if (type === 'besuch-langzeit') initLangzeitBesuchForm('', null);
+      if (type === 'besuch-langzeit') {
+        const liste = document.getElementById('langzeitBesucherListe');
+        if (liste && !liste.querySelector('.langzeit-besucher-block')) {
+          initLangzeitBesuchForm('', null);
+        }
+        bindMittagessenGruppe(document.getElementById('langzeitMittagessenInsasse'));
+        setLangzeitDatumGrenzen('');
+      }
     }
 
     function toggleEntwurfFields() {
@@ -1725,7 +1810,14 @@
       document.getElementById('entwurfBesuchLangzeitFields').style.display = type === 'besuch-langzeit' ? 'block' : 'none';
       document.getElementById('entwurfBesuchTerminFields').style.display = type === 'besuch-termin' ? 'block' : 'none';
       document.getElementById('entwurfBesuchVideoFields').style.display = type === 'besuch-video' ? 'block' : 'none';
-      if (type === 'besuch-langzeit') initLangzeitBesuchForm('entwurf', null);
+      if (type === 'besuch-langzeit') {
+        const liste = document.getElementById('entwurfLangzeitBesucherListe');
+        if (liste && !liste.querySelector('.langzeit-besucher-block')) {
+          initLangzeitBesuchForm('entwurf', null);
+        }
+        bindMittagessenGruppe(document.getElementById('entwurfLangzeitMittagessenInsasse'));
+        setLangzeitDatumGrenzen('entwurf');
+      }
     }
 
     function readFreizeitWeiterbildungForm(prefix) {
@@ -2219,7 +2311,7 @@
       resetBesuchVideoForm('');
       document.querySelectorAll('input[name="kleidung"]').forEach(cb => cb.checked = false);
       document.getElementById('eigentumBegruendung').value = '';
-      document.querySelector('input[name="antragType"][value="teilhabegeld"]').checked = true;
+      mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
       document.querySelector('input[name="eigentumAktion"][value="aufstocken"]').checked = true;
       toggleAntragFields();
     }
@@ -2235,7 +2327,9 @@
       document.getElementById('entwurfId').value = entwurfId;
       
       // Typ setzen
-      document.querySelector(`input[name="entwurfType"][value="${entwurf.type}"]`).checked = true;
+      mountAntragTypePicker('entwurfAntragTypePicker', 'entwurfType', entwurf.type, 'toggleEntwurfFields');
+      const entwurfTypeRadio = document.querySelector(`input[name="entwurfType"][value="${entwurf.type}"]`);
+      if (entwurfTypeRadio) entwurfTypeRadio.checked = true;
       toggleEntwurfFields();
       populateMonatSelect('entwurfMonatSelect', entwurf.monat || '');
       
@@ -2479,7 +2573,7 @@
         typeLabel = 'Langzeitbesuch (Genehmigung)';
         detailsHtml = `
           ${antrag.besuchDatum ? `<p><strong>Besuchstag:</strong> ${antrag.besuchDatum}</p>` : '<p class="incomplete"><em>Besuchstag noch nicht angegeben</em></p>'}
-          ${antrag.besuchUhrzeit ? `<p><strong>Uhrzeit:</strong> ${antrag.besuchUhrzeit}</p>` : '<p class="incomplete"><em>Uhrzeit noch nicht angegeben</em></p>'}
+          ${formatLangzeitBesuchszeit(antrag) ? `<p><strong>Besuchszeit:</strong> ${formatLangzeitBesuchszeit(antrag)}</p>` : '<p class="incomplete"><em>Besuchszeit noch nicht angegeben</em></p>'}
           ${formatLangzeitBesucherHtml(antrag.besucher, antrag.mittagessenInsasse)}
         `;
       } else if (antrag.type === 'besuch-termin') {
@@ -2487,7 +2581,7 @@
         const name = [antrag.besucherVorname, antrag.besucherNachname].filter(Boolean).join(' ');
         detailsHtml = `
           ${name ? `<p><strong>Besuchsperson:</strong> ${name}${antrag.besucherGeburtsdatum ? ` (geb. ${antrag.besucherGeburtsdatum})` : ''}</p>` : '<p class="incomplete"><em>Besuchsperson noch nicht angegeben</em></p>'}
-          ${antrag.mitkommendeKinder ? `<p><strong>Mitkommende Kinder:</strong> ${antrag.mitkommendeKinder}</p>` : ''}
+          ${formatAnzahlMitkommendeKinder(antrag) ? `<p><strong>Mitkommende Kinder:</strong> ${formatAnzahlMitkommendeKinder(antrag)}</p>` : ''}
           ${antrag.terminwunsch ? `<p><strong>Terminwunsch:</strong> ${antrag.terminwunsch}</p>` : '<p class="incomplete"><em>Terminwunsch noch nicht angegeben</em></p>'}
           ${antrag.ausweichtermin ? `<p><strong>Ausweichtermin:</strong> ${antrag.ausweichtermin}</p>` : ''}
         `;
@@ -2587,6 +2681,7 @@
       
       return `
         <div class="antrag-card ${isTeilweiseGenehmigt ? 'teilweise-genehmigt' : ''} ${isEntwurf ? 'entwurf' : ''}">
+          <div class="antrag-card-thema">${getAntragThemaLabel(antrag.type)}</div>
           <div class="antrag-header">
             <span class="antrag-type">${antragsNummer}${typeLabel}</span>
             <span class="status-badge ${statusClass}">
@@ -2733,13 +2828,21 @@
       const entwuerfe = antragSystem.getEntwuerfeInsasse(currentSession.userId);
       const aktiveAntraege = antragSystem.getAktiveAntraegeInsasse(currentSession.userId);
       const historieAntraege = antragSystem.getHistorieInsasse(currentSession.userId);
+
+      renderAntragFilterBar('entwuerfeTypeFilterBar', 'entwuerfe');
+      renderAntragFilterBar('aktivTypeFilterBar', 'aktiv');
+      renderAntragFilterBar('historieTypeFilterBar', 'historie');
+
+      const entwuerfeGefiltert = filterAntraegeByThema(entwuerfe, 'entwuerfe');
+      const aktiveGefiltert = filterAntraegeByThema(aktiveAntraege, 'aktiv');
+      const historieGefiltert = filterAntraegeByThema(historieAntraege, 'historie');
       
       // Aufgaben für den Insassen laden
       const meineAufgaben = aufgabenSystem.getOffeneAufgaben(currentSession.userId);
       
-      document.getElementById('entwuerfeCount').textContent = entwuerfe.length;
-      document.getElementById('aktivCount').textContent = aktiveAntraege.length;
-      document.getElementById('historieCount').textContent = historieAntraege.length;
+      document.getElementById('entwuerfeCount').textContent = formatAntragListenCount(entwuerfeGefiltert.length, entwuerfe.length);
+      document.getElementById('aktivCount').textContent = formatAntragListenCount(aktiveGefiltert.length, aktiveAntraege.length);
+      document.getElementById('historieCount').textContent = formatAntragListenCount(historieGefiltert.length, historieAntraege.length);
       document.getElementById('aufgabenCount').textContent = meineAufgaben.length;
       
       // Aufgaben anzeigen
@@ -2753,16 +2856,20 @@
       // Entwürfe
       if (entwuerfe.length === 0) {
         entwuerfeList.innerHTML = '<div class="empty-state"><p>Keine Entwürfe vorhanden.</p><p class="hint">Klicken Sie auf "+ Neuer Antrag" und dann "Als Entwurf speichern"</p></div>';
+      } else if (entwuerfeGefiltert.length === 0) {
+        entwuerfeList.innerHTML = '<div class="empty-state"><p>Keine Entwürfe in dieser Kategorie.</p></div>';
       } else {
-        entwuerfeList.innerHTML = entwuerfe.map(a => renderAntragCard(a, 'entwurf')).join('');
+        entwuerfeList.innerHTML = entwuerfeGefiltert.map(a => renderAntragCard(a, 'entwurf')).join('');
       }
       
       // Aktive Anträge
       if (aktiveAntraege.length === 0) {
         aktivList.innerHTML = '<div class="empty-state"><p>Keine eingereichten Anträge vorhanden.</p></div>';
+      } else if (aktiveGefiltert.length === 0) {
+        aktivList.innerHTML = '<div class="empty-state"><p>Keine Anträge in dieser Kategorie.</p></div>';
       } else {
         try {
-          const html = aktiveAntraege.map(a => renderAntragCard(a, 'aktiv')).join('');
+          const html = aktiveGefiltert.map(a => renderAntragCard(a, 'aktiv')).join('');
           aktivList.innerHTML = html || '<div class="empty-state"><p>Fehler beim Anzeigen der Anträge.</p></div>';
         } catch (e) {
           console.error('Fehler beim Rendern aktiver Anträge:', e);
@@ -2773,9 +2880,11 @@
       // Historie
       if (historieAntraege.length === 0) {
         historieList.innerHTML = '<div class="empty-state"><p>Noch keine abgeschlossenen Anträge.</p></div>';
+      } else if (historieGefiltert.length === 0) {
+        historieList.innerHTML = '<div class="empty-state"><p>Keine Anträge in dieser Kategorie.</p></div>';
       } else {
         try {
-          const html = historieAntraege.map(a => renderAntragCard(a, 'historie')).join('');
+          const html = historieGefiltert.map(a => renderAntragCard(a, 'historie')).join('');
           historieList.innerHTML = html || '<div class="empty-state"><p>Fehler beim Anzeigen der Anträge.</p></div>';
         } catch (e) {
           console.error('Fehler beim Rendern der Historie:', e);

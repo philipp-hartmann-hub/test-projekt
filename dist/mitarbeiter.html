@@ -205,6 +205,7 @@
               </select>
             </div>
           </div>
+          <div class="antrag-filter-bar" id="offenTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
           <div class="antrag-list" id="offenList">
             <!-- Dynamisch gefüllt -->
           </div>
@@ -224,6 +225,7 @@
               </select>
             </div>
           </div>
+          <div class="antrag-filter-bar" id="bearbeitungTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
           <div class="antrag-list" id="bearbeitungList">
             <!-- Dynamisch gefüllt -->
           </div>
@@ -244,6 +246,7 @@
               </select>
             </div>
           </div>
+          <div class="antrag-filter-bar" id="historieTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
           <div class="antrag-list" id="historieList">
             <!-- Dynamisch gefüllt -->
           </div>
@@ -1093,6 +1096,50 @@
       if (essen.ohneSchweinefleisch) parts.push(currentLanguage === 'en' ? 'No pork' : currentLanguage === 'fr' ? 'Sans porc' : 'Ohne Schweinefleisch');
       if (essen.sonstiges) parts.push(essen.sonstiges);
       return parts.length ? parts.join(', ') : '–';
+    }
+
+    function formatLangzeitBesuchszeit(antrag) {
+      if (antrag.besuchUhrzeitVon && antrag.besuchUhrzeitBis) {
+        return `${antrag.besuchUhrzeitVon} – ${antrag.besuchUhrzeitBis}`;
+      }
+      if (antrag.besuchUhrzeit) return antrag.besuchUhrzeit;
+      return '–';
+    }
+
+    function parseAnzahlMitkommendeKinder(raw) {
+      if (raw === '' || raw == null) return null;
+      const n = parseInt(String(raw).trim(), 10);
+      if (!Number.isFinite(n) || n < 0) return null;
+      return n;
+    }
+
+    function formatAnzahlMitkommendeKinder(antrag) {
+      const n = antrag.anzahlMitkommendeKinder ?? parseAnzahlMitkommendeKinder(antrag.mitkommendeKinder);
+      if (n == null || n <= 0) return '';
+      if (currentLanguage === 'en') return n === 1 ? '1 child' : `${n} children`;
+      if (currentLanguage === 'fr') return n === 1 ? '1 enfant' : `${n} enfants`;
+      return n === 1 ? '1 Kind' : `${n} Kinder`;
+    }
+
+    let mitarbeiterAntragFilter = { offen: 'alle', bearbeitung: 'alle', historie: 'alle' };
+
+    function renderMitarbeiterAntragFilterBar(containerId, listKey) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const active = mitarbeiterAntragFilter[listKey];
+      container.innerHTML = getAntragTypeFilterChips().map((chip) => `
+        <button type="button" class="antrag-filter-chip${chip.id === active ? ' active' : ''}"
+          onclick="setMitarbeiterAntragFilter('${listKey}', '${chip.id}')">${chip.titel}</button>
+      `).join('');
+    }
+
+    function setMitarbeiterAntragFilter(listKey, filterId) {
+      mitarbeiterAntragFilter[listKey] = filterId;
+      renderAntraege();
+    }
+
+    function filterMitarbeiterAntraege(antraege, listKey) {
+      return antraege.filter((a) => antragTypPasstZuFilter(a.type, mitarbeiterAntragFilter[listKey]));
     }
 
     function formatLangzeitBesucherDetails(antrag) {
@@ -2154,7 +2201,7 @@
         typeLabel = t('application.type.besuch_langzeit');
         detailsHtml = `
           <p><strong>Besuchstag:</strong> ${antrag.besuchDatum || '–'}</p>
-          <p><strong>Uhrzeit:</strong> ${antrag.besuchUhrzeit || '–'}</p>
+          <p><strong>Besuchszeit:</strong> ${formatLangzeitBesuchszeit(antrag)}</p>
           <p><strong>Insasse – Mittagessen:</strong> ${formatMittagessenAnzeige(antrag.mittagessenInsasse)}</p>
           ${formatLangzeitBesucherDetails(antrag)}
         `;
@@ -2163,7 +2210,7 @@
         const besuchName = [antrag.besucherVorname, antrag.besucherNachname].filter(Boolean).join(' ');
         detailsHtml = `
           <p><strong>Besuchsperson:</strong> ${besuchName || '–'}${antrag.besucherGeburtsdatum ? ` (geb. ${antrag.besucherGeburtsdatum})` : ''}</p>
-          ${antrag.mitkommendeKinder ? `<p><strong>Mitkommende Kinder:</strong> ${getTranslatedUserText(antrag.mitkommendeKinder)}</p>` : ''}
+          ${formatAnzahlMitkommendeKinder(antrag) ? `<p><strong>${currentLanguage === 'en' ? 'Children accompanying' : currentLanguage === 'fr' ? 'Enfants accompagnants' : 'Mitkommende Kinder'}:</strong> ${formatAnzahlMitkommendeKinder(antrag)}</p>` : ''}
           <p><strong>Terminwunsch:</strong> ${antrag.terminwunsch || '–'}</p>
           ${antrag.ausweichtermin ? `<p><strong>Ausweichtermin:</strong> ${antrag.ausweichtermin}</p>` : ''}
         `;
@@ -2753,8 +2800,8 @@ Persönlich eröffnet
               <span class="detail-value">${antrag.besuchDatum || '–'}</span>
             </div>
             <div class="detail-row">
-              <span class="detail-label">${currentLanguage === 'en' ? 'Time' : currentLanguage === 'fr' ? 'Heure' : 'Uhrzeit'}:</span>
-              <span class="detail-value">${antrag.besuchUhrzeit || '–'}</span>
+              <span class="detail-label">${currentLanguage === 'en' ? 'Visit time' : currentLanguage === 'fr' ? 'Horaire de visite' : 'Besuchszeit'}:</span>
+              <span class="detail-value">${formatLangzeitBesuchszeit(antrag)}</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">${currentLanguage === 'en' ? 'Inmate lunch' : currentLanguage === 'fr' ? 'Déjeuner détenu' : 'Mittagessen Insasse'}:</span>
@@ -2794,10 +2841,10 @@ Persönlich eröffnet
               <span class="detail-label">${currentLanguage === 'en' ? 'Visitor' : currentLanguage === 'fr' ? 'Visiteur' : 'Besuchsperson'}:</span>
               <span class="detail-value">${besuchNameTermin || '–'}${antrag.besucherGeburtsdatum ? ` (geb. ${antrag.besucherGeburtsdatum})` : ''}</span>
             </div>
-            ${antrag.mitkommendeKinder ? `
+            ${formatAnzahlMitkommendeKinder(antrag) ? `
             <div class="detail-row">
-              <span class="detail-label">${currentLanguage === 'en' ? 'Children accompanying' : currentLanguage === 'fr' ? 'Enfants accompagnants' : 'Mitkommende Kinder'}:</span>
-              <span class="detail-value">${getTranslatedUserText(antrag.mitkommendeKinder)}</span>
+              <span class="detail-label">${currentLanguage === 'en' ? 'Number of children' : currentLanguage === 'fr' ? "Nombre d'enfants" : 'Anzahl mitkommender Kinder'}:</span>
+              <span class="detail-value">${formatAnzahlMitkommendeKinder(antrag)}</span>
             </div>` : ''}
             <div class="detail-row">
               <span class="detail-label">${currentLanguage === 'en' ? 'Preferred date' : currentLanguage === 'fr' ? 'Date souhaitée' : 'Terminwunsch'}:</span>
@@ -3720,7 +3767,7 @@ ${t('action.archive')}
       } else if (antrag.type === 'freizeit-weiterbildung') {
         anliegenText = `${t('notice.applicationFor')} ${t('application.type.freizeit_weiterbildung')}: ${getTranslatedUserText(antrag.freizeitAktivitaet)}${antrag.kosten ? ` (${antrag.kosten})` : ''}`;
       } else if (antrag.type === 'besuch-langzeit') {
-        anliegenText = `${t('notice.applicationFor')} ${t('application.type.besuch_langzeit')} (${antrag.besuchDatum || '–'}, ${antrag.besuchUhrzeit || '–'})`;
+        anliegenText = `${t('notice.applicationFor')} ${t('application.type.besuch_langzeit')} (${antrag.besuchDatum || '–'}, ${formatLangzeitBesuchszeit(antrag)})`;
       } else if (antrag.type === 'besuch-termin') {
         const bn = [antrag.besucherVorname, antrag.besucherNachname].filter(Boolean).join(' ');
         anliegenText = `${t('notice.applicationFor')} ${t('application.type.besuch_termin')} (${bn || '–'})`;
@@ -5532,7 +5579,7 @@ ${t('action.archive')}
       } else if (antrag.type === 'besuch-langzeit') {
         doc.text('Art: Langzeitbesuch (Genehmigung)', 25, yPos);
         doc.text(`Besuchstag: ${antrag.besuchDatum || '–'}`, 25, yPos + 7);
-        doc.text(`Uhrzeit: ${antrag.besuchUhrzeit || '–'}`, 25, yPos + 14);
+        doc.text(`Besuchszeit: ${formatLangzeitBesuchszeit(antrag)}`, 25, yPos + 14);
         doc.text(`Mittagessen Insasse: ${formatMittagessenAnzeige(antrag.mittagessenInsasse)}`, 25, yPos + 21);
         yPos += 28;
         if (antrag.besucher && antrag.besucher.length) {
@@ -5550,8 +5597,8 @@ ${t('action.archive')}
         doc.text(`Besuchsperson: ${name || '–'}`, 25, yPos + 7);
         if (antrag.besucherGeburtsdatum) doc.text(`Geburtsdatum: ${antrag.besucherGeburtsdatum}`, 25, yPos + 14);
         let y = yPos + (antrag.besucherGeburtsdatum ? 21 : 14);
-        if (antrag.mitkommendeKinder) {
-          doc.text(`Mitkommende Kinder: ${getTranslatedUserText(antrag.mitkommendeKinder)}`, 25, y);
+        if (formatAnzahlMitkommendeKinder(antrag)) {
+          doc.text(`Anzahl mitkommender Kinder: ${formatAnzahlMitkommendeKinder(antrag)}`, 25, y);
           y += 7;
         }
         doc.text(`Terminwunsch: ${antrag.terminwunsch || '–'}`, 25, y);
@@ -6089,6 +6136,10 @@ ${t('action.archive')}
       let offeneAntraege = antragSystem.getOffeneAntraegeMitarbeiter(effektiverMitarbeiter);
       let inBearbeitungAntraege = antragSystem.getInBearbeitungAntraege(effektiverMitarbeiter);
       let historieAntraege = antragSystem.getHistorieMitarbeiter(effektiverMitarbeiter);
+
+      renderMitarbeiterAntragFilterBar('offenTypeFilterBar', 'offen');
+      renderMitarbeiterAntragFilterBar('bearbeitungTypeFilterBar', 'bearbeitung');
+      renderMitarbeiterAntragFilterBar('historieTypeFilterBar', 'historie');
       
       // Debug-Ausgabe
       console.log('[Debug] renderAntraege - offeneAntraege:', offeneAntraege.length, offeneAntraege.map(a => ({id: a.id, status: a.status, zugewiesenAnGruppe: a.zugewiesenAnGruppe})));
@@ -6135,11 +6186,29 @@ ${t('action.archive')}
       inBearbeitungAntraege = [...inBearbeitungAntraege].sort(erstelleSortierFunktion(sortierungBearbeitung));
       meineAufgaben = [...meineAufgaben].sort(erstelleSortierFunktion(sortierungBearbeitung));
       historieAntraege = [...historieAntraege].sort(erstelleSortierFunktion(sortierungHistorie));
+
+      const offeneAntraegeAll = offeneAntraege;
+      const inBearbeitungAntraegeAll = inBearbeitungAntraege;
+      const historieAntraegeAll = historieAntraege;
+      const meineAufgabenAll = meineAufgaben;
+      offeneAntraege = filterMitarbeiterAntraege(offeneAntraege, 'offen');
+      inBearbeitungAntraege = filterMitarbeiterAntraege(inBearbeitungAntraege, 'bearbeitung');
+      historieAntraege = filterMitarbeiterAntraege(historieAntraege, 'historie');
+      meineAufgaben = meineAufgabenAll.filter((a) => {
+        if (mitarbeiterAntragFilter.bearbeitung === 'alle') return true;
+        const antrag = antragSystem.getAntrag(a.antragId);
+        return antrag && antragTypPasstZuFilter(antrag.type, mitarbeiterAntragFilter.bearbeitung);
+      });
       
       const bearbeitungTotal = inBearbeitungAntraege.length + meineAufgaben.length;
-      document.getElementById('offenCount').textContent = offeneAntraege.length;
-      document.getElementById('bearbeitungCount').textContent = bearbeitungTotal;
-      document.getElementById('historieCount').textContent = historieAntraege.length;
+      const bearbeitungTotalAll = inBearbeitungAntraegeAll.length + meineAufgabenAll.length;
+      document.getElementById('offenCount').textContent = offeneAntraegeAll && offeneAntraege.length !== offeneAntraegeAll.length ? `${offeneAntraege.length} / ${offeneAntraegeAll.length}` : String(offeneAntraege.length);
+      document.getElementById('bearbeitungCount').textContent =
+        bearbeitungTotal !== bearbeitungTotalAll ? `${bearbeitungTotal} / ${bearbeitungTotalAll}` : String(bearbeitungTotal);
+      document.getElementById('historieCount').textContent =
+        historieAntraege.length !== historieAntraegeAll.length
+          ? `${historieAntraege.length} / ${historieAntraegeAll.length}`
+          : String(historieAntraege.length);
       
       // Tab-Zähler für "Anträge und Aufgaben meiner Gruppe" aktualisieren
       const offenTabCount = document.getElementById('offenTabCount');
@@ -6155,8 +6224,10 @@ ${t('action.archive')}
       }
       
       // Anträge und Aufgaben meiner Gruppe
-      if (offeneAntraege.length === 0) {
+      if (offeneAntraegeAll.length === 0) {
         offenList.innerHTML = '<div class="empty-state"><p>Keine offenen Anträge vorhanden.</p></div>';
+      } else if (offeneAntraege.length === 0) {
+        offenList.innerHTML = '<div class="empty-state"><p>Keine Anträge in dieser Kategorie.</p></div>';
       } else {
         offenList.innerHTML = offeneAntraege.map(a => renderAntragCard(a, 'offen')).join('');
       }
@@ -6176,15 +6247,19 @@ ${t('action.archive')}
         bearbeitungHtml += inBearbeitungAntraege.map(a => renderAntragCard(a, 'bearbeitung')).join('');
       }
       
-      if (bearbeitungHtml === '') {
+      if (bearbeitungTotalAll === 0) {
         bearbeitungList.innerHTML = '<div class="empty-state"><p>Keine Anträge oder Aufgaben vorhanden.</p></div>';
+      } else if (bearbeitungTotal === 0) {
+        bearbeitungList.innerHTML = '<div class="empty-state"><p>Keine Einträge in dieser Kategorie.</p></div>';
       } else {
         bearbeitungList.innerHTML = bearbeitungHtml;
       }
       
       // Historie
-      if (historieAntraege.length === 0) {
+      if (historieAntraegeAll.length === 0) {
         historieList.innerHTML = '<div class="empty-state"><p>Noch keine erledigten Anträge.</p></div>';
+      } else if (historieAntraege.length === 0) {
+        historieList.innerHTML = '<div class="empty-state"><p>Keine Anträge in dieser Kategorie.</p></div>';
       } else {
         historieList.innerHTML = historieAntraege.map(a => renderAntragCard(a, 'historie')).join('');
       }
