@@ -2567,6 +2567,17 @@ Persönlich eröffnet
               : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
         const verfuegungKette =
           'AVD → Arbeitsabteilung → Zahlstelle (Lohndatenübernahme) → AVD (Eröffnung) → GPA';
+        const einkommenAnliegenHtml = antrag.keineEinkuenfteAusserhalb === true
+          ? `<div class="detail-row">
+              <span class="detail-label">Einkünfte außerhalb des Vollzugs:</span>
+              <span class="detail-value">Keine Einkünfte (versichert)</span>
+            </div>`
+          : (antrag.einkuenfteAusserhalb
+            ? `<div class="detail-row">
+                <span class="detail-label">Einkünfte außerhalb des Vollzugs:</span>
+                <span class="detail-value">${antrag.einkuenfteAusserhalb}</span>
+              </div>`
+            : '');
         anliegenHtml = `
           <div class="detail-box">
             <h4>${t('application.type.teilhabegeld')}</h4>
@@ -2574,6 +2585,7 @@ Persönlich eröffnet
               <span class="detail-label">${t('month.january').split(' ')[0] ? t('calendar.month') : 'Monat'}:</span>
               <span class="detail-value">${formatMonat(antrag.monat)}</span>
             </div>
+            ${einkommenAnliegenHtml}
           </div>
           <div class="detail-box verfuegungsvorschlag-box">
             <h4>${verfuegungTitel}</h4>

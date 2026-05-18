@@ -201,6 +201,16 @@
               <option value="">Bitte Monat auswählen...</option>
             </select>
           </div>
+          <div class="form-group">
+            <label class="checkbox-option">
+              <input type="checkbox" id="teilhabegeldKeineEinkuenfte" onchange="toggleTeilhabegeldEinkommenFreitext('')">
+              <span class="checkbox-label">Ich versichere, dass ich außerhalb des Vollzugs über keine Einkünfte verfüge.</span>
+            </label>
+          </div>
+          <div class="form-group" id="teilhabegeldEinkuenfteFreitextGroup" style="display: none;">
+            <label for="teilhabegeldEinkuenfteFreitext">Einkünfte außerhalb des Vollzugs <span class="required">*</span></label>
+            <textarea id="teilhabegeldEinkuenfteFreitext" rows="3" placeholder="Bitte geben Sie Ihre Einkünfte außerhalb des Vollzugs an..."></textarea>
+          </div>
         </div>
 
         <!-- Eigentum Felder -->
@@ -287,6 +297,16 @@
             <select id="entwurfMonatSelect">
               <option value="">Bitte Monat auswählen...</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-option">
+              <input type="checkbox" id="entwurfTeilhabegeldKeineEinkuenfte" onchange="toggleTeilhabegeldEinkommenFreitext('entwurf')">
+              <span class="checkbox-label">Ich versichere, dass ich außerhalb des Vollzugs über keine Einkünfte verfüge.</span>
+            </label>
+          </div>
+          <div class="form-group" id="entwurfTeilhabegeldEinkuenfteFreitextGroup" style="display: none;">
+            <label for="entwurfTeilhabegeldEinkuenfteFreitext">Einkünfte außerhalb des Vollzugs <span class="required">*</span></label>
+            <textarea id="entwurfTeilhabegeldEinkuenfteFreitext" rows="3" placeholder="Bitte geben Sie Ihre Einkünfte außerhalb des Vollzugs an..."></textarea>
           </div>
         </div>
 
@@ -872,6 +892,75 @@
       document.getElementById('entwurfEigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
     }
 
+    function teilhabegeldEinkommenIds(prefix) {
+      const base = prefix ? `${prefix}Teilhabegeld` : 'teilhabegeld';
+      return {
+        checkbox: `${base}KeineEinkuenfte`,
+        textarea: `${base}EinkuenfteFreitext`,
+        group: `${base}EinkuenfteFreitextGroup`
+      };
+    }
+
+    function toggleTeilhabegeldEinkommenFreitext(prefix) {
+      const ids = teilhabegeldEinkommenIds(prefix);
+      const checkbox = document.getElementById(ids.checkbox);
+      const group = document.getElementById(ids.group);
+      const textarea = document.getElementById(ids.textarea);
+      if (!checkbox || !group || !textarea) return;
+      if (checkbox.checked) {
+        group.style.display = 'none';
+        textarea.value = '';
+      } else {
+        group.style.display = 'block';
+      }
+    }
+
+    function readTeilhabegeldEinkommen(prefix) {
+      const ids = teilhabegeldEinkommenIds(prefix);
+      const checkbox = document.getElementById(ids.checkbox);
+      const keineEinkuenfteAusserhalb = checkbox ? checkbox.checked : false;
+      const einkuenfteAusserhalb = keineEinkuenfteAusserhalb
+        ? null
+        : (document.getElementById(ids.textarea)?.value.trim() || '');
+      return { keineEinkuenfteAusserhalb, einkuenfteAusserhalb };
+    }
+
+    function setTeilhabegeldEinkommenForm(prefix, antrag) {
+      const ids = teilhabegeldEinkommenIds(prefix);
+      const checkbox = document.getElementById(ids.checkbox);
+      const textarea = document.getElementById(ids.textarea);
+      if (!checkbox || !textarea) return;
+      const keine = antrag.keineEinkuenfteAusserhalb === true;
+      checkbox.checked = keine;
+      textarea.value = keine ? '' : (antrag.einkuenfteAusserhalb || '');
+      toggleTeilhabegeldEinkommenFreitext(prefix);
+    }
+
+    function resetTeilhabegeldEinkommenForm(prefix) {
+      const ids = teilhabegeldEinkommenIds(prefix);
+      const checkbox = document.getElementById(ids.checkbox);
+      const textarea = document.getElementById(ids.textarea);
+      if (checkbox) checkbox.checked = false;
+      if (textarea) textarea.value = '';
+      toggleTeilhabegeldEinkommenFreitext(prefix);
+    }
+
+    function validateTeilhabegeldEinkommenSubmit(prefix) {
+      const { keineEinkuenfteAusserhalb, einkuenfteAusserhalb } = readTeilhabegeldEinkommen(prefix);
+      if (keineEinkuenfteAusserhalb) {
+        return { valid: true, error: null, keineEinkuenfteAusserhalb, einkuenfteAusserhalb };
+      }
+      if (!einkuenfteAusserhalb) {
+        return {
+          valid: false,
+          error: 'Bitte bestätigen Sie, dass Sie keine Einkünfte außerhalb des Vollzugs haben, oder geben Sie Ihre Einkünfte im Freitextfeld an.',
+          keineEinkuenfteAusserhalb,
+          einkuenfteAusserhalb
+        };
+      }
+      return { valid: true, error: null, keineEinkuenfteAusserhalb, einkuenfteAusserhalb };
+    }
+
     function getErlaubteMonate() {
       const jetzt = new Date();
       const monate = [];
@@ -924,7 +1013,8 @@
           const monatFormatiert = new Date(monat + '-01').toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
           return { type, data: { monat }, valid: false, error: `Sie haben bereits einen Teilhabegeld-Antrag für ${monatFormatiert} gestellt. Pro Monat ist nur ein Antrag möglich.` };
         }
-        return { type, data: { monat }, valid: true, error: null };
+        const einkommen = readTeilhabegeldEinkommen('');
+        return { type, data: { monat, ...einkommen }, valid: true, error: null };
       } else {
         const aktion = document.querySelector('input[name="eigentumAktion"]:checked').value;
         const kleidungCheckboxes = document.querySelectorAll('input[name="kleidung"]:checked');
@@ -950,6 +1040,18 @@
       if (!valid) {
         showAlert(error);
         return;
+      }
+
+      if (type === 'teilhabegeld') {
+        const einkommenCheck = validateTeilhabegeldEinkommenSubmit('');
+        if (!einkommenCheck.valid) {
+          showAlert(einkommenCheck.error);
+          return;
+        }
+        Object.assign(data, {
+          keineEinkuenfteAusserhalb: einkommenCheck.keineEinkuenfteAusserhalb,
+          einkuenfteAusserhalb: einkommenCheck.einkuenfteAusserhalb
+        });
       }
       
       var syncState = { synchronisiert: false }; // Objekt, damit in allen Code-Pfaden und bei Cache gültig
@@ -1099,6 +1201,7 @@
     function resetNewAntragForm() {
       populateMonatSelect('monatSelect');
       document.getElementById('monatSelect').value = '';
+      resetTeilhabegeldEinkommenForm('');
       document.querySelectorAll('input[name="kleidung"]').forEach(cb => cb.checked = false);
       document.getElementById('eigentumBegruendung').value = '';
       document.querySelector('input[name="antragType"][value="teilhabegeld"]').checked = true;
@@ -1123,6 +1226,7 @@
       
       if (entwurf.type === 'teilhabegeld') {
         document.getElementById('entwurfMonatSelect').value = istErlaubterMonat(entwurf.monat || '') ? (entwurf.monat || '') : '';
+        setTeilhabegeldEinkommenForm('entwurf', entwurf);
       } else {
         if (entwurf.aktion) {
           document.querySelector(`input[name="entwurfEigentumAktion"][value="${entwurf.aktion}"]`).checked = true;
@@ -1160,7 +1264,8 @@
           const monatFormatiert = new Date(monat + '-01').toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
           return { type, monat, valid: false, error: `Sie haben bereits einen Teilhabegeld-Antrag für ${monatFormatiert} gestellt. Pro Monat ist nur ein Antrag möglich.` };
         }
-        return { type, monat, valid: true, error: null };
+        const einkommen = readTeilhabegeldEinkommen('entwurf');
+        return { type, monat, ...einkommen, valid: true, error: null };
       } else {
         const aktionRadio = document.querySelector('input[name="entwurfEigentumAktion"]:checked');
         const aktion = aktionRadio ? aktionRadio.value : 'aufstocken';
@@ -1195,6 +1300,16 @@
       if (!data.valid) {
         showAlert(data.error);
         return;
+      }
+
+      if (data.type === 'teilhabegeld') {
+        const einkommenCheck = validateTeilhabegeldEinkommenSubmit('entwurf');
+        if (!einkommenCheck.valid) {
+          showAlert(einkommenCheck.error);
+          return;
+        }
+        data.keineEinkuenfteAusserhalb = einkommenCheck.keineEinkuenfteAusserhalb;
+        data.einkuenfteAusserhalb = einkommenCheck.einkuenfteAusserhalb;
       }
       
       // Erst Daten aktualisieren, dann einreichen
