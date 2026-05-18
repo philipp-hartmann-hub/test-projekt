@@ -87,6 +87,9 @@ const TRANSLATIONS = {
     'application.type.gespraechstermin': 'Gesprächstermine',
     'application.type.gesundheit_medizin': 'Gesundheit: Termin medizinischer Dienst',
     'application.type.freizeit_weiterbildung': 'Freizeitaktivitäten inkl. Weiterbildungskosten',
+    'application.type.besuch_langzeit': 'Langzeitbesuch (Genehmigung)',
+    'application.type.besuch_termin': 'Besuchstermin',
+    'application.type.besuch_video': 'Videobesuch',
     'application.type.sonstiges': 'Sonstiges Anliegen',
     
     // Status
@@ -247,6 +250,9 @@ const TRANSLATIONS = {
     'apptype.gespraechstermin': 'Gesprächstermine',
     'apptype.gesundheit_medizin': 'Gesundheit: Termin medizinischer Dienst',
     'apptype.freizeit_weiterbildung': 'Freizeitaktivitäten inkl. Weiterbildungskosten',
+    'apptype.besuch_langzeit': 'Langzeitbesuch (Genehmigung)',
+    'apptype.besuch_termin': 'Besuchstermin',
+    'apptype.besuch_video': 'Videobesuch',
     
     // Prozesskette
     'process.receipt': 'Eingang',
@@ -386,6 +392,9 @@ const TRANSLATIONS = {
     'application.type.gespraechstermin': 'Conversation appointments',
     'application.type.gesundheit_medizin': 'Health: medical service appointment',
     'application.type.freizeit_weiterbildung': 'Leisure activities incl. training costs',
+    'application.type.besuch_langzeit': 'Long-term visit (approval)',
+    'application.type.besuch_termin': 'Visit appointment',
+    'application.type.besuch_video': 'Video visit',
     'application.type.sonstiges': 'Other Concerns',
     
     // Status
@@ -563,6 +572,9 @@ const TRANSLATIONS = {
     'apptype.gespraechstermin': 'Conversation appointments',
     'apptype.gesundheit_medizin': 'Health: medical service appointment',
     'apptype.freizeit_weiterbildung': 'Leisure activities incl. training costs',
+    'apptype.besuch_langzeit': 'Long-term visit (approval)',
+    'apptype.besuch_termin': 'Visit appointment',
+    'apptype.besuch_video': 'Video visit',
     
     // Sorting
     'sort.label': 'Sort',
@@ -677,6 +689,9 @@ const TRANSLATIONS = {
     'application.type.gespraechstermin': 'Rendez-vous de conversation',
     'application.type.gesundheit_medizin': 'Santé : rendez-vous au service médical',
     'application.type.freizeit_weiterbildung': 'Activités de loisirs et frais de formation',
+    'application.type.besuch_langzeit': 'Visite longue durée (autorisation)',
+    'application.type.besuch_termin': 'Rendez-vous de visite',
+    'application.type.besuch_video': 'Visite vidéo',
     'application.type.sonstiges': 'Autres préoccupations',
     
     // Statut
@@ -854,6 +869,9 @@ const TRANSLATIONS = {
     'apptype.gespraechstermin': 'Rendez-vous de conversation',
     'apptype.gesundheit_medizin': 'Santé : rendez-vous au service médical',
     'apptype.freizeit_weiterbildung': 'Activités de loisirs et frais de formation',
+    'apptype.besuch_langzeit': 'Visite longue durée (autorisation)',
+    'apptype.besuch_termin': 'Rendez-vous de visite',
+    'apptype.besuch_video': 'Visite vidéo',
     
     // Tri
     'sort.label': 'Trier',
@@ -2694,7 +2712,10 @@ class AntragSystem {
       'beratung-unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
       gespraechstermin: 'Gesprächstermine',
       'gesundheit-medizin': 'Gesundheit: Termin medizinischer Dienst',
-      'freizeit-weiterbildung': 'Freizeitaktivitäten inkl. Weiterbildungskosten'
+      'freizeit-weiterbildung': 'Freizeitaktivitäten inkl. Weiterbildungskosten',
+      'besuch-langzeit': 'Langzeitbesuch (Genehmigung)',
+      'besuch-termin': 'Besuchstermin',
+      'besuch-video': 'Videobesuch'
     };
     return labels[type] || 'Antrag';
   }

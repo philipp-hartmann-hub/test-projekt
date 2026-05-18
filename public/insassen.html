@@ -206,6 +206,18 @@
               <input type="radio" name="antragType" value="freizeit-weiterbildung" onchange="toggleAntragFields()">
               <span class="radio-label">Freizeitaktivitäten inkl. Weiterbildungskosten</span>
             </label>
+            <label class="radio-option">
+              <input type="radio" name="antragType" value="besuch-langzeit" onchange="toggleAntragFields()">
+              <span class="radio-label">Langzeitbesuch (Genehmigung)</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="antragType" value="besuch-termin" onchange="toggleAntragFields()">
+              <span class="radio-label">Besuchstermin</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="antragType" value="besuch-video" onchange="toggleAntragFields()">
+              <span class="radio-label">Videobesuch</span>
+            </label>
           </div>
         </div>
 
@@ -346,6 +358,114 @@
             <textarea id="freizeitBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
           </div>
         </div>
+
+        <!-- Langzeitbesuch -->
+        <div id="besuchLangzeitFields" style="display: none;">
+          <div class="form-group">
+            <label for="langzeitBesuchDatum">Besuchstag <span class="required">*</span></label>
+            <input type="date" id="langzeitBesuchDatum">
+            <p class="field-hint">Der Tag muss im aktuellen oder im folgenden Monat liegen.</p>
+          </div>
+          <div class="form-group">
+            <label for="langzeitBesuchUhrzeit">Uhrzeit <span class="required">*</span></label>
+            <select id="langzeitBesuchUhrzeit">
+              <option value="">Bitte Uhrzeit wählen...</option>
+              <option value="09:00">09:00</option>
+              <option value="10:00">10:00</option>
+              <option value="11:00">11:00</option>
+              <option value="12:00">12:00</option>
+              <option value="13:00">13:00</option>
+              <option value="14:00">14:00</option>
+              <option value="15:00">15:00</option>
+              <option value="16:00">16:00</option>
+            </select>
+            <p class="field-hint">Mögliche Besuchszeiten: 9 bis 16 Uhr.</p>
+          </div>
+          <div class="form-group">
+            <h4 class="subsection-title">Mittagessen – Insasse</h4>
+            <div id="langzeitMittagessenInsasse" class="mittagessen-gruppe"></div>
+          </div>
+          <div class="form-group">
+            <label>Besuchspersonen <span class="required">*</span></label>
+            <div id="langzeitBesucherListe"></div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="addLangzeitBesucher('')">Weitere Person hinzufügen</button>
+          </div>
+        </div>
+
+        <!-- Besuchstermin -->
+        <div id="besuchTerminFields" style="display: none;">
+          <div class="form-group">
+            <label for="besuchTerminNachname">Nachname Besuchsperson <span class="required">*</span></label>
+            <input type="text" id="besuchTerminNachname">
+          </div>
+          <div class="form-group">
+            <label for="besuchTerminVorname">Vorname Besuchsperson <span class="required">*</span></label>
+            <input type="text" id="besuchTerminVorname">
+          </div>
+          <div class="form-group">
+            <label for="besuchTerminGeburtsdatum">Geburtsdatum Besuchsperson <span class="required">*</span></label>
+            <input type="date" id="besuchTerminGeburtsdatum">
+          </div>
+          <div class="form-group">
+            <label for="besuchTerminKinder">Mitkommende Kinder</label>
+            <textarea id="besuchTerminKinder" rows="2" placeholder="Name und Alter der mitkommenden Kinder (falls zutreffend)"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="besuchTerminWunsch">Terminwunsch <span class="required">*</span></label>
+            <input type="datetime-local" id="besuchTerminWunsch">
+          </div>
+          <div class="form-group">
+            <label for="besuchTerminAusweich">Ausweichtermin</label>
+            <input type="datetime-local" id="besuchTerminAusweich">
+            <p class="field-hint">Optional – ein möglicher Alternativtermin.</p>
+          </div>
+        </div>
+
+        <!-- Videobesuch -->
+        <div id="besuchVideoFields" style="display: none;">
+          <div class="form-group">
+            <label for="besuchVideoNachname">Nachname Besuchsperson <span class="required">*</span></label>
+            <input type="text" id="besuchVideoNachname">
+          </div>
+          <div class="form-group">
+            <label for="besuchVideoVorname">Vorname Besuchsperson <span class="required">*</span></label>
+            <input type="text" id="besuchVideoVorname">
+          </div>
+          <div class="form-group">
+            <label for="besuchVideoGeburtsdatum">Geburtsdatum Besuchsperson <span class="required">*</span></label>
+            <input type="date" id="besuchVideoGeburtsdatum">
+          </div>
+          <div class="form-group">
+            <label for="besuchVideoEmail">E-Mail-Adresse Besuchsperson <span class="required">*</span></label>
+            <input type="email" id="besuchVideoEmail" placeholder="besucher@beispiel.de">
+          </div>
+          <div class="form-group">
+            <label for="besuchVideoWochentag">Wochentag <span class="required">*</span></label>
+            <select id="besuchVideoWochentag">
+              <option value="">Bitte wählen...</option>
+              <option value="Montag">Montag</option>
+              <option value="Dienstag">Dienstag</option>
+              <option value="Mittwoch">Mittwoch</option>
+              <option value="Donnerstag">Donnerstag</option>
+              <option value="Freitag">Freitag</option>
+              <option value="Samstag">Samstag</option>
+              <option value="Sonntag">Sonntag</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tageszeit <span class="required">*</span></label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="besuchVideoTageszeit" value="vormittags">
+                <span class="radio-label">Vormittags</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="besuchVideoTageszeit" value="nachmittags">
+                <span class="radio-label">Nachmittags</span>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer modal-footer-triple">
         <button class="btn btn-secondary" onclick="closeModal('newAntragModal')">Abbrechen</button>
@@ -389,6 +509,18 @@
             <label class="radio-option">
               <input type="radio" name="entwurfType" value="freizeit-weiterbildung" onchange="toggleEntwurfFields()">
               <span class="radio-label">Freizeitaktivitäten inkl. Weiterbildungskosten</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="entwurfType" value="besuch-langzeit" onchange="toggleEntwurfFields()">
+              <span class="radio-label">Langzeitbesuch (Genehmigung)</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="entwurfType" value="besuch-termin" onchange="toggleEntwurfFields()">
+              <span class="radio-label">Besuchstermin</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="entwurfType" value="besuch-video" onchange="toggleEntwurfFields()">
+              <span class="radio-label">Videobesuch</span>
             </label>
           </div>
         </div>
@@ -525,9 +657,117 @@
             <input type="text" id="entwurfFreizeitKosten" placeholder="z. B. 120,00 €">
             <p class="field-hint">Optional – nur angeben, wenn die Kosten bereits bekannt sind.</p>
           </div>
-          <motion class="form-group">
+          <div class="form-group">
             <label for="entwurfFreizeitBegruendung">Begründung <span class="required">*</span></label>
             <textarea id="entwurfFreizeitBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
+          </div>
+        </div>
+
+        <!-- Langzeitbesuch -->
+        <div id="entwurfBesuchLangzeitFields" style="display: none;">
+          <div class="form-group">
+            <label for="entwurfLangzeitBesuchDatum">Besuchstag <span class="required">*</span></label>
+            <input type="date" id="entwurfLangzeitBesuchDatum">
+            <p class="field-hint">Der Tag muss im aktuellen oder im folgenden Monat liegen.</p>
+          </div>
+          <div class="form-group">
+            <label for="entwurfLangzeitBesuchUhrzeit">Uhrzeit <span class="required">*</span></label>
+            <select id="entwurfLangzeitBesuchUhrzeit">
+              <option value="">Bitte Uhrzeit wählen...</option>
+              <option value="09:00">09:00</option>
+              <option value="10:00">10:00</option>
+              <option value="11:00">11:00</option>
+              <option value="12:00">12:00</option>
+              <option value="13:00">13:00</option>
+              <option value="14:00">14:00</option>
+              <option value="15:00">15:00</option>
+              <option value="16:00">16:00</option>
+            </select>
+            <p class="field-hint">Mögliche Besuchszeiten: 9 bis 16 Uhr.</p>
+          </div>
+          <div class="form-group">
+            <h4 class="subsection-title">Mittagessen – Insasse</h4>
+            <div id="entwurfLangzeitMittagessenInsasse" class="mittagessen-gruppe"></div>
+          </div>
+          <div class="form-group">
+            <label>Besuchspersonen <span class="required">*</span></label>
+            <div id="entwurfLangzeitBesucherListe"></div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="addLangzeitBesucher('entwurf')">Weitere Person hinzufügen</button>
+          </div>
+        </div>
+
+        <!-- Besuchstermin -->
+        <div id="entwurfBesuchTerminFields" style="display: none;">
+          <div class="form-group">
+            <label for="besuchTerminNachname">Nachname Besuchsperson <span class="required">*</span></label>
+            <input type="text" id="entwurfBesuchTerminNachname">
+          </div>
+          <div class="form-group">
+            <label for="besuchTerminVorname">Vorname Besuchsperson <span class="required">*</span></label>
+            <input type="text" id="entwurfBesuchTerminVorname">
+          </div>
+          <div class="form-group">
+            <label for="besuchTerminGeburtsdatum">Geburtsdatum Besuchsperson <span class="required">*</span></label>
+            <input type="date" id="entwurfBesuchTerminGeburtsdatum">
+          </div>
+          <div class="form-group">
+            <label for="besuchTerminKinder">Mitkommende Kinder</label>
+            <textarea id="entwurfBesuchTerminKinder" rows="2" placeholder="Name und Alter der mitkommenden Kinder (falls zutreffend)"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="besuchTerminWunsch">Terminwunsch <span class="required">*</span></label>
+            <input type="datetime-local" id="entwurfBesuchTerminWunsch">
+          </div>
+          <div class="form-group">
+            <label for="besuchTerminAusweich">Ausweichtermin</label>
+            <input type="datetime-local" id="entwurfBesuchTerminAusweich">
+            <p class="field-hint">Optional – ein möglicher Alternativtermin.</p>
+          </div>
+        </div>
+
+        <!-- Videobesuch -->
+        <div id="entwurfBesuchVideoFields" style="display: none;">
+          <div class="form-group">
+            <label for="besuchVideoNachname">Nachname Besuchsperson <span class="required">*</span></label>
+            <input type="text" id="entwurfBesuchVideoNachname">
+          </div>
+          <div class="form-group">
+            <label for="besuchVideoVorname">Vorname Besuchsperson <span class="required">*</span></label>
+            <input type="text" id="entwurfBesuchVideoVorname">
+          </div>
+          <div class="form-group">
+            <label for="besuchVideoGeburtsdatum">Geburtsdatum Besuchsperson <span class="required">*</span></label>
+            <input type="date" id="entwurfBesuchVideoGeburtsdatum">
+          </div>
+          <div class="form-group">
+            <label for="besuchVideoEmail">E-Mail-Adresse Besuchsperson <span class="required">*</span></label>
+            <input type="email" id="entwurfBesuchVideoEmail" placeholder="besucher@beispiel.de">
+          </div>
+          <div class="form-group">
+            <label for="besuchVideoWochentag">Wochentag <span class="required">*</span></label>
+            <select id="entwurfBesuchVideoWochentag">
+              <option value="">Bitte wählen...</option>
+              <option value="Montag">Montag</option>
+              <option value="Dienstag">Dienstag</option>
+              <option value="Mittwoch">Mittwoch</option>
+              <option value="Donnerstag">Donnerstag</option>
+              <option value="Freitag">Freitag</option>
+              <option value="Samstag">Samstag</option>
+              <option value="Sonntag">Sonntag</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tageszeit <span class="required">*</span></label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="entwurfBesuchVideoTageszeit" value="vormittags">
+                <span class="radio-label">Vormittags</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="entwurfBesuchVideoTageszeit" value="nachmittags">
+                <span class="radio-label">Nachmittags</span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -684,6 +924,9 @@
         'gespraechstermin': 'Gesprächstermine',
         'gesundheit-medizin': 'Gesundheit: Termin medizinischer Dienst',
         'freizeit-weiterbildung': 'Freizeitaktivitäten inkl. Weiterbildungskosten',
+        'besuch-langzeit': 'Langzeitbesuch (Genehmigung)',
+        'besuch-termin': 'Besuchstermin',
+        'besuch-video': 'Videobesuch',
         'sonstiges': 'Sonstiges'
       };
       return typeMap[type] || type;
@@ -904,6 +1147,7 @@
     populateMonatSelect('monatSelect');
     populateMonatSelect('entwurfMonatSelect');
     populateMonatSelect('editMonatSelect');
+    initLangzeitBesuchForm('', null);
     window.addEventListener('dataSyncLoaded', populateUserSelect);
     window.addEventListener('dataReloaded', populateUserSelect);
     window.addEventListener('dataSyncLoaded', populateHeaderUserSwitch);
@@ -1057,7 +1301,405 @@
     // ============================================
     // ANTRÄGE
     // ============================================
-    
+
+    // --- Besuche (Langzeit, Termin, Video) ---
+    function langzeitIds(prefix) {
+      const p = prefix ? 'entwurf' : '';
+      return {
+        datum: p ? 'entwurfLangzeitBesuchDatum' : 'langzeitBesuchDatum',
+        uhrzeit: p ? 'entwurfLangzeitBesuchUhrzeit' : 'langzeitBesuchUhrzeit',
+        mittagessenInsasse: p ? 'entwurfLangzeitMittagessenInsasse' : 'langzeitMittagessenInsasse',
+        besucherListe: p ? 'entwurfLangzeitBesucherListe' : 'langzeitBesucherListe'
+      };
+    }
+
+    function formatDateInputValue(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function setLangzeitDatumGrenzen(prefix) {
+      const ids = langzeitIds(prefix);
+      const el = document.getElementById(ids.datum);
+      if (!el) return;
+      const jetzt = new Date();
+      const start = new Date(jetzt.getFullYear(), jetzt.getMonth(), 1);
+      const end = new Date(jetzt.getFullYear(), jetzt.getMonth() + 2, 0);
+      el.min = formatDateInputValue(start);
+      el.max = formatDateInputValue(end);
+    }
+
+    function istErlaubtesLangzeitbesuchDatum(datumStr) {
+      if (!datumStr) return false;
+      const d = new Date(`${datumStr}T12:00:00`);
+      if (Number.isNaN(d.getTime())) return false;
+      const jetzt = new Date();
+      const start = new Date(jetzt.getFullYear(), jetzt.getMonth(), 1);
+      const end = new Date(jetzt.getFullYear(), jetzt.getMonth() + 2, 0, 23, 59, 59);
+      return d >= start && d <= end;
+    }
+
+    function istGueltigeLangzeitUhrzeit(uhrzeit) {
+      if (!uhrzeit) return false;
+      const m = /^(\d{1,2}):(\d{2})$/.exec(uhrzeit);
+      if (!m) return false;
+      const h = parseInt(m[1], 10);
+      return h >= 9 && h <= 16;
+    }
+
+    function mittagessenHtml() {
+      return `
+        <label class="checkbox-option">
+          <input type="checkbox" class="mittag-gewuenscht">
+          <span class="checkbox-label">Mittagessen gewünscht</span>
+        </label>
+        <div class="mittagessen-optionen" style="display: none; margin-top: 8px;">
+          <div class="checkbox-group">
+            <label class="checkbox-option"><input type="checkbox" class="mittag-normal"><span class="checkbox-label">Normales Gericht</span></label>
+            <label class="checkbox-option"><input type="checkbox" class="mittag-vegetarisch"><span class="checkbox-label">Vegetarisch</span></label>
+            <label class="checkbox-option"><input type="checkbox" class="mittag-vegan"><span class="checkbox-label">Vegan</span></label>
+            <label class="checkbox-option"><input type="checkbox" class="mittag-ohne-schwein"><span class="checkbox-label">Ohne Schweinefleisch</span></label>
+          </div>
+          <label class="field-hint" style="display:block;margin-top:6px;">Sonstige Angaben (z. B. Allergien)</label>
+          <textarea class="mittag-sonstiges" rows="2" placeholder="Optional"></textarea>
+        </div>
+      `.replace(/div/g, 'div');
+    }
+
+    function bindMittagessenGruppe(container) {
+      if (!container || container.dataset.bound === '1') return;
+      container.innerHTML = mittagessenHtml();
+      const gewuenscht = container.querySelector('.mittag-gewuenscht');
+      const optionen = container.querySelector('.mittagessen-optionen');
+      if (gewuenscht && optionen) {
+        gewuenscht.addEventListener('change', () => {
+          optionen.style.display = gewuenscht.checked ? 'block' : 'none';
+        });
+      }
+      container.dataset.bound = '1';
+    }
+
+    function readMittagessenFromContainer(container) {
+      if (!container) {
+        return { mittagessenGewuenscht: false, normal: false, vegetarisch: false, vegan: false, ohneSchweinefleisch: false, sonstiges: '' };
+      }
+      const gewuenscht = container.querySelector('.mittag-gewuenscht');
+      const mittagessenGewuenscht = gewuenscht ? gewuenscht.checked : false;
+      return {
+        mittagessenGewuenscht,
+        normal: mittagessenGewuenscht && container.querySelector('.mittag-normal')?.checked === true,
+        vegetarisch: mittagessenGewuenscht && container.querySelector('.mittag-vegetarisch')?.checked === true,
+        vegan: mittagessenGewuenscht && container.querySelector('.mittag-vegan')?.checked === true,
+        ohneSchweinefleisch: mittagessenGewuenscht && container.querySelector('.mittag-ohne-schwein')?.checked === true,
+        sonstiges: mittagessenGewuenscht ? (container.querySelector('.mittag-sonstiges')?.value.trim() || '') : ''
+      };
+    }
+
+    function setMittagessenContainer(container, essen) {
+      if (!container) return;
+      bindMittagessenGruppe(container);
+      const data = essen || {};
+      const gewuenscht = container.querySelector('.mittag-gewuenscht');
+      const optionen = container.querySelector('.mittagessen-optionen');
+      if (gewuenscht) gewuenscht.checked = data.mittagessenGewuenscht === true;
+      if (optionen) optionen.style.display = data.mittagessenGewuenscht ? 'block' : 'none';
+      const setCb = (cls, val) => { const el = container.querySelector(cls); if (el) el.checked = val === true; };
+      setCb('.mittag-normal', data.normal);
+      setCb('.mittag-vegetarisch', data.vegetarisch);
+      setCb('.mittag-vegan', data.vegan);
+      setCb('.mittag-ohne-schwein', data.ohneSchweinefleisch);
+      const sonst = container.querySelector('.mittag-sonstiges');
+      if (sonst) sonst.value = data.sonstiges || '';
+    }
+
+    function validateMittagessen(essen, kontext) {
+      if (!essen || essen.mittagessenGewuenscht !== true) return { valid: true, error: null };
+      const hatOption = essen.normal || essen.vegetarisch || essen.vegan || essen.ohneSchweinefleisch || !!essen.sonstiges;
+      if (!hatOption) {
+        return { valid: false, error: `Bitte wählen Sie mindestens eine Verpflegungsoption für ${kontext} oder geben Sie sonstige Angaben an.` };
+      }
+      return { valid: true, error: null };
+    }
+
+    function formatMittagessenKurz(essen) {
+      if (!essen || essen.mittagessenGewuenscht !== true) return 'Kein Mittagessen';
+      const parts = [];
+      if (essen.normal) parts.push('Normal');
+      if (essen.vegetarisch) parts.push('Vegetarisch');
+      if (essen.vegan) parts.push('Vegan');
+      if (essen.ohneSchweinefleisch) parts.push('Ohne Schweinefleisch');
+      if (essen.sonstiges) parts.push(essen.sonstiges);
+      return parts.length ? parts.join(', ') : 'Mittagessen (ohne Angabe)';
+    }
+
+    function initLangzeitBesuchForm(prefix, besucherDaten) {
+      const ids = langzeitIds(prefix);
+      setLangzeitDatumGrenzen(prefix);
+      const insasseEl = document.getElementById(ids.mittagessenInsasse);
+      bindMittagessenGruppe(insasseEl);
+      const liste = document.getElementById(ids.besucherListe);
+      if (!liste) return;
+      liste.innerHTML = '';
+      const personen = Array.isArray(besucherDaten) && besucherDaten.length ? besucherDaten : [{}];
+      personen.forEach((p, i) => addLangzeitBesucher(prefix, p, i + 1));
+    }
+
+    function addLangzeitBesucher(prefix, person, nummer) {
+      const ids = langzeitIds(prefix);
+      const liste = document.getElementById(ids.besucherListe);
+      if (!liste) return;
+      const index = liste.querySelectorAll('.langzeit-besucher-block').length;
+      const nr = nummer || index + 1;
+      const block = document.createElement('div');
+      block.className = 'langzeit-besucher-block';
+      block.style.cssText = 'border:1px solid #ddd;border-radius:6px;padding:12px;margin-bottom:10px;';
+      block.innerHTML = `
+        <h4 class="subsection-title" style="margin-top:0;">Besuchsperson ${nr}</h4>
+        <div class="form-group">
+          <label>Nachname <span class="required">*</span></label>
+          <input type="text" class="besucher-nachname" value="${person?.nachname ? String(person.nachname).replace(/"/g, '&quot;') : ''}">
+        </div>
+        <div class="form-group">
+          <label>Vorname <span class="required">*</span></label>
+          <input type="text" class="besucher-vorname" value="${person?.vorname ? String(person.vorname).replace(/"/g, '&quot;') : ''}">
+        </div>
+        <div class="form-group">
+          <label>Geburtsdatum <span class="required">*</span></label>
+          <input type="date" class="besucher-geburtsdatum" value="${person?.geburtsdatum || ''}">
+        </div>
+        <div class="form-group">
+          <label>Mittagessen – Besuchsperson</label>
+          <div class="mittagessen-gruppe besucher-mittagessen"></div>
+        </div>
+        ${index > 0 ? '<button type="button" class="btn btn-outline btn-sm" onclick="this.closest(\'.langzeit-besucher-block\').remove()">Person entfernen</button>' : ''}
+      `.replace(/div/g, 'div');
+      block.innerHTML = block.innerHTML.replace(/div/g, 'div');
+      liste.appendChild(block);
+      const mittagEl = block.querySelector('.besucher-mittagessen');
+      setMittagessenContainer(mittagEl, person?.mittagessen);
+    }
+
+    function readLangzeitbesuchForm(prefix) {
+      const ids = langzeitIds(prefix);
+      const datumEl = document.getElementById(ids.datum);
+      const uhrzeitEl = document.getElementById(ids.uhrzeit);
+      const insasseEl = document.getElementById(ids.mittagessenInsasse);
+      const liste = document.getElementById(ids.besucherListe);
+      const besucher = [];
+      if (liste) {
+        liste.querySelectorAll('.langzeit-besucher-block').forEach((block) => {
+          besucher.push({
+            nachname: block.querySelector('.besucher-nachname')?.value.trim() || '',
+            vorname: block.querySelector('.besucher-vorname')?.value.trim() || '',
+            geburtsdatum: block.querySelector('.besucher-geburtsdatum')?.value || '',
+            mittagessen: readMittagessenFromContainer(block.querySelector('.besucher-mittagessen'))
+          });
+        });
+      }
+      return {
+        besuchDatum: datumEl ? datumEl.value : '',
+        besuchUhrzeit: uhrzeitEl ? uhrzeitEl.value : '',
+        mittagessenInsasse: readMittagessenFromContainer(insasseEl),
+        besucher
+      };
+    }
+
+    function validateLangzeitbesuchData(data) {
+      if (!data.besuchDatum) {
+        return { valid: false, error: 'Bitte geben Sie den Besuchstag an.' };
+      }
+      if (!istErlaubtesLangzeitbesuchDatum(data.besuchDatum)) {
+        return { valid: false, error: 'Der Besuchstag muss im aktuellen oder im folgenden Monat liegen.' };
+      }
+      if (!istGueltigeLangzeitUhrzeit(data.besuchUhrzeit)) {
+        return { valid: false, error: 'Bitte wählen Sie eine Uhrzeit zwischen 9 und 16 Uhr.' };
+      }
+      const mInsasse = validateMittagessen(data.mittagessenInsasse, 'den Insassen');
+      if (!mInsasse.valid) return mInsasse;
+      if (!data.besucher || !data.besucher.length) {
+        return { valid: false, error: 'Bitte geben Sie mindestens eine Besuchsperson an.' };
+      }
+      for (let i = 0; i < data.besucher.length; i++) {
+        const p = data.besucher[i];
+        if (!p.nachname || !p.vorname || !p.geburtsdatum) {
+          return { valid: false, error: `Bitte füllen Sie alle Pflichtfelder für Besuchsperson ${i + 1} aus.` };
+        }
+        const mBesucher = validateMittagessen(p.mittagessen, `Besuchsperson ${i + 1}`);
+        if (!mBesucher.valid) return mBesucher;
+      }
+      return { valid: true, error: null };
+    }
+
+    function resetLangzeitbesuchForm(prefix) {
+      const ids = langzeitIds(prefix);
+      const datumEl = document.getElementById(ids.datum);
+      const uhrzeitEl = document.getElementById(ids.uhrzeit);
+      if (datumEl) datumEl.value = '';
+      if (uhrzeitEl) uhrzeitEl.value = '';
+      initLangzeitBesuchForm(prefix, [{}]);
+      setMittagessenContainer(document.getElementById(ids.mittagessenInsasse), {});
+    }
+
+    function setLangzeitbesuchForm(prefix, antrag) {
+      const ids = langzeitIds(prefix);
+      const datumEl = document.getElementById(ids.datum);
+      const uhrzeitEl = document.getElementById(ids.uhrzeit);
+      if (datumEl) datumEl.value = antrag.besuchDatum || '';
+      if (uhrzeitEl) uhrzeitEl.value = antrag.besuchUhrzeit || '';
+      initLangzeitBesuchForm(prefix, antrag.besucher || [{}]);
+      setMittagessenContainer(document.getElementById(ids.mittagessenInsasse), antrag.mittagessenInsasse || {});
+      const liste = document.getElementById(ids.besucherListe);
+      if (liste && Array.isArray(antrag.besucher)) {
+        const blocks = liste.querySelectorAll('.langzeit-besucher-block');
+        antrag.besucher.forEach((p, i) => {
+          const block = blocks[i];
+          if (!block) return;
+          const nachname = block.querySelector('.besucher-nachname');
+          const vorname = block.querySelector('.besucher-vorname');
+          const geb = block.querySelector('.besucher-geburtsdatum');
+          if (nachname) nachname.value = p.nachname || '';
+          if (vorname) vorname.value = p.vorname || '';
+          if (geb) geb.value = p.geburtsdatum || '';
+          setMittagessenContainer(block.querySelector('.besucher-mittagessen'), p.mittagessen);
+        });
+      }
+      setLangzeitDatumGrenzen(prefix);
+    }
+
+    function formatLangzeitBesucherHtml(besucher, mittagessenInsasse) {
+      let html = `<p><strong>Insasse – Mittagessen:</strong> ${formatMittagessenKurz(mittagessenInsasse)}</p>`;
+      if (!besucher || !besucher.length) {
+        html += '<p class="incomplete"><em>Besuchspersonen noch nicht angegeben</em></p>';
+        return html;
+      }
+      besucher.forEach((p, i) => {
+        const name = [p.vorname, p.nachname].filter(Boolean).join(' ') || '–';
+        html += `<p><strong>Besuchsperson ${i + 1}:</strong> ${name}${p.geburtsdatum ? ` (geb. ${p.geburtsdatum})` : ''}<br><span>Mittagessen: ${formatMittagessenKurz(p.mittagessen)}</span></p>`;
+      });
+      return html;
+    }
+
+    function besuchTerminIds(prefix) {
+      const p = prefix ? 'entwurf' : '';
+      return {
+        nachname: `${p}BesuchTerminNachname`,
+        vorname: `${p}BesuchTerminVorname`,
+        geburtsdatum: `${p}BesuchTerminGeburtsdatum`,
+        kinder: `${p}BesuchTerminKinder`,
+        wunsch: `${p}BesuchTerminWunsch`,
+        ausweich: `${p}BesuchTerminAusweich`
+      };
+    }
+
+    function readBesuchTerminForm(prefix) {
+      const ids = besuchTerminIds(prefix);
+      const kinder = document.getElementById(ids.kinder)?.value.trim() || '';
+      const ausweich = document.getElementById(ids.ausweich)?.value || '';
+      return {
+        besucherNachname: document.getElementById(ids.nachname)?.value.trim() || '',
+        besucherVorname: document.getElementById(ids.vorname)?.value.trim() || '',
+        besucherGeburtsdatum: document.getElementById(ids.geburtsdatum)?.value || '',
+        mitkommendeKinder: kinder || null,
+        terminwunsch: document.getElementById(ids.wunsch)?.value || '',
+        ausweichtermin: ausweich || null
+      };
+    }
+
+    function validateBesuchTerminData(data) {
+      if (!data.besucherNachname || !data.besucherVorname || !data.besucherGeburtsdatum) {
+        return { valid: false, error: 'Bitte geben Sie Name, Vorname und Geburtsdatum der Besuchsperson an.' };
+      }
+      if (!data.terminwunsch) {
+        return { valid: false, error: 'Bitte geben Sie einen Terminwunsch an.' };
+      }
+      return { valid: true, error: null };
+    }
+
+    function resetBesuchTerminForm(prefix) {
+      const ids = besuchTerminIds(prefix);
+      Object.values(ids).forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+    }
+
+    function setBesuchTerminForm(prefix, antrag) {
+      const ids = besuchTerminIds(prefix);
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+      set(ids.nachname, antrag.besucherNachname);
+      set(ids.vorname, antrag.besucherVorname);
+      set(ids.geburtsdatum, antrag.besucherGeburtsdatum);
+      set(ids.kinder, antrag.mitkommendeKinder);
+      set(ids.wunsch, antrag.terminwunsch);
+      set(ids.ausweich, antrag.ausweichtermin);
+    }
+
+    function besuchVideoIds(prefix) {
+      const p = prefix ? 'entwurf' : '';
+      return {
+        nachname: `${p}BesuchVideoNachname`,
+        vorname: `${p}BesuchVideoVorname`,
+        geburtsdatum: `${p}BesuchVideoGeburtsdatum`,
+        email: `${p}BesuchVideoEmail`,
+        wochentag: `${p}BesuchVideoWochentag`,
+        tageszeitName: prefix ? 'entwurfBesuchVideoTageszeit' : 'besuchVideoTageszeit'
+      };
+    }
+
+    function readBesuchVideoForm(prefix) {
+      const ids = besuchVideoIds(prefix);
+      const tageszeitEl = document.querySelector(`input[name="${ids.tageszeitName}"]:checked`);
+      return {
+        besucherNachname: document.getElementById(ids.nachname)?.value.trim() || '',
+        besucherVorname: document.getElementById(ids.vorname)?.value.trim() || '',
+        besucherGeburtsdatum: document.getElementById(ids.geburtsdatum)?.value || '',
+        besucherEmail: document.getElementById(ids.email)?.value.trim() || '',
+        wochentag: document.getElementById(ids.wochentag)?.value || '',
+        tageszeit: tageszeitEl ? tageszeitEl.value : ''
+      };
+    }
+
+    function validateBesuchVideoData(data) {
+      if (!data.besucherNachname || !data.besucherVorname || !data.besucherGeburtsdatum) {
+        return { valid: false, error: 'Bitte geben Sie Name, Vorname und Geburtsdatum der Besuchsperson an.' };
+      }
+      if (!data.besucherEmail) {
+        return { valid: false, error: 'Bitte geben Sie die E-Mail-Adresse der Besuchsperson an.' };
+      }
+      if (!data.wochentag) {
+        return { valid: false, error: 'Bitte wählen Sie einen Wochentag.' };
+      }
+      if (!data.tageszeit) {
+        return { valid: false, error: 'Bitte wählen Sie Vormittags oder Nachmittags.' };
+      }
+      return { valid: true, error: null };
+    }
+
+    function resetBesuchVideoForm(prefix) {
+      const ids = besuchVideoIds(prefix);
+      ['nachname', 'vorname', 'geburtsdatum', 'email', 'wochentag'].forEach((k) => {
+        const el = document.getElementById(ids[k]);
+        if (el) el.value = '';
+      });
+      document.querySelectorAll(`input[name="${ids.tageszeitName}"]`).forEach((r) => { r.checked = false; });
+    }
+
+    function setBesuchVideoForm(prefix, antrag) {
+      const ids = besuchVideoIds(prefix);
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+      set(ids.nachname, antrag.besucherNachname);
+      set(ids.vorname, antrag.besucherVorname);
+      set(ids.geburtsdatum, antrag.besucherGeburtsdatum);
+      set(ids.email, antrag.besucherEmail);
+      set(ids.wochentag, antrag.wochentag);
+      if (antrag.tageszeit) {
+        const radio = document.querySelector(`input[name="${ids.tageszeitName}"][value="${antrag.tageszeit}"]`);
+        if (radio) radio.checked = true;
+      }
+    }
+
     function toggleAntragFields() {
       const type = document.querySelector('input[name="antragType"]:checked').value;
       document.getElementById('teilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
@@ -1066,6 +1708,10 @@
       document.getElementById('gespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
       document.getElementById('gesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
       document.getElementById('freizeitWeiterbildungFields').style.display = type === 'freizeit-weiterbildung' ? 'block' : 'none';
+      document.getElementById('besuchLangzeitFields').style.display = type === 'besuch-langzeit' ? 'block' : 'none';
+      document.getElementById('besuchTerminFields').style.display = type === 'besuch-termin' ? 'block' : 'none';
+      document.getElementById('besuchVideoFields').style.display = type === 'besuch-video' ? 'block' : 'none';
+      if (type === 'besuch-langzeit') initLangzeitBesuchForm('', null);
     }
 
     function toggleEntwurfFields() {
@@ -1076,6 +1722,10 @@
       document.getElementById('entwurfGespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
       document.getElementById('entwurfGesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
       document.getElementById('entwurfFreizeitWeiterbildungFields').style.display = type === 'freizeit-weiterbildung' ? 'block' : 'none';
+      document.getElementById('entwurfBesuchLangzeitFields').style.display = type === 'besuch-langzeit' ? 'block' : 'none';
+      document.getElementById('entwurfBesuchTerminFields').style.display = type === 'besuch-termin' ? 'block' : 'none';
+      document.getElementById('entwurfBesuchVideoFields').style.display = type === 'besuch-video' ? 'block' : 'none';
+      if (type === 'besuch-langzeit') initLangzeitBesuchForm('entwurf', null);
     }
 
     function readFreizeitWeiterbildungForm(prefix) {
@@ -1360,6 +2010,18 @@
         const data = readFreizeitWeiterbildungForm('');
         const check = validateFreizeitWeiterbildungData(data);
         return { type, data, valid: check.valid, error: check.error };
+      } else if (type === 'besuch-langzeit') {
+        const data = readLangzeitbesuchForm('');
+        const check = validateLangzeitbesuchData(data);
+        return { type, data, valid: check.valid, error: check.error };
+      } else if (type === 'besuch-termin') {
+        const data = readBesuchTerminForm('');
+        const check = validateBesuchTerminData(data);
+        return { type, data, valid: check.valid, error: check.error };
+      } else if (type === 'besuch-video') {
+        const data = readBesuchVideoForm('');
+        const check = validateBesuchVideoData(data);
+        return { type, data, valid: check.valid, error: check.error };
       } else if (type === 'eigentum') {
         const aktion = document.querySelector('input[name="eigentumAktion"]:checked').value;
         const kleidungCheckboxes = document.querySelectorAll('input[name="kleidung"]:checked');
@@ -1552,6 +2214,9 @@
       resetGespraechsterminForm('');
       resetGesundheitMedizinForm('');
       resetFreizeitWeiterbildungForm('');
+      resetLangzeitbesuchForm('');
+      resetBesuchTerminForm('');
+      resetBesuchVideoForm('');
       document.querySelectorAll('input[name="kleidung"]').forEach(cb => cb.checked = false);
       document.getElementById('eigentumBegruendung').value = '';
       document.querySelector('input[name="antragType"][value="teilhabegeld"]').checked = true;
@@ -1586,6 +2251,12 @@
         setGesundheitMedizinForm('entwurf', entwurf);
       } else if (entwurf.type === 'freizeit-weiterbildung') {
         setFreizeitWeiterbildungForm('entwurf', entwurf);
+      } else if (entwurf.type === 'besuch-langzeit') {
+        setLangzeitbesuchForm('entwurf', entwurf);
+      } else if (entwurf.type === 'besuch-termin') {
+        setBesuchTerminForm('entwurf', entwurf);
+      } else if (entwurf.type === 'besuch-video') {
+        setBesuchVideoForm('entwurf', entwurf);
       } else if (entwurf.type === 'eigentum') {
         if (entwurf.aktion) {
           document.querySelector(`input[name="entwurfEigentumAktion"][value="${entwurf.aktion}"]`).checked = true;
@@ -1640,6 +2311,18 @@
       } else if (type === 'freizeit-weiterbildung') {
         const data = readFreizeitWeiterbildungForm('entwurf');
         const check = validateFreizeitWeiterbildungData(data);
+        return { type, ...data, valid: check.valid, error: check.error };
+      } else if (type === 'besuch-langzeit') {
+        const data = readLangzeitbesuchForm('entwurf');
+        const check = validateLangzeitbesuchData(data);
+        return { type, ...data, valid: check.valid, error: check.error };
+      } else if (type === 'besuch-termin') {
+        const data = readBesuchTerminForm('entwurf');
+        const check = validateBesuchTerminData(data);
+        return { type, ...data, valid: check.valid, error: check.error };
+      } else if (type === 'besuch-video') {
+        const data = readBesuchVideoForm('entwurf');
+        const check = validateBesuchVideoData(data);
         return { type, ...data, valid: check.valid, error: check.error };
       } else if (type === 'eigentum') {
         const aktionRadio = document.querySelector('input[name="entwurfEigentumAktion"]:checked');
@@ -1791,6 +2474,31 @@
           ${antrag.freizeitAktivitaet ? `<p><strong>Aktivität:</strong> ${antrag.freizeitAktivitaet}</p>` : '<p class="incomplete"><em>Aktivität noch nicht angegeben</em></p>'}
           ${antrag.kosten ? `<p><strong>Kosten:</strong> ${antrag.kosten}</p>` : ''}
           ${begruendungText ? `<p><strong>Begründung:</strong> ${begruendungText}</p>` : '<p class="incomplete"><em>Begründung noch nicht angegeben</em></p>'}
+        `;
+      } else if (antrag.type === 'besuch-langzeit') {
+        typeLabel = 'Langzeitbesuch (Genehmigung)';
+        detailsHtml = `
+          ${antrag.besuchDatum ? `<p><strong>Besuchstag:</strong> ${antrag.besuchDatum}</p>` : '<p class="incomplete"><em>Besuchstag noch nicht angegeben</em></p>'}
+          ${antrag.besuchUhrzeit ? `<p><strong>Uhrzeit:</strong> ${antrag.besuchUhrzeit}</p>` : '<p class="incomplete"><em>Uhrzeit noch nicht angegeben</em></p>'}
+          ${formatLangzeitBesucherHtml(antrag.besucher, antrag.mittagessenInsasse)}
+        `;
+      } else if (antrag.type === 'besuch-termin') {
+        typeLabel = 'Besuchstermin';
+        const name = [antrag.besucherVorname, antrag.besucherNachname].filter(Boolean).join(' ');
+        detailsHtml = `
+          ${name ? `<p><strong>Besuchsperson:</strong> ${name}${antrag.besucherGeburtsdatum ? ` (geb. ${antrag.besucherGeburtsdatum})` : ''}</p>` : '<p class="incomplete"><em>Besuchsperson noch nicht angegeben</em></p>'}
+          ${antrag.mitkommendeKinder ? `<p><strong>Mitkommende Kinder:</strong> ${antrag.mitkommendeKinder}</p>` : ''}
+          ${antrag.terminwunsch ? `<p><strong>Terminwunsch:</strong> ${antrag.terminwunsch}</p>` : '<p class="incomplete"><em>Terminwunsch noch nicht angegeben</em></p>'}
+          ${antrag.ausweichtermin ? `<p><strong>Ausweichtermin:</strong> ${antrag.ausweichtermin}</p>` : ''}
+        `;
+      } else if (antrag.type === 'besuch-video') {
+        typeLabel = 'Videobesuch';
+        const name = [antrag.besucherVorname, antrag.besucherNachname].filter(Boolean).join(' ');
+        detailsHtml = `
+          ${name ? `<p><strong>Besuchsperson:</strong> ${name}${antrag.besucherGeburtsdatum ? ` (geb. ${antrag.besucherGeburtsdatum})` : ''}</p>` : '<p class="incomplete"><em>Besuchsperson noch nicht angegeben</em></p>'}
+          ${antrag.besucherEmail ? `<p><strong>E-Mail:</strong> ${antrag.besucherEmail}</p>` : '<p class="incomplete"><em>E-Mail noch nicht angegeben</em></p>'}
+          ${antrag.wochentag ? `<p><strong>Wochentag:</strong> ${antrag.wochentag}</p>` : '<p class="incomplete"><em>Wochentag noch nicht gewählt</em></p>'}
+          ${antrag.tageszeit ? `<p><strong>Tageszeit:</strong> ${antrag.tageszeit === 'vormittags' ? 'Vormittags' : antrag.tageszeit === 'nachmittags' ? 'Nachmittags' : antrag.tageszeit}</p>` : '<p class="incomplete"><em>Tageszeit noch nicht gewählt</em></p>'}
         `;
       } else {
         // Unbekannter Typ - trotzdem anzeigen

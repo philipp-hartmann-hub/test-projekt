@@ -1074,11 +1074,36 @@
         'gespraechstermin': t('application.type.gespraechstermin'),
         'gesundheit-medizin': t('application.type.gesundheit_medizin'),
         'freizeit-weiterbildung': t('application.type.freizeit_weiterbildung'),
+        'besuch-langzeit': t('application.type.besuch_langzeit'),
+        'besuch-termin': t('application.type.besuch_termin'),
+        'besuch-video': t('application.type.besuch_video'),
         'sonstiges': t('application.type.sonstiges')
       };
       return typeMap[type] || type;
     }
-    
+
+    function formatMittagessenAnzeige(essen) {
+      if (!essen || essen.mittagessenGewuenscht !== true) {
+        return currentLanguage === 'en' ? 'No lunch' : currentLanguage === 'fr' ? 'Pas de déjeuner' : 'Kein Mittagessen';
+      }
+      const parts = [];
+      if (essen.normal) parts.push(currentLanguage === 'en' ? 'Standard meal' : currentLanguage === 'fr' ? 'Standard' : 'Normales Gericht');
+      if (essen.vegetarisch) parts.push(currentLanguage === 'en' ? 'Vegetarian' : currentLanguage === 'fr' ? 'Végétarien' : 'Vegetarisch');
+      if (essen.vegan) parts.push('Vegan');
+      if (essen.ohneSchweinefleisch) parts.push(currentLanguage === 'en' ? 'No pork' : currentLanguage === 'fr' ? 'Sans porc' : 'Ohne Schweinefleisch');
+      if (essen.sonstiges) parts.push(essen.sonstiges);
+      return parts.length ? parts.join(', ') : '–';
+    }
+
+    function formatLangzeitBesucherDetails(antrag) {
+      if (!antrag.besucher || !antrag.besucher.length) return '<p>–</p>';
+      return antrag.besucher.map((person, i) => {
+        const name = [person.vorname, person.nachname].filter(Boolean).join(' ') || '–';
+        const geb = person.geburtsdatum ? ` (geb. ${person.geburtsdatum})` : '';
+        return `<p><strong>${currentLanguage === 'en' ? 'Visitor' : currentLanguage === 'fr' ? 'Visiteur' : 'Besuchsperson'} ${i + 1}:</strong> ${name}${geb}<br>${currentLanguage === 'en' ? 'Lunch' : currentLanguage === 'fr' ? 'Déjeuner' : 'Mittagessen'}: ${formatMittagessenAnzeige(person.mittagessen)}</p>`;
+      }).join('');
+    }
+
     // Übersetzte Aktivitätsbeschreibung
     function getAktivitaetBeschreibung(aktivitaet) {
       const typ = aktivitaet.typ;
@@ -1095,6 +1120,12 @@
               ? t('apptype.gesundheit_medizin')
             : aktivitaet.beschreibung.includes('Freizeitaktivität')
               ? t('apptype.freizeit_weiterbildung')
+            : aktivitaet.beschreibung.includes('Langzeitbesuch')
+              ? t('apptype.besuch_langzeit')
+            : aktivitaet.beschreibung.includes('Besuchstermin')
+              ? t('apptype.besuch_termin')
+            : aktivitaet.beschreibung.includes('Videobesuch')
+              ? t('apptype.besuch_video')
             : aktivitaet.beschreibung.includes('Beratungs')
               ? t('apptype.beratung_unterstuetzung')
               : t('apptype.eigentum');
@@ -2119,6 +2150,32 @@
           ${antrag.kosten ? `<p><strong>Kosten:</strong> ${antrag.kosten}</p>` : ''}
           ${antrag.antragBegruendung ? `<p><strong>Begründung:</strong> ${getTranslatedUserText(antrag.antragBegruendung)}</p>` : ''}
         `;
+      } else if (antrag.type === 'besuch-langzeit') {
+        typeLabel = t('application.type.besuch_langzeit');
+        detailsHtml = `
+          <p><strong>Besuchstag:</strong> ${antrag.besuchDatum || '–'}</p>
+          <p><strong>Uhrzeit:</strong> ${antrag.besuchUhrzeit || '–'}</p>
+          <p><strong>Insasse – Mittagessen:</strong> ${formatMittagessenAnzeige(antrag.mittagessenInsasse)}</p>
+          ${formatLangzeitBesucherDetails(antrag)}
+        `;
+      } else if (antrag.type === 'besuch-termin') {
+        typeLabel = t('application.type.besuch_termin');
+        const besuchName = [antrag.besucherVorname, antrag.besucherNachname].filter(Boolean).join(' ');
+        detailsHtml = `
+          <p><strong>Besuchsperson:</strong> ${besuchName || '–'}${antrag.besucherGeburtsdatum ? ` (geb. ${antrag.besucherGeburtsdatum})` : ''}</p>
+          ${antrag.mitkommendeKinder ? `<p><strong>Mitkommende Kinder:</strong> ${getTranslatedUserText(antrag.mitkommendeKinder)}</p>` : ''}
+          <p><strong>Terminwunsch:</strong> ${antrag.terminwunsch || '–'}</p>
+          ${antrag.ausweichtermin ? `<p><strong>Ausweichtermin:</strong> ${antrag.ausweichtermin}</p>` : ''}
+        `;
+      } else if (antrag.type === 'besuch-video') {
+        typeLabel = t('application.type.besuch_video');
+        const besuchName = [antrag.besucherVorname, antrag.besucherNachname].filter(Boolean).join(' ');
+        detailsHtml = `
+          <p><strong>Besuchsperson:</strong> ${besuchName || '–'}${antrag.besucherGeburtsdatum ? ` (geb. ${antrag.besucherGeburtsdatum})` : ''}</p>
+          <p><strong>E-Mail:</strong> ${antrag.besucherEmail || '–'}</p>
+          <p><strong>Wochentag:</strong> ${antrag.wochentag || '–'}</p>
+          <p><strong>Tageszeit:</strong> ${antrag.tageszeit === 'vormittags' ? 'Vormittags' : antrag.tageszeit === 'nachmittags' ? 'Nachmittags' : (antrag.tageszeit || '–')}</p>
+        `;
       }
       
       // Antrags-Nummer anzeigen
@@ -2673,13 +2730,134 @@ Persönlich eröffnet
             <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
           </div>
         `;
-      } else if (antrag.type === 'gesundheit-medizin') {
+      } else if (antrag.type === 'besuch-langzeit') {
         const verfuegungTitel =
           currentLanguage === 'en'
             ? 'Suggested procedure sequence (reference Ist process)'
             : currentLanguage === 'fr'
               ? 'Suggestion de séquence (processus cible)'
               : 'Verfügungsvorschlag';
+        const verfuegungHinweis =
+          currentLanguage === 'en'
+            ? 'This is a suggestion only; it does not replace a professional decision.'
+            : currentLanguage === 'fr'
+              ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle."
+              : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
+
+        const verfuegungKetteLangzeit = 'AVD → VAL → Langzeitbesuchszentrum → VAL → VZG';
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>${t('application.type.besuch_langzeit')}</h4>
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Visit day' : currentLanguage === 'fr' ? 'Jour de visite' : 'Besuchstag'}:</span>
+              <span class="detail-value">${antrag.besuchDatum || '–'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Time' : currentLanguage === 'fr' ? 'Heure' : 'Uhrzeit'}:</span>
+              <span class="detail-value">${antrag.besuchUhrzeit || '–'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Inmate lunch' : currentLanguage === 'fr' ? 'Déjeuner détenu' : 'Mittagessen Insasse'}:</span>
+              <span class="detail-value">${formatMittagessenAnzeige(antrag.mittagessenInsasse)}</span>
+            </div>
+            <div class="detail-row detail-row-block">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Visitors' : currentLanguage === 'fr' ? 'Visiteurs' : 'Besuchspersonen'}:</span>
+              <span class="detail-value">${formatLangzeitBesucherDetails(antrag)}</span>
+            </div>
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitel}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKetteLangzeit}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
+          </div>
+        `;
+      } else if (antrag.type === 'besuch-termin') {
+        const verfuegungTitel =
+          currentLanguage === 'en'
+            ? 'Suggested procedure sequence (reference Ist process)'
+            : currentLanguage === 'fr'
+              ? 'Suggestion de séquence (processus cible)'
+              : 'Verfügungsvorschlag';
+        const verfuegungHinweis =
+          currentLanguage === 'en'
+            ? 'This is a suggestion only; it does not replace a professional decision.'
+            : currentLanguage === 'fr'
+              ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle."
+              : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
+
+        const verfuegungKetteTermin = 'AVD → Besuchskoordination → Station → GPA';
+        const besuchNameTermin = [antrag.besucherVorname, antrag.besucherNachname].filter(Boolean).join(' ');
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>${t('application.type.besuch_termin')}</h4>
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Visitor' : currentLanguage === 'fr' ? 'Visiteur' : 'Besuchsperson'}:</span>
+              <span class="detail-value">${besuchNameTermin || '–'}${antrag.besucherGeburtsdatum ? ` (geb. ${antrag.besucherGeburtsdatum})` : ''}</span>
+            </div>
+            ${antrag.mitkommendeKinder ? `
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Children accompanying' : currentLanguage === 'fr' ? 'Enfants accompagnants' : 'Mitkommende Kinder'}:</span>
+              <span class="detail-value">${getTranslatedUserText(antrag.mitkommendeKinder)}</span>
+            </div>` : ''}
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Preferred date' : currentLanguage === 'fr' ? 'Date souhaitée' : 'Terminwunsch'}:</span>
+              <span class="detail-value">${antrag.terminwunsch || '–'}</span>
+            </div>
+            ${antrag.ausweichtermin ? `
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Alternative date' : currentLanguage === 'fr' ? 'Date alternative' : 'Ausweichtermin'}:</span>
+              <span class="detail-value">${antrag.ausweichtermin}</span>
+            </div>` : ''}
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitel}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKetteTermin}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
+          </div>
+        `;
+      } else if (antrag.type === 'besuch-video') {
+        const verfuegungTitel =
+          currentLanguage === 'en'
+            ? 'Suggested procedure sequence (reference Ist process)'
+            : currentLanguage === 'fr'
+              ? 'Suggestion de séquence (processus cible)'
+              : 'Verfügungsvorschlag';
+        const verfuegungHinweis =
+          currentLanguage === 'en'
+            ? 'This is a suggestion only; it does not replace a professional decision.'
+            : currentLanguage === 'fr'
+              ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle."
+              : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
+
+        const verfuegungKetteVideo = 'AVD → Revision (Eintragung des Termins) → Station (Eröffnung) → Revision (Bestätigung Vollzugsplanung und Vollzug)';
+        const besuchNameVideo = [antrag.besucherVorname, antrag.besucherNachname].filter(Boolean).join(' ');
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>${t('application.type.besuch_video')}</h4>
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Visitor' : currentLanguage === 'fr' ? 'Visiteur' : 'Besuchsperson'}:</span>
+              <span class="detail-value">${besuchNameVideo || '–'}${antrag.besucherGeburtsdatum ? ` (geb. ${antrag.besucherGeburtsdatum})` : ''}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">E-Mail:</span>
+              <span class="detail-value">${antrag.besucherEmail || '–'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Weekday' : currentLanguage === 'fr' ? 'Jour de la semaine' : 'Wochentag'}:</span>
+              <span class="detail-value">${antrag.wochentag || '–'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Time of day' : currentLanguage === 'fr' ? 'Moment de la journée' : 'Tageszeit'}:</span>
+              <span class="detail-value">${antrag.tageszeit === 'vormittags' ? (currentLanguage === 'en' ? 'Morning' : currentLanguage === 'fr' ? 'Matin' : 'Vormittags') : antrag.tageszeit === 'nachmittags' ? (currentLanguage === 'en' ? 'Afternoon' : currentLanguage === 'fr' ? 'Après-midi' : 'Nachmittags') : (antrag.tageszeit || '–')}</span>
+            </div>
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitel}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKetteVideo}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
+          </div>
+        `;
+      } else if (antrag.type === 'gesundheit-medizin') {
         const verfuegungHinweis =
           currentLanguage === 'en'
             ? 'This is a suggestion only; it does not replace a professional decision.'
@@ -3541,6 +3719,14 @@ ${t('action.archive')}
         anliegenText = `${t('notice.applicationFor')} ${t('application.type.gesundheit_medizin')}`;
       } else if (antrag.type === 'freizeit-weiterbildung') {
         anliegenText = `${t('notice.applicationFor')} ${t('application.type.freizeit_weiterbildung')}: ${getTranslatedUserText(antrag.freizeitAktivitaet)}${antrag.kosten ? ` (${antrag.kosten})` : ''}`;
+      } else if (antrag.type === 'besuch-langzeit') {
+        anliegenText = `${t('notice.applicationFor')} ${t('application.type.besuch_langzeit')} (${antrag.besuchDatum || '–'}, ${antrag.besuchUhrzeit || '–'})`;
+      } else if (antrag.type === 'besuch-termin') {
+        const bn = [antrag.besucherVorname, antrag.besucherNachname].filter(Boolean).join(' ');
+        anliegenText = `${t('notice.applicationFor')} ${t('application.type.besuch_termin')} (${bn || '–'})`;
+      } else if (antrag.type === 'besuch-video') {
+        const bn = [antrag.besucherVorname, antrag.besucherNachname].filter(Boolean).join(' ');
+        anliegenText = `${t('notice.applicationFor')} ${t('application.type.besuch_video')} (${bn || '–'}, ${antrag.wochentag || '–'})`;
       }
       
       // Entscheidungstext (übersetzt)
@@ -5343,6 +5529,46 @@ ${t('action.archive')}
           y += 7;
         }
         yPos = y + 7;
+      } else if (antrag.type === 'besuch-langzeit') {
+        doc.text('Art: Langzeitbesuch (Genehmigung)', 25, yPos);
+        doc.text(`Besuchstag: ${antrag.besuchDatum || '–'}`, 25, yPos + 7);
+        doc.text(`Uhrzeit: ${antrag.besuchUhrzeit || '–'}`, 25, yPos + 14);
+        doc.text(`Mittagessen Insasse: ${formatMittagessenAnzeige(antrag.mittagessenInsasse)}`, 25, yPos + 21);
+        yPos += 28;
+        if (antrag.besucher && antrag.besucher.length) {
+          antrag.besucher.forEach((p, i) => {
+            const name = [p.vorname, p.nachname].filter(Boolean).join(' ');
+            doc.text(`Besuchsperson ${i + 1}: ${name || '–'}${p.geburtsdatum ? ` (geb. ${p.geburtsdatum})` : ''}`, 25, yPos);
+            doc.text(`Mittagessen: ${formatMittagessenAnzeige(p.mittagessen)}`, 25, yPos + 7);
+            yPos += 14;
+          });
+        }
+        yPos += 7;
+      } else if (antrag.type === 'besuch-termin') {
+        doc.text('Art: Besuchstermin', 25, yPos);
+        const name = [antrag.besucherVorname, antrag.besucherNachname].filter(Boolean).join(' ');
+        doc.text(`Besuchsperson: ${name || '–'}`, 25, yPos + 7);
+        if (antrag.besucherGeburtsdatum) doc.text(`Geburtsdatum: ${antrag.besucherGeburtsdatum}`, 25, yPos + 14);
+        let y = yPos + (antrag.besucherGeburtsdatum ? 21 : 14);
+        if (antrag.mitkommendeKinder) {
+          doc.text(`Mitkommende Kinder: ${getTranslatedUserText(antrag.mitkommendeKinder)}`, 25, y);
+          y += 7;
+        }
+        doc.text(`Terminwunsch: ${antrag.terminwunsch || '–'}`, 25, y);
+        y += 7;
+        if (antrag.ausweichtermin) {
+          doc.text(`Ausweichtermin: ${antrag.ausweichtermin}`, 25, y);
+          y += 7;
+        }
+        yPos = y + 7;
+      } else if (antrag.type === 'besuch-video') {
+        doc.text('Art: Videobesuch', 25, yPos);
+        const name = [antrag.besucherVorname, antrag.besucherNachname].filter(Boolean).join(' ');
+        doc.text(`Besuchsperson: ${name || '–'}`, 25, yPos + 7);
+        doc.text(`E-Mail: ${antrag.besucherEmail || '–'}`, 25, yPos + 14);
+        doc.text(`Wochentag: ${antrag.wochentag || '–'}`, 25, yPos + 21);
+        doc.text(`Tageszeit: ${antrag.tageszeit || '–'}`, 25, yPos + 28);
+        yPos += 35;
       }
       
       // Sachliche/fachliche Prüfung (wenn erfolgt)
