@@ -86,6 +86,7 @@ const TRANSLATIONS = {
     'application.type.beratung_unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
     'application.type.gespraechstermin': 'Gesprächstermine',
     'application.type.gesundheit_medizin': 'Gesundheit: Termin medizinischer Dienst',
+    'application.type.freizeit_weiterbildung': 'Freizeitaktivitäten inkl. Weiterbildungskosten',
     'application.type.sonstiges': 'Sonstiges Anliegen',
     
     // Status
@@ -245,6 +246,7 @@ const TRANSLATIONS = {
     'apptype.beratung_unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
     'apptype.gespraechstermin': 'Gesprächstermine',
     'apptype.gesundheit_medizin': 'Gesundheit: Termin medizinischer Dienst',
+    'apptype.freizeit_weiterbildung': 'Freizeitaktivitäten inkl. Weiterbildungskosten',
     
     // Prozesskette
     'process.receipt': 'Eingang',
@@ -383,6 +385,7 @@ const TRANSLATIONS = {
     'application.type.beratung_unterstuetzung': 'Counselling and support services',
     'application.type.gespraechstermin': 'Conversation appointments',
     'application.type.gesundheit_medizin': 'Health: medical service appointment',
+    'application.type.freizeit_weiterbildung': 'Leisure activities incl. training costs',
     'application.type.sonstiges': 'Other Concerns',
     
     // Status
@@ -559,6 +562,7 @@ const TRANSLATIONS = {
     'apptype.beratung_unterstuetzung': 'Counselling and support services',
     'apptype.gespraechstermin': 'Conversation appointments',
     'apptype.gesundheit_medizin': 'Health: medical service appointment',
+    'apptype.freizeit_weiterbildung': 'Leisure activities incl. training costs',
     
     // Sorting
     'sort.label': 'Sort',
@@ -672,6 +676,7 @@ const TRANSLATIONS = {
     'application.type.beratung_unterstuetzung': 'Services de conseil et de soutien',
     'application.type.gespraechstermin': 'Rendez-vous de conversation',
     'application.type.gesundheit_medizin': 'Santé : rendez-vous au service médical',
+    'application.type.freizeit_weiterbildung': 'Activités de loisirs et frais de formation',
     'application.type.sonstiges': 'Autres préoccupations',
     
     // Statut
@@ -848,6 +853,7 @@ const TRANSLATIONS = {
     'apptype.beratung_unterstuetzung': 'Services de conseil et de soutien',
     'apptype.gespraechstermin': 'Rendez-vous de conversation',
     'apptype.gesundheit_medizin': 'Santé : rendez-vous au service médical',
+    'apptype.freizeit_weiterbildung': 'Activités de loisirs et frais de formation',
     
     // Tri
     'sort.label': 'Trier',
@@ -2687,7 +2693,8 @@ class AntragSystem {
       eigentum: 'Eigentum in der Kammer',
       'beratung-unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
       gespraechstermin: 'Gesprächstermine',
-      'gesundheit-medizin': 'Gesundheit: Termin medizinischer Dienst'
+      'gesundheit-medizin': 'Gesundheit: Termin medizinischer Dienst',
+      'freizeit-weiterbildung': 'Freizeitaktivitäten inkl. Weiterbildungskosten'
     };
     return labels[type] || 'Antrag';
   }

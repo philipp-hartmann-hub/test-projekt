@@ -202,6 +202,10 @@
               <input type="radio" name="antragType" value="gesundheit-medizin" onchange="toggleAntragFields()">
               <span class="radio-label">Gesundheit: Termin medizinischer Dienst</span>
             </label>
+            <label class="radio-option">
+              <input type="radio" name="antragType" value="freizeit-weiterbildung" onchange="toggleAntragFields()">
+              <span class="radio-label">Freizeitaktivitäten inkl. Weiterbildungskosten</span>
+            </label>
           </div>
         </div>
 
@@ -325,6 +329,23 @@
             <p class="field-hint">Aus datenschutzrechtlichen Gründen sind hier keine weiteren Angaben erforderlich.</p>
           </div>
         </div>
+
+        <!-- Freizeitaktivitäten inkl. Weiterbildungskosten -->
+        <div id="freizeitWeiterbildungFields" style="display: none;">
+          <div class="form-group">
+            <label for="freizeitAktivitaet">Freizeitaktivität bzw. Weiterbildung <span class="required">*</span></label>
+            <textarea id="freizeitAktivitaet" rows="3" placeholder="z. B. Sportkurs, Sprachkurs, berufliche Weiterbildung..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="freizeitKosten">Kosten (falls bekannt)</label>
+            <input type="text" id="freizeitKosten" placeholder="z. B. 120,00 €">
+            <p class="field-hint">Optional – nur angeben, wenn die Kosten bereits bekannt sind.</p>
+          </div>
+          <div class="form-group">
+            <label for="freizeitBegruendung">Begründung <span class="required">*</span></label>
+            <textarea id="freizeitBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
+          </div>
+        </div>
       </div>
       <div class="modal-footer modal-footer-triple">
         <button class="btn btn-secondary" onclick="closeModal('newAntragModal')">Abbrechen</button>
@@ -364,6 +385,10 @@
             <label class="radio-option">
               <input type="radio" name="entwurfType" value="gesundheit-medizin" onchange="toggleEntwurfFields()">
               <span class="radio-label">Gesundheit: Termin medizinischer Dienst</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="entwurfType" value="freizeit-weiterbildung" onchange="toggleEntwurfFields()">
+              <span class="radio-label">Freizeitaktivitäten inkl. Weiterbildungskosten</span>
             </label>
           </div>
         </div>
@@ -486,6 +511,23 @@
               <span class="checkbox-label">Ich beantrage einen Termin beim medizinischen Dienst</span>
             </label>
             <p class="field-hint">Aus datenschutzrechtlichen Gründen sind hier keine weiteren Angaben erforderlich.</p>
+          </div>
+        </div>
+
+        <!-- Freizeitaktivitäten inkl. Weiterbildungskosten -->
+        <div id="entwurfFreizeitWeiterbildungFields" style="display: none;">
+          <div class="form-group">
+            <label for="entwurfFreizeitAktivitaet">Freizeitaktivität bzw. Weiterbildung <span class="required">*</span></label>
+            <textarea id="entwurfFreizeitAktivitaet" rows="3" placeholder="z. B. Sportkurs, Sprachkurs, berufliche Weiterbildung..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="entwurfFreizeitKosten">Kosten (falls bekannt)</label>
+            <input type="text" id="entwurfFreizeitKosten" placeholder="z. B. 120,00 €">
+            <p class="field-hint">Optional – nur angeben, wenn die Kosten bereits bekannt sind.</p>
+          </div>
+          <motion class="form-group">
+            <label for="entwurfFreizeitBegruendung">Begründung <span class="required">*</span></label>
+            <textarea id="entwurfFreizeitBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
           </div>
         </div>
 
@@ -641,6 +683,7 @@
         'beratung-unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
         'gespraechstermin': 'Gesprächstermine',
         'gesundheit-medizin': 'Gesundheit: Termin medizinischer Dienst',
+        'freizeit-weiterbildung': 'Freizeitaktivitäten inkl. Weiterbildungskosten',
         'sonstiges': 'Sonstiges'
       };
       return typeMap[type] || type;
@@ -1022,6 +1065,7 @@
       document.getElementById('beratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
       document.getElementById('gespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
       document.getElementById('gesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
+      document.getElementById('freizeitWeiterbildungFields').style.display = type === 'freizeit-weiterbildung' ? 'block' : 'none';
     }
 
     function toggleEntwurfFields() {
@@ -1031,6 +1075,47 @@
       document.getElementById('entwurfBeratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
       document.getElementById('entwurfGespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
       document.getElementById('entwurfGesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
+      document.getElementById('entwurfFreizeitWeiterbildungFields').style.display = type === 'freizeit-weiterbildung' ? 'block' : 'none';
+    }
+
+    function readFreizeitWeiterbildungForm(prefix) {
+      const aktivitaetEl = document.getElementById(prefix ? 'entwurfFreizeitAktivitaet' : 'freizeitAktivitaet');
+      const kostenEl = document.getElementById(prefix ? 'entwurfFreizeitKosten' : 'freizeitKosten');
+      const begruendungEl = document.getElementById(prefix ? 'entwurfFreizeitBegruendung' : 'freizeitBegruendung');
+      const kostenText = kostenEl ? kostenEl.value.trim() : '';
+      return {
+        freizeitAktivitaet: aktivitaetEl ? aktivitaetEl.value.trim() : '',
+        kosten: kostenText || null,
+        antragBegruendung: begruendungEl ? begruendungEl.value.trim() : ''
+      };
+    }
+
+    function validateFreizeitWeiterbildungData(data) {
+      if (!data.freizeitAktivitaet) {
+        return { valid: false, error: 'Bitte geben Sie die Freizeitaktivität bzw. Weiterbildung an.' };
+      }
+      if (!data.antragBegruendung) {
+        return { valid: false, error: 'Bitte geben Sie eine Begründung für Ihren Antrag an.' };
+      }
+      return { valid: true, error: null };
+    }
+
+    function resetFreizeitWeiterbildungForm(prefix) {
+      const aktivitaetEl = document.getElementById(prefix ? 'entwurfFreizeitAktivitaet' : 'freizeitAktivitaet');
+      const kostenEl = document.getElementById(prefix ? 'entwurfFreizeitKosten' : 'freizeitKosten');
+      const begruendungEl = document.getElementById(prefix ? 'entwurfFreizeitBegruendung' : 'freizeitBegruendung');
+      if (aktivitaetEl) aktivitaetEl.value = '';
+      if (kostenEl) kostenEl.value = '';
+      if (begruendungEl) begruendungEl.value = '';
+    }
+
+    function setFreizeitWeiterbildungForm(prefix, antrag) {
+      const aktivitaetEl = document.getElementById(prefix ? 'entwurfFreizeitAktivitaet' : 'freizeitAktivitaet');
+      const kostenEl = document.getElementById(prefix ? 'entwurfFreizeitKosten' : 'freizeitKosten');
+      const begruendungEl = document.getElementById(prefix ? 'entwurfFreizeitBegruendung' : 'freizeitBegruendung');
+      if (aktivitaetEl) aktivitaetEl.value = antrag.freizeitAktivitaet || '';
+      if (kostenEl) kostenEl.value = antrag.kosten || '';
+      if (begruendungEl) begruendungEl.value = antrag.antragBegruendung || '';
     }
 
     function readGesundheitMedizinForm(prefix) {
@@ -1271,6 +1356,10 @@
         const data = readGesundheitMedizinForm('');
         const check = validateGesundheitMedizinData(data);
         return { type, data, valid: check.valid, error: check.error };
+      } else if (type === 'freizeit-weiterbildung') {
+        const data = readFreizeitWeiterbildungForm('');
+        const check = validateFreizeitWeiterbildungData(data);
+        return { type, data, valid: check.valid, error: check.error };
       } else if (type === 'eigentum') {
         const aktion = document.querySelector('input[name="eigentumAktion"]:checked').value;
         const kleidungCheckboxes = document.querySelectorAll('input[name="kleidung"]:checked');
@@ -1462,6 +1551,7 @@
       resetBeratungUnterstuetzungForm('');
       resetGespraechsterminForm('');
       resetGesundheitMedizinForm('');
+      resetFreizeitWeiterbildungForm('');
       document.querySelectorAll('input[name="kleidung"]').forEach(cb => cb.checked = false);
       document.getElementById('eigentumBegruendung').value = '';
       document.querySelector('input[name="antragType"][value="teilhabegeld"]').checked = true;
@@ -1494,6 +1584,8 @@
         setGespraechsterminForm('entwurf', entwurf);
       } else if (entwurf.type === 'gesundheit-medizin') {
         setGesundheitMedizinForm('entwurf', entwurf);
+      } else if (entwurf.type === 'freizeit-weiterbildung') {
+        setFreizeitWeiterbildungForm('entwurf', entwurf);
       } else if (entwurf.type === 'eigentum') {
         if (entwurf.aktion) {
           document.querySelector(`input[name="entwurfEigentumAktion"][value="${entwurf.aktion}"]`).checked = true;
@@ -1544,6 +1636,10 @@
       } else if (type === 'gesundheit-medizin') {
         const data = readGesundheitMedizinForm('entwurf');
         const check = validateGesundheitMedizinData(data);
+        return { type, ...data, valid: check.valid, error: check.error };
+      } else if (type === 'freizeit-weiterbildung') {
+        const data = readFreizeitWeiterbildungForm('entwurf');
+        const check = validateFreizeitWeiterbildungData(data);
         return { type, ...data, valid: check.valid, error: check.error };
       } else if (type === 'eigentum') {
         const aktionRadio = document.querySelector('input[name="entwurfEigentumAktion"]:checked');
@@ -1686,6 +1782,16 @@
         detailsHtml = antrag.medizinischerDienstTermin === true
           ? '<p><strong>Termin beim medizinischen Dienst</strong> beantragt</p>'
           : '<p class="incomplete"><em>Bestätigung noch nicht erteilt</em></p>';
+      } else if (antrag.type === 'freizeit-weiterbildung') {
+        typeLabel = 'Freizeitaktivitäten inkl. Weiterbildungskosten';
+        const begruendungText = antrag.antragBegruendung
+          ? (typeof antrag.antragBegruendung === 'object' ? (antrag.antragBegruendung.text || '') : antrag.antragBegruendung)
+          : '';
+        detailsHtml = `
+          ${antrag.freizeitAktivitaet ? `<p><strong>Aktivität:</strong> ${antrag.freizeitAktivitaet}</p>` : '<p class="incomplete"><em>Aktivität noch nicht angegeben</em></p>'}
+          ${antrag.kosten ? `<p><strong>Kosten:</strong> ${antrag.kosten}</p>` : ''}
+          ${begruendungText ? `<p><strong>Begründung:</strong> ${begruendungText}</p>` : '<p class="incomplete"><em>Begründung noch nicht angegeben</em></p>'}
+        `;
       } else {
         // Unbekannter Typ - trotzdem anzeigen
         typeLabel = antrag.type || 'Antrag';
