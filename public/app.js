@@ -84,6 +84,7 @@ const TRANSLATIONS = {
     'application.type.teilhabegeld': 'Teilhabegeld',
     'application.type.eigentum': 'Eigentum aus der Kammer',
     'application.type.beratung_unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
+    'application.type.gespraechstermin': 'Gesprächstermine',
     'application.type.sonstiges': 'Sonstiges Anliegen',
     
     // Status
@@ -241,6 +242,7 @@ const TRANSLATIONS = {
     'apptype.teilhabegeld': 'Teilhabegeld',
     'apptype.eigentum': 'Eigentum in der Kammer',
     'apptype.beratung_unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
+    'apptype.gespraechstermin': 'Gesprächstermine',
     
     // Prozesskette
     'process.receipt': 'Eingang',
@@ -377,6 +379,7 @@ const TRANSLATIONS = {
     'application.type.teilhabegeld': 'Participation Allowance',
     'application.type.eigentum': 'Property from Storage',
     'application.type.beratung_unterstuetzung': 'Counselling and support services',
+    'application.type.gespraechstermin': 'Conversation appointments',
     'application.type.sonstiges': 'Other Concerns',
     
     // Status
@@ -551,6 +554,7 @@ const TRANSLATIONS = {
     'apptype.teilhabegeld': 'Participation allowance',
     'apptype.eigentum': 'Property from storage',
     'apptype.beratung_unterstuetzung': 'Counselling and support services',
+    'apptype.gespraechstermin': 'Conversation appointments',
     
     // Sorting
     'sort.label': 'Sort',
@@ -662,6 +666,7 @@ const TRANSLATIONS = {
     'application.type.teilhabegeld': 'Allocation de participation',
     'application.type.eigentum': 'Propriété du dépôt',
     'application.type.beratung_unterstuetzung': 'Services de conseil et de soutien',
+    'application.type.gespraechstermin': 'Rendez-vous de conversation',
     'application.type.sonstiges': 'Autres préoccupations',
     
     // Statut
@@ -836,6 +841,7 @@ const TRANSLATIONS = {
     'apptype.teilhabegeld': 'Allocation de participation',
     'apptype.eigentum': 'Biens du dépôt',
     'apptype.beratung_unterstuetzung': 'Services de conseil et de soutien',
+    'apptype.gespraechstermin': 'Rendez-vous de conversation',
     
     // Tri
     'sort.label': 'Trier',
@@ -2673,7 +2679,8 @@ class AntragSystem {
     const labels = {
       teilhabegeld: 'Teilhabegeld',
       eigentum: 'Eigentum in der Kammer',
-      'beratung-unterstuetzung': 'Beratungs- und Unterstützungsleistungen'
+      'beratung-unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
+      gespraechstermin: 'Gesprächstermine'
     };
     return labels[type] || 'Antrag';
   }

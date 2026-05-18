@@ -1071,6 +1071,7 @@
         'teilhabegeld': t('application.type.teilhabegeld'),
         'eigentum': t('application.type.eigentum'),
         'beratung-unterstuetzung': t('application.type.beratung_unterstuetzung'),
+        'gespraechstermin': t('application.type.gespraechstermin'),
         'sonstiges': t('application.type.sonstiges')
       };
       return typeMap[type] || type;
@@ -1086,6 +1087,8 @@
         case 'erstellt':
           const appType = aktivitaet.beschreibung.includes('Teilhabegeld')
             ? t('apptype.teilhabegeld')
+            : aktivitaet.beschreibung.includes('Gesprächstermin')
+              ? t('apptype.gespraechstermin')
             : aktivitaet.beschreibung.includes('Beratungs')
               ? t('apptype.beratung_unterstuetzung')
               : t('apptype.eigentum');
@@ -2090,6 +2093,16 @@
           <p><strong>Leistungen:</strong> ${antrag.leistungsArt || '–'}</p>
           ${antrag.antragBegruendung ? `<p><strong>Begründung:</strong> ${getTranslatedUserText(antrag.antragBegruendung)}</p>` : ''}
         `;
+      } else if (antrag.type === 'gespraechstermin') {
+        typeLabel = t('application.type.gespraechstermin');
+        const ortParts = [];
+        if (antrag.gespraechInnerhalbVollzug) ortParts.push('Innerhalb des Vollzugs');
+        if (antrag.gespraechAusserhalbVollzug) ortParts.push('Außerhalb des Vollzugs');
+        detailsHtml = `
+          <p><strong>Gesprächspartner:</strong> ${antrag.gespraechspartner || '–'}</p>
+          <p><strong>Ort:</strong> ${ortParts.length ? ortParts.join(', ') : '–'}</p>
+          ${antrag.antragBegruendung ? `<p><strong>Begründung:</strong> ${getTranslatedUserText(antrag.antragBegruendung)}</p>` : ''}
+        `;
       }
       
       // Antrags-Nummer anzeigen
@@ -2601,6 +2614,51 @@ Persönlich eröffnet
           <div class="detail-box verfuegungsvorschlag-box">
             <h4>${verfuegungTitel}</h4>
             <p class="verfuegungsreihenfolge">${verfuegungKette}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
+          </div>
+        `;
+      } else if (antrag.type === 'gespraechstermin') {
+        const verfuegungTitel =
+          currentLanguage === 'en'
+            ? 'Suggested procedure sequence (reference Ist process)'
+            : currentLanguage === 'fr'
+              ? 'Suggestion de séquence (processus cible)'
+              : 'Verfügungsvorschlag';
+        const verfuegungHinweis =
+          currentLanguage === 'en'
+            ? 'This is a suggestion only; it does not replace a professional decision.'
+            : currentLanguage === 'fr'
+              ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle."
+              : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
+        const ortParts = [];
+        if (antrag.gespraechInnerhalbVollzug) {
+          ortParts.push(currentLanguage === 'en' ? 'Within the facility' : currentLanguage === 'fr' ? "À l'intérieur de l'établissement" : 'Innerhalb des Vollzugs');
+        }
+        if (antrag.gespraechAusserhalbVollzug) {
+          ortParts.push(currentLanguage === 'en' ? 'Outside the facility' : currentLanguage === 'fr' ? "À l'extérieur de l'établissement" : 'Außerhalb des Vollzugs');
+        }
+        const verfuegungKetteGespraech = 'AVD → VAL (Vorklärung) → Gesprächspartner';
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>${t('application.type.gespraechstermin')}</h4>
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Conversation partner' : currentLanguage === 'fr' ? 'Interlocuteur' : 'Gesprächspartner'}:</span>
+              <span class="detail-value">${getTranslatedUserText(antrag.gespraechspartner)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Location' : currentLanguage === 'fr' ? 'Lieu' : 'Ort'}:</span>
+              <span class="detail-value">${ortParts.join(', ') || '–'}</span>
+            </div>
+            ${antrag.antragBegruendung ? `
+              <div class="detail-row">
+                <span class="detail-label">${t('application.justification')}:</span>
+                <span class="detail-value">${getTranslatedUserText(antrag.antragBegruendung)}</span>
+              </div>
+            ` : ''}
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitel}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKetteGespraech}</p>
             <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
           </div>
         `;
@@ -3388,6 +3446,11 @@ ${t('action.archive')}
         anliegenText = `${aktionText} ${eigentumsText} (${antrag.kleidung.join(', ')})`;
       } else if (antrag.type === 'beratung-unterstuetzung') {
         anliegenText = `${t('notice.applicationFor')} ${t('application.type.beratung_unterstuetzung')}: ${getTranslatedUserText(antrag.leistungsArt)}`;
+      } else if (antrag.type === 'gespraechstermin') {
+        const ortParts = [];
+        if (antrag.gespraechInnerhalbVollzug) ortParts.push('innerhalb des Vollzugs');
+        if (antrag.gespraechAusserhalbVollzug) ortParts.push('außerhalb des Vollzugs');
+        anliegenText = `${t('notice.applicationFor')} ${t('application.type.gespraechstermin')} (${antrag.gespraechspartner || '–'}, ${ortParts.join(' und ') || '–'})`;
       }
       
       // Entscheidungstext (übersetzt)
@@ -5159,6 +5222,19 @@ ${t('action.archive')}
           yPos += 21;
         } else {
           yPos += 14;
+        }
+      } else if (antrag.type === 'gespraechstermin') {
+        const ortParts = [];
+        if (antrag.gespraechInnerhalbVollzug) ortParts.push('innerhalb des Vollzugs');
+        if (antrag.gespraechAusserhalbVollzug) ortParts.push('außerhalb des Vollzugs');
+        doc.text('Art: Gesprächstermine', 25, yPos);
+        doc.text(`Gesprächspartner: ${antrag.gespraechspartner || '–'}`, 25, yPos + 7);
+        doc.text(`Ort: ${ortParts.join(', ') || '–'}`, 25, yPos + 14);
+        if (antrag.antragBegruendung) {
+          doc.text(`Begründung: ${getTranslatedUserText(antrag.antragBegruendung)}`, 25, yPos + 21);
+          yPos += 28;
+        } else {
+          yPos += 21;
         }
       }
       

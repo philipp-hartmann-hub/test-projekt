@@ -194,6 +194,10 @@
               <input type="radio" name="antragType" value="beratung-unterstuetzung" onchange="toggleAntragFields()">
               <span class="radio-label">Beratungs- und Unterstützungsleistungen</span>
             </label>
+            <label class="radio-option">
+              <input type="radio" name="antragType" value="gespraechstermin" onchange="toggleAntragFields()">
+              <span class="radio-label">Gesprächstermine</span>
+            </label>
           </div>
         </div>
 
@@ -280,6 +284,32 @@
             <p class="field-hint">Art der Leistungen und Begründung sind für die Einreichung erforderlich.</p>
           </div>
         </div>
+
+        <!-- Gesprächstermine -->
+        <div id="gespraechsterminFields" style="display: none;">
+          <div class="form-group">
+            <label for="gespraechGespraechspartner">Gesprächspartner <span class="required">*</span></label>
+            <input type="text" id="gespraechGespraechspartner" placeholder="z. B. Verteidiger, Angehörige, Beratungsstelle...">
+          </div>
+          <div class="form-group">
+            <label>Ort des Gesprächs <span class="required">*</span></label>
+            <div class="checkbox-group">
+              <label class="checkbox-option">
+                <input type="checkbox" id="gespraechInnerhalbVollzug">
+                <span class="checkbox-label">Innerhalb des Vollzugs</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" id="gespraechAusserhalbVollzug">
+                <span class="checkbox-label">Außerhalb des Vollzugs</span>
+              </label>
+            </div>
+            <p class="field-hint">Bitte wählen Sie mindestens eine Option.</p>
+          </div>
+          <div class="form-group">
+            <label for="gespraechBegruendung">Begründung <span class="required">*</span></label>
+            <textarea id="gespraechBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
+          </div>
+        </div>
       </div>
       <div class="modal-footer modal-footer-triple">
         <button class="btn btn-secondary" onclick="closeModal('newAntragModal')">Abbrechen</button>
@@ -311,6 +341,10 @@
             <label class="radio-option">
               <input type="radio" name="entwurfType" value="beratung-unterstuetzung" onchange="toggleEntwurfFields()">
               <span class="radio-label">Beratungs- und Unterstützungsleistungen</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="entwurfType" value="gespraechstermin" onchange="toggleEntwurfFields()">
+              <span class="radio-label">Gesprächstermine</span>
             </label>
           </div>
         </div>
@@ -396,6 +430,32 @@
             <label for="entwurfBeratungBegruendung">Begründung <span class="required">*</span></label>
             <textarea id="entwurfBeratungBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
             <p class="field-hint">Art der Leistungen und Begründung sind für die Einreichung erforderlich.</p>
+          </div>
+        </div>
+
+        <!-- Gesprächstermine -->
+        <div id="entwurfGespraechsterminFields" style="display: none;">
+          <div class="form-group">
+            <label for="entwurfGespraechGespraechspartner">Gesprächspartner <span class="required">*</span></label>
+            <input type="text" id="entwurfGespraechGespraechspartner" placeholder="z. B. Verteidiger, Angehörige, Beratungsstelle...">
+          </div>
+          <div class="form-group">
+            <label>Ort des Gesprächs <span class="required">*</span></label>
+            <div class="checkbox-group">
+              <label class="checkbox-option">
+                <input type="checkbox" id="entwurfGespraechInnerhalbVollzug">
+                <span class="checkbox-label">Innerhalb des Vollzugs</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" id="entwurfGespraechAusserhalbVollzug">
+                <span class="checkbox-label">Außerhalb des Vollzugs</span>
+              </label>
+            </div>
+            <p class="field-hint">Bitte wählen Sie mindestens eine Option.</p>
+          </div>
+          <div class="form-group">
+            <label for="entwurfGespraechBegruendung">Begründung <span class="required">*</span></label>
+            <textarea id="entwurfGespraechBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
           </div>
         </div>
 
@@ -549,6 +609,7 @@
         'teilhabegeld': 'Teilhabegeld',
         'eigentum': 'Eigentum in der Kammer',
         'beratung-unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
+        'gespraechstermin': 'Gesprächstermine',
         'sonstiges': 'Sonstiges'
       };
       return typeMap[type] || type;
@@ -928,6 +989,7 @@
       document.getElementById('teilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
       document.getElementById('eigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
       document.getElementById('beratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
+      document.getElementById('gespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
     }
 
     function toggleEntwurfFields() {
@@ -935,6 +997,62 @@
       document.getElementById('entwurfTeilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
       document.getElementById('entwurfEigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
       document.getElementById('entwurfBeratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
+      document.getElementById('entwurfGespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
+    }
+
+    function formatGespraechOrtText(antrag) {
+      const parts = [];
+      if (antrag.gespraechInnerhalbVollzug) parts.push('Innerhalb des Vollzugs');
+      if (antrag.gespraechAusserhalbVollzug) parts.push('Außerhalb des Vollzugs');
+      return parts.length ? parts.join(', ') : '';
+    }
+
+    function readGespraechsterminForm(prefix) {
+      const partnerEl = document.getElementById(prefix ? 'entwurfGespraechGespraechspartner' : 'gespraechGespraechspartner');
+      const innerhalbEl = document.getElementById(prefix ? 'entwurfGespraechInnerhalbVollzug' : 'gespraechInnerhalbVollzug');
+      const ausserhalbEl = document.getElementById(prefix ? 'entwurfGespraechAusserhalbVollzug' : 'gespraechAusserhalbVollzug');
+      const begruendungEl = document.getElementById(prefix ? 'entwurfGespraechBegruendung' : 'gespraechBegruendung');
+      return {
+        gespraechspartner: partnerEl ? partnerEl.value.trim() : '',
+        gespraechInnerhalbVollzug: innerhalbEl ? innerhalbEl.checked : false,
+        gespraechAusserhalbVollzug: ausserhalbEl ? ausserhalbEl.checked : false,
+        antragBegruendung: begruendungEl ? begruendungEl.value.trim() : ''
+      };
+    }
+
+    function validateGespraechsterminData(data) {
+      if (!data.gespraechspartner) {
+        return { valid: false, error: 'Bitte geben Sie den Gesprächspartner an.' };
+      }
+      if (!data.gespraechInnerhalbVollzug && !data.gespraechAusserhalbVollzug) {
+        return { valid: false, error: 'Bitte wählen Sie mindestens eine Option für den Ort des Gesprächs (innerhalb oder außerhalb des Vollzugs).' };
+      }
+      if (!data.antragBegruendung) {
+        return { valid: false, error: 'Bitte geben Sie eine Begründung für Ihren Antrag an.' };
+      }
+      return { valid: true, error: null };
+    }
+
+    function resetGespraechsterminForm(prefix) {
+      const partnerEl = document.getElementById(prefix ? 'entwurfGespraechGespraechspartner' : 'gespraechGespraechspartner');
+      const innerhalbEl = document.getElementById(prefix ? 'entwurfGespraechInnerhalbVollzug' : 'gespraechInnerhalbVollzug');
+      const ausserhalbEl = document.getElementById(prefix ? 'entwurfGespraechAusserhalbVollzug' : 'gespraechAusserhalbVollzug');
+      const begruendungEl = document.getElementById(prefix ? 'entwurfGespraechBegruendung' : 'gespraechBegruendung');
+      if (partnerEl) partnerEl.value = '';
+      if (innerhalbEl) innerhalbEl.checked = false;
+      if (ausserhalbEl) ausserhalbEl.checked = false;
+      if (begruendungEl) begruendungEl.value = '';
+    }
+
+    function setGespraechsterminForm(prefix, antrag) {
+      const partnerEl = document.getElementById(prefix ? 'entwurfGespraechGespraechspartner' : 'gespraechGespraechspartner');
+      const innerhalbEl = document.getElementById(prefix ? 'entwurfGespraechInnerhalbVollzug' : 'gespraechInnerhalbVollzug');
+      const ausserhalbEl = document.getElementById(prefix ? 'entwurfGespraechAusserhalbVollzug' : 'gespraechAusserhalbVollzug');
+      const begruendungEl = document.getElementById(prefix ? 'entwurfGespraechBegruendung' : 'gespraechBegruendung');
+      if (partnerEl) partnerEl.value = antrag.gespraechspartner || '';
+      if (innerhalbEl) innerhalbEl.checked = antrag.gespraechInnerhalbVollzug === true;
+      if (ausserhalbEl) ausserhalbEl.checked = antrag.gespraechAusserhalbVollzug === true;
+      if (begruendungEl) begruendungEl.value = antrag.antragBegruendung || '';
     }
 
     function readBeratungUnterstuetzungForm(prefix) {
@@ -1089,6 +1207,10 @@
       } else if (type === 'beratung-unterstuetzung') {
         const data = readBeratungUnterstuetzungForm('');
         const check = validateBeratungUnterstuetzungData(data);
+        return { type, data, valid: check.valid, error: check.error };
+      } else if (type === 'gespraechstermin') {
+        const data = readGespraechsterminForm('');
+        const check = validateGespraechsterminData(data);
         return { type, data, valid: check.valid, error: check.error };
       } else if (type === 'eigentum') {
         const aktion = document.querySelector('input[name="eigentumAktion"]:checked').value;
@@ -1279,6 +1401,7 @@
       document.getElementById('monatSelect').value = '';
       resetTeilhabegeldEinkommenForm('');
       resetBeratungUnterstuetzungForm('');
+      resetGespraechsterminForm('');
       document.querySelectorAll('input[name="kleidung"]').forEach(cb => cb.checked = false);
       document.getElementById('eigentumBegruendung').value = '';
       document.querySelector('input[name="antragType"][value="teilhabegeld"]').checked = true;
@@ -1307,6 +1430,8 @@
       } else if (entwurf.type === 'beratung-unterstuetzung') {
         document.getElementById('entwurfBeratungLeistungsart').value = entwurf.leistungsArt || '';
         document.getElementById('entwurfBeratungBegruendung').value = entwurf.antragBegruendung || '';
+      } else if (entwurf.type === 'gespraechstermin') {
+        setGespraechsterminForm('entwurf', entwurf);
       } else if (entwurf.type === 'eigentum') {
         if (entwurf.aktion) {
           document.querySelector(`input[name="entwurfEigentumAktion"][value="${entwurf.aktion}"]`).checked = true;
@@ -1349,6 +1474,10 @@
       } else if (type === 'beratung-unterstuetzung') {
         const data = readBeratungUnterstuetzungForm('entwurf');
         const check = validateBeratungUnterstuetzungData(data);
+        return { type, ...data, valid: check.valid, error: check.error };
+      } else if (type === 'gespraechstermin') {
+        const data = readGespraechsterminForm('entwurf');
+        const check = validateGespraechsterminData(data);
         return { type, ...data, valid: check.valid, error: check.error };
       } else if (type === 'eigentum') {
         const aktionRadio = document.querySelector('input[name="entwurfEigentumAktion"]:checked');
@@ -1473,6 +1602,17 @@
           : '';
         detailsHtml = `
           ${leistungsText ? `<p><strong>Leistungen:</strong> ${leistungsText}</p>` : '<p class="incomplete"><em>Leistungen noch nicht angegeben</em></p>'}
+          ${begruendungText ? `<p><strong>Begründung:</strong> ${begruendungText}</p>` : '<p class="incomplete"><em>Begründung noch nicht angegeben</em></p>'}
+        `;
+      } else if (antrag.type === 'gespraechstermin') {
+        typeLabel = 'Gesprächstermine';
+        const ortText = formatGespraechOrtText(antrag);
+        const begruendungText = antrag.antragBegruendung
+          ? (typeof antrag.antragBegruendung === 'object' ? (antrag.antragBegruendung.text || '') : antrag.antragBegruendung)
+          : '';
+        detailsHtml = `
+          ${antrag.gespraechspartner ? `<p><strong>Gesprächspartner:</strong> ${antrag.gespraechspartner}</p>` : '<p class="incomplete"><em>Gesprächspartner noch nicht angegeben</em></p>'}
+          ${ortText ? `<p><strong>Ort:</strong> ${ortText}</p>` : '<p class="incomplete"><em>Ort noch nicht gewählt</em></p>'}
           ${begruendungText ? `<p><strong>Begründung:</strong> ${begruendungText}</p>` : '<p class="incomplete"><em>Begründung noch nicht angegeben</em></p>'}
         `;
       } else {
