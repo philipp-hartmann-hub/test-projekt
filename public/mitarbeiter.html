@@ -6640,16 +6640,21 @@ ${t('action.archive')}
 
       closeModal('terminVereinbarenModal');
 
-      const mailText = (result.emailEmpfaenger || [])
-        .map((e) => `• ${e.name} <${e.email}>`)
-        .join('\n');
-      const mailHinweis = mailText
-        ? `\n\nDummy-E-Mail versendet an:\n${mailText}`
-        : '\n\nKeine externe E-Mail (nur Portal-Benachrichtigungen).';
+      let erfolgsHinweis = 'Termin wurde vereinbart.';
+      if (teilnehmerArt === 'intern') {
+        erfolgsHinweis +=
+          ' Insasse und beteiligte Mitarbeitende wurden über die Plattform benachrichtigt (Kalender & Nachrichten).';
+      } else {
+        erfolgsHinweis += ' Der Insasse wurde im Portal benachrichtigt.';
+        const mailText = (result.emailEmpfaenger || [])
+          .map((e) => `• ${e.name} <${e.email}>`)
+          .join('\n');
+        if (mailText) {
+          erfolgsHinweis += `\n\nDummy-E-Mail an externen Kontakt:\n${mailText}`;
+        }
+      }
 
-      showAlert(
-        `Termin wurde vereinbart. Insasse und beteiligte Personen wurden benachrichtigt.${mailHinweis}`
-      );
+      showAlert(erfolgsHinweis);
 
       renderKalender();
       renderNotifications();

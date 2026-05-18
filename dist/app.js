@@ -2213,8 +2213,26 @@ class TerminSystem {
   getTermineFuerInsasse(insasseId) {
     const id = String(insasseId);
     return this.termine
-      .filter((t) => t.typ === 'vereinbarung' && String(t.insasseId) === id)
+      .filter((t) => {
+        if (t.typ !== 'vereinbarung') return false;
+        if (String(t.insasseId) === id) return true;
+        return Array.isArray(t.sichtbarFuer) && t.sichtbarFuer.some((sid) => String(sid) === id);
+      })
       .sort((a, b) => new Date(a.datum) - new Date(b.datum));
+  }
+
+  getTermineFuerInsasseMonat(insasseId, jahr, monat) {
+    return this.getTermineFuerInsasse(insasseId).filter((t) => {
+      const d = new Date(t.datum);
+      return d.getFullYear() === jahr && d.getMonth() === monat;
+    });
+  }
+
+  getTermineFuerInsasseTag(insasseId, datum) {
+    const tag = new Date(datum).toDateString();
+    return this.getTermineFuerInsasse(insasseId).filter(
+      (t) => new Date(t.datum).toDateString() === tag
+    );
   }
 }
 
@@ -4489,8 +4507,40 @@ function getMitarbeiterIdsFuerGruppe(gruppe) {
     .map((u) => String(u.id));
 }
 
+/** Stabile Insassen-User-ID für Benachrichtigungen und Kalender (inkl. ID-Reparatur am Antrag). */
+function resolveInsasseUserId(antragId, insasseId, insasseName) {
+  const antrag = antragId ? antragSystem.getAntrag(antragId) : null;
+  const candidates = [insasseId, antrag?.insasseId].filter((x) => x != null && x !== '').map(String);
+
+  for (const cid of candidates) {
+    if (userSystem.users.some((u) => u.type === 'insasse' && String(u.id) === cid)) {
+      return cid;
+    }
+  }
+
+  const name = (insasseName || antrag?.insasseName || '').trim();
+  if (name && typeof userSystem !== 'undefined') {
+    const byName = userSystem.users.find((u) => {
+      if (u.type !== 'insasse') return false;
+      const full = `${u.vorname || ''} ${u.nachname || ''}`.trim();
+      return u.name === name || full === name;
+    });
+    if (byName) {
+      const resolved = String(byName.id);
+      if (antrag && String(antrag.insasseId) !== resolved) {
+        antrag.insasseId = resolved;
+        antragSystem.saveAntraege();
+      }
+      return resolved;
+    }
+  }
+
+  return candidates[0] || null;
+}
+
 /**
- * Termin in Phase Bekanntgabe vereinbaren: Kalendereinträge, Benachrichtigungen, Dummy-E-Mail.
+ * Termin vereinbaren: Kalendereinträge und Plattform-Benachrichtigungen;
+ * Dummy-E-Mail nur an externe Kontakte (intern läuft ausschließlich über das Portal).
  */
 function vereinbareTerminAusAntrag(params) {
   const {
@@ -4517,18 +4567,17 @@ function vereinbareTerminAusAntrag(params) {
     externKontakt = EXTERNE_KONTAKTE.find((k) => k.id === externKontaktId) || null;
   }
 
-  const sichtbarFuer = new Set([String(insasseId), String(erstelltVonId)]);
+  const resolvedInsasseId = resolveInsasseUserId(antragId, insasseId, insasseName);
+  if (!resolvedInsasseId) {
+    throw new Error('Insasse für Termin konnte nicht zugeordnet werden.');
+  }
+
+  const sichtbarFuer = new Set([String(resolvedInsasseId), String(erstelltVonId)]);
   const emailEmpfaenger = [];
 
   if (teilnehmerArt === 'intern') {
     if (zugewiesenAnTyp === 'mitarbeiter' && zugewiesenAnId) {
       sichtbarFuer.add(String(zugewiesenAnId));
-      const person = userSystem.users.find((u) => String(u.id) === String(zugewiesenAnId));
-      emailEmpfaenger.push({
-        name: zugewiesenAnName || (person ? `${person.vorname} ${person.nachname}` : 'Mitarbeiter'),
-        email: (person && person.email) || 'mitarbeiter@jva-prototyp.de',
-        typ: 'intern'
-      });
     } else if (zugewiesenAnTyp === 'gruppe' && zugewiesenAnGruppe) {
       getMitarbeiterIdsFuerGruppe(zugewiesenAnGruppe).forEach((id) => sichtbarFuer.add(id));
     }
@@ -4547,7 +4596,7 @@ function vereinbareTerminAusAntrag(params) {
     ort,
     teamsLink,
     antragId,
-    insasseId,
+    insasseId: resolvedInsasseId,
     insasseName,
     teilnehmerArt,
     externKontakt,
@@ -4566,7 +4615,7 @@ function vereinbareTerminAusAntrag(params) {
   const msgBase = `Termin „${termin.betreff}“ am ${datumFmt}${zeitInfo}${ortInfo}`;
 
   notificationSystem.createNotification(
-    insasseId,
+    resolvedInsasseId,
     'termin-vereinbart',
     'Termin vereinbart',
     msgBase,
@@ -4591,14 +4640,6 @@ function vereinbareTerminAusAntrag(params) {
           `${msgBase} (Insasse: ${insasseName})`,
           antragId
         );
-        const person = userSystem.users.find((u) => String(u.id) === mid);
-        if (person) {
-          emailEmpfaenger.push({
-            name: `${person.vorname} ${person.nachname}`,
-            email: person.email || 'mitarbeiter@jva-prototyp.de',
-            typ: 'intern'
-          });
-        }
       });
     }
   }
