@@ -827,7 +827,11 @@
             <label>Zuweisung an: *</label>
             <div class="radio-group">
               <label class="radio-option">
-                <input type="radio" name="tvZuweisungTyp" value="gruppe" checked onchange="toggleTvZuweisungTyp()">
+                <input type="radio" name="tvZuweisungTyp" value="selbst" checked onchange="toggleTvZuweisungTyp()">
+                <span class="radio-label">Mich selbst</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="tvZuweisungTyp" value="gruppe" onchange="toggleTvZuweisungTyp()">
                 <span class="radio-label">Gruppe</span>
               </label>
               <label class="radio-option">
@@ -6392,7 +6396,7 @@ ${t('action.archive')}
       `;
 
       document.querySelector('input[name="tvTeilnehmerArt"][value="intern"]').checked = true;
-      document.querySelector('input[name="tvZuweisungTyp"][value="gruppe"]').checked = true;
+      document.querySelector('input[name="tvZuweisungTyp"][value="selbst"]').checked = true;
       document.getElementById('tvBetreff').value = `Termin: ${antrag.insasseName || 'Insasse'} – ${antragSystem.getAntragTypLabel(antrag.type)}`;
       document.getElementById('tvDatum').value = '';
       document.getElementById('tvUhrzeit').value = '';
@@ -6446,6 +6450,10 @@ ${t('action.archive')}
       document.getElementById('tvGruppeContainer').style.display = typ === 'gruppe' ? 'block' : 'none';
       document.getElementById('tvPersonContainer').style.display = typ === 'person' ? 'block' : 'none';
       if (typ === 'person') loadAlleMitarbeiterFuerTv();
+      if (typ === 'selbst') {
+        document.getElementById('tvPersonId').value = currentSession.userId;
+        document.getElementById('tvSelectedPersonName').textContent = currentSession.name;
+      }
     }
 
     function loadTvGruppen() {
@@ -6499,14 +6507,18 @@ ${t('action.archive')}
     }
 
     function loadAlleMitarbeiterFuerTv() {
-      const alle = userSystem.users.filter((u) => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
-      alle.sort((a, b) => `${a.nachname} ${a.vorname}`.localeCompare(`${b.nachname} ${b.vorname}`, 'de'));
+      const alle = userSystem.users.filter((u) => u.type === 'mitarbeiter');
+      alle.sort((a, b) => {
+        if (String(a.id) === String(currentSession.userId)) return -1;
+        if (String(b.id) === String(currentSession.userId)) return 1;
+        return `${a.nachname} ${a.vorname}`.localeCompare(`${b.nachname} ${b.vorname}`, 'de');
+      });
       renderTvMitarbeiterListe(alle);
     }
 
     function filterTvMitarbeiterListe() {
       const suchbegriff = document.getElementById('tvMitarbeiterSuche').value.toLowerCase().trim();
-      let mitarbeiter = userSystem.users.filter((u) => u.type === 'mitarbeiter' && u.id !== currentSession.userId);
+      let mitarbeiter = userSystem.users.filter((u) => u.type === 'mitarbeiter');
       if (suchbegriff) {
         mitarbeiter = mitarbeiter.filter((m) => {
           const vollName = `${m.vorname} ${m.nachname}`.toLowerCase();
@@ -6526,9 +6538,12 @@ ${t('action.archive')}
       }
       liste.innerHTML = mitarbeiter.map((m) => {
         const isSelected = String(m.id) === String(selectedId);
+        const istSelbst = String(m.id) === String(currentSession.userId);
+        const anzeigeName = `${m.vorname} ${m.nachname}${istSelbst ? ' (Sie)' : ''}`;
+        const escapedName = anzeigeName.replace(/'/g, "\\'");
         return `
-          <div class="mitarbeiter-item ${isSelected ? 'selected' : ''}" onclick="selectTvMitarbeiter('${m.id}', '${m.vorname} ${m.nachname}')">
-            <div class="mitarbeiter-item-name">${m.vorname} ${m.nachname}</div>
+          <div class="mitarbeiter-item ${isSelected ? 'selected' : ''}" onclick="selectTvMitarbeiter('${m.id}', '${escapedName}')">
+            <div class="mitarbeiter-item-name">${anzeigeName}</div>
             <div class="mitarbeiter-item-info">${getRolleText(m.rolle)}</div>
           </div>`;
       }).join('');
@@ -6594,7 +6609,11 @@ ${t('action.archive')}
 
       if (teilnehmerArt === 'intern') {
         const zuweisungTyp = document.querySelector('input[name="tvZuweisungTyp"]:checked')?.value;
-        if (zuweisungTyp === 'person') {
+        if (zuweisungTyp === 'selbst') {
+          zugewiesenAnTyp = 'mitarbeiter';
+          zugewiesenAnId = currentSession.userId;
+          zugewiesenAnName = currentSession.name;
+        } else if (zuweisungTyp === 'person') {
           zugewiesenAnId = document.getElementById('tvPersonId').value;
           if (!zugewiesenAnId) {
             showAlert('Bitte wählen Sie eine Person aus.');

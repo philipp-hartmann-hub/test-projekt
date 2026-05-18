@@ -1133,14 +1133,14 @@
       
       renderAntraege();
       renderNotifications();
-      renderInsasseKalender();
+      safeRenderInsasseKalender();
       updateNotificationBadge();
 
       window.addEventListener('dataSyncLoaded', () => {
         if (currentSession) {
           renderAntraege();
           renderNotifications();
-          renderInsasseKalender();
+          safeRenderInsasseKalender();
           updateNotificationBadge();
         }
       });
@@ -1152,7 +1152,7 @@
           console.log('Aktualisiere UI nach dataReloaded...');
           renderAntraege();
           renderNotifications();
-          renderInsasseKalender();
+          safeRenderInsasseKalender();
           updateNotificationBadge();
         }
       });
@@ -1161,7 +1161,7 @@
       setInterval(() => {
         renderNotifications();
         renderAntraege();
-        renderInsasseKalender();
+        safeRenderInsasseKalender();
         updateNotificationBadge();
       }, 10000); // Alle 10 Sekunden
       
@@ -1245,38 +1245,75 @@
     function toggleInsasseKalender() {
       const section = document.getElementById('insasseKalenderSection');
       const icon = document.getElementById('insasseKalenderToggleIcon');
+      const content = document.getElementById('insasseKalenderCollapsible');
+      if (!section || !icon || !content) return;
+
       insasseKalenderExpanded = !insasseKalenderExpanded;
       if (insasseKalenderExpanded) {
         section.classList.remove('collapsed');
         section.classList.add('expanded');
         icon.textContent = '▼';
-        renderInsasseKalender();
+        content.style.display = 'block';
+        safeRenderInsasseKalender();
       } else {
         section.classList.remove('expanded');
         section.classList.add('collapsed');
         icon.textContent = '▶';
+        content.style.display = 'none';
       }
+    }
+
+    function safeRenderInsasseKalender() {
+      try {
+        renderInsasseKalender();
+      } catch (error) {
+        console.error('Kalender konnte nicht geladen werden:', error);
+        const main = document.getElementById('insasseKalenderMain');
+        if (main) {
+          main.innerHTML = '<p class="keine-termine">Termine konnten nicht geladen werden.</p>';
+        }
+      }
+    }
+
+    function getInsasseTermineMonat(uid, jahr, monat) {
+      if (typeof terminSystem.getTermineFuerInsasseMonat === 'function') {
+        return terminSystem.getTermineFuerInsasseMonat(uid, jahr, monat);
+      }
+      return terminSystem.getTermineFuerInsasse(uid).filter((t) => {
+        const d = new Date(t.datum);
+        return d.getFullYear() === jahr && d.getMonth() === monat;
+      });
+    }
+
+    function getInsasseTermineTag(uid, datum) {
+      if (typeof terminSystem.getTermineFuerInsasseTag === 'function') {
+        return terminSystem.getTermineFuerInsasseTag(uid, datum);
+      }
+      const tag = new Date(datum).toDateString();
+      return terminSystem.getTermineFuerInsasse(uid).filter(
+        (t) => new Date(t.datum).toDateString() === tag
+      );
     }
 
     function insasseKalenderHeute() {
       insasseKalenderDatum = new Date();
       insasseAusgewaehltesDatum = new Date();
-      renderInsasseKalender();
+      safeRenderInsasseKalender();
     }
 
     function insasseKalenderZurueck() {
       insasseKalenderDatum.setMonth(insasseKalenderDatum.getMonth() - 1);
-      renderInsasseKalender();
+      safeRenderInsasseKalender();
     }
 
     function insasseKalenderVor() {
       insasseKalenderDatum.setMonth(insasseKalenderDatum.getMonth() + 1);
-      renderInsasseKalender();
+      safeRenderInsasseKalender();
     }
 
     function insasseWaehleTagImMonat(datumIso) {
       insasseAusgewaehltesDatum = new Date(datumIso);
-      renderInsasseKalender();
+      safeRenderInsasseKalender();
     }
 
     function renderInsasseTerminBlock(t) {
@@ -1305,7 +1342,7 @@
       const uid = String(currentSession.userId);
       const jahr = insasseKalenderDatum.getFullYear();
       const monat = insasseKalenderDatum.getMonth();
-      const termine = terminSystem.getTermineFuerInsasseMonat(uid, jahr, monat);
+      const termine = getInsasseTermineMonat(uid, jahr, monat);
       const ersterTag = new Date(jahr, monat, 1);
       const letzterTag = new Date(jahr, monat + 1, 0);
       const startWochentag = (ersterTag.getDay() + 6) % 7;
@@ -1344,7 +1381,7 @@
       const liste = document.getElementById('insasseTermineSidebarListe');
       if (!titel || !liste || !currentSession) return;
       const uid = String(currentSession.userId);
-      const termine = terminSystem.getTermineFuerInsasseTag(uid, insasseAusgewaehltesDatum);
+      const termine = getInsasseTermineTag(uid, insasseAusgewaehltesDatum);
       titel.textContent = `Termine am ${insasseAusgewaehltesDatum.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}`;
       if (termine.length === 0) {
         liste.innerHTML = '<p class="keine-termine">Keine Termine an diesem Tag</p>';
@@ -1452,7 +1489,7 @@
         if (section && !insasseKalenderExpanded) {
           toggleInsasseKalender();
         } else {
-          renderInsasseKalender();
+          safeRenderInsasseKalender();
         }
         section?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         return;
@@ -3020,7 +3057,6 @@
       renderAntragFilterBar('entwuerfeTypeFilterBar', 'entwuerfe');
       renderAntragFilterBar('aktivTypeFilterBar', 'aktiv');
       renderAntragFilterBar('historieTypeFilterBar', 'historie');
-      renderInsasseTermine();
 
       const entwuerfeGefiltert = filterAntraegeByThema(entwuerfe, 'entwuerfe');
       const aktiveGefiltert = filterAntraegeByThema(aktiveAntraege, 'aktiv');
@@ -3080,6 +3116,8 @@
           historieList.innerHTML = '<div class="error-state" style="color:red;padding:1rem;">Fehler: ' + e.message + '</div>';
         }
       }
+
+      safeRenderInsasseKalender();
     }
 
     // ============================================
