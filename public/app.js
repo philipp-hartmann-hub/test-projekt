@@ -2212,6 +2212,16 @@ class ExternePartnerSystem {
 
 const externePartnerSystem = new ExternePartnerSystem();
 
+/** Ohne TDZ-Zugriff auf const antragSystem (wichtig vor Zeile der AntragSystem-Instanz). */
+function getAntragSystemRef() {
+  try {
+    if (typeof window !== 'undefined' && window.antragSystem) {
+      return window.antragSystem;
+    }
+  } catch (e) { /* ignore */ }
+  return null;
+}
+
 class TerminSystem {
   constructor() {
     this.storageKey = 'gefaengnis_termine';
@@ -2265,8 +2275,9 @@ class TerminSystem {
       }
 
       let insasseId = t.insasseId;
-      if (!insasseId && t.antragId && typeof antragSystem !== 'undefined') {
-        const a = antragSystem.getAntrag(t.antragId);
+      if (!insasseId && t.antragId) {
+        const sys = getAntragSystemRef();
+        const a = sys ? sys.getAntrag(t.antragId) : null;
         if (a?.insasseId) {
           insasseId = a.insasseId;
           t.insasseId = insasseId;
@@ -2304,8 +2315,9 @@ class TerminSystem {
     if (nameNorm && t.insasseName && String(t.insasseName).trim().toLowerCase() === nameNorm) {
       return true;
     }
-    if (t.antragId && typeof antragSystem !== 'undefined') {
-      const a = antragSystem.getAntrag(t.antragId);
+    if (t.antragId) {
+      const sys = getAntragSystemRef();
+      const a = sys ? sys.getAntrag(t.antragId) : null;
       if (a) {
         if (String(a.insasseId) === id) return true;
         if (
@@ -4863,6 +4875,10 @@ class AntragSystem {
 const antragSystem = new AntragSystem();
 if (typeof window !== 'undefined') {
   window.antragSystem = antragSystem;
+  window.getAntragSystemRef = getAntragSystemRef;
+}
+if (typeof terminSystem !== 'undefined' && typeof terminSystem.migrateInsasseTermine === 'function') {
+  terminSystem.migrateInsasseTermine();
 }
 
 /** Themengruppen für Antragsauswahl und Listenfilter (Insassen- und Mitarbeiterportal) */

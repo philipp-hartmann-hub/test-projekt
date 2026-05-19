@@ -961,13 +961,18 @@
     </div>
   </div>
 
-  <script src="data-sync.js?v=20260519-antragsys"></script>
-  <script src="app.js?v=20260519-antragsys"></script>
+  <script src="data-sync.js?v=20260519-tdzfix"></script>
+  <script src="app.js?v=20260519-tdzfix"></script>
   <script>
     let currentSession = null;
 
     function getAntragSystem() {
-      return (typeof window !== 'undefined' && window.antragSystem) ? window.antragSystem : null;
+      if (typeof window === 'undefined') return null;
+      if (typeof window.getAntragSystemRef === 'function') {
+        const sys = window.getAntragSystemRef();
+        if (sys) return sys;
+      }
+      return window.antragSystem || null;
     }
 
     function getInsasseSession() {
@@ -3460,6 +3465,6 @@
       renderAntraege();
     }
   </script>
-  <script src="insassen-picker-boot.js?v=20260519-antragsys"></script>
+  <script src="insassen-picker-boot.js?v=20260519-tdzfix"></script>
 </body>
 </html>
