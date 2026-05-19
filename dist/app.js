@@ -4860,7 +4860,11 @@ class AntragSystem {
   }
 }
 
-// Globale Instanz
+const antragSystem = new AntragSystem();
+if (typeof window !== 'undefined') {
+  window.antragSystem = antragSystem;
+}
+
 /** Themengruppen für Antragsauswahl und Listenfilter (Insassen- und Mitarbeiterportal) */
 const ANTRAG_TYPE_GRUPPEN = [
   {
@@ -4909,7 +4913,7 @@ function getAntragTypeFilterChips() {
 }
 
 function _getAntragTypLabelForPicker(type) {
-  if (typeof antragSystem !== 'undefined' && antragSystem && typeof antragSystem.getAntragTypLabel === 'function') {
+  if (typeof antragSystem !== 'undefined' && typeof antragSystem.getAntragTypLabel === 'function') {
     return antragSystem.getAntragTypLabel(type);
   }
   const fallback = {
@@ -4988,8 +4992,6 @@ function renderAntragFilterBarHtml(listKey, activeFilterId, setFilterFn) {
     <div class="antrag-filter-bar">${chips}</div>
   </details>`;
 }
-
-const antragSystem = new AntragSystem();
 
 /** Monat YYYY-MM für Demo-Anträge (offset in Monaten). */
 function _demoMonatOffset(offsetMonths) {

@@ -960,10 +960,16 @@
     </div>
   </div>
 
-  <script src="data-sync.js?v=20260519-submit"></script>
-  <script src="app.js?v=20260519-submit"></script>
+  <script src="data-sync.js?v=20260519-antragsys"></script>
+  <script src="app.js?v=20260519-antragsys"></script>
   <script>
     let currentSession = null;
+
+    function getAntragSystem() {
+      if (typeof window !== 'undefined' && window.antragSystem) return window.antragSystem;
+      if (typeof antragSystem !== 'undefined') return antragSystem;
+      return null;
+    }
 
     function getInsasseSession() {
       if (currentSession && currentSession.type === 'insasse') return currentSession;
@@ -2499,7 +2505,8 @@
         }
         // Prüfen ob bereits ein Antrag für diesen Monat existiert
         const session = getInsasseSession();
-        if (session && antragSystem.hatTeilhabegeldAntragFuerMonat(session.userId, monat)) {
+        const sys = getAntragSystem();
+        if (session && sys && sys.hatTeilhabegeldAntragFuerMonat(session.userId, monat)) {
           const monatFormatiert = new Date(monat + '-01').toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
           return { type, data: { monat }, valid: false, error: `Sie haben bereits einen Teilhabegeld-Antrag für ${monatFormatiert} gestellt. Pro Monat ist nur ein Antrag möglich.` };
         }
@@ -2557,9 +2564,14 @@
 
     async function submitNewAntrag() {
       const session = getInsasseSession();
+      const sys = getAntragSystem();
       const submitBtn = document.querySelector('#newAntragModal [data-action="submit-new-antrag"]');
       if (!session) {
         insasseHinweis('Bitte melden Sie sich erneut an.');
+        return;
+      }
+      if (!sys) {
+        insasseHinweis('Antragssystem ist nicht geladen. Bitte Seite neu laden.');
         return;
       }
       if (submitBtn && submitBtn.disabled) return;
@@ -2589,7 +2601,7 @@
           });
         }
 
-        const antrag = antragSystem.createAntrag(type, data, session, false);
+        const antrag = sys.createAntrag(type, data, session, false);
         console.log('[Insassen] Antrag erstellt:', antrag.id, antrag.antragsNummer);
 
         closeModal('newAntragModal');
@@ -2615,8 +2627,13 @@
 
     function saveAsEntwurf() {
       const session = getInsasseSession();
+      const sys = getAntragSystem();
       if (!session) {
         insasseHinweis('Bitte melden Sie sich erneut an.');
+        return;
+      }
+      if (!sys) {
+        insasseHinweis('Antragssystem ist nicht geladen. Bitte Seite neu laden.');
         return;
       }
       try {
@@ -2626,7 +2643,7 @@
           return;
         }
 
-        const antrag = antragSystem.createAntrag(type, data || {}, session, true);
+        const antrag = sys.createAntrag(type, data || {}, session, true);
         closeModal('newAntragModal');
         renderAntraege();
         resetNewAntragForm();
@@ -3462,6 +3479,6 @@
       renderAntraege();
     }
   </script>
-  <script src="insassen-picker-boot.js?v=20260519-submit"></script>
+  <script src="insassen-picker-boot.js?v=20260519-antragsys"></script>
 </body>
 </html>
