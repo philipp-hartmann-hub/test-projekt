@@ -5888,7 +5888,8 @@ function openModal(modalId) {
 }
 
 function closeModal(modalId) {
-  document.getElementById(modalId).classList.remove('active');
+  const el = document.getElementById(modalId);
+  if (el) el.classList.remove('active');
 }
 
 // ============================================
@@ -5965,6 +5966,14 @@ function closeDialog(result) {
     dialogResolve(result);
     dialogResolve = null;
   }
+}
+
+if (typeof window !== 'undefined') {
+  window.openModal = openModal;
+  window.closeModal = closeModal;
+  window.showAlert = showAlert;
+  window.showConfirm = showConfirm;
+  window.closeDialog = closeDialog;
 }
 
 // Klick außerhalb Modal schließt es

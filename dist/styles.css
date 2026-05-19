@@ -1711,6 +1711,10 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   visibility: visible;
 }
 
+#customDialogOverlay {
+  z-index: 1100;
+}
+
 .modal {
   background: var(--bg-card);
   border: none;
@@ -1718,7 +1722,9 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   transform: scale(0.95) translateY(20px);
   transition: transform 0.3s ease;
   box-shadow: var(--shadow-lg);
@@ -1760,6 +1766,9 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
 
 .modal-body {
   padding: 1.25rem 1.5rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .modal-footer {
@@ -1769,6 +1778,10 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   padding: 0.9rem 1.5rem 1.1rem;
   border-top: 1px solid var(--border-color);
   flex-wrap: wrap;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  position: relative;
+  z-index: 2;
 }
 
 .modal-footer-triple {

@@ -518,9 +518,9 @@
         </div>
       </div>
       <div class="modal-footer modal-footer-triple">
-        <button class="btn btn-secondary" onclick="closeModal('newAntragModal')">Abbrechen</button>
-        <button class="btn btn-outline" onclick="saveAsEntwurf()">Als Entwurf speichern</button>
-        <button class="btn btn-primary" onclick="submitNewAntrag()">Einreichen</button>
+        <button type="button" class="btn btn-secondary" data-action="cancel-new-antrag" onclick="closeModal('newAntragModal')">Abbrechen</button>
+        <button type="button" class="btn btn-outline" data-action="draft-new-antrag" onclick="saveAsEntwurf()">Als Entwurf speichern</button>
+        <button type="button" class="btn btn-primary" data-action="submit-new-antrag" onclick="submitNewAntrag()">Einreichen</button>
       </div>
     </div>
   </div>
@@ -960,8 +960,8 @@
     </div>
   </div>
 
-  <script src="data-sync.js?v=20260519-toggle"></script>
-  <script src="app.js?v=20260519-toggle"></script>
+  <script src="data-sync.js?v=20260519-modal"></script>
+  <script src="app.js?v=20260519-modal"></script>
   <script>
     let currentSession = null;
 
@@ -2507,7 +2507,11 @@
         const check = validateBesuchVideoData(data);
         return { type, data, valid: check.valid, error: check.error };
       } else if (type === 'eigentum') {
-        const aktion = document.querySelector('input[name="eigentumAktion"]:checked').value;
+        const aktionEl = document.querySelector('input[name="eigentumAktion"]:checked');
+        if (!aktionEl) {
+          return { type, data: {}, valid: false, error: 'Bitte wählen Sie eine Aktion (Aufstocken oder Abbau).' };
+        }
+        const aktion = aktionEl.value;
         const kleidungCheckboxes = document.querySelectorAll('input[name="kleidung"]:checked');
         const kleidung = Array.from(kleidungCheckboxes).map(cb => cb.value);
         const antragBegruendungText = document.getElementById('eigentumBegruendung').value.trim();
@@ -2526,7 +2530,7 @@
 
     async function submitNewAntrag() {
       if (!currentSession) return;
-      
+      try {
       const { type, data, valid, error } = getNewAntragData();
       
       if (!valid) {
@@ -2672,15 +2676,23 @@
       } else {
         showAlert('Antrag wurde eingereicht und lokal gespeichert. Die Synchronisation mit dem Server steht noch aus oder ist fehlgeschlagen.');
       }
+      } catch (e) {
+        console.error('submitNewAntrag:', e);
+        showAlert('Antrag konnte nicht eingereicht werden: ' + (e.message || e));
+      }
     }
 
     function saveAsEntwurf() {
       if (!currentSession) return;
-      
-      const { type, data } = getNewAntragData();
+      try {
+      const { type, data, valid, error } = getNewAntragData();
+      if (!type) {
+        showAlert(error || 'Bitte wählen Sie eine Antragsart aus.');
+        return;
+      }
       
       // Bei Entwürfen ist keine Validierung nötig - kann unvollständig sein
-      antragSystem.createAntrag(type, data, currentSession, true);
+      antragSystem.createAntrag(type, data || {}, currentSession, true);
       
       closeModal('newAntragModal');
       renderAntraege();
@@ -2688,9 +2700,30 @@
       
       // Hinweis anzeigen
       showAlert('Entwurf wurde gespeichert! Sie finden ihn in der rechten Spalte.');
+      } catch (e) {
+        console.error('saveAsEntwurf:', e);
+        showAlert('Entwurf konnte nicht gespeichert werden: ' + (e.message || e));
+      }
+    }
+
+    function bindNewAntragModalFooter() {
+      const overlay = document.getElementById('newAntragModal');
+      if (!overlay || overlay.dataset.footerBound === '1') return;
+      overlay.dataset.footerBound = '1';
+      const panel = overlay.querySelector('.modal');
+      if (!panel) return;
+      panel.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        if (action === 'cancel-new-antrag') closeModal('newAntragModal');
+        else if (action === 'draft-new-antrag') saveAsEntwurf();
+        else if (action === 'submit-new-antrag') submitNewAntrag();
+      });
     }
 
     function openNewAntragModal() {
+      bindNewAntragModalFooter();
       openModal('newAntragModal');
       try {
         resetNewAntragForm();
@@ -2738,11 +2771,14 @@
     }
 
     window.openNewAntragModal = openNewAntragModal;
+    window.submitNewAntrag = submitNewAntrag;
+    window.saveAsEntwurf = saveAsEntwurf;
     window.toggleAntragFields = toggleAntragFields;
     window.toggleEntwurfFields = toggleEntwurfFields;
     window.resetNewAntragForm = resetNewAntragForm;
     window.mountAntragTypePicker = mountAntragTypePicker;
     window.setAntragTypePickerSelection = setAntragTypePickerSelection;
+    window.getNewAntragData = getNewAntragData;
 
     if (typeof window.refreshInsassenAntragPickers === 'function') {
       window.refreshInsassenAntragPickers();
@@ -3471,6 +3507,6 @@
       renderAntraege();
     }
   </script>
-  <script src="insassen-picker-boot.js?v=20260519-toggle"></script>
+  <script src="insassen-picker-boot.js?v=20260519-modal"></script>
 </body>
 </html>
