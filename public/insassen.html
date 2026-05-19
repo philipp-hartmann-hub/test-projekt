@@ -942,8 +942,23 @@
     function mountAntragTypePicker(containerId, inputName, selectedValue, onChangeHandler) {
       const el = document.getElementById(containerId);
       if (!el) return;
-      el.innerHTML = renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler);
-      initAntragTypePickerAccordion(containerId, inputName, onChangeHandler);
+      const renderFn =
+        typeof renderAntragTypePickerHtml === 'function'
+          ? renderAntragTypePickerHtml
+          : window.renderAntragTypePickerHtml;
+      if (typeof renderFn !== 'function') {
+        console.error('renderAntragTypePickerHtml fehlt – app.js neu laden');
+        el.innerHTML = '<p class="empty-hint">Antragsarten konnten nicht geladen werden. Bitte Seite neu laden.</p>';
+        return;
+      }
+      el.innerHTML = renderFn(inputName, selectedValue, onChangeHandler);
+      const initFn =
+        typeof initAntragTypePickerAccordion === 'function'
+          ? initAntragTypePickerAccordion
+          : window.initAntragTypePickerAccordion;
+      if (typeof initFn === 'function') {
+        initFn(containerId, inputName, onChangeHandler);
+      }
     }
 
     function renderAntragFilterBar(containerId, listKey) {
@@ -2066,7 +2081,9 @@
     }
 
     function toggleAntragFields() {
-      const type = document.querySelector('input[name="antragType"]:checked').value;
+      const selected = document.querySelector('input[name="antragType"]:checked');
+      if (!selected) return;
+      const type = selected.value;
       document.getElementById('teilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
       document.getElementById('eigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
       document.getElementById('beratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
@@ -2087,7 +2104,9 @@
     }
 
     function toggleEntwurfFields() {
-      const type = document.querySelector('input[name="entwurfType"]:checked').value;
+      const selected = document.querySelector('input[name="entwurfType"]:checked');
+      if (!selected) return;
+      const type = selected.value;
       document.getElementById('entwurfTeilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
       document.getElementById('entwurfEigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
       document.getElementById('entwurfBeratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
@@ -2586,13 +2605,21 @@
     }
 
     function openNewAntragModal() {
-      resetNewAntragForm();
       openModal('newAntragModal');
+      try {
+        resetNewAntragForm();
+      } catch (e) {
+        console.error('resetNewAntragForm:', e);
+        showAlert('Antragsformular konnte nicht vollständig zurückgesetzt werden. Sie können trotzdem einen Antrag stellen.');
+        mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
+        toggleAntragFields();
+      }
     }
 
     function resetNewAntragForm() {
       populateMonatSelect('monatSelect');
-      document.getElementById('monatSelect').value = '';
+      const monatSelect = document.getElementById('monatSelect');
+      if (monatSelect) monatSelect.value = '';
       resetTeilhabegeldEinkommenForm('');
       resetBeratungUnterstuetzungForm('');
       resetGespraechsterminForm('');
@@ -2601,12 +2628,22 @@
       resetLangzeitbesuchForm('');
       resetBesuchTerminForm('');
       resetBesuchVideoForm('');
-      document.querySelectorAll('input[name="kleidung"]').forEach(cb => cb.checked = false);
-      document.getElementById('eigentumBegruendung').value = '';
+      document.querySelectorAll('input[name="kleidung"]').forEach((cb) => {
+        cb.checked = false;
+      });
+      const eigentumBegr = document.getElementById('eigentumBegruendung');
+      if (eigentumBegr) eigentumBegr.value = '';
       mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
-      document.querySelector('input[name="eigentumAktion"][value="aufstocken"]').checked = true;
+      const eigentumRadio = document.querySelector('input[name="eigentumAktion"][value="aufstocken"]');
+      if (eigentumRadio) eigentumRadio.checked = true;
       toggleAntragFields();
     }
+
+    window.openNewAntragModal = openNewAntragModal;
+    window.toggleAntragFields = toggleAntragFields;
+    window.toggleEntwurfFields = toggleEntwurfFields;
+    window.resetNewAntragForm = resetNewAntragForm;
+    window.mountAntragTypePicker = mountAntragTypePicker;
 
     // ============================================
     // ENTWÜRFE

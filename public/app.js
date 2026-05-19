@@ -4950,13 +4950,22 @@ function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
 function initAntragTypePickerAccordion(containerId, inputName, onChangeHandler) {
   const container = document.getElementById(containerId);
   if (!container || !onChangeHandler) return;
+  const handler =
+    typeof window[onChangeHandler] === 'function'
+      ? window[onChangeHandler]
+      : typeof window[onChangeHandler] === 'undefined' && typeof globalThis[onChangeHandler] === 'function'
+        ? globalThis[onChangeHandler]
+        : null;
+  if (!handler) return;
   container.querySelectorAll(`input[name="${inputName}"]`).forEach((radio) => {
-    radio.addEventListener('change', () => {
-      if (typeof window[onChangeHandler] === 'function') {
-        window[onChangeHandler]();
-      }
-    });
+    radio.addEventListener('change', () => handler());
   });
+}
+
+if (typeof window !== 'undefined') {
+  window.renderAntragTypePickerHtml = renderAntragTypePickerHtml;
+  window.initAntragTypePickerAccordion = initAntragTypePickerAccordion;
+  window._getAntragTypLabelForPicker = _getAntragTypLabelForPicker;
 }
 
 function renderAntragFilterBarHtml(listKey, activeFilterId, setFilterFn) {
