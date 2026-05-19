@@ -63,6 +63,7 @@
           <button class="tab active" onclick="switchTab('insassen')">Insassen</button>
           <button class="tab" onclick="switchTab('mitarbeiter')">Mitarbeiter</button>
           <button class="tab" onclick="switchTab('termine')">Termine</button>
+          <button class="tab" onclick="switchTab('externe')">Externe Partner</button>
         </div>
 
         <!-- Insassen-Verwaltung -->
@@ -85,6 +86,16 @@
           <div class="user-list" id="mitarbeiterList">
             <!-- Dynamisch gefüllt -->
           </div>
+        </section>
+
+        <!-- Externe Partner (Terminbuchung) -->
+        <section class="section" id="externePartnerSection" style="display: none;">
+          <div class="section-header">
+            <h2>Externe Partner <span class="count" id="externePartnerCount">0</span></h2>
+            <button class="btn btn-primary" onclick="openExternePartnerModal()">+ Neuer Partner</button>
+          </div>
+          <p class="section-hint">Profile für externe Anbieter mit Leistungen (Termindauer) und wöchentlichen Verfügbarkeiten. Mitarbeitende buchen Termine wie beim Zahnarzt.</p>
+          <div class="user-list" id="externePartnerList"></div>
         </section>
 
         <!-- Termin-Verwaltung -->
@@ -402,6 +413,52 @@
     </div>
   </div>
 
+  <!-- Modal: Externer Partner -->
+  <div class="modal-overlay" id="externePartnerModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3 id="externePartnerModalTitle">Externer Partner</h3>
+        <button class="modal-close" onclick="closeModal('externePartnerModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="epName">Name <span class="required">*</span></label>
+            <input type="text" id="epName" required>
+          </div>
+          <div class="form-group">
+            <label for="epBeruf">Beruf / Rolle</label>
+            <input type="text" id="epBeruf" placeholder="z. B. Pastor, Suchtberaterin">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="epEmail">E-Mail <span class="required">*</span></label>
+          <input type="email" id="epEmail" required>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="epAktiv" checked> Partner ist aktiv (buchbar)
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Leistungen (Services)</label>
+          <div id="epServicesList"></div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addEpServiceRow()">+ Leistung</button>
+        </div>
+        <div class="form-group">
+          <label>Verfügbarkeiten (Wochentag, von–bis)</label>
+          <div id="epVerfuegbarkeitenList"></div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addEpVerfuegbarkeitRow()">+ Zeitfenster</button>
+        </div>
+        <input type="hidden" id="epEditId">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('externePartnerModal')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="speichereExternePartner()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Neuer Admin-Termin -->
   <div class="modal-overlay" id="adminTerminModal">
     <div class="modal">
@@ -605,7 +662,8 @@
       document.getElementById('insassenSection').style.display = 'none';
       document.getElementById('mitarbeiterSection').style.display = 'none';
       document.getElementById('termineSection').style.display = 'none';
-      
+      document.getElementById('externePartnerSection').style.display = 'none';
+
       if (tab === 'insassen') {
         tabs[0].classList.add('active');
         document.getElementById('insassenSection').style.display = 'block';
@@ -616,6 +674,10 @@
         tabs[2].classList.add('active');
         document.getElementById('termineSection').style.display = 'block';
         renderAdminTermine();
+      } else if (tab === 'externe') {
+        tabs[3].classList.add('active');
+        document.getElementById('externePartnerSection').style.display = 'block';
+        renderExternePartner();
       }
     }
 
@@ -1559,6 +1621,169 @@
           insassenList.innerHTML = `<div class="error-state">Fehler beim Laden: ${error.message}</div>`;
         }
       }
+    }
+
+    // ============================================
+    // EXTERNE PARTNER
+    // ============================================
+
+    const EP_WOCHENTAGE = [
+      { v: 1, l: 'Montag' },
+      { v: 2, l: 'Dienstag' },
+      { v: 3, l: 'Mittwoch' },
+      { v: 4, l: 'Donnerstag' },
+      { v: 5, l: 'Freitag' },
+      { v: 6, l: 'Samstag' },
+      { v: 0, l: 'Sonntag' }
+    ];
+
+    function renderExternePartner() {
+      const liste = document.getElementById('externePartnerList');
+      if (!liste || typeof externePartnerSystem === 'undefined') return;
+      const partner = externePartnerSystem.partner;
+      document.getElementById('externePartnerCount').textContent = partner.length;
+      if (partner.length === 0) {
+        liste.innerHTML = '<div class="empty-state"><p>Noch keine externen Partner angelegt.</p></div>';
+        return;
+      }
+      liste.innerHTML = partner.map((p) => {
+        const svc = (p.services || []).map((s) => `${escapeHtml(s.name)} (${s.dauerMinuten} Min.)`).join(', ') || '–';
+        const vf = (p.verfuegbarkeiten || []).length;
+        return `
+          <div class="user-card">
+            <div class="user-card-main">
+              <div class="user-name">${escapeHtml(p.name)}${p.aktiv === false ? ' <span class="badge badge-muted">inaktiv</span>' : ''}</div>
+              <div class="user-meta">${escapeHtml(p.beruf || '')} · ${escapeHtml(p.email)}</div>
+              <div class="user-meta">Leistungen: ${svc}</div>
+              <div class="user-meta">${vf} Verfügbarkeitsfenster</div>
+            </div>
+            <div class="user-card-actions">
+              <button class="btn btn-secondary btn-sm" onclick="openExternePartnerModal('${p.id}')">Bearbeiten</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteExternePartner('${p.id}')">Löschen</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function addEpServiceRow(data = {}) {
+      const list = document.getElementById('epServicesList');
+      const row = document.createElement('div');
+      row.className = 'ep-dynamic-row form-row';
+      row.innerHTML = `
+        <input type="hidden" class="ep-svc-id" value="${data.id || ''}">
+        <div class="form-group" style="flex:2">
+          <input type="text" class="ep-svc-name" placeholder="Leistungsname" value="${escapeHtml(data.name || '')}">
+        </div>
+        <div class="form-group" style="flex:1">
+          <input type="number" class="ep-svc-dauer" min="15" step="5" placeholder="Min." value="${data.dauerMinuten || 30}">
+        </div>
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.ep-dynamic-row').remove()">×</button>
+      `;
+      list.appendChild(row);
+    }
+
+    function addEpVerfuegbarkeitRow(data = {}) {
+      const list = document.getElementById('epVerfuegbarkeitenList');
+      const opts = EP_WOCHENTAGE.map((w) =>
+        `<option value="${w.v}" ${String(data.wochentag) === String(w.v) ? 'selected' : ''}>${w.l}</option>`
+      ).join('');
+      const row = document.createElement('div');
+      row.className = 'ep-dynamic-row form-row';
+      row.innerHTML = `
+        <div class="form-group">
+          <select class="ep-vf-wd">${opts}</select>
+        </div>
+        <div class="form-group">
+          <input type="time" class="ep-vf-von" value="${data.von || '09:00'}">
+        </div>
+        <div class="form-group">
+          <input type="time" class="ep-vf-bis" value="${data.bis || '12:00'}">
+        </div>
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.ep-dynamic-row').remove()">×</button>
+      `;
+      list.appendChild(row);
+    }
+
+    function openExternePartnerModal(id) {
+      document.getElementById('epEditId').value = id || '';
+      document.getElementById('epServicesList').innerHTML = '';
+      document.getElementById('epVerfuegbarkeitenList').innerHTML = '';
+      if (id && typeof externePartnerSystem !== 'undefined') {
+        const p = externePartnerSystem.getPartner(id);
+        if (!p) return;
+        document.getElementById('externePartnerModalTitle').textContent = 'Partner bearbeiten';
+        document.getElementById('epName').value = p.name;
+        document.getElementById('epEmail').value = p.email;
+        document.getElementById('epBeruf').value = p.beruf || '';
+        document.getElementById('epAktiv').checked = p.aktiv !== false;
+        (p.services || []).forEach((s) => addEpServiceRow(s));
+        (p.verfuegbarkeiten || []).forEach((v) => addEpVerfuegbarkeitRow(v));
+      } else {
+        document.getElementById('externePartnerModalTitle').textContent = 'Neuer externer Partner';
+        document.getElementById('epName').value = '';
+        document.getElementById('epEmail').value = '';
+        document.getElementById('epBeruf').value = '';
+        document.getElementById('epAktiv').checked = true;
+        addEpServiceRow({ name: 'Beratungsgespräch', dauerMinuten: 45 });
+        addEpVerfuegbarkeitRow({ wochentag: 1, von: '09:00', bis: '12:00' });
+      }
+      openModal('externePartnerModal');
+    }
+
+    function collectEpServices() {
+      return Array.from(document.querySelectorAll('#epServicesList .ep-dynamic-row')).map((row) => ({
+        id: row.querySelector('.ep-svc-id').value || undefined,
+        name: row.querySelector('.ep-svc-name').value.trim(),
+        dauerMinuten: parseInt(row.querySelector('.ep-svc-dauer').value, 10) || 30
+      })).filter((s) => s.name);
+    }
+
+    function collectEpVerfuegbarkeiten() {
+      return Array.from(document.querySelectorAll('#epVerfuegbarkeitenList .ep-dynamic-row')).map((row) => ({
+        wochentag: row.querySelector('.ep-vf-wd').value,
+        von: row.querySelector('.ep-vf-von').value,
+        bis: row.querySelector('.ep-vf-bis').value
+      })).filter((v) => v.von && v.bis);
+    }
+
+    function speichereExternePartner() {
+      if (typeof externePartnerSystem === 'undefined') return;
+      const name = document.getElementById('epName').value.trim();
+      const email = document.getElementById('epEmail').value.trim();
+      const beruf = document.getElementById('epBeruf').value.trim();
+      const aktiv = document.getElementById('epAktiv').checked;
+      const services = collectEpServices();
+      const verfuegbarkeiten = collectEpVerfuegbarkeiten();
+      const editId = document.getElementById('epEditId').value;
+
+      if (!name || !email) {
+        showAlert('Name und E-Mail sind Pflichtfelder.');
+        return;
+      }
+      if (services.length === 0) {
+        showAlert('Bitte mindestens eine Leistung anlegen.');
+        return;
+      }
+      if (verfuegbarkeiten.length === 0) {
+        showAlert('Bitte mindestens ein Verfügbarkeitsfenster anlegen.');
+        return;
+      }
+
+      const payload = { name, email, beruf, aktiv, services, verfuegbarkeiten };
+      if (editId) {
+        externePartnerSystem.updatePartner(editId, payload);
+      } else {
+        externePartnerSystem.createPartner(payload);
+      }
+      closeModal('externePartnerModal');
+      renderExternePartner();
+    }
+
+    async function deleteExternePartner(id) {
+      const confirmed = await showConfirm('Partner wirklich löschen?');
+      if (!confirmed) return;
+      externePartnerSystem.deletePartner(id);
+      renderExternePartner();
     }
 
     // ============================================

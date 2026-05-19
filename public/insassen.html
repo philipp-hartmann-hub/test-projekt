@@ -49,7 +49,7 @@
   </div>
 
   <!-- Portal-Bereich (nach Login sichtbar) -->
-  <div id="portalSection" style="display: none;">
+  <div id="portalSection" class="insassen-portal" style="display: none;">
     <header class="header">
       <div class="header-left">
         <div class="hamburg-logo">
@@ -113,35 +113,6 @@
           </button>
         </div>
 
-        <!-- Termine (vereinbarte Termine) -->
-        <section class="section kalender-section collapsed" id="insasseKalenderSection">
-          <div class="kalender-toggle-header" onclick="toggleInsasseKalender()">
-            <div class="kalender-toggle-left">
-              <span class="kalender-toggle-icon" id="insasseKalenderToggleIcon">▶</span>
-              <h2>Meine Termine <span class="count" id="insasseTermineCount">0</span></h2>
-            </div>
-          </div>
-          <div class="kalender-collapsible-content" id="insasseKalenderCollapsible">
-            <div class="kalender-header-bar">
-              <div class="kalender-toolbar">
-                <div class="kalender-nav">
-                  <button type="button" class="nav-btn" onclick="insasseKalenderZurueck()" title="Zurück">◀</button>
-                  <button type="button" class="nav-btn heute-btn" onclick="insasseKalenderHeute()">Heute</button>
-                  <span class="kalender-anzeige" id="insasseKalenderAnzeige">Januar 2026</span>
-                  <button type="button" class="nav-btn" onclick="insasseKalenderVor()" title="Vor">▶</button>
-                </div>
-              </div>
-            </div>
-            <div class="kalender-content">
-              <div class="kalender-main" id="insasseKalenderMain"></div>
-              <div class="termine-sidebar" id="insasseTermineSidebar">
-                <h4 id="insasseTermineSidebarTitel">Termine heute</h4>
-                <div id="insasseTermineSidebarListe"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <!-- Aufgaben-Bereich für Insassen -->
         <section class="section aufgaben-section" id="aufgabenSection" style="display: none;">
           <div class="section-header">
@@ -199,6 +170,36 @@
             </section>
           </div>
         </div>
+
+        <!-- Termine (vereinbarte Termine) -->
+        <section class="section kalender-section insasse-kalender-section collapsed" id="insasseKalenderSection">
+          <div class="kalender-toggle-header" onclick="toggleInsasseKalender()">
+            <div class="kalender-toggle-left">
+              <span class="kalender-toggle-icon" id="insasseKalenderToggleIcon">▶</span>
+              <h2>Meine Termine <span class="count" id="insasseTermineCount">0</span></h2>
+            </div>
+          </div>
+          <div class="kalender-collapsible-content" id="insasseKalenderCollapsible">
+            <div class="kalender-header-bar">
+              <div class="kalender-toolbar">
+                <div class="kalender-nav">
+                  <button type="button" class="nav-btn" onclick="insasseKalenderZurueck()" title="Zurück">◀</button>
+                  <button type="button" class="nav-btn heute-btn" onclick="insasseKalenderHeute()">Heute</button>
+                  <span class="kalender-anzeige" id="insasseKalenderAnzeige">Januar 2026</span>
+                  <button type="button" class="nav-btn" onclick="insasseKalenderVor()" title="Vor">▶</button>
+                </div>
+              </div>
+            </div>
+            <div class="kalender-content insasse-kalender-content">
+              <div class="kalender-main" id="insasseKalenderMain"></div>
+              <div class="termine-sidebar" id="insasseTermineSidebar">
+                <h4 id="insasseTermineSidebarTitel">Termine heute</h4>
+                <div id="insasseTermineSidebarListe"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
       </div>
     </main>
   </div>
@@ -949,6 +950,18 @@
       container.innerHTML = renderAntragFilterBarHtml(listKey, antragListeFilter[listKey], 'setAntragListeFilter');
     }
 
+    function updateFilterHinweis(containerId, gefiltert, gesamt) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const alt = container.parentElement?.querySelector('.filter-active-hint');
+      if (alt) alt.remove();
+      if (gefiltert >= gesamt || gesamt === 0) return;
+      const hint = document.createElement('p');
+      hint.className = 'filter-active-hint';
+      hint.textContent = `${gesamt - gefiltert} weiterer Antrag${gesamt - gefiltert === 1 ? '' : 'e'} durch den Filter ausgeblendet. Wählen Sie „Alle“ oder einen anderen Filter.`;
+      container.insertAdjacentElement('afterend', hint);
+    }
+
     function setAntragListeFilter(listKey, filterId) {
       antragListeFilter[listKey] = filterId;
       renderAntraege();
@@ -1321,7 +1334,7 @@
       const datumStr = d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
       const zeitStr = t.uhrzeit ? `${t.uhrzeit} Uhr` : 'Ganztägig';
       const teilnehmerStr = t.teilnehmerArt === 'extern' && t.externKontakt
-        ? t.externKontakt.label
+        ? `${t.externKontakt.serviceName || ''}${t.externKontakt.serviceName ? ' – ' : ''}${t.externKontakt.name}${t.durchfuehrungArt === 'online' ? ' (Online)' : ''}`
         : (t.zugewiesenAnName || 'Mitarbeitende');
       return `
         <div class="termin-item insasse-termin-item" style="border-left-color: #0d9488;">
@@ -1516,18 +1529,25 @@
     // ============================================
     
     function switchTab(tab) {
-      const tabs = document.querySelectorAll('.tab');
-      tabs.forEach(t => t.classList.remove('active'));
-      
-      document.getElementById('aktivSection').style.display = 'none';
-      document.getElementById('historieSection').style.display = 'none';
-      
+      const tabBar = document.querySelector('.column-main .tabs');
+      const tabs = tabBar ? tabBar.querySelectorAll('.tab') : [];
+      tabs.forEach((t) => t.classList.remove('active'));
+
+      const aktivSection = document.getElementById('aktivSection');
+      const historieSection = document.getElementById('historieSection');
+      if (!aktivSection || !historieSection) return;
+
+      aktivSection.style.display = 'none';
+      historieSection.style.display = 'none';
+
       if (tab === 'aktiv') {
-        tabs[0].classList.add('active');
-        document.getElementById('aktivSection').style.display = 'block';
+        if (tabs[0]) tabs[0].classList.add('active');
+        aktivSection.style.display = 'block';
+        aktivSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       } else {
-        tabs[1].classList.add('active');
-        document.getElementById('historieSection').style.display = 'block';
+        if (tabs[1]) tabs[1].classList.add('active');
+        historieSection.style.display = 'block';
+        historieSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     }
 
@@ -3050,9 +3070,11 @@
         antragSystem.saveAntraege();
       }
       
-      const entwuerfe = antragSystem.getEntwuerfeInsasse(currentSession.userId);
-      const aktiveAntraege = antragSystem.getAktiveAntraegeInsasse(currentSession.userId);
-      const historieAntraege = antragSystem.getHistorieInsasse(currentSession.userId);
+      antragSystem.migrateAntraege();
+
+      const entwuerfe = antragSystem.getEntwuerfeInsasse(currentSession.userId, currentSession.name);
+      const aktiveAntraege = antragSystem.getAktiveAntraegeInsasse(currentSession.userId, currentSession.name);
+      const historieAntraege = antragSystem.getHistorieInsasse(currentSession.userId, currentSession.name);
 
       renderAntragFilterBar('entwuerfeTypeFilterBar', 'entwuerfe');
       renderAntragFilterBar('aktivTypeFilterBar', 'aktiv');
@@ -3068,6 +3090,9 @@
       document.getElementById('entwuerfeCount').textContent = formatAntragListenCount(entwuerfeGefiltert.length, entwuerfe.length);
       document.getElementById('aktivCount').textContent = formatAntragListenCount(aktiveGefiltert.length, aktiveAntraege.length);
       document.getElementById('historieCount').textContent = formatAntragListenCount(historieGefiltert.length, historieAntraege.length);
+      updateFilterHinweis('entwuerfeTypeFilterBar', entwuerfeGefiltert.length, entwuerfe.length);
+      updateFilterHinweis('aktivTypeFilterBar', aktiveGefiltert.length, aktiveAntraege.length);
+      updateFilterHinweis('historieTypeFilterBar', historieGefiltert.length, historieAntraege.length);
       document.getElementById('aufgabenCount').textContent = meineAufgaben.length;
       
       // Aufgaben anzeigen

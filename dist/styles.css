@@ -2015,6 +2015,53 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   border: 1px solid var(--jhh-border);
 }
 
+.termin-slot-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 0.25rem 0;
+}
+
+.termin-slot-btn {
+  border: 1px solid var(--jhh-border);
+  background: #fff;
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.65rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.termin-slot-btn:hover {
+  border-color: var(--jhh-primary);
+  background: rgba(0, 92, 169, 0.05);
+}
+
+.termin-slot-btn.selected {
+  border-color: var(--jhh-primary);
+  background: var(--jhh-primary);
+  color: #fff;
+}
+
+.empty-hint {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.ep-dynamic-row {
+  align-items: flex-end;
+  margin-bottom: 0.5rem;
+  gap: 0.5rem;
+}
+
+.ep-dynamic-row .form-group {
+  margin-bottom: 0;
+}
+
 /* Hinweis unter Formularfeldern */
 .field-hint {
   font-size: 0.8rem;
@@ -4947,6 +4994,83 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   color: #fff;
 }
 
+/* Insassen-Portal: Antragslisten scrollen, Kalender kompakt unter den Anträgen */
+.insassen-portal .column-sidebar {
+  position: static;
+  align-self: start;
+}
+
+.insassen-portal .entwuerfe-section {
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.insassen-portal .antrag-filter-details,
+.insassen-portal .antrag-filter-bar {
+  overflow: visible;
+}
+
+.insassen-portal .antrag-filter-bar {
+  flex-wrap: wrap;
+}
+
+.insassen-portal .filter-active-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.insassen-portal .insasse-kalender-section {
+  margin-top: 0.25rem;
+}
+
+.insassen-portal .insasse-kalender-content {
+  grid-template-columns: 1fr minmax(200px, 260px);
+  gap: 1rem;
+}
+
+.insassen-portal .insasse-kalender-section .kalender-header-bar {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+}
+
+.insassen-portal .insasse-kalender-section .kalender-main {
+  min-height: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.insassen-portal .insasse-kalender-section .kalender-tag {
+  min-height: 42px;
+  aspect-ratio: auto;
+  padding: 0.2rem;
+}
+
+.insassen-portal .insasse-kalender-section .kalender-wochentag {
+  padding: 0.35rem 0.25rem;
+  font-size: 0.7rem;
+}
+
+.insassen-portal .insasse-kalender-section .tag-nummer {
+  font-size: 0.8rem;
+}
+
+.insassen-portal .insasse-kalender-section .termine-sidebar {
+  max-height: 280px;
+}
+
+@media (max-width: 900px) {
+  .insassen-portal .insasse-kalender-content {
+    grid-template-columns: 1fr;
+  }
+
+  .insassen-portal .entwuerfe-section {
+    max-height: none;
+  }
+}
+
 .antrag-card-thema {
   display: inline-block;
   font-size: 0.75rem;
@@ -4955,4 +5079,38 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   margin-bottom: 0.35rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.teams-link-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.teams-link-row input[type="url"] {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.insasse-termin-item {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  border-left: 4px solid #0d9488;
+}
+
+.insasse-termin-item .termin-meta {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.insasse-termin-item .termin-item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
 }

@@ -1938,11 +1938,250 @@ const aktivitaetenSystem = new AktivitaetenSystem();
 // TERMINSYSTEM
 // ============================================
 
-const EXTERNE_KONTAKTE = [
-  { id: 'pastor', label: 'Pastor', name: 'Pfarrer Thomas Meyer', email: 'pastor.meyer@jva-prototyp.de' },
-  { id: 'suchtberater', label: 'Suchtberater', name: 'Dr. Anna Weber', email: 'a.weber@suchtberatung-prototyp.de' },
-  { id: 'uebergangsmanager', label: 'Übergangsmanager', name: 'Marc Hoffmann', email: 'm.hoffmann@uebergang-prototyp.de' }
-];
+// ============================================
+// EXTERNE PARTNER (Terminbuchung wie Zahnarzt)
+// ============================================
+
+function parseZeitZuMinuten(zeit) {
+  if (!zeit) return 0;
+  const [h, m] = String(zeit).split(':').map((x) => parseInt(x, 10) || 0);
+  return h * 60 + m;
+}
+
+function minutenZuZeit(minuten) {
+  const h = Math.floor(minuten / 60);
+  const m = minuten % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function generateTeamsMeetingLink() {
+  const id = Date.now().toString(36);
+  return `https://teams.microsoft.com/l/meetup-join/19%3ameeting-${id}-jvp/0?context={"Tid":"prototyp"}`;
+}
+
+class ExternePartnerSystem {
+  constructor() {
+    this.storageKey = 'gefaengnis_externe_partner';
+    this.partner = this.load();
+    this.seedDefaultsIfEmpty();
+  }
+
+  load() {
+    const data = localStorage.getItem(this.storageKey);
+    return data ? JSON.parse(data) : [];
+  }
+
+  save() {
+    localStorage.setItem(this.storageKey, JSON.stringify(this.partner));
+  }
+
+  generateId(prefix) {
+    return `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+  }
+
+  seedDefaultsIfEmpty() {
+    if (this.partner.length > 0) return;
+    this.partner = [
+      {
+        id: 'ep-pastor',
+        name: 'Pfarrer Thomas Meyer',
+        email: 'pastor.meyer@jva-prototyp.de',
+        beruf: 'Pastor',
+        aktiv: true,
+        services: [
+          { id: 'svc-seelsorge', name: 'Seelsorggespräch', dauerMinuten: 45 },
+          { id: 'svc-trauung', name: 'Trauungsvorbereitung', dauerMinuten: 30 }
+        ],
+        verfuegbarkeiten: [
+          { wochentag: 1, von: '09:00', bis: '12:00' },
+          { wochentag: 1, von: '14:00', bis: '16:00' },
+          { wochentag: 3, von: '10:00', bis: '15:00' },
+          { wochentag: 5, von: '09:00', bis: '11:00' }
+        ]
+      },
+      {
+        id: 'ep-suchtberater',
+        name: 'Dr. Anna Weber',
+        email: 'a.weber@suchtberatung-prototyp.de',
+        beruf: 'Suchtberaterin',
+        aktiv: true,
+        services: [
+          { id: 'svc-beratung', name: 'Suchtberatung', dauerMinuten: 50 },
+          { id: 'svc-nachsorge', name: 'Nachsorgegespräch', dauerMinuten: 30 }
+        ],
+        verfuegbarkeiten: [
+          { wochentag: 2, von: '08:00', bis: '12:00' },
+          { wochentag: 2, von: '13:00', bis: '16:00' },
+          { wochentag: 4, von: '09:00', bis: '14:00' }
+        ]
+      },
+      {
+        id: 'ep-uebergang',
+        name: 'Marc Hoffmann',
+        email: 'm.hoffmann@uebergang-prototyp.de',
+        beruf: 'Übergangsmanager',
+        aktiv: true,
+        services: [
+          { id: 'svc-uebergang', name: 'Übergangsmanagement', dauerMinuten: 60 }
+        ],
+        verfuegbarkeiten: [
+          { wochentag: 1, von: '10:00', bis: '16:00' },
+          { wochentag: 4, von: '10:00', bis: '15:00' }
+        ]
+      }
+    ];
+    this.save();
+  }
+
+  getPartner(id) {
+    return this.partner.find((p) => String(p.id) === String(id));
+  }
+
+  getAktivePartner() {
+    return this.partner.filter((p) => p.aktiv !== false);
+  }
+
+  getAlleServices() {
+    const list = [];
+    this.getAktivePartner().forEach((p) => {
+      (p.services || []).forEach((s) => {
+        list.push({
+          serviceId: s.id,
+          serviceName: s.name,
+          dauerMinuten: s.dauerMinuten || 30,
+          partnerId: p.id,
+          partnerName: p.name,
+          partnerBeruf: p.beruf || ''
+        });
+      });
+    });
+    return list;
+  }
+
+  getPartnerMitService(serviceId) {
+    return this.getAktivePartner().filter((p) =>
+      (p.services || []).some((s) => s.id === serviceId)
+    );
+  }
+
+  getService(partnerId, serviceId) {
+    const p = this.getPartner(partnerId);
+    if (!p) return null;
+    return (p.services || []).find((s) => s.id === serviceId) || null;
+  }
+
+  createPartner(data) {
+    const partner = {
+      id: this.generateId('EP'),
+      name: data.name,
+      email: data.email,
+      beruf: data.beruf || '',
+      aktiv: data.aktiv !== false,
+      services: (data.services || []).map((s) => ({
+        id: s.id || this.generateId('SVC'),
+        name: s.name,
+        dauerMinuten: parseInt(s.dauerMinuten, 10) || 30
+      })),
+      verfuegbarkeiten: (data.verfuegbarkeiten || []).map((v) => ({
+        wochentag: parseInt(v.wochentag, 10),
+        von: v.von,
+        bis: v.bis
+      }))
+    };
+    this.partner.push(partner);
+    this.save();
+    return partner;
+  }
+
+  updatePartner(id, data) {
+    const p = this.getPartner(id);
+    if (!p) return null;
+    if (data.name != null) p.name = data.name;
+    if (data.email != null) p.email = data.email;
+    if (data.beruf != null) p.beruf = data.beruf;
+    if (data.aktiv != null) p.aktiv = data.aktiv;
+    if (data.services) {
+      p.services = data.services.map((s) => ({
+        id: s.id || this.generateId('SVC'),
+        name: s.name,
+        dauerMinuten: parseInt(s.dauerMinuten, 10) || 30
+      }));
+    }
+    if (data.verfuegbarkeiten) {
+      p.verfuegbarkeiten = data.verfuegbarkeiten.map((v) => ({
+        wochentag: parseInt(v.wochentag, 10),
+        von: v.von,
+        bis: v.bis
+      }));
+    }
+    this.save();
+    return p;
+  }
+
+  deletePartner(id) {
+    this.partner = this.partner.filter((p) => String(p.id) !== String(id));
+    this.save();
+  }
+
+  isSlotBelegt(partnerId, datum, uhrzeit, dauerMinuten) {
+    if (typeof terminSystem === 'undefined') return false;
+    const start = parseZeitZuMinuten(uhrzeit);
+    const end = start + (dauerMinuten || 30);
+    return terminSystem.termine.some((t) => {
+      if (t.typ !== 'vereinbarung' || t.teilnehmerArt !== 'extern') return false;
+      if (String(t.externPartnerId) !== String(partnerId)) return false;
+      if (t.datum !== datum) return false;
+      const tStart = parseZeitZuMinuten(t.uhrzeit);
+      const tEnd = tStart + (t.dauerMinuten || 30);
+      return start < tEnd && end > tStart;
+    });
+  }
+
+  getVerfuegbareSlots(partnerId, serviceId, options = {}) {
+    const partner = this.getPartner(partnerId);
+    const service = this.getService(partnerId, serviceId);
+    if (!partner || !service) return [];
+
+    const dauer = service.dauerMinuten || 30;
+    const tage = options.tage != null ? options.tage : 42;
+    const ab = options.abDatum ? new Date(options.abDatum) : new Date();
+    ab.setHours(0, 0, 0, 0);
+
+    const slots = [];
+    const WOCHENTAGE_KURZ = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+
+    for (let d = 0; d < tage; d++) {
+      const tag = new Date(ab);
+      tag.setDate(tag.getDate() + d);
+      const wd = tag.getDay();
+      const datumIso = tag.toISOString().split('T')[0];
+      const fenster = (partner.verfuegbarkeiten || []).filter((v) => v.wochentag === wd);
+
+      fenster.forEach((fen) => {
+        let cursor = parseZeitZuMinuten(fen.von);
+        const ende = parseZeitZuMinuten(fen.bis);
+        while (cursor + dauer <= ende) {
+          const uhrzeit = minutenZuZeit(cursor);
+          if (!this.isSlotBelegt(partnerId, datumIso, uhrzeit, dauer)) {
+            const datumObj = new Date(datumIso + 'T12:00:00');
+            const label = `${WOCHENTAGE_KURZ[wd]}, ${datumObj.toLocaleDateString('de-DE')} · ${uhrzeit} Uhr`;
+            slots.push({
+              datum: datumIso,
+              uhrzeit,
+              dauerMinuten: dauer,
+              label,
+              slotKey: `${datumIso}|${uhrzeit}`
+            });
+          }
+          cursor += dauer;
+        }
+      });
+    }
+    return slots;
+  }
+}
+
+const externePartnerSystem = new ExternePartnerSystem();
 
 class TerminSystem {
   constructor() {
@@ -2195,6 +2434,10 @@ class TerminSystem {
       insasseName: data.insasseName || '',
       teilnehmerArt: data.teilnehmerArt,
       externKontakt: data.externKontakt || null,
+      externPartnerId: data.externPartnerId || null,
+      externServiceId: data.externServiceId || null,
+      dauerMinuten: data.dauerMinuten || null,
+      durchfuehrungArt: data.durchfuehrungArt || null,
       zugewiesenAnTyp: data.zugewiesenAnTyp || null,
       zugewiesenAnId: data.zugewiesenAnId || null,
       zugewiesenAnName: data.zugewiesenAnName || null,
@@ -2696,9 +2939,13 @@ class AntragSystem {
         antrag.status = 'in-bearbeitung';
         changed = true;
       }
-      // Erledigte Anträge markieren
-      if (['genehmigt', 'abgelehnt', 'zurueckgegeben', 'teilweise-genehmigt'].includes(antrag.status) && antrag.erledigt === undefined) {
-        antrag.erledigt = (antrag.status !== 'zurueckgegeben');
+      // Abgeschlossene Anträge für Insassen-Historie markieren
+      if (['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(antrag.status) && antrag.erledigt !== true) {
+        antrag.erledigt = true;
+        changed = true;
+      }
+      if (antrag.status === 'zurueckgegeben' && antrag.erledigt === undefined) {
+        antrag.erledigt = false;
         changed = true;
       }
       // Insassen-Nummer ergänzen (aus User-System holen)
@@ -3559,37 +3806,52 @@ class AntragSystem {
 
   // ====== INSASSEN-FUNKTIONEN ======
 
-  // Entwürfe eines bestimmten Insassen
-  getEntwuerfeInsasse(insasseId) {
+  _gehoertZuInsasse(antrag, insasseId, insasseName) {
     const sid = String(insasseId);
-    return this.antraege.filter(a => 
-      String(a.insasseId) === sid &&
-      a.status === 'entwurf'
-    ).sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
-  }
-
-  // Aktive Anträge eines bestimmten Insassen (ohne Entwürfe, ohne erledigte)
-  getAktiveAntraegeInsasse(insasseId) {
-    const sid = String(insasseId);
-    return this.antraege.filter(a => {
-      if (String(a.insasseId) !== sid) return false;
-      if (a.status === 'entwurf') return false;
-      // Abgeschlossene Anträge gehören immer in die Historie
-      if (a.erledigt === true) return false;
-      // Alle nicht-erledigten Anträge sind aktiv (inkl. wartet-Auf-Eroeffnung/Vollzug)
+    if (antrag.insasseId != null && antrag.insasseId !== '' && String(antrag.insasseId) === sid) {
       return true;
-    }).sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
+    }
+    const name = (insasseName || '').trim();
+    if (name && antrag.insasseName && antrag.insasseName.trim() === name) {
+      return true;
+    }
+    return false;
   }
 
-  // Historie eines bestimmten Insassen (erledigte Anträge, die bekannt gegeben wurden)
-  getHistorieInsasse(insasseId) {
-    const sid = String(insasseId);
-    return this.antraege.filter(a => {
-      if (String(a.insasseId) !== sid) return false;
-      if (a.status === 'entwurf') return false;
-      // Alle abgeschlossenen Anträge gehören in die Historie
-      return a.erledigt === true;
-    }).sort((a, b) => new Date(b.bearbeitetAm || b.erstelltAm) - new Date(a.bearbeitetAm || a.erstelltAm));
+  /** Abgeschlossen aus Sicht des Insassenportals (Historie-Tab). */
+  _istAbgeschlossenFuerInsassenPortal(antrag) {
+    if (!antrag || antrag.status === 'entwurf') return false;
+    if (antrag.wartetAufEroeffnung || antrag.wartetAufVollzug) return false;
+    if (antrag.erledigt === true) return true;
+    return ['genehmigt', 'abgelehnt', 'teilweise-genehmigt', 'zurueckgegeben'].includes(antrag.status);
+  }
+
+  // Entwürfe eines bestimmten Insassen
+  getEntwuerfeInsasse(insasseId, insasseName) {
+    return this.antraege
+      .filter((a) => this._gehoertZuInsasse(a, insasseId, insasseName) && a.status === 'entwurf')
+      .sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
+  }
+
+  // Aktive Anträge eines bestimmten Insassen (ohne Entwürfe, ohne abgeschlossene)
+  getAktiveAntraegeInsasse(insasseId, insasseName) {
+    return this.antraege
+      .filter((a) => {
+        if (!this._gehoertZuInsasse(a, insasseId, insasseName)) return false;
+        if (a.status === 'entwurf') return false;
+        return !this._istAbgeschlossenFuerInsassenPortal(a);
+      })
+      .sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
+  }
+
+  // Historie: abgeschlossene Anträge (genehmigt, abgelehnt, zurückgegeben, …)
+  getHistorieInsasse(insasseId, insasseName) {
+    return this.antraege
+      .filter((a) => {
+        if (!this._gehoertZuInsasse(a, insasseId, insasseName)) return false;
+        return this._istAbgeschlossenFuerInsassenPortal(a);
+      })
+      .sort((a, b) => new Date(b.bearbeitetAm || b.erstelltAm) - new Date(a.bearbeitetAm || a.erstelltAm));
   }
 
   // ====== MITARBEITER-FUNKTIONEN ======
@@ -4539,8 +4801,7 @@ function resolveInsasseUserId(antragId, insasseId, insasseName) {
 }
 
 /**
- * Termin vereinbaren: Kalendereinträge und Plattform-Benachrichtigungen;
- * Dummy-E-Mail nur an externe Kontakte (intern läuft ausschließlich über das Portal).
+ * Termin vereinbaren: Kalendereinträge und Plattform-Benachrichtigungen (intern nur Portal).
  */
 function vereinbareTerminAusAntrag(params) {
   const {
@@ -4553,7 +4814,11 @@ function vereinbareTerminAusAntrag(params) {
     ort,
     teamsLink,
     teilnehmerArt,
-    externKontaktId,
+    externPartnerId,
+    externServiceId,
+    dauerMinuten,
+    durchfuehrungArt,
+    externKontakt,
     zugewiesenAnTyp,
     zugewiesenAnId,
     zugewiesenAnName,
@@ -4561,11 +4826,6 @@ function vereinbareTerminAusAntrag(params) {
     erstelltVonId,
     erstelltVonName
   } = params;
-
-  let externKontakt = null;
-  if (teilnehmerArt === 'extern' && externKontaktId) {
-    externKontakt = EXTERNE_KONTAKTE.find((k) => k.id === externKontaktId) || null;
-  }
 
   const resolvedInsasseId = resolveInsasseUserId(antragId, insasseId, insasseName);
   if (!resolvedInsasseId) {
@@ -4581,12 +4841,6 @@ function vereinbareTerminAusAntrag(params) {
     } else if (zugewiesenAnTyp === 'gruppe' && zugewiesenAnGruppe) {
       getMitarbeiterIdsFuerGruppe(zugewiesenAnGruppe).forEach((id) => sichtbarFuer.add(id));
     }
-  } else if (externKontakt) {
-    emailEmpfaenger.push({
-      name: externKontakt.name,
-      email: externKontakt.email,
-      typ: 'extern'
-    });
   }
 
   const termin = terminSystem.createVereinbarungsTermin({
@@ -4599,7 +4853,11 @@ function vereinbareTerminAusAntrag(params) {
     insasseId: resolvedInsasseId,
     insasseName,
     teilnehmerArt,
-    externKontakt,
+    externKontakt: externKontakt || null,
+    externPartnerId: externPartnerId || null,
+    externServiceId: externServiceId || null,
+    dauerMinuten: dauerMinuten || null,
+    durchfuehrungArt: durchfuehrungArt || null,
     zugewiesenAnTyp,
     zugewiesenAnId,
     zugewiesenAnName,
@@ -4612,7 +4870,8 @@ function vereinbareTerminAusAntrag(params) {
   const datumFmt = new Date(termin.datum).toLocaleDateString('de-DE');
   const zeitInfo = termin.uhrzeit ? ` um ${termin.uhrzeit} Uhr` : '';
   const ortInfo = termin.ort ? ` · Ort: ${termin.ort}` : '';
-  const msgBase = `Termin „${termin.betreff}“ am ${datumFmt}${zeitInfo}${ortInfo}`;
+  const teamsInfo = termin.teamsLink ? ' Online per Teams – Link im Kalender.' : '';
+  const msgBase = `Termin „${termin.betreff}“ am ${datumFmt}${zeitInfo}${ortInfo}${teamsInfo}`;
 
   notificationSystem.createNotification(
     resolvedInsasseId,
@@ -4655,7 +4914,9 @@ function vereinbareTerminAusAntrag(params) {
         datum: termin.datum,
         uhrzeit: termin.uhrzeit,
         ort: termin.ort,
-        extern: externKontakt ? externKontakt.label : null
+        extern: externKontakt ? (externKontakt.beruf || externKontakt.name) : null,
+        externPartnerId: externPartnerId || null,
+        durchfuehrungArt: durchfuehrungArt || null
       },
       benutzerTyp: 'mitarbeiter',
       benutzerId: erstelltVonId,
@@ -4664,6 +4925,92 @@ function vereinbareTerminAusAntrag(params) {
   }
 
   return { termin, emailEmpfaenger };
+}
+
+/**
+ * Externen Termin über Buchungsstrecke (Service → Person → Slot → Präsenz/Online).
+ */
+function vereinbareExternenTerminAusAntrag(params) {
+  const {
+    antragId,
+    insasseId,
+    insasseName,
+    partnerId,
+    serviceId,
+    datum,
+    uhrzeit,
+    durchfuehrungArt,
+    ort,
+    erstelltVonId,
+    erstelltVonName
+  } = params;
+
+  const partner = externePartnerSystem.getPartner(partnerId);
+  const service = externePartnerSystem.getService(partnerId, serviceId);
+  if (!partner || !service) {
+    throw new Error('Externer Partner oder Leistung nicht gefunden.');
+  }
+  if (externePartnerSystem.isSlotBelegt(partnerId, datum, uhrzeit, service.dauerMinuten)) {
+    throw new Error('Dieser Terminslot ist nicht mehr verfügbar. Bitte wählen Sie einen anderen Slot.');
+  }
+
+  const durchfuehrung = durchfuehrungArt === 'online' ? 'online' : 'praesenz';
+  const teamsLink = durchfuehrung === 'online' ? generateTeamsMeetingLink() : null;
+  const ortFinal =
+    durchfuehrung === 'online'
+      ? 'Online (Microsoft Teams)'
+      : (ort || 'Vor Ort in der Anstalt').trim();
+
+  const externKontakt = {
+    id: partner.id,
+    name: partner.name,
+    email: partner.email,
+    beruf: partner.beruf || '',
+    serviceName: service.name,
+    dauerMinuten: service.dauerMinuten
+  };
+
+  const betreff = `${service.name} – ${partner.name}`;
+
+  const insasseUser =
+    typeof userSystem !== 'undefined'
+      ? userSystem.users.find((u) => String(u.id) === String(resolveInsasseUserId(antragId, insasseId, insasseName)))
+      : null;
+  const insasseEmail = insasseUser?.email || null;
+
+  const result = vereinbareTerminAusAntrag({
+    antragId,
+    insasseId,
+    insasseName,
+    betreff,
+    datum,
+    uhrzeit,
+    ort: ortFinal,
+    teamsLink,
+    teilnehmerArt: 'extern',
+    externPartnerId: partner.id,
+    externServiceId: service.id,
+    dauerMinuten: service.dauerMinuten,
+    durchfuehrungArt: durchfuehrung,
+    externKontakt,
+    erstelltVonId,
+    erstelltVonName
+  });
+
+  const emailEmpfaenger = [
+    { name: partner.name, email: partner.email, typ: 'extern' }
+  ];
+  if (durchfuehrung === 'online' && insasseEmail) {
+    emailEmpfaenger.push({ name: insasseName, email: insasseEmail, typ: 'insasse' });
+  }
+  if (durchfuehrung === 'online') {
+    result.emailEmpfaenger = emailEmpfaenger;
+    result.teamsLink = teamsLink;
+  } else {
+    result.emailEmpfaenger = [{ name: partner.name, email: partner.email, typ: 'extern' }];
+  }
+
+  return result;
 }
 
 // Nachladen aus localStorage (wird von data-sync.js nach Server-Sync aufgerufen)
@@ -4680,6 +5027,11 @@ function reloadDataFromStorage() {
     if (rawAktivitaeten) aktivitaetenSystem.aktivitaeten = JSON.parse(rawAktivitaeten);
     const rawTermine = localStorage.getItem('gefaengnis_termine');
     if (rawTermine) terminSystem.termine = JSON.parse(rawTermine);
+    const rawExterne = localStorage.getItem('gefaengnis_externe_partner');
+    if (rawExterne && typeof externePartnerSystem !== 'undefined') {
+      externePartnerSystem.partner = JSON.parse(rawExterne);
+      if (externePartnerSystem.partner.length === 0) externePartnerSystem.seedDefaultsIfEmpty();
+    }
     const rawAufgaben = localStorage.getItem('gefaengnis_aufgaben');
     if (rawAufgaben) {
       aufgabenSystem.aufgaben = JSON.parse(rawAufgaben);

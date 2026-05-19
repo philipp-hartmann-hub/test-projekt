@@ -862,17 +862,50 @@
           </div>
         </div>
         <div id="tvExternBereich" style="display: none;">
+          <p class="section-hint">Terminbuchung bei externem Anbieter: Leistung, Person und freien Slot wählen.</p>
           <div class="form-group">
-            <label for="tvExternKontakt">Externer Kontakt: *</label>
-            <select id="tvExternKontakt" onchange="onTvExternKontaktChange()">
-              <option value="">-- Bitte wählen --</option>
+            <label for="tvExtService">1. Leistung <span class="required">*</span></label>
+            <select id="tvExtService" onchange="onTvExtServiceChange()">
+              <option value="">-- Bitte Leistung wählen --</option>
             </select>
           </div>
-          <div id="tvExternKontaktDetails" class="detail-box" style="display: none;">
-            <p><strong>Name:</strong> <span id="tvExternName">–</span></p>
-            <p><strong>E-Mail:</strong> <span id="tvExternEmail">–</span></p>
+          <div class="form-group">
+            <label for="tvExtPartner">2. Person <span class="required">*</span></label>
+            <select id="tvExtPartner" onchange="onTvExtPartnerChange()" disabled>
+              <option value="">-- Zuerst Leistung wählen --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>3. Terminslot <span class="required">*</span></label>
+            <div id="tvExtSlots" class="termin-slot-list">
+              <p class="empty-hint">Bitte zuerst Leistung und Person wählen.</p>
+            </div>
+            <input type="hidden" id="tvExtSlotKey" value="">
+          </div>
+          <div class="form-group">
+            <label>4. Durchführung <span class="required">*</span></label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="tvExtDurchfuehrung" value="praesenz" checked onchange="toggleTvExtDurchfuehrung()">
+                <span class="radio-label">Vor Ort</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="tvExtDurchfuehrung" value="online" onchange="toggleTvExtDurchfuehrung()">
+                <span class="radio-label">Online</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group" id="tvExtPraesenzFelder">
+            <label for="tvExtOrt">Ort <span class="required">*</span></label>
+            <input type="text" id="tvExtOrt" placeholder="z. B. Besprechungsraum, Sozialdienst">
+          </div>
+          <div class="form-group" id="tvExtOnlineFelder" style="display: none;">
+            <label>Teams-Link</label>
+            <input type="url" id="tvExtTeamsLink" placeholder="Wird bei Buchung automatisch erzeugt …" readonly>
+            <p class="section-hint" style="margin-top: 0.5rem;">Bei Online-Terminen wird der Link an die externe Person und den Insassen versendet.</p>
           </div>
         </div>
+        <div id="tvInternTerminFelder">
         <div class="form-group">
           <label for="tvBetreff">Betreff des Termins <span class="required">*</span></label>
           <input type="text" id="tvBetreff" placeholder="z. B. Gespräch zur Entscheidung">
@@ -880,7 +913,7 @@
         <div class="form-row">
           <div class="form-group">
             <label for="tvDatum">Datum <span class="required">*</span></label>
-            <input type="date" id="tvDatum" required>
+            <input type="date" id="tvDatum">
           </div>
           <div class="form-group">
             <label for="tvUhrzeit">Uhrzeit</label>
@@ -897,6 +930,7 @@
             <input type="url" id="tvTeamsLink" placeholder="https://teams.microsoft.com/..." readonly>
             <button type="button" class="btn btn-secondary btn-sm" onclick="setTvDummyTeamsLink()">Dummy-Teams-Link</button>
           </div>
+        </div>
         </div>
         <input type="hidden" id="tvAntragId">
         <input type="hidden" id="tvInsasseId">
@@ -6409,40 +6443,107 @@ ${t('action.archive')}
       document.getElementById('tvPersonId').value = '';
       document.getElementById('tvSelectedPersonDisplay').style.display = 'none';
       document.getElementById('tvMitarbeiterSuche').value = '';
-      document.getElementById('tvExternKontakt').value = '';
-      document.getElementById('tvExternKontaktDetails').style.display = 'none';
+      document.getElementById('tvExtService').value = '';
+      document.getElementById('tvExtPartner').value = '';
+      document.getElementById('tvExtPartner').disabled = true;
+      document.getElementById('tvExtSlotKey').value = '';
+      document.getElementById('tvExtOrt').value = '';
+      document.getElementById('tvExtTeamsLink').value = '';
+      document.querySelector('input[name="tvExtDurchfuehrung"][value="praesenz"]').checked = true;
 
       loadTvGruppen();
-      loadTvExterneKontakte();
+      loadTvExtServices();
+      resetTvExtSlots();
+      toggleTvExtDurchfuehrung();
       toggleTvTeilnehmerArt();
       toggleTvZuweisungTyp();
       openModal('terminVereinbarenModal');
     }
 
-    function loadTvExterneKontakte() {
-      const select = document.getElementById('tvExternKontakt');
-      const kontakte = typeof EXTERNE_KONTAKTE !== 'undefined' ? EXTERNE_KONTAKTE : [];
-      select.innerHTML = '<option value="">-- Bitte wählen --</option>' +
-        kontakte.map((k) => `<option value="${k.id}">${k.label}</option>`).join('');
+    function loadTvExtServices() {
+      const select = document.getElementById('tvExtService');
+      if (!select || typeof externePartnerSystem === 'undefined') return;
+      const services = externePartnerSystem.getAlleServices();
+      const seen = new Set();
+      select.innerHTML = '<option value="">-- Bitte Leistung wählen --</option>';
+      services.forEach((s) => {
+        if (seen.has(s.serviceId)) return;
+        seen.add(s.serviceId);
+        select.innerHTML += `<option value="${s.serviceId}">${s.serviceName} (${s.dauerMinuten} Min.)</option>`;
+      });
     }
 
-    function onTvExternKontaktChange() {
-      const id = document.getElementById('tvExternKontakt').value;
-      const kontakt = (typeof EXTERNE_KONTAKTE !== 'undefined' ? EXTERNE_KONTAKTE : []).find((k) => k.id === id);
-      const box = document.getElementById('tvExternKontaktDetails');
-      if (!kontakt) {
-        box.style.display = 'none';
+    function onTvExtServiceChange() {
+      const serviceId = document.getElementById('tvExtService').value;
+      const partnerSelect = document.getElementById('tvExtPartner');
+      document.getElementById('tvExtSlotKey').value = '';
+      resetTvExtSlots();
+      if (!serviceId || typeof externePartnerSystem === 'undefined') {
+        partnerSelect.innerHTML = '<option value="">-- Zuerst Leistung wählen --</option>';
+        partnerSelect.disabled = true;
         return;
       }
-      document.getElementById('tvExternName').textContent = kontakt.name;
-      document.getElementById('tvExternEmail').textContent = kontakt.email;
-      box.style.display = 'block';
+      const partner = externePartnerSystem.getPartnerMitService(serviceId);
+      partnerSelect.innerHTML = '<option value="">-- Person wählen --</option>' +
+        partner.map((p) => {
+          const svc = (p.services || []).find((s) => s.id === serviceId);
+          const beruf = p.beruf ? ` (${p.beruf})` : '';
+          return `<option value="${p.id}">${p.name}${beruf}${svc ? '' : ''}</option>`;
+        }).join('');
+      partnerSelect.disabled = partner.length === 0;
+      if (partner.length === 1) {
+        partnerSelect.value = partner[0].id;
+        onTvExtPartnerChange();
+      }
+    }
+
+    function onTvExtPartnerChange() {
+      document.getElementById('tvExtSlotKey').value = '';
+      renderTvExtSlots();
+    }
+
+    function resetTvExtSlots() {
+      const box = document.getElementById('tvExtSlots');
+      if (!box) return;
+      box.innerHTML = '<p class="empty-hint">Bitte zuerst Leistung und Person wählen.</p>';
+    }
+
+    function renderTvExtSlots() {
+      const box = document.getElementById('tvExtSlots');
+      const serviceId = document.getElementById('tvExtService').value;
+      const partnerId = document.getElementById('tvExtPartner').value;
+      const selectedKey = document.getElementById('tvExtSlotKey').value;
+      if (!box || !serviceId || !partnerId || typeof externePartnerSystem === 'undefined') {
+        resetTvExtSlots();
+        return;
+      }
+      const slots = externePartnerSystem.getVerfuegbareSlots(partnerId, serviceId, { tage: 56 });
+      if (slots.length === 0) {
+        box.innerHTML = '<p class="empty-hint">Keine freien Terminslots in den nächsten Wochen.</p>';
+        return;
+      }
+      box.innerHTML = slots.map((s) => `
+        <button type="button" class="termin-slot-btn ${s.slotKey === selectedKey ? 'selected' : ''}"
+                onclick="selectTvExtSlot('${s.slotKey}')">${s.label}</button>
+      `).join('');
+    }
+
+    function selectTvExtSlot(slotKey) {
+      document.getElementById('tvExtSlotKey').value = slotKey;
+      renderTvExtSlots();
+    }
+
+    function toggleTvExtDurchfuehrung() {
+      const art = document.querySelector('input[name="tvExtDurchfuehrung"]:checked')?.value;
+      document.getElementById('tvExtPraesenzFelder').style.display = art === 'praesenz' ? 'block' : 'none';
+      document.getElementById('tvExtOnlineFelder').style.display = art === 'online' ? 'block' : 'none';
     }
 
     function toggleTvTeilnehmerArt() {
       const art = document.querySelector('input[name="tvTeilnehmerArt"]:checked')?.value;
       document.getElementById('tvInternBereich').style.display = art === 'intern' ? 'block' : 'none';
       document.getElementById('tvExternBereich').style.display = art === 'extern' ? 'block' : 'none';
+      document.getElementById('tvInternTerminFelder').style.display = art === 'intern' ? 'block' : 'none';
     }
 
     function toggleTvZuweisungTyp() {
@@ -6582,80 +6683,116 @@ ${t('action.archive')}
       const insasseId = document.getElementById('tvInsasseId').value;
       const insasseName = document.getElementById('tvInsasseName').value;
       const teilnehmerArt = document.querySelector('input[name="tvTeilnehmerArt"]:checked')?.value;
-      const betreff = document.getElementById('tvBetreff').value.trim();
-      const datum = document.getElementById('tvDatum').value;
-      const uhrzeit = document.getElementById('tvUhrzeit').value;
-      const ort = document.getElementById('tvOrt').value.trim();
-      const teamsLink = document.getElementById('tvTeamsLink').value.trim();
 
-      if (!betreff) {
-        showAlert('Bitte geben Sie einen Betreff ein.');
-        return;
-      }
-      if (!datum) {
-        showAlert('Bitte wählen Sie ein Datum.');
-        return;
-      }
-      if (!ort) {
-        showAlert('Bitte geben Sie einen Ort an.');
-        return;
-      }
-
-      let zugewiesenAnTyp = null;
-      let zugewiesenAnId = null;
-      let zugewiesenAnName = null;
-      let zugewiesenAnGruppe = null;
-      let externKontaktId = null;
-
-      if (teilnehmerArt === 'intern') {
-        const zuweisungTyp = document.querySelector('input[name="tvZuweisungTyp"]:checked')?.value;
-        if (zuweisungTyp === 'selbst') {
-          zugewiesenAnTyp = 'mitarbeiter';
-          zugewiesenAnId = currentSession.userId;
-          zugewiesenAnName = currentSession.name;
-        } else if (zuweisungTyp === 'person') {
-          zugewiesenAnId = document.getElementById('tvPersonId').value;
-          if (!zugewiesenAnId) {
-            showAlert('Bitte wählen Sie eine Person aus.');
+      let result;
+      try {
+        if (teilnehmerArt === 'extern') {
+          const serviceId = document.getElementById('tvExtService').value;
+          const partnerId = document.getElementById('tvExtPartner').value;
+          const slotKey = document.getElementById('tvExtSlotKey').value;
+          const durchfuehrungArt = document.querySelector('input[name="tvExtDurchfuehrung"]:checked')?.value;
+          if (!serviceId) {
+            showAlert('Bitte wählen Sie eine Leistung.');
             return;
           }
-          zugewiesenAnTyp = 'mitarbeiter';
-          zugewiesenAnName = document.getElementById('tvSelectedPersonName').textContent;
+          if (!partnerId) {
+            showAlert('Bitte wählen Sie eine Person.');
+            return;
+          }
+          if (!slotKey) {
+            showAlert('Bitte wählen Sie einen Terminslot.');
+            return;
+          }
+          const [datum, uhrzeit] = slotKey.split('|');
+          const ort =
+            durchfuehrungArt === 'praesenz' ? document.getElementById('tvExtOrt').value.trim() : '';
+          if (durchfuehrungArt === 'praesenz' && !ort) {
+            showAlert('Bitte geben Sie einen Ort für den Vor-Ort-Termin an.');
+            return;
+          }
+          result = vereinbareExternenTerminAusAntrag({
+            antragId,
+            insasseId,
+            insasseName,
+            partnerId,
+            serviceId,
+            datum,
+            uhrzeit,
+            durchfuehrungArt,
+            ort,
+            erstelltVonId: currentSession.userId,
+            erstelltVonName: currentSession.name
+          });
         } else {
-          zugewiesenAnGruppe = buildTvGruppeObject();
-          if (!zugewiesenAnGruppe) {
-            showAlert('Bitte wählen Sie eine Gruppe aus.');
+          const betreff = document.getElementById('tvBetreff').value.trim();
+          const datum = document.getElementById('tvDatum').value;
+          const uhrzeit = document.getElementById('tvUhrzeit').value;
+          const ort = document.getElementById('tvOrt').value.trim();
+          const teamsLink = document.getElementById('tvTeamsLink').value.trim();
+
+          if (!betreff) {
+            showAlert('Bitte geben Sie einen Betreff ein.');
             return;
           }
-          zugewiesenAnTyp = 'gruppe';
-          zugewiesenAnName = document.getElementById('tvGruppeSelect').selectedOptions[0]?.text || 'Gruppe';
-        }
-      } else {
-        externKontaktId = document.getElementById('tvExternKontakt').value;
-        if (!externKontaktId) {
-          showAlert('Bitte wählen Sie einen externen Kontakt.');
-          return;
-        }
-      }
+          if (!datum) {
+            showAlert('Bitte wählen Sie ein Datum.');
+            return;
+          }
+          if (!ort) {
+            showAlert('Bitte geben Sie einen Ort an.');
+            return;
+          }
 
-      const result = vereinbareTerminAusAntrag({
-        antragId,
-        insasseId,
-        insasseName,
-        betreff,
-        datum,
-        uhrzeit: uhrzeit || null,
-        ort,
-        teamsLink: teamsLink || null,
-        teilnehmerArt,
-        externKontaktId,
-        zugewiesenAnTyp,
-        zugewiesenAnId,
-        zugewiesenAnName,
-        zugewiesenAnGruppe,
-        erstelltVonId: currentSession.userId,
-        erstelltVonName: currentSession.name
-      });
+          let zugewiesenAnTyp = null;
+          let zugewiesenAnId = null;
+          let zugewiesenAnName = null;
+          let zugewiesenAnGruppe = null;
+
+          const zuweisungTyp = document.querySelector('input[name="tvZuweisungTyp"]:checked')?.value;
+          if (zuweisungTyp === 'selbst') {
+            zugewiesenAnTyp = 'mitarbeiter';
+            zugewiesenAnId = currentSession.userId;
+            zugewiesenAnName = currentSession.name;
+          } else if (zuweisungTyp === 'person') {
+            zugewiesenAnId = document.getElementById('tvPersonId').value;
+            if (!zugewiesenAnId) {
+              showAlert('Bitte wählen Sie eine Person aus.');
+              return;
+            }
+            zugewiesenAnTyp = 'mitarbeiter';
+            zugewiesenAnName = document.getElementById('tvSelectedPersonName').textContent;
+          } else {
+            zugewiesenAnGruppe = buildTvGruppeObject();
+            if (!zugewiesenAnGruppe) {
+              showAlert('Bitte wählen Sie eine Gruppe aus.');
+              return;
+            }
+            zugewiesenAnTyp = 'gruppe';
+            zugewiesenAnName = document.getElementById('tvGruppeSelect').selectedOptions[0]?.text || 'Gruppe';
+          }
+
+          result = vereinbareTerminAusAntrag({
+            antragId,
+            insasseId,
+            insasseName,
+            betreff,
+            datum,
+            uhrzeit: uhrzeit || null,
+            ort,
+            teamsLink: teamsLink || null,
+            teilnehmerArt: 'intern',
+            zugewiesenAnTyp,
+            zugewiesenAnId,
+            zugewiesenAnName,
+            zugewiesenAnGruppe,
+            erstelltVonId: currentSession.userId,
+            erstelltVonName: currentSession.name
+          });
+        }
+      } catch (err) {
+        showAlert(err.message || 'Termin konnte nicht vereinbart werden.');
+        return;
+      }
 
       closeModal('terminVereinbarenModal');
 
@@ -6666,10 +6803,13 @@ ${t('action.archive')}
       } else {
         erfolgsHinweis += ' Der Insasse wurde im Portal benachrichtigt.';
         const mailText = (result.emailEmpfaenger || [])
-          .map((e) => `• ${e.name} <${e.email}>`)
+          .map((e) => `• ${e.name} <${e.email}>${e.typ === 'insasse' ? ' (Insasse)' : ''}`)
           .join('\n');
         if (mailText) {
-          erfolgsHinweis += `\n\nDummy-E-Mail an externen Kontakt:\n${mailText}`;
+          erfolgsHinweis += `\n\nDummy-E-Mail-Versand:\n${mailText}`;
+        }
+        if (result.teamsLink) {
+          erfolgsHinweis += `\n\nTeams-Link: ${result.teamsLink}`;
         }
       }
 
@@ -7000,7 +7140,7 @@ ${t('action.archive')}
           ${termin.ort ? `<p><strong>Ort:</strong> ${termin.ort}</p>` : ''}
           ${termin.teamsLink ? `<p><strong>Teams:</strong> <a href="${termin.teamsLink}" target="_blank" rel="noopener">Meeting-Link öffnen</a></p>` : ''}
           ${termin.insasseName ? `<p><strong>Insasse:</strong> ${termin.insasseName}</p>` : ''}
-          ${termin.externKontakt ? `<p><strong>Extern:</strong> ${termin.externKontakt.label} (${termin.externKontakt.email})</p>` : ''}
+          ${termin.externKontakt ? `<p><strong>Extern:</strong> ${termin.externKontakt.serviceName ? termin.externKontakt.serviceName + ' – ' : ''}${termin.externKontakt.name} (${termin.externKontakt.email})${termin.durchfuehrungArt === 'online' ? ' · Online' : ''}</p>` : ''}
           ${termin.beschreibung ? `<p><strong>${descLabel}:</strong> ${getTranslatedUserText(termin.beschreibung)}</p>` : ''}
           <p><strong>${createdByLabel}:</strong> ${termin.erstelltVonName}</p>
           ${termin.antragId ? `<p><strong>${forAppLabel}:</strong> <a href="#" onclick="closeModal('terminDetailModal'); openAntragDetail('${termin.antragId}'); return false;">${openAppText}</a></p>` : ''}
