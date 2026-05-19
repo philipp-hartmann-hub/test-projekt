@@ -4994,7 +4994,11 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   color: #fff;
 }
 
-/* Insassen-Portal: Antragslisten scrollen, Kalender kompakt unter den Anträgen */
+/* Insassen-Portal: Antragslisten scrollen, Kalender zwischen Nachrichten und Anträgen */
+.insassen-portal .insasse-kalender-section {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
 .insassen-portal .column-sidebar {
   position: static;
   align-self: start;
@@ -5019,10 +5023,6 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   margin: 0 0 0.75rem;
   font-size: 0.8125rem;
   color: var(--text-secondary);
-}
-
-.insassen-portal .insasse-kalender-section {
-  margin-top: 0.25rem;
 }
 
 .insassen-portal .insasse-kalender-content {

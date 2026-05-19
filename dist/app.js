@@ -2220,7 +2220,126 @@ class TerminSystem {
 
   loadTermine() {
     const data = localStorage.getItem(this.storageKey);
-    return data ? JSON.parse(data) : [];
+    const termine = data ? JSON.parse(data) : [];
+    this.termine = termine;
+    this.migrateInsasseTermine();
+    return this.termine;
+  }
+
+  /**
+   * Alte Vereinbarungstermine normalisieren (typ, sichtbarFuer, Betreff) für Insassen-Kalender.
+   */
+  migrateInsasseTermine() {
+    if (!Array.isArray(this.termine)) return;
+    let changed = false;
+    const nurMitarbeiterTypen = new Set(['admin', 'persoenlich', 'haus', 'station']);
+
+    this.termine.forEach((t) => {
+      if (!t || typeof t !== 'object') return;
+
+      if (!t.betreff && t.titel) {
+        t.betreff = t.titel;
+        changed = true;
+      }
+      if (!t.titel && t.betreff) {
+        t.titel = t.betreff;
+        changed = true;
+      }
+
+      if (nurMitarbeiterTypen.has(t.typ)) return;
+
+      const hatInsassenBezug =
+        t.insasseId ||
+        t.insasseName ||
+        t.antragId ||
+        t.teilnehmerArt === 'extern' ||
+        t.teilnehmerArt === 'intern' ||
+        t.externKontakt ||
+        t.externPartnerId;
+
+      if (!hatInsassenBezug) return;
+
+      if (t.typ !== 'vereinbarung' && t.typ !== 'aufgabe') {
+        t.typ = t.aufgabeId ? 'aufgabe' : 'vereinbarung';
+        changed = true;
+      }
+
+      let insasseId = t.insasseId;
+      if (!insasseId && t.antragId && typeof antragSystem !== 'undefined') {
+        const a = antragSystem.getAntrag(t.antragId);
+        if (a?.insasseId) {
+          insasseId = a.insasseId;
+          t.insasseId = insasseId;
+          changed = true;
+        }
+        if (!t.insasseName && a?.insasseName) {
+          t.insasseName = a.insasseName;
+          changed = true;
+        }
+      }
+
+      if (insasseId) {
+        const sid = String(insasseId);
+        if (!Array.isArray(t.sichtbarFuer)) {
+          t.sichtbarFuer = [sid];
+          changed = true;
+        } else if (!t.sichtbarFuer.some((x) => String(x) === sid)) {
+          t.sichtbarFuer.push(sid);
+          changed = true;
+        }
+      }
+    });
+
+    if (changed) this.saveTermine();
+  }
+
+  _terminGehoertZuInsasse(t, insasseId, insasseName) {
+    const id = String(insasseId);
+    const nameNorm = (insasseName || '').trim().toLowerCase();
+
+    if (String(t.insasseId) === id) return true;
+    if (Array.isArray(t.sichtbarFuer) && t.sichtbarFuer.some((sid) => String(sid) === id)) {
+      return true;
+    }
+    if (nameNorm && t.insasseName && String(t.insasseName).trim().toLowerCase() === nameNorm) {
+      return true;
+    }
+    if (t.antragId && typeof antragSystem !== 'undefined') {
+      const a = antragSystem.getAntrag(t.antragId);
+      if (a) {
+        if (String(a.insasseId) === id) return true;
+        if (
+          nameNorm &&
+          a.insasseName &&
+          String(a.insasseName).trim().toLowerCase() === nameNorm
+        ) {
+          return true;
+        }
+      }
+    }
+    if (t.typ === 'aufgabe' && t.aufgabeId && typeof aufgabenSystem !== 'undefined') {
+      const auf = aufgabenSystem.aufgaben.find((x) => x.id === t.aufgabeId);
+      if (auf && String(auf.zugewiesenAnId) === id) return true;
+    }
+    return false;
+  }
+
+  _istKalenderRelevanterInsasseTermin(t) {
+    if (!t) return false;
+    const nurMitarbeiter = new Set(['admin', 'persoenlich', 'haus', 'station']);
+    if (nurMitarbeiter.has(t.typ)) return false;
+    if (t.typ === 'vereinbarung' || t.typ === 'aufgabe') return true;
+    if (
+      t.insasseId ||
+      t.insasseName ||
+      t.antragId ||
+      t.teilnehmerArt ||
+      t.externKontakt ||
+      t.externPartnerId
+    ) {
+      return true;
+    }
+    return false;
   }
 
   saveTermine() {
@@ -2482,28 +2601,33 @@ class TerminSystem {
     return termin;
   }
 
-  getTermineFuerInsasse(insasseId) {
+  getTermineFuerInsasse(insasseId, insasseName) {
     const id = String(insasseId);
     return this.termine
       .filter((t) => {
-        if (t.typ !== 'vereinbarung') return false;
-        if (String(t.insasseId) === id) return true;
-        return Array.isArray(t.sichtbarFuer) && t.sichtbarFuer.some((sid) => String(sid) === id);
+        if (!this._istKalenderRelevanterInsasseTermin(t)) return false;
+        return this._terminGehoertZuInsasse(t, id, insasseName);
       })
-      .sort((a, b) => new Date(a.datum) - new Date(b.datum));
+      .sort((a, b) => {
+        const da = normalizeDatumIso(a.datum) + 'T' + normalizeUhrzeit(a.uhrzeit);
+        const db = normalizeDatumIso(b.datum) + 'T' + normalizeUhrzeit(b.uhrzeit);
+        return da.localeCompare(db);
+      });
   }
 
-  getTermineFuerInsasseMonat(insasseId, jahr, monat) {
-    return this.getTermineFuerInsasse(insasseId).filter((t) => {
-      const d = new Date(t.datum);
-      return d.getFullYear() === jahr && d.getMonth() === monat;
+  getTermineFuerInsasseMonat(insasseId, jahr, monat, insasseName) {
+    return this.getTermineFuerInsasse(insasseId, insasseName).filter((t) => {
+      const iso = normalizeDatumIso(t.datum);
+      if (!iso || iso.length < 10) return false;
+      const [y, m] = iso.split('-').map((x) => parseInt(x, 10));
+      return y === jahr && m - 1 === monat;
     });
   }
 
-  getTermineFuerInsasseTag(insasseId, datum) {
-    const tag = new Date(datum).toDateString();
-    return this.getTermineFuerInsasse(insasseId).filter(
-      (t) => new Date(t.datum).toDateString() === tag
+  getTermineFuerInsasseTag(insasseId, datum, insasseName) {
+    const tagIso = datumIsoLocal(datum instanceof Date ? datum : new Date(datum));
+    return this.getTermineFuerInsasse(insasseId, insasseName).filter(
+      (t) => normalizeDatumIso(t.datum) === tagIso
     );
   }
 }
@@ -4791,6 +4915,10 @@ function renderAntragFilterBarHtml(listKey, activeFilterId, setFilterFn) {
 
 const antragSystem = new AntragSystem();
 
+if (typeof terminSystem !== 'undefined') {
+  terminSystem.migrateInsasseTermine();
+}
+
 function getMitarbeiterIdsFuerGruppe(gruppe) {
   if (!gruppe || typeof userSystem === 'undefined') return [];
   return userSystem.users
@@ -5055,7 +5183,10 @@ function reloadDataFromStorage() {
     const rawAktivitaeten = localStorage.getItem('gefaengnis_aktivitaeten');
     if (rawAktivitaeten) aktivitaetenSystem.aktivitaeten = JSON.parse(rawAktivitaeten);
     const rawTermine = localStorage.getItem('gefaengnis_termine');
-    if (rawTermine) terminSystem.termine = JSON.parse(rawTermine);
+    if (rawTermine) {
+      terminSystem.termine = JSON.parse(rawTermine);
+      terminSystem.migrateInsasseTermine();
+    }
     const rawExterne = localStorage.getItem('gefaengnis_externe_partner');
     if (rawExterne && typeof externePartnerSystem !== 'undefined') {
       externePartnerSystem.partner = JSON.parse(rawExterne);

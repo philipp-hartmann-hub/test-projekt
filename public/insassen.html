@@ -106,6 +106,35 @@
           </div>
         </section>
 
+        <!-- Termine (Kalender zwischen Nachrichten und Anträgen) -->
+        <section class="section kalender-section insasse-kalender-section collapsed" id="insasseKalenderSection">
+          <div class="kalender-toggle-header" onclick="toggleInsasseKalender()">
+            <div class="kalender-toggle-left">
+              <span class="kalender-toggle-icon" id="insasseKalenderToggleIcon">▶</span>
+              <h2>Meine Termine <span class="count" id="insasseTermineCount">0</span></h2>
+            </div>
+          </div>
+          <div class="kalender-collapsible-content" id="insasseKalenderCollapsible">
+            <div class="kalender-header-bar">
+              <div class="kalender-toolbar">
+                <div class="kalender-nav">
+                  <button type="button" class="nav-btn" onclick="insasseKalenderZurueck()" title="Zurück">◀</button>
+                  <button type="button" class="nav-btn heute-btn" onclick="insasseKalenderHeute()">Heute</button>
+                  <span class="kalender-anzeige" id="insasseKalenderAnzeige">Januar 2026</span>
+                  <button type="button" class="nav-btn" onclick="insasseKalenderVor()" title="Vor">▶</button>
+                </div>
+              </div>
+            </div>
+            <div class="kalender-content insasse-kalender-content">
+              <div class="kalender-main" id="insasseKalenderMain"></div>
+              <div class="termine-sidebar" id="insasseTermineSidebar">
+                <h4 id="insasseTermineSidebarTitel">Termine heute</h4>
+                <div id="insasseTermineSidebarListe"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- Neuer Antrag Button -->
         <div class="action-bar">
           <button class="btn btn-primary" onclick="openModal('newAntragModal')">
@@ -171,34 +200,6 @@
           </div>
         </div>
 
-        <!-- Termine (vereinbarte Termine) -->
-        <section class="section kalender-section insasse-kalender-section collapsed" id="insasseKalenderSection">
-          <div class="kalender-toggle-header" onclick="toggleInsasseKalender()">
-            <div class="kalender-toggle-left">
-              <span class="kalender-toggle-icon" id="insasseKalenderToggleIcon">▶</span>
-              <h2>Meine Termine <span class="count" id="insasseTermineCount">0</span></h2>
-            </div>
-          </div>
-          <div class="kalender-collapsible-content" id="insasseKalenderCollapsible">
-            <div class="kalender-header-bar">
-              <div class="kalender-toolbar">
-                <div class="kalender-nav">
-                  <button type="button" class="nav-btn" onclick="insasseKalenderZurueck()" title="Zurück">◀</button>
-                  <button type="button" class="nav-btn heute-btn" onclick="insasseKalenderHeute()">Heute</button>
-                  <span class="kalender-anzeige" id="insasseKalenderAnzeige">Januar 2026</span>
-                  <button type="button" class="nav-btn" onclick="insasseKalenderVor()" title="Vor">▶</button>
-                </div>
-              </div>
-            </div>
-            <div class="kalender-content insasse-kalender-content">
-              <div class="kalender-main" id="insasseKalenderMain"></div>
-              <div class="termine-sidebar" id="insasseTermineSidebar">
-                <h4 id="insasseTermineSidebarTitel">Termine heute</h4>
-                <div id="insasseTermineSidebarListe"></div>
-              </div>
-            </div>
-          </div>
-        </section>
 
       </div>
     </main>
@@ -1276,8 +1277,19 @@
       }
     }
 
+    function getInsasseKalenderKontext() {
+      if (!currentSession) return { uid: '', name: '' };
+      return {
+        uid: String(currentSession.userId),
+        name: (currentSession.name || '').trim()
+      };
+    }
+
     function safeRenderInsasseKalender() {
       try {
+        if (typeof window.reloadDataFromStorage === 'function') {
+          window.reloadDataFromStorage();
+        }
         renderInsasseKalender();
       } catch (error) {
         console.error('Kalender konnte nicht geladen werden:', error);
@@ -1288,24 +1300,43 @@
       }
     }
 
-    function getInsasseTermineMonat(uid, jahr, monat) {
+    function getInsasseTermineMonat(uid, jahr, monat, insasseName) {
+      const name = insasseName != null ? insasseName : getInsasseKalenderKontext().name;
       if (typeof terminSystem.getTermineFuerInsasseMonat === 'function') {
-        return terminSystem.getTermineFuerInsasseMonat(uid, jahr, monat);
+        return terminSystem.getTermineFuerInsasseMonat(uid, jahr, monat, name);
       }
-      return terminSystem.getTermineFuerInsasse(uid).filter((t) => {
-        const d = new Date(t.datum);
-        return d.getFullYear() === jahr && d.getMonth() === monat;
+      return terminSystem.getTermineFuerInsasse(uid, name).filter((t) => {
+        const iso = typeof normalizeDatumIso === 'function' ? normalizeDatumIso(t.datum) : String(t.datum).slice(0, 10);
+        const [y, m] = iso.split('-').map((x) => parseInt(x, 10));
+        return y === jahr && m - 1 === monat;
       });
     }
 
-    function getInsasseTermineTag(uid, datum) {
+    function getInsasseTermineTag(uid, datum, insasseName) {
+      const name = insasseName != null ? insasseName : getInsasseKalenderKontext().name;
       if (typeof terminSystem.getTermineFuerInsasseTag === 'function') {
-        return terminSystem.getTermineFuerInsasseTag(uid, datum);
+        return terminSystem.getTermineFuerInsasseTag(uid, datum, name);
       }
-      const tag = new Date(datum).toDateString();
-      return terminSystem.getTermineFuerInsasse(uid).filter(
-        (t) => new Date(t.datum).toDateString() === tag
-      );
+      const tagIso =
+        typeof datumIsoLocal === 'function'
+          ? datumIsoLocal(datum instanceof Date ? datum : new Date(datum))
+          : new Date(datum).toISOString().slice(0, 10);
+      return terminSystem.getTermineFuerInsasse(uid, name).filter((t) => {
+        const iso = typeof normalizeDatumIso === 'function' ? normalizeDatumIso(t.datum) : String(t.datum).slice(0, 10);
+        return iso === tagIso;
+      });
+    }
+
+    function terminFaelltAufKalendertag(termin, kalenderDatum) {
+      const iso =
+        typeof normalizeDatumIso === 'function'
+          ? normalizeDatumIso(termin.datum)
+          : String(termin.datum).slice(0, 10);
+      const tagIso =
+        typeof datumIsoLocal === 'function'
+          ? datumIsoLocal(kalenderDatum)
+          : kalenderDatum.toISOString().slice(0, 10);
+      return iso === tagIso;
     }
 
     function insasseKalenderHeute() {
@@ -1325,21 +1356,25 @@
     }
 
     function insasseWaehleTagImMonat(datumIso) {
-      insasseAusgewaehltesDatum = new Date(datumIso);
+      insasseAusgewaehltesDatum = new Date(datumIso + 'T12:00:00');
       safeRenderInsasseKalender();
     }
 
     function renderInsasseTerminBlock(t) {
-      const d = new Date(t.datum);
+      const d = new Date((typeof normalizeDatumIso === 'function' ? normalizeDatumIso(t.datum) : t.datum) + 'T12:00:00');
       const datumStr = d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
       const zeitStr = t.uhrzeit ? `${t.uhrzeit} Uhr` : 'Ganztägig';
       const teilnehmerStr = t.teilnehmerArt === 'extern' && t.externKontakt
         ? `${t.externKontakt.serviceName || ''}${t.externKontakt.serviceName ? ' – ' : ''}${t.externKontakt.name}${t.durchfuehrungArt === 'online' ? ' (Online)' : ''}`
-        : (t.zugewiesenAnName || 'Mitarbeitende');
+        : t.typ === 'aufgabe'
+          ? 'Aufgabe (Frist)'
+          : (t.zugewiesenAnName || 'Mitarbeitende');
+      const typLabel = t.typ === 'aufgabe' ? 'Frist' : 'Termin';
+      const typColor = t.typ === 'aufgabe' ? '#d97706' : '#0d9488';
       return `
-        <div class="termin-item insasse-termin-item" style="border-left-color: #0d9488;">
+        <div class="termin-item insasse-termin-item" style="border-left-color: ${typColor};">
           <div class="termin-item-header">
-            <span class="termin-typ-badge" style="background: #0d9488;">Termin</span>
+            <span class="termin-typ-badge" style="background: ${typColor};">${typLabel}</span>
             <strong>${t.betreff || t.titel}</strong>
           </div>
           <p class="termin-meta">${datumStr} · ${zeitStr}</p>
@@ -1352,10 +1387,10 @@
     function renderInsasseKalenderMonat() {
       const main = document.getElementById('insasseKalenderMain');
       if (!main || !currentSession) return;
-      const uid = String(currentSession.userId);
+      const { uid, name } = getInsasseKalenderKontext();
       const jahr = insasseKalenderDatum.getFullYear();
       const monat = insasseKalenderDatum.getMonth();
-      const termine = getInsasseTermineMonat(uid, jahr, monat);
+      const termine = getInsasseTermineMonat(uid, jahr, monat, name);
       const ersterTag = new Date(jahr, monat, 1);
       const letzterTag = new Date(jahr, monat + 1, 0);
       const startWochentag = (ersterTag.getDay() + 6) % 7;
@@ -1375,12 +1410,14 @@
       for (let tag = 1; tag <= letzterTag.getDate(); tag++) {
         const datum = new Date(jahr, monat, tag);
         const ds = datum.toDateString();
-        const tagesTermine = termine.filter((t) => new Date(t.datum).toDateString() === ds);
+        const datumIso =
+          typeof datumIsoLocal === 'function' ? datumIsoLocal(datum) : datum.toISOString().slice(0, 10);
+        const tagesTermine = termine.filter((t) => terminFaelltAufKalendertag(t, datum));
         const markers = tagesTermine.slice(0, 3).map(() => '<div class="termin-marker" style="background:#0d9488;"></div>').join('');
         const mehr = tagesTermine.length > 3 ? `<div class="mehr-termine">+${tagesTermine.length - 3}</div>` : '';
         html += `
           <div class="kalender-tag ${ds === heute ? 'heute' : ''} ${ds === insasseAusgewaehltesDatum.toDateString() ? 'ausgewaehlt' : ''} ${tagesTermine.length ? 'hat-termine' : ''}"
-               onclick="insasseWaehleTagImMonat('${datum.toISOString()}')">
+               onclick="insasseWaehleTagImMonat('${datumIso}')">
             <span class="tag-nummer">${tag}</span>
             <div class="termin-markers">${markers}${mehr}</div>
           </div>`;
@@ -1393,8 +1430,8 @@
       const titel = document.getElementById('insasseTermineSidebarTitel');
       const liste = document.getElementById('insasseTermineSidebarListe');
       if (!titel || !liste || !currentSession) return;
-      const uid = String(currentSession.userId);
-      const termine = getInsasseTermineTag(uid, insasseAusgewaehltesDatum);
+      const { uid, name } = getInsasseKalenderKontext();
+      const termine = getInsasseTermineTag(uid, insasseAusgewaehltesDatum, name);
       titel.textContent = `Termine am ${insasseAusgewaehltesDatum.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}`;
       if (termine.length === 0) {
         liste.innerHTML = '<p class="keine-termine">Keine Termine an diesem Tag</p>';
@@ -1411,11 +1448,15 @@
       if (!section) return;
 
       section.style.display = 'block';
-      const uid = String(currentSession.userId);
+      const { uid, name } = getInsasseKalenderKontext();
       const jetzt = new Date();
       jetzt.setHours(0, 0, 0, 0);
-      const kommende = terminSystem.getTermineFuerInsasse(uid).filter((t) => new Date(t.datum) >= jetzt);
-      if (countEl) countEl.textContent = kommende.length;
+      const alleMeine = terminSystem.getTermineFuerInsasse(uid, name);
+      const kommende = alleMeine.filter((t) => {
+        const d = new Date(normalizeDatumIso(t.datum) + 'T12:00:00');
+        return d >= jetzt;
+      });
+      if (countEl) countEl.textContent = alleMeine.length;
       if (anzeige) anzeige.textContent = `${INSASSE_MONATE[insasseKalenderDatum.getMonth()]} ${insasseKalenderDatum.getFullYear()}`;
       renderInsasseKalenderMonat();
       renderInsasseKalenderSidebar();
