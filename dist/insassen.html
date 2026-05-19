@@ -216,7 +216,39 @@
         <div class="form-group">
           <label>Antragsart</label>
           <p class="section-hint" style="margin-top: 0.25rem;">Bitte wählen Sie zuerst die gewünschte Antragsart.</p>
-          <div id="newAntragTypePicker" class="antrag-type-picker"></div>
+          <div id="newAntragTypePicker" class="antrag-type-picker" data-picker-fallback>
+            <div class="antrag-type-flat-list">
+              <div class="antrag-type-group-block" data-gruppe="finanzen-unterbringung">
+                <p class="antrag-type-group-title">Finanzen &amp; Unterbringung</p>
+                <div class="radio-group antrag-type-group-options">
+                  <label class="radio-option"><input type="radio" name="antragType" value="teilhabegeld" checked onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Teilhabegeld</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="eigentum" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Eigentum in der Kammer</span></label>
+                </div>
+              </div>
+              <div class="antrag-type-group-block" data-gruppe="beratung-gesundheit">
+                <p class="antrag-type-group-title">Beratung, Gespräche &amp; Gesundheit</p>
+                <div class="radio-group antrag-type-group-options">
+                  <label class="radio-option"><input type="radio" name="antragType" value="beratung-unterstuetzung"><span class="radio-label">Beratungs- und Unterstützungsleistungen</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="gespraechstermin"><span class="radio-label">Gesprächstermine</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="gesundheit-medizin"><span class="radio-label">Gesundheit: Termin medizinischer Dienst</span></label>
+                </div>
+              </div>
+              <div class="antrag-type-group-block" data-gruppe="freizeit">
+                <p class="antrag-type-group-title">Freizeit &amp; Weiterbildung</p>
+                <div class="radio-group antrag-type-group-options">
+                  <label class="radio-option"><input type="radio" name="antragType" value="freizeit-weiterbildung"><span class="radio-label">Freizeitaktivitäten inkl. Weiterbildungskosten</span></label>
+                </div>
+              </div>
+              <div class="antrag-type-group-block" data-gruppe="besuche">
+                <p class="antrag-type-group-title">Besuche</p>
+                <div class="radio-group antrag-type-group-options">
+                  <label class="radio-option"><input type="radio" name="antragType" value="besuch-langzeit"><span class="radio-label">Langzeitbesuch (Genehmigung)</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="besuch-termin"><span class="radio-label">Besuchstermin</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="besuch-video"><span class="radio-label">Videobesuch</span></label>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Teilhabegeld Felder -->
@@ -503,7 +535,39 @@
       <div class="modal-body">
         <div class="form-group">
           <label>Antragsart</label>
-          <div id="entwurfAntragTypePicker" class="antrag-type-picker"></div>
+          <div id="entwurfAntragTypePicker" class="antrag-type-picker" data-picker-fallback>
+            <div class="antrag-type-flat-list">
+              <div class="antrag-type-group-block" data-gruppe="finanzen-unterbringung">
+                <p class="antrag-type-group-title">Finanzen &amp; Unterbringung</p>
+                <div class="radio-group antrag-type-group-options">
+                  <label class="radio-option"><input type="radio" name="entwurfType" value="teilhabegeld" checked><span class="radio-label">Teilhabegeld</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" value="eigentum"><span class="radio-label">Eigentum in der Kammer</span></label>
+                </div>
+              </div>
+              <div class="antrag-type-group-block" data-gruppe="beratung-gesundheit">
+                <p class="antrag-type-group-title">Beratung, Gespräche &amp; Gesundheit</p>
+                <div class="radio-group antrag-type-group-options">
+                  <label class="radio-option"><input type="radio" name="entwurfType" value="beratung-unterstuetzung"><span class="radio-label">Beratungs- und Unterstützungsleistungen</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" value="gespraechstermin"><span class="radio-label">Gesprächstermine</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" value="gesundheit-medizin"><span class="radio-label">Gesundheit: Termin medizinischer Dienst</span></label>
+                </div>
+              </div>
+              <div class="antrag-type-group-block" data-gruppe="freizeit">
+                <p class="antrag-type-group-title">Freizeit &amp; Weiterbildung</p>
+                <div class="radio-group antrag-type-group-options">
+                  <label class="radio-option"><input type="radio" name="entwurfType" value="freizeit-weiterbildung"><span class="radio-label">Freizeitaktivitäten inkl. Weiterbildungskosten</span></label>
+                </div>
+              </div>
+              <div class="antrag-type-group-block" data-gruppe="besuche">
+                <p class="antrag-type-group-title">Besuche</p>
+                <div class="radio-group antrag-type-group-options">
+                  <label class="radio-option"><input type="radio" name="entwurfType" value="besuch-langzeit"><span class="radio-label">Langzeitbesuch (Genehmigung)</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" value="besuch-termin"><span class="radio-label">Besuchstermin</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" value="besuch-video"><span class="radio-label">Videobesuch</span></label>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Teilhabegeld Felder -->
@@ -896,8 +960,8 @@
     </div>
   </div>
 
-  <script src="data-sync.js"></script>
-  <script src="app.js"></script>
+  <script src="data-sync.js?v=20260519-picker"></script>
+  <script src="app.js?v=20260519-picker"></script>
   <script>
     let currentSession = null;
 
@@ -940,6 +1004,19 @@
     };
 
     function mountAntragTypePicker(containerId, inputName, selectedValue, onChangeHandler) {
+      if (typeof window.refreshInsassenAntragPickers === 'function') {
+        window.refreshInsassenAntragPickers();
+        if (typeof window.setAntragTypePickerSelection === 'function') {
+          window.setAntragTypePickerSelection(containerId, inputName, selectedValue || 'teilhabegeld');
+        }
+        if (inputName === 'antragType' && typeof window.toggleAntragFields === 'function') {
+          window.toggleAntragFields();
+        }
+        if (inputName === 'entwurfType' && typeof window.toggleEntwurfFields === 'function') {
+          window.toggleEntwurfFields();
+        }
+        return;
+      }
       const el = document.getElementById(containerId);
       if (!el) return;
       const renderFn =
@@ -948,16 +1025,22 @@
           : window.renderAntragTypePickerHtml;
       if (typeof renderFn !== 'function') {
         console.error('renderAntragTypePickerHtml fehlt – app.js neu laden');
-        el.innerHTML = '<p class="empty-hint">Antragsarten konnten nicht geladen werden. Bitte Seite neu laden.</p>';
+        if (!el.querySelector('input[type="radio"]')) {
+          el.innerHTML = '<p class="empty-hint">Antragsarten konnten nicht geladen werden. Bitte Seite neu laden.</p>';
+        }
         return;
       }
-      el.innerHTML = renderFn(inputName, selectedValue);
-      const initFn =
-        typeof initAntragTypePickerAccordion === 'function'
-          ? initAntragTypePickerAccordion
-          : window.initAntragTypePickerAccordion;
-      if (typeof initFn === 'function') {
-        initFn(containerId, inputName, onChangeHandler);
+      try {
+        el.innerHTML = renderFn(inputName, selectedValue);
+        const initFn =
+          typeof initAntragTypePickerAccordion === 'function'
+            ? initAntragTypePickerAccordion
+            : window.initAntragTypePickerAccordion;
+        if (typeof initFn === 'function') {
+          initFn(containerId, inputName, onChangeHandler);
+        }
+      } catch (err) {
+        console.error('mountAntragTypePicker', containerId, err);
       }
     }
 
@@ -2608,6 +2691,9 @@
 
     function openNewAntragModal() {
       openModal('newAntragModal');
+      if (typeof window.refreshInsassenAntragPickers === 'function') {
+        window.refreshInsassenAntragPickers();
+      }
       try {
         resetNewAntragForm();
       } catch (e) {
@@ -2660,8 +2746,12 @@
     window.mountAntragTypePicker = mountAntragTypePicker;
     window.setAntragTypePickerSelection = setAntragTypePickerSelection;
 
-    mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
-    mountAntragTypePicker('entwurfAntragTypePicker', 'entwurfType', 'teilhabegeld', 'toggleEntwurfFields');
+    if (typeof window.refreshInsassenAntragPickers === 'function') {
+      window.refreshInsassenAntragPickers();
+    } else {
+      mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
+      mountAntragTypePicker('entwurfAntragTypePicker', 'entwurfType', 'teilhabegeld', 'toggleEntwurfFields');
+    }
 
     // ============================================
     // ENTWÜRFE
@@ -3383,5 +3473,6 @@
       renderAntraege();
     }
   </script>
+  <script src="insassen-picker-boot.js?v=20260519-picker"></script>
 </body>
 </html>
