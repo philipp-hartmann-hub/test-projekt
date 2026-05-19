@@ -64,6 +64,7 @@
           <button class="tab" onclick="switchTab('mitarbeiter')">Mitarbeiter</button>
           <button class="tab" onclick="switchTab('termine')">Termine</button>
           <button class="tab" onclick="switchTab('externe')">Externe Partner</button>
+          <button class="tab" onclick="switchTab('daten')">Daten & Backup</button>
         </div>
 
         <!-- Insassen-Verwaltung -->
@@ -108,6 +109,29 @@
           <div class="termin-list" id="adminTerminList">
             <!-- Dynamisch gefüllt -->
           </div>
+        </section>
+
+        <section class="section" id="datenSection" style="display: none;">
+          <div class="section-header">
+            <h2>Daten sichern & wiederherstellen</h2>
+          </div>
+          <div class="info-box warning">
+            <p><strong>Wichtig:</strong> Echte Anträge und Aufgaben liegen im Browser (localStorage) und auf dem Server (Neon).
+              Wenn beides geleert wurde, sind sie nur noch über eine frühere Backup-Datei oder Neon Point-in-Time Recovery wiederherstellbar.</p>
+          </div>
+          <div id="datenStatusBox" class="info-box" style="margin-bottom: 1rem;">
+            <p>Lade Datenstände …</p>
+          </div>
+          <div class="form-group">
+            <button type="button" class="btn btn-primary" onclick="adminDownloadBackup()">Backup herunterladen (JSON)</button>
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('backupImportFile').click()">Backup importieren</button>
+            <input type="file" id="backupImportFile" accept="application/json,.json" style="display: none;" onchange="adminImportBackupFile(event)">
+            <button type="button" class="btn btn-secondary" onclick="adminEntferneDemoDaten()">Demo-Daten entfernen</button>
+          </div>
+          <p class="section-hint">
+            Alte Daten im Browser: F12 → Application → Local Storage → gefaengnis_antraege / gefaengnis_aufgaben.
+            Backup von einem anderen Gerät hier importieren.
+          </p>
         </section>
       </div>
     </main>
@@ -663,6 +687,7 @@
       document.getElementById('mitarbeiterSection').style.display = 'none';
       document.getElementById('termineSection').style.display = 'none';
       document.getElementById('externePartnerSection').style.display = 'none';
+      document.getElementById('datenSection').style.display = 'none';
 
       if (tab === 'insassen') {
         tabs[0].classList.add('active');
@@ -678,7 +703,76 @@
         tabs[3].classList.add('active');
         document.getElementById('externePartnerSection').style.display = 'block';
         renderExternePartner();
+      } else if (tab === 'daten') {
+        tabs[4].classList.add('active');
+        document.getElementById('datenSection').style.display = 'block';
+        renderDatenBackupStatus();
       }
+    }
+
+    function _countDemoAntraege() {
+      if (!antragSystem) return 0;
+      return antragSystem.antraege.filter((a) => String(a?.id || '').startsWith('DEMO-')).length;
+    }
+
+    async function renderDatenBackupStatus() {
+      const box = document.getElementById('datenStatusBox');
+      if (!box) return;
+      const lokalAntraege = antragSystem ? antragSystem.antraege.length : 0;
+      const lokalAufgaben = typeof aufgabenSystem !== 'undefined' ? aufgabenSystem.aufgaben.length : 0;
+      const demo = _countDemoAntraege();
+      let serverHtml = '<p>Server: nicht verbunden</p>';
+      if (window.DataSync && DataSync.isConnected()) {
+        try {
+          const c = await DataSync.fetchServerDataCounts();
+          if (c) {
+            serverHtml = `<p>Server: ${c.gefaengnis_antraege ?? '?'} Anträge, ${c.gefaengnis_aufgaben ?? '?'} Aufgaben, ${c.gefaengnis_notifications ?? '?'} Benachrichtigungen</p>`;
+          }
+        } catch (e) {
+          serverHtml = `<p>Server: Abfrage fehlgeschlagen (${e.message || e})</p>`;
+        }
+      }
+      box.innerHTML = `
+        <p><strong>Lokal (dieser Browser):</strong> ${lokalAntraege} Anträge (davon Demo: ${demo}), ${lokalAufgaben} Aufgaben</p>
+        ${serverHtml}
+      `;
+    }
+
+    function adminDownloadBackup() {
+      if (!window.DataSync || !DataSync.downloadAppDataBackup) {
+        showAlert('Backup-Funktion nicht geladen. Seite neu laden.');
+        return;
+      }
+      DataSync.downloadAppDataBackup();
+      showAlert('Backup wurde heruntergeladen.');
+    }
+
+    async function adminImportBackupFile(event) {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = '';
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const bundle = JSON.parse(text);
+        if (typeof entferneDemoDaten === 'function') entferneDemoDaten();
+        const result = await DataSync.importAppDataBundle(bundle, { merge: true });
+        localStorage.setItem('gefaengnis_skip_demo_seed', '1');
+        showAlert(`Import abgeschlossen: ${result.antraege} Anträge, ${result.aufgaben} Aufgaben (zusammengeführt).`);
+        renderDatenBackupStatus();
+      } catch (e) {
+        showAlert('Import fehlgeschlagen: ' + (e.message || e));
+      }
+    }
+
+    async function adminEntferneDemoDaten() {
+      if (typeof entferneDemoDaten !== 'function') return;
+      const ok = await showConfirm('Demo-Anträge und zugehörige Demo-Aufgaben entfernen?');
+      if (!ok) return;
+      entferneDemoDaten();
+      if (antragSystem) antragSystem.saveAntraege();
+      if (typeof aufgabenSystem !== 'undefined') aufgabenSystem.saveAufgaben();
+      showAlert('Demo-Daten wurden entfernt.');
+      renderDatenBackupStatus();
     }
 
     // ============================================

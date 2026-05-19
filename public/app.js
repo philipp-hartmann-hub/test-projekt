@@ -5003,10 +5003,46 @@ function _demoMonatOffset(offsetMonths) {
  * Legt Beispiel-Anträge, Aufgaben und Benachrichtigungen an, wenn keine Anträge vorhanden sind.
  * @returns {boolean} true wenn Demo-Daten neu angelegt wurden
  */
+/** Entfernt nur automatisch angelegte Demo-Einträge (z. B. vor Import echter Daten). */
+function entferneDemoDaten() {
+  let changed = false;
+  if (antragSystem) {
+    const vorher = antragSystem.antraege.length;
+    antragSystem.antraege = antragSystem.antraege.filter((a) => !String(a?.id || '').startsWith('DEMO-'));
+    if (antragSystem.antraege.length !== vorher) {
+      antragSystem.saveAntraege();
+      changed = true;
+    }
+  }
+  if (typeof aufgabenSystem !== 'undefined') {
+    const vorher = aufgabenSystem.aufgaben.length;
+    aufgabenSystem.aufgaben = aufgabenSystem.aufgaben.filter((a) => !String(a?.id || '').startsWith('DEMO-'));
+    if (aufgabenSystem.aufgaben.length !== vorher) {
+      aufgabenSystem.saveAufgaben();
+      changed = true;
+    }
+  }
+  if (typeof aktivitaetenSystem !== 'undefined') {
+    const vorher = aktivitaetenSystem.aktivitaeten.length;
+    aktivitaetenSystem.aktivitaeten = aktivitaetenSystem.aktivitaeten.filter(
+      (a) => !String(a?.antragId || '').startsWith('DEMO-')
+    );
+    if (aktivitaetenSystem.aktivitaeten.length !== vorher) {
+      aktivitaetenSystem.saveAktivitaeten();
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 function seedDemoDatenIfEmpty() {
   if (!antragSystem || !Array.isArray(antragSystem.antraege)) return false;
+  if (localStorage.getItem('gefaengnis_skip_demo_seed') === '1') return false;
+  const hatEchteAntraege = antragSystem.antraege.some(
+    (a) => a && a.id && !String(a.id).startsWith('DEMO-')
+  );
+  if (hatEchteAntraege) return false;
   if (antragSystem.antraege.length > 0) return false;
-  if (antragSystem.antraege.some((a) => a && String(a.id).startsWith('DEMO-'))) return false;
 
   const t0 = new Date();
   const t1 = new Date(t0.getTime() - 2 * 86400000).toISOString();
@@ -5228,11 +5264,20 @@ function seedDemoDatenIfEmpty() {
   }
 
   console.log('[Demo] Beispiel-Anträge und Aufgaben wiederhergestellt:', antraege.length, 'Anträge,', aufgaben.length, 'Aufgaben');
+  window.dispatchEvent(new CustomEvent('demoDatenGeladen'));
   return true;
+}
+
+/** In der Browser-Konsole prüfbar, ob der aktuelle Stand geladen ist. */
+const APP_DEPLOY_TAG = 'fc629e8-begleitung-demo';
+if (typeof window !== 'undefined') {
+  window.APP_DEPLOY_TAG = APP_DEPLOY_TAG;
+  console.info('[App] Deploy-Tag:', APP_DEPLOY_TAG);
 }
 
 if (typeof window !== 'undefined') {
   window.seedDemoDatenIfEmpty = seedDemoDatenIfEmpty;
+  window.entferneDemoDaten = entferneDemoDaten;
 }
 
 seedDemoDatenIfEmpty();

@@ -675,6 +675,15 @@ async function reloadDataFromServer() {
     } else {
       console.warn('reloadDataFromStorage Funktion nicht verfügbar');
     }
+
+    if (typeof window.seedDemoDatenIfEmpty === 'function') {
+      const seeded = window.seedDemoDatenIfEmpty();
+      if (seeded && serverConnected) {
+        ['gefaengnis_antraege', 'gefaengnis_aufgaben', 'gefaengnis_notifications', 'gefaengnis_aktivitaeten'].forEach(
+          (k) => scheduleSyncToServer(k)
+        );
+      }
+    }
     
     // Event feuern, damit UI aktualisiert wird
     console.log('Feuere dataReloaded Event...');
@@ -694,6 +703,112 @@ async function reloadDataFromServer() {
 }
 
 // ============================================
+// BACKUP / WIEDERHERSTELLUNG
+// ============================================
+
+const BACKUP_STORAGE_KEYS = [
+  'gefaengnis_users',
+  'gefaengnis_antraege',
+  'gefaengnis_aufgaben',
+  'gefaengnis_notifications',
+  'gefaengnis_aktivitaeten',
+  'gefaengnis_termine',
+  'gefaengnis_externe_partner'
+];
+
+function _mergeBackupArray(key, existing, incoming) {
+  const ex = Array.isArray(existing) ? existing : [];
+  const inc = Array.isArray(incoming) ? incoming : [];
+  if (key === 'gefaengnis_antraege') return mergeAntraegeArraysAfterFetch(ex, inc);
+  if (key === 'gefaengnis_aktivitaeten') return mergeAktivitaetenArrays(ex, inc);
+  if (key === 'gefaengnis_termine') return mergeTermineArraysAfterFetch(ex, inc);
+  return mergeAntragArraysByIdOrContent(ex, inc);
+}
+
+function exportAppDataBundle() {
+  const bundle = {
+    format: 'jvp-backup-v1',
+    exportedAt: new Date().toISOString(),
+    data: {}
+  };
+  BACKUP_STORAGE_KEYS.forEach((key) => {
+    try {
+      const raw = localStorage.getItem(key);
+      bundle.data[key] = raw ? JSON.parse(raw) : [];
+    } catch (_) {
+      bundle.data[key] = [];
+    }
+  });
+  return bundle;
+}
+
+function downloadAppDataBackup() {
+  const bundle = exportAppDataBundle();
+  const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `jvp-backup-${stamp}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  return bundle;
+}
+
+async function importAppDataBundle(bundle, options = {}) {
+  const merge = options.merge !== false;
+  const payload = bundle && bundle.data ? bundle.data : bundle;
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Ungültige Backup-Datei.');
+  }
+
+  BACKUP_STORAGE_KEYS.forEach((key) => {
+    if (payload[key] == null) return;
+    const incoming = payload[key];
+    if (merge) {
+      let existing = [];
+      try {
+        existing = JSON.parse(localStorage.getItem(key) || '[]');
+      } catch (_) {
+        existing = [];
+      }
+      originalSetItem(key, JSON.stringify(_mergeBackupArray(key, existing, incoming)));
+    } else {
+      originalSetItem(key, JSON.stringify(incoming));
+    }
+  });
+
+  if (typeof window.reloadDataFromStorage === 'function') {
+    window.reloadDataFromStorage();
+  }
+
+  if (serverConnected && initialDataLoaded) {
+    for (const key of Object.keys(SYNC_KEYS)) {
+      await scheduleSyncToServer(key);
+    }
+  }
+
+  return {
+    antraege: JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]').length,
+    aufgaben: JSON.parse(localStorage.getItem('gefaengnis_aufgaben') || '[]').length
+  };
+}
+
+async function fetchServerDataCounts() {
+  if (!serverConnected) return null;
+  const counts = {};
+  for (const [key, endpoint] of Object.entries(SYNC_KEYS)) {
+    try {
+      const rows = await apiCall(endpoint);
+      counts[key] = Array.isArray(rows) ? rows.length : 0;
+    } catch (_) {
+      counts[key] = null;
+    }
+  }
+  return counts;
+}
+
+// ============================================
 // GLOBALE API OBJEKTE
 // ============================================
 
@@ -704,6 +819,10 @@ window.DataSync = {
   reloadDataFromServer,
   syncAntragToServer,
   fetchAktivitaetenForAntrag,
+  exportAppDataBundle,
+  downloadAppDataBackup,
+  importAppDataBundle,
+  fetchServerDataCounts,
   isConnected: () => serverConnected,
   isLoaded: () => initialDataLoaded
 };
