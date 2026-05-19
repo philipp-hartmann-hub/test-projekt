@@ -2479,25 +2479,82 @@ class TerminSystem {
     return termine.filter(t => new Date(t.datum).toDateString() === tag);
   }
 
+  _getAufgabeText(field) {
+    if (!field) return '';
+    if (typeof field === 'string') return field;
+    if (typeof field === 'object' && field.text) return field.text;
+    return String(field);
+  }
+
+  _getLinkedTerminFuerAufgabe(aufgabe) {
+    if (!aufgabe?.terminId) return null;
+    return this.termine.find((t) => String(t.id) === String(aufgabe.terminId)) || null;
+  }
+
+  /** Kalendereintrag für übernommene Begleitungsaufgabe (Termindatum/-zeit). */
+  syncBegleitungKalenderFuerAufgabe(aufgabe) {
+    if (!aufgabe || aufgabe.zugewiesenAnTyp !== 'mitarbeiter' || !aufgabe.zugewiesenAnId) {
+      return null;
+    }
+    const linked = this._getLinkedTerminFuerAufgabe(aufgabe);
+    const datum = linked?.datum || aufgabe.fristDatum;
+    if (!datum) return null;
+
+    const uhrzeit = linked?.uhrzeit || aufgabe.terminUhrzeit || null;
+    const titelBasis = linked?.betreff || linked?.titel || this._getAufgabeText(aufgabe.kurzbeschreibung);
+    const titelRaw = `Begleitung: ${titelBasis}`;
+    const titelKurz = titelRaw.length > 80 ? `${titelRaw.substring(0, 77)}…` : titelRaw;
+    const beschreibung =
+      this._getAufgabeText(aufgabe.beschreibung) ||
+      `Begleitung des Insassen zum vereinbarten Termin.`;
+    const sichtbarFuer = [String(aufgabe.erstelltVonId), String(aufgabe.zugewiesenAnId)].filter(
+      (x) => x != null && x !== '' && x !== 'undefined'
+    );
+
+    const existierend = this.termine.find((t) => t.aufgabeId === aufgabe.id);
+    if (existierend) {
+      return (
+        this.updateTermin(existierend.id, {
+          titel: titelKurz,
+          beschreibung,
+          datum,
+          uhrzeit,
+          antragId: aufgabe.antragId,
+          sichtbarFuer
+        }) || existierend
+      );
+    }
+
+    return this.createTermin({
+      titel: titelKurz,
+      beschreibung,
+      datum,
+      uhrzeit,
+      typ: 'aufgabe',
+      erstelltVonId: aufgabe.erstelltVonId,
+      erstelltVonName: aufgabe.erstelltVonName,
+      aufgabeId: aufgabe.id,
+      antragId: aufgabe.antragId,
+      sichtbarFuer
+    });
+  }
+
   // Aufgaben-Termin erstellen (automatisch bei Aufgabe mit Frist)
   createAufgabenTermin(aufgabe) {
     if (!aufgabe || !aufgabe.fristDatum) return null;
+    if (aufgabe.terminBegleitung || aufgabe.terminId) {
+      return this.syncBegleitungKalenderFuerAufgabe(aufgabe);
+    }
     // Nur persönlich zugewiesene Mitarbeiter: Frist im persönlichen Kalender
     if (aufgabe.zugewiesenAnTyp !== 'mitarbeiter') {
       this.deleteAufgabenTermin(aufgabe.id);
       return null;
     }
 
-    // Text aus Kurzbeschreibung oder Beschreibung extrahieren (kann String oder Objekt sein)
-    const getText = (field) => {
-      if (!field) return '';
-      if (typeof field === 'string') return field;
-      if (typeof field === 'object' && field.text) return field.text;
-      return String(field);
-    };
-
-    const titelText = getText(aufgabe.kurzbeschreibung) || getText(aufgabe.beschreibung);
+    const titelText = this._getAufgabeText(aufgabe.kurzbeschreibung) || this._getAufgabeText(aufgabe.beschreibung);
     const titelKurz = titelText.substring(0, 50) + (titelText.length > 50 ? '...' : '');
+    const linked = this._getLinkedTerminFuerAufgabe(aufgabe);
+    const uhrzeit = linked?.uhrzeit || aufgabe.terminUhrzeit || null;
     const sichtbarFuer = [String(aufgabe.erstelltVonId), String(aufgabe.zugewiesenAnId)].filter(
       (x) => x != null && x !== '' && x !== 'undefined'
     );
@@ -2507,8 +2564,9 @@ class TerminSystem {
       return (
         this.updateTermin(existierend.id, {
           titel: `Aufgabe: ${titelKurz}`,
-          beschreibung: getText(aufgabe.beschreibung),
+          beschreibung: this._getAufgabeText(aufgabe.beschreibung),
           datum: aufgabe.fristDatum,
+          uhrzeit,
           antragId: aufgabe.antragId,
           sichtbarFuer
         }) || existierend
@@ -2517,8 +2575,9 @@ class TerminSystem {
 
     return this.createTermin({
       titel: `Aufgabe: ${titelKurz}`,
-      beschreibung: getText(aufgabe.beschreibung),
+      beschreibung: this._getAufgabeText(aufgabe.beschreibung),
       datum: aufgabe.fristDatum,
+      uhrzeit,
       typ: 'aufgabe',
       erstelltVonId: aufgabe.erstelltVonId,
       erstelltVonName: aufgabe.erstelltVonName,
@@ -2593,6 +2652,7 @@ class TerminSystem {
       sichtbarFuer: data.sichtbarFuer || [],
       erstelltVonId: data.erstelltVonId,
       erstelltVonName: data.erstelltVonName,
+      begleitungErforderlich: data.begleitungErforderlich === true,
       erstelltAm: new Date().toISOString(),
       einladungVersendetAm: new Date().toISOString()
     };
@@ -2710,7 +2770,10 @@ class AufgabenSystem {
       antwortPdfs: null, // Array von PDFs in der Antwort
       erledigungsTyp: null, // 'antwort' oder 'kenntnisnahme'
       erstelltAm: new Date().toISOString(),
-      erledigtAm: null
+      erledigtAm: null,
+      terminId: data.terminId || null,
+      terminBegleitung: data.terminBegleitung === true,
+      terminUhrzeit: data.terminUhrzeit || null
     };
     
     console.log('[Debug] createAufgabe - Erstellte Aufgabe:', {
@@ -2770,6 +2833,16 @@ class AufgabenSystem {
     }
     
     return aufgabe;
+  }
+
+  /** Nach Übernahme einer Gruppenaufgabe: Kalender des Bearbeiters aktualisieren. */
+  syncKalenderNachGruppenuebernahme(aufgabe) {
+    if (!aufgabe || typeof terminSystem === 'undefined') return;
+    if (aufgabe.terminBegleitung || aufgabe.terminId) {
+      terminSystem.syncBegleitungKalenderFuerAufgabe(aufgabe);
+    } else if (aufgabe.fristDatum && aufgabe.zugewiesenAnTyp === 'mitarbeiter') {
+      terminSystem.createAufgabenTermin(aufgabe);
+    }
   }
 
   // Aufgabe erledigen
@@ -3325,11 +3398,12 @@ class AntragSystem {
       // ALLE offenen Gruppenaufgaben für diesen Antrag dem Mitarbeiter zuweisen
       // (nicht nur die seiner Gruppe, damit der Antrag aus allen Gruppen-Listen verschwindet)
       const gruppenAufgaben = aufgabenSystem.getAlleOffenenGruppenAufgabenFuerAntrag(antragId);
-      gruppenAufgaben.forEach(aufgabe => {
+      gruppenAufgaben.forEach((aufgabe) => {
         aufgabe.zugewiesenAnTyp = 'mitarbeiter';
         aufgabe.zugewiesenAnId = mitarbeiter.userId;
         aufgabe.zugewiesenAnName = mitarbeiter.name;
         aufgabe.zugewiesenAnGruppe = null;
+        aufgabenSystem.syncKalenderNachGruppenuebernahme(aufgabe);
       });
       if (gruppenAufgaben.length > 0) {
         aufgabenSystem.saveAufgaben();
@@ -3391,11 +3465,12 @@ class AntragSystem {
       // ALLE offenen Gruppenaufgaben für diesen Antrag dem Mitarbeiter zuweisen
       // (nicht nur die seiner Gruppe, damit der Antrag aus allen Gruppen-Listen verschwindet)
       const gruppenAufgaben = aufgabenSystem.getAlleOffenenGruppenAufgabenFuerAntrag(antragId);
-      gruppenAufgaben.forEach(aufgabe => {
+      gruppenAufgaben.forEach((aufgabe) => {
         aufgabe.zugewiesenAnTyp = 'mitarbeiter';
         aufgabe.zugewiesenAnId = mitarbeiter.userId;
         aufgabe.zugewiesenAnName = mitarbeiter.name;
         aufgabe.zugewiesenAnGruppe = null;
+        aufgabenSystem.syncKalenderNachGruppenuebernahme(aufgabe);
       });
       if (gruppenAufgaben.length > 0) {
         aufgabenSystem.saveAufgaben();
@@ -3426,12 +3501,13 @@ class AntragSystem {
       console.log('[Debug] nehmeAntrag: Gefundene Gruppenaufgaben:', gruppenAufgaben.length);
       
       if (gruppenAufgaben.length > 0) {
-        gruppenAufgaben.forEach(aufgabe => {
+        gruppenAufgaben.forEach((aufgabe) => {
           console.log('[Debug] Konvertiere Aufgabe:', aufgabe.id);
           aufgabe.zugewiesenAnTyp = 'mitarbeiter';
           aufgabe.zugewiesenAnId = mitarbeiter.userId;
           aufgabe.zugewiesenAnName = mitarbeiter.name;
           aufgabe.zugewiesenAnGruppe = null;
+          aufgabenSystem.syncKalenderNachGruppenuebernahme(aufgabe);
         });
         aufgabenSystem.saveAufgaben();
         
@@ -4915,6 +4991,252 @@ function renderAntragFilterBarHtml(listKey, activeFilterId, setFilterFn) {
 
 const antragSystem = new AntragSystem();
 
+/** Monat YYYY-MM für Demo-Anträge (offset in Monaten). */
+function _demoMonatOffset(offsetMonths) {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + offsetMonths);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/**
+ * Legt Beispiel-Anträge, Aufgaben und Benachrichtigungen an, wenn keine Anträge vorhanden sind.
+ * @returns {boolean} true wenn Demo-Daten neu angelegt wurden
+ */
+function seedDemoDatenIfEmpty() {
+  if (!antragSystem || !Array.isArray(antragSystem.antraege)) return false;
+  if (antragSystem.antraege.length > 0) return false;
+  if (antragSystem.antraege.some((a) => a && String(a.id).startsWith('DEMO-'))) return false;
+
+  const t0 = new Date();
+  const t1 = new Date(t0.getTime() - 2 * 86400000).toISOString();
+  const t2 = new Date(t0.getTime() - 5 * 86400000).toISOString();
+  const t3 = new Date(t0.getTime() - 10 * 86400000).toISOString();
+
+  const antraege = [
+    {
+      id: 'DEMO-ANT-TGB-001',
+      antragsNummer: 'A-DEMO-0001',
+      type: 'teilhabegeld',
+      status: 'offen',
+      insasseId: 'insasse-1',
+      insassenNummer: 'INS-001',
+      insasseName: 'Hans Mueller',
+      insasseGeburtsdatum: '1985-03-15',
+      insasseJva: 'haus1',
+      insasseStation: '1',
+      bearbeiterId: null,
+      bearbeiterName: null,
+      monat: _demoMonatOffset(0),
+      keineEinkuenfteAusserhalb: true,
+      einkuenfteAusserhalb: '',
+      erstelltAm: t1,
+      erledigt: false
+    },
+    {
+      id: 'DEMO-ANT-EIG-001',
+      antragsNummer: 'A-DEMO-0002',
+      type: 'eigentum',
+      status: 'in-bearbeitung',
+      insasseId: 'insasse-1',
+      insassenNummer: 'INS-001',
+      insasseName: 'Hans Mueller',
+      insasseGeburtsdatum: '1985-03-15',
+      insasseJva: 'haus1',
+      insasseStation: '1',
+      bearbeiterId: 'avd-1',
+      bearbeiterName: 'Anna Schmidt (AVD)',
+      aktion: 'abholen',
+      kleidung: ['oberbekleidung'],
+      antragBegruendung: 'Winterjacke zur Entlassung abholen.',
+      erstelltAm: t2,
+      erledigt: false
+    },
+    {
+      id: 'DEMO-ANT-TGB-002',
+      antragsNummer: 'A-DEMO-0003',
+      type: 'teilhabegeld',
+      status: 'offen',
+      insasseId: 'insasse-2',
+      insassenNummer: 'INS-002',
+      insasseName: 'Klaus Fischer',
+      insasseGeburtsdatum: '1990-07-22',
+      insasseJva: 'haus2',
+      insasseStation: '2',
+      bearbeiterId: null,
+      bearbeiterName: null,
+      monat: _demoMonatOffset(-1),
+      keineEinkuenfteAusserhalb: true,
+      einkuenfteAusserhalb: '',
+      erstelltAm: t1,
+      erledigt: false
+    },
+    {
+      id: 'DEMO-ANT-EIG-002',
+      antragsNummer: 'A-DEMO-0004',
+      type: 'eigentum',
+      status: 'in-bearbeitung',
+      insasseId: 'insasse-2',
+      insassenNummer: 'INS-002',
+      insasseName: 'Klaus Fischer',
+      insasseGeburtsdatum: '1990-07-22',
+      insasseJva: 'haus2',
+      insasseStation: '2',
+      bearbeiterId: 'avd-2',
+      bearbeiterName: 'Peter Weber (AVD)',
+      zugewiesenAnGruppe: { typ: 'kammer', hausId: null },
+      zugewiesenAnGruppeName: 'Kammer',
+      hauptbearbeitungWartetAufUebernahme: true,
+      aktion: 'einlagern',
+      kleidung: ['schuhe'],
+      antragBegruendung: 'Sportschuhe zur Einlagerung.',
+      erstelltAm: t3,
+      erledigt: false
+    },
+    {
+      id: 'DEMO-ANT-TGB-003',
+      antragsNummer: 'A-DEMO-0005',
+      type: 'teilhabegeld',
+      status: 'genehmigt',
+      insasseId: 'insasse-1',
+      insassenNummer: 'INS-001',
+      insasseName: 'Hans Mueller',
+      insasseGeburtsdatum: '1985-03-15',
+      insasseJva: 'haus1',
+      insasseStation: '1',
+      bearbeiterId: 'avd-1',
+      bearbeiterName: 'Anna Schmidt (AVD)',
+      monat: _demoMonatOffset(-2),
+      keineEinkuenfteAusserhalb: true,
+      einkuenfteAusserhalb: '',
+      sachlichGeprueft: true,
+      entscheidungGetroffen: true,
+      wartetAufEroeffnung: true,
+      erledigt: true,
+      erstelltAm: t3,
+      bearbeitetAm: t2
+    },
+    {
+      id: 'DEMO-ANT-BER-001',
+      antragsNummer: 'A-DEMO-0006',
+      type: 'beratung-unterstuetzung',
+      status: 'in-bearbeitung',
+      insasseId: 'insasse-1',
+      insassenNummer: 'INS-001',
+      insasseName: 'Hans Mueller',
+      insasseGeburtsdatum: '1985-03-15',
+      insasseJva: 'haus1',
+      insasseStation: '1',
+      bearbeiterId: 'avd-1',
+      bearbeiterName: 'Anna Schmidt (AVD)',
+      beratungThema: 'Entlassungsvorbereitung',
+      beratungBeschreibung: 'Unterstützung bei Wohnungssuche nach Entlassung.',
+      erstelltAm: t2,
+      erledigt: false
+    }
+  ];
+
+  antraege.forEach((a) => antragSystem.antraege.push(a));
+  antragSystem.migrateAntraege();
+  antragSystem.saveAntraege();
+
+  const aufgaben = [
+    {
+      id: 'DEMO-AUF-ST-001',
+      antragId: 'DEMO-ANT-TGB-001',
+      antragsNummer: 'A-DEMO-0001',
+      erstelltVonId: 'avd-1',
+      erstelltVonName: 'Anna Schmidt (AVD)',
+      zugewiesenAnTyp: 'gruppe',
+      zugewiesenAnGruppe: { typ: 'station', hausId: 'haus1', station: '1' },
+      zugewiesenAnName: 'AVD Haus 1 Station 1',
+      kurzbeschreibung: 'Unterlagen für Teilhabegeld',
+      beschreibung: 'Bitte fehlende Nachweise zum Teilhabegeld-Antrag im Postfach bereitstellen.',
+      fristDatum: new Date(t0.getTime() + 7 * 86400000).toISOString().slice(0, 10),
+      status: 'offen',
+      erstelltAm: t1
+    },
+    {
+      id: 'DEMO-AUF-KAM-001',
+      antragId: 'DEMO-ANT-EIG-002',
+      antragsNummer: 'A-DEMO-0004',
+      erstelltVonId: 'avd-2',
+      erstelltVonName: 'Peter Weber (AVD)',
+      zugewiesenAnTyp: 'gruppe',
+      zugewiesenAnGruppe: { typ: 'kammer', hausId: null },
+      zugewiesenAnName: 'Kammer',
+      kurzbeschreibung: 'Kammerprüfung Eigentum',
+      beschreibung: 'Eigentumsantrag zur Prüfung durch die Kammer weiterleiten.',
+      fristDatum: new Date(t0.getTime() + 14 * 86400000).toISOString().slice(0, 10),
+      status: 'offen',
+      erstelltAm: t2
+    },
+    {
+      id: 'DEMO-AUF-AVD-001',
+      antragId: 'DEMO-ANT-EIG-001',
+      antragsNummer: 'A-DEMO-0002',
+      erstelltVonId: 'val-1',
+      erstelltVonName: 'Max Mustermann (VAL)',
+      zugewiesenAnTyp: 'mitarbeiter',
+      zugewiesenAnId: 'avd-1',
+      zugewiesenAnName: 'Anna Schmidt (AVD)',
+      kurzbeschreibung: 'Abholtermin abstimmen',
+      beschreibung: 'Termin mit Insasse für Abholung der Winterjacke vereinbaren.',
+      fristDatum: new Date(t0.getTime() + 3 * 86400000).toISOString().slice(0, 10),
+      status: 'offen',
+      erstelltAm: t2
+    }
+  ];
+
+  if (typeof aufgabenSystem !== 'undefined') {
+    aufgaben.forEach((a) => aufgabenSystem.aufgaben.push(a));
+    aufgabenSystem.migrateZahlstelleArbeitskoordinationGruppen();
+    aufgabenSystem.saveAufgaben();
+    if (typeof terminSystem !== 'undefined') {
+      terminSystem.syncAufgabenFristenFromAufgaben(aufgabenSystem.aufgaben);
+    }
+  }
+
+  if (typeof aktivitaetenSystem !== 'undefined') {
+    antraege.forEach((a) => {
+      aktivitaetenSystem.logAktivitaet({
+        antragId: a.id,
+        typ: 'erstellt',
+        beschreibung: `Demo-Antrag "${antragSystem.getAntragTypLabel(a.type)}" angelegt`,
+        benutzerTyp: 'insasse',
+        benutzerId: a.insasseId,
+        benutzerName: a.insasseName
+      });
+    });
+  }
+
+  if (typeof notificationSystem !== 'undefined') {
+    notificationSystem.createNotification(
+      'avd-1',
+      'demo-daten',
+      'Demo-Daten wiederhergestellt',
+      'Beispiel-Anträge und Aufgaben wurden automatisch angelegt (keine Anträge in den Daten gefunden).',
+      'DEMO-ANT-TGB-001'
+    );
+    notificationSystem.createNotification(
+      'kammer-1',
+      'antrag-zugewiesen',
+      'Neuer Gruppenantrag',
+      'Eigentumsantrag A-DEMO-0004 wartet auf Übernahme durch die Kammer.',
+      'DEMO-ANT-EIG-002'
+    );
+  }
+
+  console.log('[Demo] Beispiel-Anträge und Aufgaben wiederhergestellt:', antraege.length, 'Anträge,', aufgaben.length, 'Aufgaben');
+  return true;
+}
+
+if (typeof window !== 'undefined') {
+  window.seedDemoDatenIfEmpty = seedDemoDatenIfEmpty;
+}
+
+seedDemoDatenIfEmpty();
+
 if (typeof terminSystem !== 'undefined') {
   terminSystem.migrateInsasseTermine();
 }
@@ -4957,6 +5279,88 @@ function resolveInsasseUserId(antragId, insasseId, insasseName) {
   return candidates[0] || null;
 }
 
+/** JVA/Haus und Station des Insassen für Stations-Aufgaben. */
+function resolveInsasseStandort(antragId, insasseId) {
+  const antrag = typeof antragSystem !== 'undefined' ? antragSystem.getAntrag(antragId) : null;
+  if (antrag?.insasseJva) {
+    return {
+      hausId: String(antrag.insasseJva).replace(/^jva/, 'haus'),
+      station: String(antrag.insasseStation ?? '')
+    };
+  }
+  const uid = insasseId || antrag?.insasseId;
+  if (uid && typeof userSystem !== 'undefined') {
+    const u = userSystem.users.find((x) => String(x.id) === String(uid));
+    if (u?.jva) {
+      return {
+        hausId: String(u.jva).replace(/^jva/, 'haus'),
+        station: String(u.station ?? '')
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Stationspostfach: Aufgabe „Insasse zum Termin begleiten“ (AVD der Insassen-Station).
+ */
+function erstelleBegleitungAufgabeFuerTermin(termin, meta) {
+  if (!termin || typeof aufgabenSystem === 'undefined') return null;
+
+  const standort = resolveInsasseStandort(meta.antragId, meta.insasseId);
+  if (!standort?.hausId) {
+    console.warn('[Begleitung] Keine Station für Insassen ermittelbar – keine Aufgabe erstellt.');
+    return null;
+  }
+
+  const hausName = getHausName(standort.hausId);
+  const gruppenName = `AVD ${hausName} Station ${standort.station || '–'}`;
+  const datumFmt = new Date(termin.datum).toLocaleDateString('de-DE');
+  const zeitInfo = termin.uhrzeit ? ` um ${termin.uhrzeit} Uhr` : '';
+  const ortInfo = termin.ort ? `\nOrt: ${termin.ort}` : '';
+  const insasseLabel = meta.insasseName || termin.insasseName || 'Insasse';
+
+  const antrag = antragSystem.getAntrag(meta.antragId);
+  const beschreibung =
+    `Der Insasse ${insasseLabel} muss zum folgenden Termin begleitet werden:\n\n` +
+    `„${termin.betreff || termin.titel}“\n` +
+    `Datum: ${datumFmt}${zeitInfo}${ortInfo}`;
+
+  const aufgabe = aufgabenSystem.createAufgabe({
+    antragId: meta.antragId,
+    antragsNummer: antrag?.antragsNummer || null,
+    erstelltVonId: meta.erstelltVonId,
+    erstelltVonName: meta.erstelltVonName,
+    zugewiesenAnTyp: 'gruppe',
+    zugewiesenAnGruppe: {
+      typ: 'station',
+      hausId: standort.hausId,
+      station: standort.station
+    },
+    zugewiesenAnName: gruppenName,
+    kurzbeschreibung: 'Begleitung zum Termin',
+    beschreibung,
+    fristDatum: termin.datum,
+    terminId: termin.id,
+    terminBegleitung: true,
+    terminUhrzeit: termin.uhrzeit || null
+  });
+
+  if (typeof aktivitaetenSystem !== 'undefined') {
+    aktivitaetenSystem.logAktivitaet({
+      antragId: meta.antragId,
+      typ: 'begleitung-aufgabe',
+      beschreibung: `Begleitungsaufgabe für Station erstellt (${gruppenName})`,
+      details: { terminId: termin.id, aufgabeId: aufgabe.id },
+      benutzerTyp: 'mitarbeiter',
+      benutzerId: meta.erstelltVonId,
+      benutzerName: meta.erstelltVonName
+    });
+  }
+
+  return aufgabe;
+}
+
 /**
  * Termin vereinbaren: Kalendereinträge und Plattform-Benachrichtigungen (intern nur Portal).
  */
@@ -4980,6 +5384,7 @@ function vereinbareTerminAusAntrag(params) {
     zugewiesenAnId,
     zugewiesenAnName,
     zugewiesenAnGruppe,
+    begleitungErforderlich,
     erstelltVonId,
     erstelltVonName
   } = params;
@@ -5020,9 +5425,21 @@ function vereinbareTerminAusAntrag(params) {
     zugewiesenAnName,
     zugewiesenAnGruppe,
     sichtbarFuer: Array.from(sichtbarFuer),
+    begleitungErforderlich: begleitungErforderlich === true,
     erstelltVonId,
     erstelltVonName
   });
+
+  let begleitungAufgabe = null;
+  if (begleitungErforderlich) {
+    begleitungAufgabe = erstelleBegleitungAufgabeFuerTermin(termin, {
+      antragId,
+      insasseId: resolvedInsasseId,
+      insasseName,
+      erstelltVonId,
+      erstelltVonName
+    });
+  }
 
   const datumFmt = new Date(termin.datum).toLocaleDateString('de-DE');
   const zeitInfo = termin.uhrzeit ? ` um ${termin.uhrzeit} Uhr` : '';
@@ -5081,7 +5498,7 @@ function vereinbareTerminAusAntrag(params) {
     });
   }
 
-  return { termin, emailEmpfaenger };
+  return { termin, emailEmpfaenger, begleitungAufgabe };
 }
 
 /**
@@ -5098,6 +5515,7 @@ function vereinbareExternenTerminAusAntrag(params) {
     uhrzeit,
     durchfuehrungArt,
     ort,
+    begleitungErforderlich,
     erstelltVonId,
     erstelltVonName
   } = params;
@@ -5150,6 +5568,7 @@ function vereinbareExternenTerminAusAntrag(params) {
     dauerMinuten: service.dauerMinuten,
     durchfuehrungArt: durchfuehrung,
     externKontakt,
+    begleitungErforderlich,
     erstelltVonId,
     erstelltVonName
   });
@@ -5204,6 +5623,9 @@ function reloadDataFromStorage() {
     }
     if (typeof terminSystem !== 'undefined' && typeof aufgabenSystem !== 'undefined') {
       terminSystem.syncAufgabenFristenFromAufgaben(aufgabenSystem.aufgaben);
+    }
+    if (typeof seedDemoDatenIfEmpty === 'function') {
+      seedDemoDatenIfEmpty();
     }
   } catch (e) {
     console.warn('reloadDataFromStorage:', e);

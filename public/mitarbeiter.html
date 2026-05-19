@@ -932,6 +932,16 @@
           </div>
         </div>
         </div>
+        <div class="form-group" id="tvBegleitungContainer">
+          <label class="checkbox-option">
+            <input type="checkbox" id="tvBegleitungErforderlich">
+            <span>Insasse muss zum Termin begleitet werden</span>
+          </label>
+          <p class="section-hint" style="margin-top: 0.5rem;">
+            Es wird eine Aufgabe im Stationspostfach (AVD der Insassen-Station) unter „Anträge und Aufgaben meiner Gruppe“ erstellt.
+            Übernimmt ein Mitarbeiter der Station die Aufgabe, erscheint der Termin in seinem Kalender.
+          </p>
+        </div>
         <input type="hidden" id="tvAntragId">
         <input type="hidden" id="tvInsasseId">
         <input type="hidden" id="tvInsasseName">
@@ -6450,6 +6460,8 @@ ${t('action.archive')}
       document.getElementById('tvExtOrt').value = '';
       document.getElementById('tvExtTeamsLink').value = '';
       document.querySelector('input[name="tvExtDurchfuehrung"][value="praesenz"]').checked = true;
+      const begleitungCb = document.getElementById('tvBegleitungErforderlich');
+      if (begleitungCb) begleitungCb.checked = false;
 
       loadTvGruppen();
       loadTvExtServices();
@@ -6693,6 +6705,7 @@ ${t('action.archive')}
       const insasseId = document.getElementById('tvInsasseId').value;
       const insasseName = document.getElementById('tvInsasseName').value;
       const teilnehmerArt = document.querySelector('input[name="tvTeilnehmerArt"]:checked')?.value;
+      const begleitungErforderlich = document.getElementById('tvBegleitungErforderlich')?.checked === true;
 
       let result;
       try {
@@ -6730,6 +6743,7 @@ ${t('action.archive')}
             uhrzeit,
             durchfuehrungArt,
             ort,
+            begleitungErforderlich,
             erstelltVonId: currentSession.userId,
             erstelltVonName: currentSession.name
           });
@@ -6795,6 +6809,7 @@ ${t('action.archive')}
             zugewiesenAnId,
             zugewiesenAnName,
             zugewiesenAnGruppe,
+            begleitungErforderlich,
             erstelltVonId: currentSession.userId,
             erstelltVonName: currentSession.name
           });
@@ -6807,6 +6822,15 @@ ${t('action.archive')}
       closeModal('terminVereinbarenModal');
 
       let erfolgsHinweis = 'Termin wurde vereinbart.';
+      if (begleitungErforderlich) {
+        if (result.begleitungAufgabe) {
+          erfolgsHinweis +=
+            ' Eine Begleitungsaufgabe wurde im Stationspostfach (AVD) angelegt.';
+        } else {
+          erfolgsHinweis +=
+            ' Hinweis: Begleitung gewünscht, aber Stationszuordnung des Insassen konnte nicht ermittelt werden – keine Aufgabe erstellt.';
+        }
+      }
       if (teilnehmerArt === 'intern') {
         erfolgsHinweis +=
           ' Insasse und beteiligte Mitarbeitende wurden über die Plattform benachrichtigt (Kalender & Nachrichten).';

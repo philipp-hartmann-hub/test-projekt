@@ -118,8 +118,16 @@ async function loadInitialData() {
       'gefaengnis_antraege',
       JSON.stringify(mergeAntraegeArraysAfterFetch(prevAntraegeInit, antraege))
     );
-    localStorage.setItem('gefaengnis_aufgaben', JSON.stringify(aufgaben));
-    localStorage.setItem('gefaengnis_notifications', JSON.stringify(notifications));
+    const prevAufgabenInit = JSON.parse(localStorage.getItem('gefaengnis_aufgaben') || '[]');
+    localStorage.setItem(
+      'gefaengnis_aufgaben',
+      JSON.stringify(mergeAntragArraysByIdOrContent(prevAufgabenInit, aufgaben))
+    );
+    const prevNotificationsInit = JSON.parse(localStorage.getItem('gefaengnis_notifications') || '[]');
+    localStorage.setItem(
+      'gefaengnis_notifications',
+      JSON.stringify(mergeAntragArraysByIdOrContent(prevNotificationsInit, notifications))
+    );
     const prevAktivitaeten = JSON.parse(localStorage.getItem('gefaengnis_aktivitaeten') || '[]');
     localStorage.setItem(
       'gefaengnis_aktivitaeten',
@@ -136,6 +144,14 @@ async function loadInitialData() {
     console.log('Alle Daten vom Server geladen und in localStorage gespeichert');
     if (typeof window.reloadDataFromStorage === 'function') {
       window.reloadDataFromStorage();
+    }
+    if (typeof window.seedDemoDatenIfEmpty === 'function') {
+      const seeded = window.seedDemoDatenIfEmpty();
+      if (seeded && serverConnected) {
+        ['gefaengnis_antraege', 'gefaengnis_aufgaben', 'gefaengnis_notifications', 'gefaengnis_aktivitaeten'].forEach(
+          (k) => scheduleSyncToServer(k)
+        );
+      }
     }
     window.dispatchEvent(new CustomEvent('dataSyncLoaded'));
     return true;
@@ -366,6 +382,13 @@ async function syncToServerImpl(key) {
   try {
     const currentServerData = await apiCall(endpoint);
     const localData = JSON.parse(data);
+    const skipDeletes = !Array.isArray(localData) || localData.length === 0;
+
+    if (skipDeletes && currentServerData.length > 0) {
+      console.warn(
+        `[Sync] ${key}: keine lokalen Einträge — Server-Löschungen übersprungen (${currentServerData.length} auf dem Server)`
+      );
+    }
 
     for (const localItem of localData) {
       const serverItem = currentServerData.find(s => s.id === localItem.id);
@@ -398,7 +421,7 @@ async function syncToServerImpl(key) {
       }
     }
 
-    if (key !== 'gefaengnis_aktivitaeten') {
+    if (key !== 'gefaengnis_aktivitaeten' && !skipDeletes) {
       for (const serverItem of currentServerData) {
         const stillExists = localData.find(l => l.id === serverItem.id);
         if (!stillExists) {
@@ -600,8 +623,16 @@ async function reloadDataFromServer() {
       'gefaengnis_antraege',
       JSON.stringify(mergeAntraegeArraysAfterFetch(prevAntraegeReload, antraege))
     );
-    originalSetItem('gefaengnis_aufgaben', JSON.stringify(aufgaben));
-    originalSetItem('gefaengnis_notifications', JSON.stringify(notifications));
+    const prevAufgabenReload = JSON.parse(localStorage.getItem('gefaengnis_aufgaben') || '[]');
+    originalSetItem(
+      'gefaengnis_aufgaben',
+      JSON.stringify(mergeAntragArraysByIdOrContent(prevAufgabenReload, aufgaben))
+    );
+    const prevNotificationsReload = JSON.parse(localStorage.getItem('gefaengnis_notifications') || '[]');
+    originalSetItem(
+      'gefaengnis_notifications',
+      JSON.stringify(mergeAntragArraysByIdOrContent(prevNotificationsReload, notifications))
+    );
     const prevAktivReload = JSON.parse(localStorage.getItem('gefaengnis_aktivitaeten') || '[]');
     originalSetItem(
       'gefaengnis_aktivitaeten',
