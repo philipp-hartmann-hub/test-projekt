@@ -951,7 +951,7 @@
         el.innerHTML = '<p class="empty-hint">Antragsarten konnten nicht geladen werden. Bitte Seite neu laden.</p>';
         return;
       }
-      el.innerHTML = renderFn(inputName, selectedValue, onChangeHandler);
+      el.innerHTML = renderFn(inputName, selectedValue);
       const initFn =
         typeof initAntragTypePickerAccordion === 'function'
           ? initAntragTypePickerAccordion
@@ -1218,8 +1218,6 @@
     populateMonatSelect('entwurfMonatSelect');
     populateMonatSelect('editMonatSelect');
     initLangzeitBesuchForm('', null);
-    mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
-    mountAntragTypePicker('entwurfAntragTypePicker', 'entwurfType', 'teilhabegeld', 'toggleEntwurfFields');
     window.addEventListener('dataSyncLoaded', populateUserSelect);
     window.addEventListener('dataReloaded', populateUserSelect);
     window.addEventListener('dataSyncLoaded', populateHeaderUserSwitch);
@@ -2375,7 +2373,11 @@
     }
 
     function getNewAntragData() {
-      const type = document.querySelector('input[name="antragType"]:checked').value;
+      const selectedType = document.querySelector('input[name="antragType"]:checked');
+      if (!selectedType) {
+        return { type: null, data: {}, valid: false, error: 'Bitte wählen Sie eine Antragsart aus.' };
+      }
+      const type = selectedType.value;
       
       if (type === 'teilhabegeld') {
         const monat = document.getElementById('monatSelect').value;
@@ -2616,6 +2618,14 @@
       }
     }
 
+    function setAntragTypePickerSelection(containerId, inputName, typeValue) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.querySelectorAll(`input[name="${inputName}"]`).forEach((radio) => {
+        radio.checked = radio.value === typeValue;
+      });
+    }
+
     function resetNewAntragForm() {
       populateMonatSelect('monatSelect');
       const monatSelect = document.getElementById('monatSelect');
@@ -2633,7 +2643,11 @@
       });
       const eigentumBegr = document.getElementById('eigentumBegruendung');
       if (eigentumBegr) eigentumBegr.value = '';
-      mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
+      if (!document.querySelector('#newAntragTypePicker input[name="antragType"]')) {
+        mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
+      } else {
+        setAntragTypePickerSelection('newAntragTypePicker', 'antragType', 'teilhabegeld');
+      }
       const eigentumRadio = document.querySelector('input[name="eigentumAktion"][value="aufstocken"]');
       if (eigentumRadio) eigentumRadio.checked = true;
       toggleAntragFields();
@@ -2644,6 +2658,10 @@
     window.toggleEntwurfFields = toggleEntwurfFields;
     window.resetNewAntragForm = resetNewAntragForm;
     window.mountAntragTypePicker = mountAntragTypePicker;
+    window.setAntragTypePickerSelection = setAntragTypePickerSelection;
+
+    mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
+    mountAntragTypePicker('entwurfAntragTypePicker', 'entwurfType', 'teilhabegeld', 'toggleEntwurfFields');
 
     // ============================================
     // ENTWÜRFE

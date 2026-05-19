@@ -4926,16 +4926,15 @@ function _getAntragTypLabelForPicker(type) {
   return fallback[type] || type;
 }
 
-function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
+function renderAntragTypePickerHtml(inputName, selectedValue) {
   const selected = selectedValue || 'teilhabegeld';
-  const onChange = onChangeHandler ? ` onchange="${onChangeHandler}()"` : '';
   return `<div class="antrag-type-flat-list">${ANTRAG_TYPE_GRUPPEN.map((gruppe) => {
     const options = gruppe.typen
       .map((type) => {
         const label = _getAntragTypLabelForPicker(type);
         const checked = type === selected ? ' checked' : '';
         return `<label class="radio-option">
-          <input type="radio" name="${inputName}" value="${type}"${checked}${onChange}>
+          <input type="radio" name="${inputName}" value="${type}"${checked}>
           <span class="radio-label">${label}</span>
         </label>`;
       })
@@ -4947,18 +4946,25 @@ function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
   }).join('')}</div>`;
 }
 
+function _resolveAntragTypePickerHandler(onChangeHandler) {
+  if (typeof onChangeHandler === 'function') return onChangeHandler;
+  if (typeof onChangeHandler === 'string' && typeof window[onChangeHandler] === 'function') {
+    return window[onChangeHandler];
+  }
+  return null;
+}
+
 function initAntragTypePickerAccordion(containerId, inputName, onChangeHandler) {
   const container = document.getElementById(containerId);
   if (!container || !onChangeHandler) return;
-  const handler =
-    typeof window[onChangeHandler] === 'function'
-      ? window[onChangeHandler]
-      : typeof window[onChangeHandler] === 'undefined' && typeof globalThis[onChangeHandler] === 'function'
-        ? globalThis[onChangeHandler]
-        : null;
-  if (!handler) return;
-  container.querySelectorAll(`input[name="${inputName}"]`).forEach((radio) => {
-    radio.addEventListener('change', () => handler());
+  const boundKey = `antragPicker:${inputName}`;
+  if (container.dataset.antragPickerBound === boundKey) return;
+  container.dataset.antragPickerBound = boundKey;
+  container.addEventListener('change', (ev) => {
+    const input = ev.target;
+    if (!input || input.name !== inputName || input.type !== 'radio') return;
+    const handler = _resolveAntragTypePickerHandler(onChangeHandler);
+    if (handler) handler();
   });
 }
 
