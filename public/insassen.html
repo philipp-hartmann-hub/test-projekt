@@ -137,7 +137,7 @@
 
         <!-- Neuer Antrag Button -->
         <div class="action-bar">
-          <button class="btn btn-primary" onclick="openModal('newAntragModal')">
+          <button class="btn btn-primary" onclick="openNewAntragModal()">
             + Neuer Antrag
           </button>
         </div>
@@ -215,6 +215,7 @@
       <div class="modal-body">
         <div class="form-group">
           <label>Antragsart</label>
+          <p class="section-hint" style="margin-top: 0.25rem;">Bitte wählen Sie zuerst die gewünschte Antragsart.</p>
           <div id="newAntragTypePicker" class="antrag-type-picker"></div>
         </div>
 
@@ -2582,6 +2583,11 @@
       
       // Hinweis anzeigen
       showAlert('Entwurf wurde gespeichert! Sie finden ihn in der rechten Spalte.');
+    }
+
+    function openNewAntragModal() {
+      resetNewAntragForm();
+      openModal('newAntragModal');
     }
 
     function resetNewAntragForm() {

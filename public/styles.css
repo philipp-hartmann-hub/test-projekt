@@ -4851,6 +4851,35 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   max-height: min(52vh, 420px);
 }
 
+.antrag-type-flat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: inherit;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.antrag-type-group-block {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  padding: 0.65rem 0.85rem 0.75rem;
+}
+
+.antrag-type-group-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.antrag-type-group-options {
+  gap: 0.35rem;
+}
+
 .antrag-type-accordion {
   display: flex;
   flex-direction: column;

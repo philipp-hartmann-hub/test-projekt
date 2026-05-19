@@ -4908,70 +4908,53 @@ function getAntragTypeFilterChips() {
   ];
 }
 
+function _getAntragTypLabelForPicker(type) {
+  if (typeof antragSystem !== 'undefined' && antragSystem && typeof antragSystem.getAntragTypLabel === 'function') {
+    return antragSystem.getAntragTypLabel(type);
+  }
+  const fallback = {
+    teilhabegeld: 'Teilhabegeld',
+    eigentum: 'Eigentum in der Kammer',
+    'beratung-unterstuetzung': 'Beratungs- und Unterstützungsleistungen',
+    gespraechstermin: 'Gesprächstermine',
+    'gesundheit-medizin': 'Gesundheit: Termin medizinischer Dienst',
+    'freizeit-weiterbildung': 'Freizeitaktivitäten inkl. Weiterbildungskosten',
+    'besuch-langzeit': 'Langzeitbesuch (Genehmigung)',
+    'besuch-termin': 'Besuchstermin',
+    'besuch-video': 'Videobesuch'
+  };
+  return fallback[type] || type;
+}
+
 function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
   const selected = selectedValue || 'teilhabegeld';
   const onChange = onChangeHandler ? ` onchange="${onChangeHandler}()"` : '';
-  return `<div class="antrag-type-accordion">${ANTRAG_TYPE_GRUPPEN.map((gruppe) => {
-    const hasSelected = gruppe.typen.includes(selected);
-    const expanded = hasSelected ? ' expanded' : '';
-    const selectedLabel = hasSelected ? antragSystem.getAntragTypLabel(selected) : '';
-    const hint = hasSelected
-      ? selectedLabel
-      : `${gruppe.typen.length} ${gruppe.typen.length === 1 ? 'Antragsart' : 'Antragsarten'}`;
-    const options = gruppe.typen.map((type) => {
-      const label = antragSystem.getAntragTypLabel(type);
-      const checked = type === selected ? ' checked' : '';
-      return `<label class="radio-option">
+  return `<div class="antrag-type-flat-list">${ANTRAG_TYPE_GRUPPEN.map((gruppe) => {
+    const options = gruppe.typen
+      .map((type) => {
+        const label = _getAntragTypLabelForPicker(type);
+        const checked = type === selected ? ' checked' : '';
+        return `<label class="radio-option">
           <input type="radio" name="${inputName}" value="${type}"${checked}${onChange}>
           <span class="radio-label">${label}</span>
         </label>`;
-    }).join('');
-    return `<div class="antrag-type-accordion-item${expanded}" data-gruppe="${gruppe.id}">
-        <button type="button" class="antrag-type-accordion-trigger" aria-expanded="${hasSelected ? 'true' : 'false'}">
-          <span class="antrag-type-accordion-heading">
-            <span class="antrag-type-accordion-title">${gruppe.titel}</span>
-            <span class="antrag-type-accordion-hint">${hint}</span>
-          </span>
-          <span class="antrag-type-accordion-icon" aria-hidden="true"></span>
-        </button>
-        <div class="antrag-type-accordion-panel">
-          <div class="radio-group">${options}</div>
-        </div>
-      </div>`;
+      })
+      .join('');
+    return `<div class="antrag-type-group-block" data-gruppe="${gruppe.id}">
+      <p class="antrag-type-group-title">${gruppe.titel}</p>
+      <div class="radio-group antrag-type-group-options">${options}</div>
+    </div>`;
   }).join('')}</div>`;
 }
 
 function initAntragTypePickerAccordion(containerId, inputName, onChangeHandler) {
   const container = document.getElementById(containerId);
-  if (!container) return;
-
-  const items = container.querySelectorAll('.antrag-type-accordion-item');
-
-  const setExpanded = (item, expanded) => {
-    if (!item) return;
-    item.classList.toggle('expanded', expanded);
-    const trigger = item.querySelector('.antrag-type-accordion-trigger');
-    if (trigger) trigger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-  };
-
-  items.forEach((item) => {
-    const trigger = item.querySelector('.antrag-type-accordion-trigger');
-    if (!trigger) return;
-    trigger.addEventListener('click', () => {
-      const willExpand = !item.classList.contains('expanded');
-      items.forEach((other) => setExpanded(other, false));
-      setExpanded(item, willExpand);
-    });
-  });
-
+  if (!container || !onChangeHandler) return;
   container.querySelectorAll(`input[name="${inputName}"]`).forEach((radio) => {
     radio.addEventListener('change', () => {
-      const parent = radio.closest('.antrag-type-accordion-item');
-      if (!parent) return;
-      items.forEach((other) => setExpanded(other, false));
-      setExpanded(parent, true);
-      const hint = parent.querySelector('.antrag-type-accordion-hint');
-      if (hint) hint.textContent = antragSystem.getAntragTypLabel(radio.value);
+      if (typeof window[onChangeHandler] === 'function') {
+        window[onChangeHandler]();
+      }
     });
   });
 }
