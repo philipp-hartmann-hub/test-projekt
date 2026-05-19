@@ -518,9 +518,9 @@
         </div>
       </div>
       <div class="modal-footer modal-footer-triple">
-        <button type="button" class="btn btn-secondary" data-action="cancel-new-antrag" onclick="closeModal('newAntragModal')">Abbrechen</button>
-        <button type="button" class="btn btn-outline" data-action="draft-new-antrag" onclick="saveAsEntwurf()">Als Entwurf speichern</button>
-        <button type="button" class="btn btn-primary" data-action="submit-new-antrag" onclick="submitNewAntrag()">Einreichen</button>
+        <button type="button" class="btn btn-secondary" data-action="cancel-new-antrag">Abbrechen</button>
+        <button type="button" class="btn btn-outline" data-action="draft-new-antrag">Als Entwurf speichern</button>
+        <button type="button" class="btn btn-primary" data-action="submit-new-antrag">Einreichen</button>
       </div>
     </div>
   </div>
@@ -960,10 +960,36 @@
     </div>
   </div>
 
-  <script src="data-sync.js?v=20260519-modal"></script>
-  <script src="app.js?v=20260519-modal"></script>
+  <script src="data-sync.js?v=20260519-submit"></script>
+  <script src="app.js?v=20260519-submit"></script>
   <script>
     let currentSession = null;
+
+    function getInsasseSession() {
+      if (currentSession && currentSession.type === 'insasse') return currentSession;
+      if (typeof sessionManager !== 'undefined' && sessionManager.getSession) {
+        const s = sessionManager.getSession();
+        if (s && s.type === 'insasse') {
+          currentSession = s;
+          return s;
+        }
+      }
+      return null;
+    }
+
+    function insasseHinweis(message, title) {
+      const text = message || 'Hinweis';
+      if (typeof showAlert === 'function') {
+        try {
+          const p = showAlert(text, title);
+          if (p && typeof p.catch === 'function') p.catch(() => alert(text));
+          return;
+        } catch (e) {
+          console.warn('showAlert fehlgeschlagen:', e);
+        }
+      }
+      alert(text);
+    }
 
     // Statusanzeige (nur Deutsch)
     function getStatusText(status) {
@@ -2472,7 +2498,8 @@
           return { type, data: { monat }, valid: false, error: getErlaubteMonateHinweis() };
         }
         // Prüfen ob bereits ein Antrag für diesen Monat existiert
-        if (antragSystem.hatTeilhabegeldAntragFuerMonat(currentSession.userId, monat)) {
+        const session = getInsasseSession();
+        if (session && antragSystem.hatTeilhabegeldAntragFuerMonat(session.userId, monat)) {
           const monatFormatiert = new Date(monat + '-01').toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
           return { type, data: { monat }, valid: false, error: `Sie haben bereits einen Teilhabegeld-Antrag für ${monatFormatiert} gestellt. Pro Monat ist nur ein Antrag möglich.` };
         }
@@ -2529,180 +2556,88 @@
     }
 
     async function submitNewAntrag() {
-      if (!currentSession) return;
-      try {
-      const { type, data, valid, error } = getNewAntragData();
-      
-      if (!valid) {
-        showAlert(error);
+      const session = getInsasseSession();
+      const submitBtn = document.querySelector('#newAntragModal [data-action="submit-new-antrag"]');
+      if (!session) {
+        insasseHinweis('Bitte melden Sie sich erneut an.');
         return;
       }
+      if (submitBtn && submitBtn.disabled) return;
 
-      if (type === 'teilhabegeld') {
-        const einkommenCheck = validateTeilhabegeldEinkommenSubmit('');
-        if (!einkommenCheck.valid) {
-          showAlert(einkommenCheck.error);
+      const prevLabel = submitBtn ? submitBtn.textContent : '';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Wird eingereicht…';
+      }
+
+      try {
+        const { type, data, valid, error } = getNewAntragData();
+        if (!valid) {
+          insasseHinweis(error || 'Bitte prüfen Sie Ihre Eingaben.');
           return;
         }
-        Object.assign(data, {
-          keineEinkuenfteAusserhalb: einkommenCheck.keineEinkuenfteAusserhalb,
-          einkuenfteAusserhalb: einkommenCheck.einkuenfteAusserhalb
-        });
-      }
-      
-      var syncState = { synchronisiert: false }; // Objekt, damit in allen Code-Pfaden und bei Cache gültig
-      
-      const antrag = antragSystem.createAntrag(type, data, currentSession, false);
-      console.log('[Insassen] Antrag erstellt:', antrag.id, antrag.antragsNummer);
-      
-      // Warten kurz, damit localStorage.setItem Zeit hat zu syncen
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Explizit synchronisieren mit Verifikation
-      if (window.DataSync && window.DataSync.isConnected()) {
-        console.log('[Insassen] Synchronisiere Antrag explizit mit Server...');
-        const base = window.location.origin + '/api';
-        let retries = 0;
-        const maxRetries = 5;
-        
-        while (!syncState.synchronisiert && retries < maxRetries) {
-          try {
-            // 1. Prüfe ob Antrag bereits auf Server existiert
-            const currentServerData = await fetch(base + '/antraege', {
-              headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-            }).then(r => {
-              if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
-              return r.json();
-            });
-            
-            const existsOnServer = currentServerData.find(s => s.id === antrag.id);
-            
-            if (!existsOnServer) {
-              console.log('[Insassen] Antrag noch nicht auf Server, sende POST...');
-              
-              // 2. POST-Anfrage senden
-              const postResponse = await fetch(base + '/antraege', {
-                method: 'POST',
-                headers: { 
-                  'Content-Type': 'application/json',
-                  'Cache-Control': 'no-cache',
-                  'Pragma': 'no-cache'
-                },
-                body: JSON.stringify(antrag)
-              });
-              
-              if (!postResponse.ok) {
-                var errText = await postResponse.text();
-                var detail = '';
-                try {
-                  var errBody = JSON.parse(errText);
-                  detail = errBody.detail || errBody.error || '';
-                } catch (e) { detail = errText.slice(0, 200); }
-                if (!detail) detail = postResponse.statusText;
-                throw new Error('HTTP ' + postResponse.status + ': ' + detail);
-              }
-              
-              const serverAntrag = await postResponse.json();
-              console.log('[Insassen] POST erfolgreich, Server-Antrag:', serverAntrag.id);
-              
-              // 3. Verifikation: Prüfe ob Antrag wirklich auf Server gespeichert wurde
-              await new Promise(resolve => setTimeout(resolve, 500 + (retries * 200))); // Zunehmende Verzögerung
-              
-              const verifyResponse = await fetch(base + '/antraege/' + antrag.id, {
-                headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-              });
-              
-              if (verifyResponse.ok) {
-                const verifyAntrag = await verifyResponse.json();
-                if (verifyAntrag.id === antrag.id) {
-                  syncState.synchronisiert = true;
-                  console.log('[Insassen] ✓ Antrag erfolgreich synchronisiert und verifiziert');
-                  
-                  // Aktualisiere lokale Daten mit Server-Daten (falls Server Änderungen gemacht hat)
-                  const index = antragSystem.antraege.findIndex(a => a.id === antrag.id);
-                  if (index !== -1) {
-                    Object.assign(antragSystem.antraege[index], verifyAntrag);
-                    antragSystem.saveAntraege();
-                    if (typeof window.reloadDataFromStorage === 'function') {
-                      window.reloadDataFromStorage();
-                    }
-                  }
-                } else {
-                  retries++;
-                  console.warn('[Insassen] Verifikation fehlgeschlagen, versuche erneut...', retries);
-                }
-              } else {
-                retries++;
-                console.warn('[Insassen] Verifikations-Request fehlgeschlagen, versuche erneut...', retries);
-              }
-            } else {
-              console.log('[Insassen] Antrag bereits auf Server vorhanden');
-              syncState.synchronisiert = true;
-              
-              // Aktualisiere lokale Daten mit Server-Daten
-              const serverAntrag = existsOnServer;
-              const index = antragSystem.antraege.findIndex(a => a.id === antrag.id);
-              if (index !== -1) {
-                Object.assign(antragSystem.antraege[index], serverAntrag);
-                antragSystem.saveAntraege();
-                if (typeof window.reloadDataFromStorage === 'function') {
-                  window.reloadDataFromStorage();
-                }
-              }
-            }
-          } catch (e) {
-            retries++;
-            console.warn(`[Insassen] Synchronisations-Fehler (Versuch ${retries}/${maxRetries}):`, e.message);
-            if (retries >= maxRetries) {
-              console.error('[Insassen] ✗ Antrag konnte nicht synchronisiert werden nach', maxRetries, 'Versuchen');
-              showAlert('Warnung: Der Antrag wurde lokal gespeichert, konnte aber nicht mit dem Server synchronisiert werden. Bitte versuchen Sie es später erneut.');
-            } else {
-              // Warte vor dem nächsten Versuch
-              await new Promise(resolve => setTimeout(resolve, 1000 * retries));
-            }
+
+        if (type === 'teilhabegeld') {
+          const einkommenCheck = validateTeilhabegeldEinkommenSubmit('');
+          if (!einkommenCheck.valid) {
+            insasseHinweis(einkommenCheck.error);
+            return;
           }
+          Object.assign(data, {
+            keineEinkuenfteAusserhalb: einkommenCheck.keineEinkuenfteAusserhalb,
+            einkuenfteAusserhalb: einkommenCheck.einkuenfteAusserhalb
+          });
         }
-      } else {
-        console.warn('[Insassen] Server nicht verbunden, Antrag nur lokal gespeichert');
-      }
-      
-      closeModal('newAntragModal');
-      renderAntraege();
-      resetNewAntragForm();
-      
-      // Erfolgsmeldung (syncState verhindert ReferenceError bei gecachtem Alt-Code)
-      if (syncState && syncState.synchronisiert) {
-        showAlert('Antrag erfolgreich eingereicht und synchronisiert!');
-      } else {
-        showAlert('Antrag wurde eingereicht und lokal gespeichert. Die Synchronisation mit dem Server steht noch aus oder ist fehlgeschlagen.');
-      }
+
+        const antrag = antragSystem.createAntrag(type, data, session, false);
+        console.log('[Insassen] Antrag erstellt:', antrag.id, antrag.antragsNummer);
+
+        closeModal('newAntragModal');
+        renderAntraege();
+        resetNewAntragForm();
+        insasseHinweis('Antrag wurde eingereicht.');
+
+        if (window.DataSync && typeof window.DataSync.syncAntragToServer === 'function') {
+          window.DataSync.syncAntragToServer(antrag.id).then((ok) => {
+            if (ok) renderAntraege();
+          }).catch((e) => console.warn('[Insassen] Hintergrund-Sync:', e));
+        }
       } catch (e) {
         console.error('submitNewAntrag:', e);
-        showAlert('Antrag konnte nicht eingereicht werden: ' + (e.message || e));
+        insasseHinweis('Antrag konnte nicht eingereicht werden: ' + (e.message || e));
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = prevLabel || 'Einreichen';
+        }
       }
     }
 
     function saveAsEntwurf() {
-      if (!currentSession) return;
-      try {
-      const { type, data, valid, error } = getNewAntragData();
-      if (!type) {
-        showAlert(error || 'Bitte wählen Sie eine Antragsart aus.');
+      const session = getInsasseSession();
+      if (!session) {
+        insasseHinweis('Bitte melden Sie sich erneut an.');
         return;
       }
-      
-      // Bei Entwürfen ist keine Validierung nötig - kann unvollständig sein
-      antragSystem.createAntrag(type, data || {}, currentSession, true);
-      
-      closeModal('newAntragModal');
-      renderAntraege();
-      resetNewAntragForm();
-      
-      // Hinweis anzeigen
-      showAlert('Entwurf wurde gespeichert! Sie finden ihn in der rechten Spalte.');
+      try {
+        const { type, data, valid, error } = getNewAntragData();
+        if (!type) {
+          insasseHinweis(error || 'Bitte wählen Sie eine Antragsart aus.');
+          return;
+        }
+
+        const antrag = antragSystem.createAntrag(type, data || {}, session, true);
+        closeModal('newAntragModal');
+        renderAntraege();
+        resetNewAntragForm();
+        insasseHinweis('Entwurf wurde gespeichert! Sie finden ihn in der rechten Spalte.');
+
+        if (window.DataSync && typeof window.DataSync.syncAntragToServer === 'function') {
+          window.DataSync.syncAntragToServer(antrag.id).catch(() => {});
+        }
       } catch (e) {
         console.error('saveAsEntwurf:', e);
-        showAlert('Entwurf konnte nicht gespeichert werden: ' + (e.message || e));
+        insasseHinweis('Entwurf konnte nicht gespeichert werden: ' + (e.message || e));
       }
     }
 
@@ -2710,16 +2645,32 @@
       const overlay = document.getElementById('newAntragModal');
       if (!overlay || overlay.dataset.footerBound === '1') return;
       overlay.dataset.footerBound = '1';
-      const panel = overlay.querySelector('.modal');
-      if (!panel) return;
-      panel.addEventListener('click', (ev) => {
-        const btn = ev.target.closest('button[data-action]');
-        if (!btn) return;
-        const action = btn.getAttribute('data-action');
-        if (action === 'cancel-new-antrag') closeModal('newAntragModal');
-        else if (action === 'draft-new-antrag') saveAsEntwurf();
-        else if (action === 'submit-new-antrag') submitNewAntrag();
-      });
+
+      const cancelBtn = overlay.querySelector('[data-action="cancel-new-antrag"]');
+      const draftBtn = overlay.querySelector('[data-action="draft-new-antrag"]');
+      const submitBtn = overlay.querySelector('[data-action="submit-new-antrag"]');
+
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          closeModal('newAntragModal');
+        });
+      }
+      if (draftBtn) {
+        draftBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          saveAsEntwurf();
+        });
+      }
+      if (submitBtn) {
+        submitBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          submitNewAntrag();
+        });
+      }
     }
 
     function openNewAntragModal() {
@@ -2770,9 +2721,13 @@
       toggleAntragFields();
     }
 
+    bindNewAntragModalFooter();
+
     window.openNewAntragModal = openNewAntragModal;
     window.submitNewAntrag = submitNewAntrag;
     window.saveAsEntwurf = saveAsEntwurf;
+    window.getInsasseSession = getInsasseSession;
+    window.insasseHinweis = insasseHinweis;
     window.toggleAntragFields = toggleAntragFields;
     window.toggleEntwurfFields = toggleEntwurfFields;
     window.resetNewAntragForm = resetNewAntragForm;
@@ -3507,6 +3462,6 @@
       renderAntraege();
     }
   </script>
-  <script src="insassen-picker-boot.js?v=20260519-modal"></script>
+  <script src="insassen-picker-boot.js?v=20260519-submit"></script>
 </body>
 </html>
