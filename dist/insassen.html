@@ -228,23 +228,23 @@
               <div class="antrag-type-group-block" data-gruppe="beratung-gesundheit">
                 <p class="antrag-type-group-title">Beratung, Gespräche &amp; Gesundheit</p>
                 <div class="radio-group antrag-type-group-options">
-                  <label class="radio-option"><input type="radio" name="antragType" value="beratung-unterstuetzung"><span class="radio-label">Beratungs- und Unterstützungsleistungen</span></label>
-                  <label class="radio-option"><input type="radio" name="antragType" value="gespraechstermin"><span class="radio-label">Gesprächstermine</span></label>
-                  <label class="radio-option"><input type="radio" name="antragType" value="gesundheit-medizin"><span class="radio-label">Gesundheit: Termin medizinischer Dienst</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="beratung-unterstuetzung" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Beratungs- und Unterstützungsleistungen</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="gespraechstermin" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Gesprächstermine</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="gesundheit-medizin" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Gesundheit: Termin medizinischer Dienst</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="freizeit">
                 <p class="antrag-type-group-title">Freizeit &amp; Weiterbildung</p>
                 <div class="radio-group antrag-type-group-options">
-                  <label class="radio-option"><input type="radio" name="antragType" value="freizeit-weiterbildung"><span class="radio-label">Freizeitaktivitäten inkl. Weiterbildungskosten</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="freizeit-weiterbildung" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Freizeitaktivitäten inkl. Weiterbildungskosten</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="besuche">
                 <p class="antrag-type-group-title">Besuche</p>
                 <div class="radio-group antrag-type-group-options">
-                  <label class="radio-option"><input type="radio" name="antragType" value="besuch-langzeit"><span class="radio-label">Langzeitbesuch (Genehmigung)</span></label>
-                  <label class="radio-option"><input type="radio" name="antragType" value="besuch-termin"><span class="radio-label">Besuchstermin</span></label>
-                  <label class="radio-option"><input type="radio" name="antragType" value="besuch-video"><span class="radio-label">Videobesuch</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="besuch-langzeit" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Langzeitbesuch (Genehmigung)</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="besuch-termin" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Besuchstermin</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="besuch-video" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Videobesuch</span></label>
                 </div>
               </div>
             </div>
@@ -540,30 +540,30 @@
               <div class="antrag-type-group-block" data-gruppe="finanzen-unterbringung">
                 <p class="antrag-type-group-title">Finanzen &amp; Unterbringung</p>
                 <div class="radio-group antrag-type-group-options">
-                  <label class="radio-option"><input type="radio" name="entwurfType" value="teilhabegeld" checked><span class="radio-label">Teilhabegeld</span></label>
-                  <label class="radio-option"><input type="radio" name="entwurfType" value="eigentum"><span class="radio-label">Eigentum in der Kammer</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="teilhabegeld" checked><span class="radio-label">Teilhabegeld</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="eigentum"><span class="radio-label">Eigentum in der Kammer</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="beratung-gesundheit">
                 <p class="antrag-type-group-title">Beratung, Gespräche &amp; Gesundheit</p>
                 <div class="radio-group antrag-type-group-options">
-                  <label class="radio-option"><input type="radio" name="entwurfType" value="beratung-unterstuetzung"><span class="radio-label">Beratungs- und Unterstützungsleistungen</span></label>
-                  <label class="radio-option"><input type="radio" name="entwurfType" value="gespraechstermin"><span class="radio-label">Gesprächstermine</span></label>
-                  <label class="radio-option"><input type="radio" name="entwurfType" value="gesundheit-medizin"><span class="radio-label">Gesundheit: Termin medizinischer Dienst</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="beratung-unterstuetzung"><span class="radio-label">Beratungs- und Unterstützungsleistungen</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="gespraechstermin"><span class="radio-label">Gesprächstermine</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="gesundheit-medizin"><span class="radio-label">Gesundheit: Termin medizinischer Dienst</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="freizeit">
                 <p class="antrag-type-group-title">Freizeit &amp; Weiterbildung</p>
                 <div class="radio-group antrag-type-group-options">
-                  <label class="radio-option"><input type="radio" name="entwurfType" value="freizeit-weiterbildung"><span class="radio-label">Freizeitaktivitäten inkl. Weiterbildungskosten</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="freizeit-weiterbildung"><span class="radio-label">Freizeitaktivitäten inkl. Weiterbildungskosten</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="besuche">
                 <p class="antrag-type-group-title">Besuche</p>
                 <div class="radio-group antrag-type-group-options">
-                  <label class="radio-option"><input type="radio" name="entwurfType" value="besuch-langzeit"><span class="radio-label">Langzeitbesuch (Genehmigung)</span></label>
-                  <label class="radio-option"><input type="radio" name="entwurfType" value="besuch-termin"><span class="radio-label">Besuchstermin</span></label>
-                  <label class="radio-option"><input type="radio" name="entwurfType" value="besuch-video"><span class="radio-label">Videobesuch</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="besuch-langzeit"><span class="radio-label">Langzeitbesuch (Genehmigung)</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="besuch-termin"><span class="radio-label">Besuchstermin</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="besuch-video"><span class="radio-label">Videobesuch</span></label>
                 </div>
               </div>
             </div>
@@ -960,8 +960,8 @@
     </div>
   </div>
 
-  <script src="data-sync.js?v=20260519-picker"></script>
-  <script src="app.js?v=20260519-picker"></script>
+  <script src="data-sync.js?v=20260519-toggle"></script>
+  <script src="app.js?v=20260519-toggle"></script>
   <script>
     let currentSession = null;
 
@@ -1004,19 +1004,6 @@
     };
 
     function mountAntragTypePicker(containerId, inputName, selectedValue, onChangeHandler) {
-      if (typeof window.refreshInsassenAntragPickers === 'function') {
-        window.refreshInsassenAntragPickers();
-        if (typeof window.setAntragTypePickerSelection === 'function') {
-          window.setAntragTypePickerSelection(containerId, inputName, selectedValue || 'teilhabegeld');
-        }
-        if (inputName === 'antragType' && typeof window.toggleAntragFields === 'function') {
-          window.toggleAntragFields();
-        }
-        if (inputName === 'entwurfType' && typeof window.toggleEntwurfFields === 'function') {
-          window.toggleEntwurfFields();
-        }
-        return;
-      }
       const el = document.getElementById(containerId);
       if (!el) return;
       const renderFn =
@@ -1031,13 +1018,19 @@
         return;
       }
       try {
-        el.innerHTML = renderFn(inputName, selectedValue);
+        el.innerHTML = renderFn(inputName, selectedValue, onChangeHandler);
         const initFn =
           typeof initAntragTypePickerAccordion === 'function'
             ? initAntragTypePickerAccordion
             : window.initAntragTypePickerAccordion;
         if (typeof initFn === 'function') {
           initFn(containerId, inputName, onChangeHandler);
+        }
+        if (inputName === 'antragType' && typeof toggleAntragFields === 'function') {
+          toggleAntragFields();
+        }
+        if (inputName === 'entwurfType' && typeof toggleEntwurfFields === 'function') {
+          toggleEntwurfFields();
         }
       } catch (err) {
         console.error('mountAntragTypePicker', containerId, err);
@@ -2162,7 +2155,9 @@
     }
 
     function toggleAntragFields() {
-      const selected = document.querySelector('input[name="antragType"]:checked');
+      const selected =
+        document.querySelector('#newAntragTypePicker input[name="antragType"]:checked') ||
+        document.querySelector('input[name="antragType"]:checked');
       if (!selected) return;
       const type = selected.value;
       document.getElementById('teilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
@@ -2183,9 +2178,12 @@
         setLangzeitDatumGrenzen('');
       }
     }
+    window.toggleAntragFields = toggleAntragFields;
 
     function toggleEntwurfFields() {
-      const selected = document.querySelector('input[name="entwurfType"]:checked');
+      const selected =
+        document.querySelector('#entwurfAntragTypePicker input[name="entwurfType"]:checked') ||
+        document.querySelector('input[name="entwurfType"]:checked');
       if (!selected) return;
       const type = selected.value;
       document.getElementById('entwurfTeilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
@@ -2206,6 +2204,7 @@
         setLangzeitDatumGrenzen('entwurf');
       }
     }
+    window.toggleEntwurfFields = toggleEntwurfFields;
 
     function readFreizeitWeiterbildungForm(prefix) {
       const aktivitaetEl = document.getElementById(prefix ? 'entwurfFreizeitAktivitaet' : 'freizeitAktivitaet');
@@ -2456,7 +2455,9 @@
     }
 
     function getNewAntragData() {
-      const selectedType = document.querySelector('input[name="antragType"]:checked');
+      const selectedType =
+        document.querySelector('#newAntragTypePicker input[name="antragType"]:checked') ||
+        document.querySelector('input[name="antragType"]:checked');
       if (!selectedType) {
         return { type: null, data: {}, valid: false, error: 'Bitte wählen Sie eine Antragsart aus.' };
       }
@@ -2691,9 +2692,6 @@
 
     function openNewAntragModal() {
       openModal('newAntragModal');
-      if (typeof window.refreshInsassenAntragPickers === 'function') {
-        window.refreshInsassenAntragPickers();
-      }
       try {
         resetNewAntragForm();
       } catch (e) {
@@ -3473,6 +3471,6 @@
       renderAntraege();
     }
   </script>
-  <script src="insassen-picker-boot.js?v=20260519-picker"></script>
+  <script src="insassen-picker-boot.js?v=20260519-toggle"></script>
 </body>
 </html>

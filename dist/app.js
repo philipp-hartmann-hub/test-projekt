@@ -4926,15 +4926,18 @@ function _getAntragTypLabelForPicker(type) {
   return fallback[type] || type;
 }
 
-function renderAntragTypePickerHtml(inputName, selectedValue) {
+function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
   const selected = selectedValue || 'teilhabegeld';
+  const handlerAttr = onChangeHandler
+    ? ` onchange="typeof window['${onChangeHandler}']==='function'&&window['${onChangeHandler}']()"`
+    : '';
   return `<div class="antrag-type-flat-list">${ANTRAG_TYPE_GRUPPEN.map((gruppe) => {
     const options = gruppe.typen
       .map((type) => {
         const label = _getAntragTypLabelForPicker(type);
         const checked = type === selected ? ' checked' : '';
         return `<label class="radio-option">
-          <input type="radio" name="${inputName}" value="${type}"${checked}>
+          <input type="radio" name="${inputName}" value="${type}"${checked}${handlerAttr}>
           <span class="radio-label">${label}</span>
         </label>`;
       })
@@ -4957,15 +4960,14 @@ function _resolveAntragTypePickerHandler(onChangeHandler) {
 function initAntragTypePickerAccordion(containerId, inputName, onChangeHandler) {
   const container = document.getElementById(containerId);
   if (!container || !onChangeHandler) return;
-  const boundKey = `antragPicker:${inputName}`;
-  if (container.dataset.antragPickerBound === boundKey) return;
-  container.dataset.antragPickerBound = boundKey;
-  container.addEventListener('change', (ev) => {
+  if (container._antragPickerChangeHandler) return;
+  container._antragPickerChangeHandler = (ev) => {
     const input = ev.target;
     if (!input || input.name !== inputName || input.type !== 'radio') return;
     const handler = _resolveAntragTypePickerHandler(onChangeHandler);
     if (handler) handler();
-  });
+  };
+  container.addEventListener('change', container._antragPickerChangeHandler);
 }
 
 if (typeof window !== 'undefined') {
