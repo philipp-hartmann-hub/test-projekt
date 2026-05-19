@@ -6457,6 +6457,9 @@ ${t('action.archive')}
       toggleTvExtDurchfuehrung();
       toggleTvTeilnehmerArt();
       toggleTvZuweisungTyp();
+      if (typeof window.reloadDataFromStorage === 'function') {
+        window.reloadDataFromStorage();
+      }
       openModal('terminVereinbarenModal');
     }
 
@@ -6517,13 +6520,20 @@ ${t('action.archive')}
         resetTvExtSlots();
         return;
       }
+      if (typeof window.reloadDataFromStorage === 'function') {
+        window.reloadDataFromStorage();
+      }
       const slots = externePartnerSystem.getVerfuegbareSlots(partnerId, serviceId, { tage: 56 });
+      if (selectedKey && !slots.some((s) => s.slotKey === selectedKey)) {
+        document.getElementById('tvExtSlotKey').value = '';
+      }
       if (slots.length === 0) {
         box.innerHTML = '<p class="empty-hint">Keine freien Terminslots in den nächsten Wochen.</p>';
         return;
       }
+      const activeKey = document.getElementById('tvExtSlotKey').value;
       box.innerHTML = slots.map((s) => `
-        <button type="button" class="termin-slot-btn ${s.slotKey === selectedKey ? 'selected' : ''}"
+        <button type="button" class="termin-slot-btn ${s.slotKey === activeKey ? 'selected' : ''}"
                 onclick="selectTvExtSlot('${s.slotKey}')">${s.label}</button>
       `).join('');
     }

@@ -1954,6 +1954,27 @@ function minutenZuZeit(minuten) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+function normalizeDatumIso(datum) {
+  if (!datum) return '';
+  const s = String(datum);
+  return s.includes('T') ? s.split('T')[0] : s.slice(0, 10);
+}
+
+function normalizeUhrzeit(zeit) {
+  if (!zeit) return '00:00';
+  const parts = String(zeit).split(':');
+  const h = parseInt(parts[0], 10) || 0;
+  const m = parseInt(parts[1], 10) || 0;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function datumIsoLocal(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function generateTeamsMeetingLink() {
   const id = Date.now().toString(36);
   return `https://teams.microsoft.com/l/meetup-join/19%3ameeting-${id}-jvp/0?context={"Tid":"prototyp"}`;
@@ -2125,14 +2146,20 @@ class ExternePartnerSystem {
 
   isSlotBelegt(partnerId, datum, uhrzeit, dauerMinuten) {
     if (typeof terminSystem === 'undefined') return false;
-    const start = parseZeitZuMinuten(uhrzeit);
+    const normDatum = normalizeDatumIso(datum);
+    const start = parseZeitZuMinuten(normalizeUhrzeit(uhrzeit));
     const end = start + (dauerMinuten || 30);
     return terminSystem.termine.some((t) => {
-      if (t.typ !== 'vereinbarung' || t.teilnehmerArt !== 'extern') return false;
-      if (String(t.externPartnerId) !== String(partnerId)) return false;
-      if (t.datum !== datum) return false;
-      const tStart = parseZeitZuMinuten(t.uhrzeit);
-      const tEnd = tStart + (t.dauerMinuten || 30);
+      if (t.typ !== 'vereinbarung') return false;
+      const istExtern =
+        t.teilnehmerArt === 'extern' || t.externPartnerId || (t.externKontakt && t.externKontakt.id);
+      if (!istExtern) return false;
+      const tPartnerId = t.externPartnerId || t.externKontakt?.id;
+      if (!tPartnerId || String(tPartnerId) !== String(partnerId)) return false;
+      if (normalizeDatumIso(t.datum) !== normDatum) return false;
+      const tDauer = t.dauerMinuten || t.externKontakt?.dauerMinuten || 30;
+      const tStart = parseZeitZuMinuten(normalizeUhrzeit(t.uhrzeit));
+      const tEnd = tStart + tDauer;
       return start < tEnd && end > tStart;
     });
   }
@@ -2154,8 +2181,10 @@ class ExternePartnerSystem {
       const tag = new Date(ab);
       tag.setDate(tag.getDate() + d);
       const wd = tag.getDay();
-      const datumIso = tag.toISOString().split('T')[0];
-      const fenster = (partner.verfuegbarkeiten || []).filter((v) => v.wochentag === wd);
+      const datumIso = datumIsoLocal(tag);
+      const fenster = (partner.verfuegbarkeiten || []).filter(
+        (v) => parseInt(v.wochentag, 10) === wd
+      );
 
       fenster.forEach((fen) => {
         let cursor = parseZeitZuMinuten(fen.von);

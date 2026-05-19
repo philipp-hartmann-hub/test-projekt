@@ -125,7 +125,11 @@ async function loadInitialData() {
       'gefaengnis_aktivitaeten',
       JSON.stringify(mergeAktivitaetenArrays(prevAktivitaeten, aktivitaeten))
     );
-    localStorage.setItem('gefaengnis_termine', JSON.stringify(termine));
+    const prevTermineInit = JSON.parse(localStorage.getItem('gefaengnis_termine') || '[]');
+    localStorage.setItem(
+      'gefaengnis_termine',
+      JSON.stringify(mergeTermineArraysAfterFetch(prevTermineInit, termine))
+    );
 
     serverConnected = true;
     initialDataLoaded = true;
@@ -310,6 +314,29 @@ function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
  * Beim Neuladen vom Server: Anträge nicht blind ersetzen (Race mit Upload/Sync).
  * Pro ID: mergeAntragSnapshotAfterPut(lokal, Server) → dokumente/kommentare/weiterleitungen vereinigt.
  */
+/** Termine beim Server-Reload mit lokalen Daten vereinigen (verhindert verlorene Buchungen vor Sync-Ende). */
+function mergeTermineArraysAfterFetch(localArr, serverArr) {
+  const local = Array.isArray(localArr) ? localArr : [];
+  const server = Array.isArray(serverArr) ? serverArr : [];
+  const map = new Map();
+  const ts = (t) =>
+    new Date(t.erstelltAm || t.einladungVersendetAm || 0).getTime();
+  local.forEach((t) => {
+    if (t && t.id != null && String(t.id) !== '') map.set(String(t.id), t);
+  });
+  server.forEach((t) => {
+    if (!t || t.id == null || String(t.id) === '') return;
+    const id = String(t.id);
+    if (!map.has(id)) {
+      map.set(id, t);
+      return;
+    }
+    const prev = map.get(id);
+    map.set(id, ts(t) >= ts(prev) ? { ...prev, ...t } : { ...t, ...prev });
+  });
+  return Array.from(map.values());
+}
+
 function mergeAntraegeArraysAfterFetch(localArr, serverArr) {
   const local = Array.isArray(localArr) ? localArr : [];
   const server = Array.isArray(serverArr) ? serverArr : [];
@@ -580,7 +607,11 @@ async function reloadDataFromServer() {
       'gefaengnis_aktivitaeten',
       JSON.stringify(mergeAktivitaetenArrays(prevAktivReload, aktivitaeten))
     );
-    originalSetItem('gefaengnis_termine', JSON.stringify(termine));
+    const prevTermineReload = JSON.parse(localStorage.getItem('gefaengnis_termine') || '[]');
+    originalSetItem(
+      'gefaengnis_termine',
+      JSON.stringify(mergeTermineArraysAfterFetch(prevTermineReload, termine))
+    );
 
     const vorherAntraege = antragSystem ? antragSystem.antraege.length : 0;
     const vorherAufgaben = aufgabenSystem ? aufgabenSystem.aufgaben.length : 0;
