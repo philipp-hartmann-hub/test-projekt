@@ -102,17 +102,7 @@ async function loadInitialData() {
       apiCall('/termine')
     ]);
 
-    // Server-User auf Frontend-Format mappen (name/rolle -> vorname/nachname/type), falls noch nicht vorhanden
-    const usersFrontend = users.map(u => {
-      if (u.type !== undefined && u.vorname !== undefined) return u;
-      return {
-        ...u,
-        type: u.rolle === 'insasse' ? 'insasse' : 'mitarbeiter',
-        vorname: (u.name && u.name.split(' ')[0]) || '',
-        nachname: (u.name && u.name.split(' ').slice(1).join(' ')) || ''
-      };
-    });
-    localStorage.setItem('gefaengnis_users', JSON.stringify(usersFrontend));
+    const userMergeResult = storeMergedUsersFromServer(users);
     const prevAntraegeInit = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
     localStorage.setItem(
       'gefaengnis_antraege',
@@ -142,6 +132,10 @@ async function loadInitialData() {
     serverConnected = true;
     initialDataLoaded = true;
     console.log('Alle Daten vom Server geladen und in localStorage gespeichert');
+    if (userMergeResult.shouldPushToServer) {
+      console.log('[Sync] Lokale Benutzer ergänzen Server — Upload wird eingeplant.');
+      scheduleSyncToServer('gefaengnis_users');
+    }
     if (typeof window.reloadDataFromStorage === 'function') {
       window.reloadDataFromStorage();
     }
@@ -367,6 +361,76 @@ function mergeAntraegeArraysAfterFetch(localArr, serverArr) {
     else map.set(id, mergeAntragSnapshotAfterPut(map.get(id), a));
   });
   return Array.from(map.values());
+}
+
+function mapServerUserToFrontend(u) {
+  if (!u || typeof u !== 'object') return u;
+  if (u.type !== undefined && u.vorname !== undefined) return u;
+  return {
+    ...u,
+    type: u.rolle === 'insasse' ? 'insasse' : 'mitarbeiter',
+    vorname: (u.name && u.name.split(' ')[0]) || '',
+    nachname: (u.name && u.name.split(' ').slice(1).join(' ')) || ''
+  };
+}
+
+/** Benutzer nie blind durch Server-Seed ersetzen — lokale Konten bleiben erhalten. */
+function mergeUsersArraysAfterFetch(localArr, serverArr) {
+  const local = Array.isArray(localArr) ? localArr : [];
+  const server = Array.isArray(serverArr) ? serverArr : [];
+  if (server.length === 0 && local.length > 0) {
+    console.warn('[Sync] Server ohne Benutzer — lokale Benutzerliste bleibt erhalten.');
+    return local;
+  }
+  if (local.length === 0) return server;
+
+  const map = new Map();
+  const order = [];
+  const preserveKeys = ['password', 'username', 'vorname', 'nachname', 'insassenNummer', 'geburtsdatum', 'jva', 'jvas', 'station', 'rolle'];
+
+  function add(item, fromServer) {
+    if (!item || typeof item !== 'object' || item.id == null || String(item.id) === '') return;
+    const id = String(item.id);
+    if (map.has(id)) {
+      const prev = map.get(id);
+      const merged = { ...prev, ...item };
+      if (fromServer) {
+        preserveKeys.forEach((k) => {
+          if ((item[k] == null || item[k] === '') && prev[k] != null && prev[k] !== '') {
+            merged[k] = prev[k];
+          }
+        });
+      }
+      map.set(id, merged);
+    } else {
+      map.set(id, item);
+      order.push(id);
+    }
+  }
+
+  local.forEach((u) => add(u, false));
+  server.forEach((u) => add(u, true));
+  return order.map((id) => map.get(id));
+}
+
+function readLocalUsersArray() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem('gefaengnis_users') || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function storeMergedUsersFromServer(serverUsersRaw) {
+  const prevUsers = readLocalUsersArray();
+  const serverMapped = (Array.isArray(serverUsersRaw) ? serverUsersRaw : []).map(mapServerUserToFrontend);
+  const merged = mergeUsersArraysAfterFetch(prevUsers, serverMapped);
+  localStorage.setItem('gefaengnis_users', JSON.stringify(merged));
+  return {
+    merged,
+    shouldPushToServer: merged.length > serverMapped.length
+  };
 }
 
 // Liest localStorage erst beim Ausführen des Jobs (nicht den Wert vom setItem-Zeitpunkt).
@@ -605,19 +669,14 @@ async function reloadDataFromServer() {
       apiCall('/termine')
     ]);
 
-    // Server-User auf Frontend-Format mappen
-    const usersFrontend = users.map(u => {
-      if (u.type !== undefined && u.vorname !== undefined) return u;
-      return {
-        ...u,
-        type: u.rolle === 'insasse' ? 'insasse' : 'mitarbeiter',
-        vorname: (u.name && u.name.split(' ')[0]) || '',
-        nachname: (u.name && u.name.split(' ').slice(1).join(' ')) || ''
-      };
-    });
-    
-    // Daten in localStorage speichern (ohne Sync-Loop zu triggern)
-    originalSetItem('gefaengnis_users', JSON.stringify(usersFrontend));
+    const prevUsers = readLocalUsersArray();
+    const serverMapped = users.map(mapServerUserToFrontend);
+    const mergedUsers = mergeUsersArraysAfterFetch(prevUsers, serverMapped);
+    originalSetItem('gefaengnis_users', JSON.stringify(mergedUsers));
+    if (mergedUsers.length > serverMapped.length) {
+      console.log('[Sync] Nach Reload: lokale Benutzer zum Server hochladen…');
+      scheduleSyncToServer('gefaengnis_users');
+    }
     const prevAntraegeReload = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
     originalSetItem(
       'gefaengnis_antraege',
@@ -720,6 +779,7 @@ function _mergeBackupArray(key, existing, incoming) {
   const ex = Array.isArray(existing) ? existing : [];
   const inc = Array.isArray(incoming) ? incoming : [];
   if (key === 'gefaengnis_antraege') return mergeAntraegeArraysAfterFetch(ex, inc);
+  if (key === 'gefaengnis_users') return mergeUsersArraysAfterFetch(ex, inc);
   if (key === 'gefaengnis_aktivitaeten') return mergeAktivitaetenArrays(ex, inc);
   if (key === 'gefaengnis_termine') return mergeTermineArraysAfterFetch(ex, inc);
   return mergeAntragArraysByIdOrContent(ex, inc);

@@ -1277,21 +1277,11 @@ class UserSystem {
 
   ensureDefaultUsers() {
     if (!Array.isArray(this.users)) this.users = [];
-    const hasAdmin = this.users.some(u => u && u.username === 'admin');
-    if (this.users.length === 0 || !hasAdmin) {
-      if (this.users.length === 0) console.log('Keine Benutzer gefunden - erstelle Standardbenutzer...');
-      else console.log('Admin-Benutzer fehlt - ergänze Standardbenutzer...');
-      const defaults = this._getDefaultUsersList();
-      if (this.users.length === 0) {
-        defaults.forEach(u => this.users.push(u));
-      } else {
-        defaults.forEach(du => {
-          if (!this.users.some(u => u && u.username === du.username)) this.users.push(du);
-        });
-      }
-      this.saveUsers();
-      console.log('Anmeldung z.B. mit admin/admin, val1/val1, avd1/avd1, insasse1/insasse1');
-    }
+    if (this.users.length > 0) return;
+    console.log('Keine Benutzer gefunden - erstelle Standardbenutzer (nur leere Datenbank)...');
+    this._getDefaultUsersList().forEach((u) => this.users.push(u));
+    this.saveUsers();
+    console.log('Anmeldung z.B. mit admin/admin, val1/val1, avd1/avd1, insasse1/insasse1');
   }
 
   saveUsers() {
@@ -5297,8 +5287,6 @@ if (typeof window !== 'undefined') {
   window.seedDemoDatenIfEmpty = seedDemoDatenIfEmpty;
   window.entferneDemoDaten = entferneDemoDaten;
 }
-
-seedDemoDatenIfEmpty();
 
 if (typeof terminSystem !== 'undefined') {
   terminSystem.migrateInsasseTermine();
