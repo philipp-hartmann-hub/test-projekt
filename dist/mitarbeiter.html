@@ -906,20 +906,20 @@
           </div>
         </div>
         <div id="tvInternTerminFelder">
+        <p class="section-hint">Interne Terminbuchung: freien Slot wählen (Verfügbarkeiten pro Person bzw. aggregiert pro Gruppe, je 30 Min.).</p>
+        <div class="form-group">
+          <label>Verfügbarer Terminslot <span class="required">*</span></label>
+          <div id="tvInternSlots" class="termin-slot-list">
+            <p class="empty-hint">Bitte zuerst Zuweisung (Gruppe oder Person) wählen.</p>
+          </div>
+          <input type="hidden" id="tvInternSlotKey" value="">
+        </div>
         <div class="form-group">
           <label for="tvBetreff">Betreff des Termins <span class="required">*</span></label>
           <input type="text" id="tvBetreff" placeholder="z. B. Gespräch zur Entscheidung">
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="tvDatum">Datum <span class="required">*</span></label>
-            <input type="date" id="tvDatum">
-          </div>
-          <div class="form-group">
-            <label for="tvUhrzeit">Uhrzeit</label>
-            <input type="time" id="tvUhrzeit">
-          </div>
-        </div>
+        <input type="hidden" id="tvDatum">
+        <input type="hidden" id="tvUhrzeit">
         <div class="form-group">
           <label for="tvOrt">Ort <span class="required">*</span></label>
           <input type="text" id="tvOrt" placeholder="z. B. Besprechungsraum Station 3">
@@ -2739,6 +2739,15 @@ Persönlich eröffnet
       // Prüfen ob es Gruppenaufgaben für diesen Mitarbeiter gibt
       const meineGruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, currentSession);
       const hatGruppenaufgaben = meineGruppenAufgaben.length > 0;
+      const offeneTerminAufgaben = aufgabenSystem.aufgaben.filter(
+        (a) =>
+          a.antragId === antragId &&
+          a.status === 'offen' &&
+          a.terminId &&
+          a.zugewiesenAnTyp === 'mitarbeiter' &&
+          String(a.zugewiesenAnId) === String(currentSession.userId)
+      );
+      const hatTerminAufgabe = offeneTerminAufgaben.length > 0;
       
       // Prüfen ob eine Hauptbearbeitungsübergabe wartet
       const hatWartendeUebergabe = antrag.hauptbearbeitungWartetAufUebernahme && 
@@ -2750,7 +2759,8 @@ Persönlich eröffnet
       const kannValUebernehmen = istValWeit && valSichtAufAntrag && String(antrag.bearbeiterId) !== String(currentSession.userId) && !antrag.veraktet;
       
       // Kann der Mitarbeiter diesen Antrag/Aufgabe übernehmen?
-      const kannUebernehmen = istOffen || hatGruppenaufgaben || hatWartendeUebergabe || kannValUebernehmen;
+      const kannUebernehmen =
+        istOffen || hatGruppenaufgaben || hatTerminAufgabe || hatWartendeUebergabe || kannValUebernehmen;
       
       // Prüfen ob der aktuelle Benutzer berechtigt ist
       const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(antragId);
@@ -3546,6 +3556,16 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                 </div>
               ` : ''}
               
+              ${hatTerminAufgabe ? `
+                <div class="gruppenaufgaben-info" style="background: #e8f4fd; border: 1px solid #0d6efd; border-radius: 4px; padding: 12px; margin: 12px 0;">
+                  <strong style="color: #084298;">Termin-Aufgabe:</strong>
+                  <ul style="margin: 8px 0 0 20px; padding: 0; color: #084298;">
+                    ${offeneTerminAufgaben.map(a => `<li>${getTranslatedUserText(a.kurzbeschreibung || a.beschreibung)}</li>`).join('')}
+                  </ul>
+                  <p style="margin: 8px 0 0 0; font-size: 0.9em; color: #084298;">Nach „Aufgabe übernehmen“ erscheint der Termin in Ihrem Kalender.</p>
+                </div>
+              ` : ''}
+              
               ${hatWartendeUebergabe ? `
                 <div class="uebergabe-info" style="background: #d1ecf1; border: 1px solid #17a2b8; border-radius: 4px; padding: 12px; margin: 12px 0;">
                   <strong style="color: #0c5460;">Weitergeleitet von: ${antrag.bearbeiterName || 'unbekannt'}</strong>
@@ -3559,7 +3579,7 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                 ${kannUebernehmen && !istBearbeiter ? `
                   <button class="btn btn-primary btn-large" onclick="${istHausleitung() ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
                     ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : 
-                      hatGruppenaufgaben ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche') : 
+                      (hatGruppenaufgaben || hatTerminAufgabe) ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche') : 
                       t('button.takeApplication')}
                   </button>
                 ` : ''}
@@ -6457,6 +6477,7 @@ ${t('action.archive')}
       document.getElementById('tvExtPartner').value = '';
       document.getElementById('tvExtPartner').disabled = true;
       document.getElementById('tvExtSlotKey').value = '';
+      document.getElementById('tvInternSlotKey').value = '';
       document.getElementById('tvExtOrt').value = '';
       document.getElementById('tvExtTeamsLink').value = '';
       document.querySelector('input[name="tvExtDurchfuehrung"][value="praesenz"]').checked = true;
@@ -6466,6 +6487,7 @@ ${t('action.archive')}
       loadTvGruppen();
       loadTvExtServices();
       resetTvExtSlots();
+      resetTvInternSlots();
       toggleTvExtDurchfuehrung();
       toggleTvTeilnehmerArt();
       toggleTvZuweisungTyp();
@@ -6577,6 +6599,74 @@ ${t('action.archive')}
         document.getElementById('tvPersonId').value = currentSession.userId;
         document.getElementById('tvSelectedPersonName').textContent = currentSession.name;
       }
+      document.getElementById('tvInternSlotKey').value = '';
+      renderTvInternSlots();
+    }
+
+    function buildTvInternZuweisung() {
+      const zuweisungTyp = document.querySelector('input[name="tvZuweisungTyp"]:checked')?.value;
+      if (zuweisungTyp === 'gruppe') {
+        const gruppe = buildTvGruppeObject();
+        if (!gruppe) return null;
+        const label =
+          document.getElementById('tvGruppeSelect').selectedOptions[0]?.text || 'Gruppe';
+        return { typ: 'gruppe', gruppe, gruppenLabel: label };
+      }
+      if (zuweisungTyp === 'person') {
+        const personId = document.getElementById('tvPersonId').value;
+        if (!personId) return null;
+        return { typ: 'mitarbeiter', id: personId };
+      }
+      if (zuweisungTyp === 'selbst') {
+        return { typ: 'mitarbeiter', id: currentSession.userId };
+      }
+      return null;
+    }
+
+    function resetTvInternSlots() {
+      const box = document.getElementById('tvInternSlots');
+      if (!box) return;
+      box.innerHTML = '<p class="empty-hint">Bitte zuerst Zuweisung (Gruppe oder Person) wählen.</p>';
+    }
+
+    function renderTvInternSlots() {
+      const box = document.getElementById('tvInternSlots');
+      const zuweisung = buildTvInternZuweisung();
+      const selectedKey = document.getElementById('tvInternSlotKey')?.value || '';
+      if (!box || typeof getInterneVerfuegbareSlots !== 'function') {
+        resetTvInternSlots();
+        return;
+      }
+      if (!zuweisung) {
+        resetTvInternSlots();
+        return;
+      }
+      if (typeof window.reloadDataFromStorage === 'function') {
+        window.reloadDataFromStorage();
+      }
+      const slots = getInterneVerfuegbareSlots(zuweisung, { tage: 56 });
+      if (selectedKey && !slots.some((s) => s.slotKey === selectedKey)) {
+        document.getElementById('tvInternSlotKey').value = '';
+        document.getElementById('tvDatum').value = '';
+        document.getElementById('tvUhrzeit').value = '';
+      }
+      if (slots.length === 0) {
+        box.innerHTML = '<p class="empty-hint">Keine freien Terminslots in den nächsten Wochen.</p>';
+        return;
+      }
+      const activeKey = document.getElementById('tvInternSlotKey').value;
+      box.innerHTML = slots.map((s) => `
+        <button type="button" class="termin-slot-btn ${s.slotKey === activeKey ? 'selected' : ''}"
+                onclick="selectTvInternSlot('${s.slotKey}')">${s.label}</button>
+      `).join('');
+    }
+
+    function selectTvInternSlot(slotKey) {
+      document.getElementById('tvInternSlotKey').value = slotKey;
+      const [datum, uhrzeit] = slotKey.split('|');
+      document.getElementById('tvDatum').value = datum || '';
+      document.getElementById('tvUhrzeit').value = uhrzeit || '';
+      renderTvInternSlots();
     }
 
     function loadTvGruppen() {
@@ -6612,7 +6702,11 @@ ${t('action.archive')}
       document.getElementById('tvGruppeTyp').value = '';
       document.getElementById('tvGruppeHaus').value = '';
       document.getElementById('tvGruppeStation').value = '';
-      if (!value) return;
+      document.getElementById('tvInternSlotKey').value = '';
+      if (!value) {
+        renderTvInternSlots();
+        return;
+      }
       const parts = value.split('|');
       const gruppeTyp = parts[0];
       if (typeof istAnstaltsweiteJvaGruppeTyp === 'function' && istAnstaltsweiteJvaGruppeTyp(gruppeTyp)) {
@@ -6627,6 +6721,7 @@ ${t('action.archive')}
         document.getElementById('tvGruppeTyp').value = gruppeTyp;
         document.getElementById('tvGruppeHaus').value = parts[1];
       }
+      renderTvInternSlots();
     }
 
     function loadAlleMitarbeiterFuerTv() {
@@ -6676,12 +6771,16 @@ ${t('action.archive')}
       document.getElementById('tvPersonId').value = id;
       document.getElementById('tvSelectedPersonName').textContent = name;
       document.getElementById('tvSelectedPersonDisplay').style.display = 'flex';
+      document.getElementById('tvInternSlotKey').value = '';
       filterTvMitarbeiterListe();
+      renderTvInternSlots();
     }
 
     function clearTvSelectedPerson() {
       document.getElementById('tvPersonId').value = '';
       document.getElementById('tvSelectedPersonDisplay').style.display = 'none';
+      document.getElementById('tvInternSlotKey').value = '';
+      renderTvInternSlots();
       filterTvMitarbeiterListe();
     }
 
@@ -6748,18 +6847,28 @@ ${t('action.archive')}
             erstelltVonName: currentSession.name
           });
         } else {
+          const internSlotKey = document.getElementById('tvInternSlotKey').value;
           const betreff = document.getElementById('tvBetreff').value.trim();
-          const datum = document.getElementById('tvDatum').value;
-          const uhrzeit = document.getElementById('tvUhrzeit').value;
+          let datum = document.getElementById('tvDatum').value;
+          let uhrzeit = document.getElementById('tvUhrzeit').value;
           const ort = document.getElementById('tvOrt').value.trim();
           const teamsLink = document.getElementById('tvTeamsLink').value.trim();
 
+          if (!internSlotKey) {
+            showAlert('Bitte wählen Sie einen Terminslot.');
+            return;
+          }
+          if (!datum || !uhrzeit) {
+            const parts = internSlotKey.split('|');
+            datum = parts[0] || datum;
+            uhrzeit = parts[1] || uhrzeit;
+          }
           if (!betreff) {
             showAlert('Bitte geben Sie einen Betreff ein.');
             return;
           }
           if (!datum) {
-            showAlert('Bitte wählen Sie ein Datum.');
+            showAlert('Bitte wählen Sie einen Terminslot.');
             return;
           }
           if (!ort) {
@@ -6832,8 +6941,19 @@ ${t('action.archive')}
         }
       }
       if (teilnehmerArt === 'intern') {
-        erfolgsHinweis +=
-          ' Insasse und beteiligte Mitarbeitende wurden über die Plattform benachrichtigt (Kalender & Nachrichten).';
+        if (result.terminAufgabe) {
+          const zuw = document.querySelector('input[name="tvZuweisungTyp"]:checked')?.value;
+          if (zuw === 'gruppe') {
+            erfolgsHinweis +=
+              ' Eine Termin-Aufgabe wurde im Postfach „Anträge und Aufgaben meiner Gruppe“ angelegt. Nach Übernahme erscheint der Termin im persönlichen Kalender.';
+          } else if (zuw === 'person') {
+            erfolgsHinweis +=
+              ' Eine Termin-Aufgabe wurde unter „Meine Anträge und Aufgaben“ angelegt. Nach Annahme erscheint der Termin im persönlichen Kalender.';
+          } else {
+            erfolgsHinweis += ' Der Termin wurde in Ihrem Kalender eingetragen.';
+          }
+        }
+        erfolgsHinweis += ' Insasse und Beteiligte wurden benachrichtigt.';
       } else {
         erfolgsHinweis += ' Der Insasse wurde im Portal benachrichtigt.';
         const mailText = (result.emailEmpfaenger || [])
@@ -6851,6 +6971,7 @@ ${t('action.archive')}
 
       renderKalender();
       renderNotifications();
+      renderAntraege();
       if (currentAntragId === antragId) openAntragDetail(antragId);
     }
 

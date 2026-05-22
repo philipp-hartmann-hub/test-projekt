@@ -324,13 +324,37 @@ function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
  * Beim Neuladen vom Server: Anträge nicht blind ersetzen (Race mit Upload/Sync).
  * Pro ID: mergeAntragSnapshotAfterPut(lokal, Server) → dokumente/kommentare/weiterleitungen vereinigt.
  */
+/** Insassen-Sichtbarkeit bei Termin-Merge erhalten (Server-Payload oft ohne sichtbarFuer). */
+function mergeTerminSnapshotAfterFetch(localT, serverT) {
+  if (!localT && !serverT) return null;
+  if (!localT) return serverT;
+  if (!serverT) return localT;
+  const ts = (t) => new Date(t.erstelltAm || t.einladungVersendetAm || 0).getTime();
+  const merged = ts(serverT) >= ts(localT) ? { ...localT, ...serverT } : { ...serverT, ...localT };
+
+  const insasseId = merged.insasseId || localT.insasseId || serverT.insasseId;
+  if (insasseId) merged.insasseId = String(insasseId);
+  const insasseName = merged.insasseName || localT.insasseName || serverT.insasseName;
+  if (insasseName) merged.insasseName = insasseName;
+
+  const sf = new Set();
+  [localT.sichtbarFuer, serverT.sichtbarFuer, merged.sichtbarFuer].forEach((arr) => {
+    if (!Array.isArray(arr)) return;
+    arr.forEach((id) => {
+      if (id != null && String(id) !== '') sf.add(String(id));
+    });
+  });
+  if (insasseId) sf.add(String(insasseId));
+  if (sf.size > 0) merged.sichtbarFuer = [...sf];
+
+  return merged;
+}
+
 /** Termine beim Server-Reload mit lokalen Daten vereinigen (verhindert verlorene Buchungen vor Sync-Ende). */
 function mergeTermineArraysAfterFetch(localArr, serverArr) {
   const local = Array.isArray(localArr) ? localArr : [];
   const server = Array.isArray(serverArr) ? serverArr : [];
   const map = new Map();
-  const ts = (t) =>
-    new Date(t.erstelltAm || t.einladungVersendetAm || 0).getTime();
   local.forEach((t) => {
     if (t && t.id != null && String(t.id) !== '') map.set(String(t.id), t);
   });
@@ -341,8 +365,7 @@ function mergeTermineArraysAfterFetch(localArr, serverArr) {
       map.set(id, t);
       return;
     }
-    const prev = map.get(id);
-    map.set(id, ts(t) >= ts(prev) ? { ...prev, ...t } : { ...t, ...prev });
+    map.set(id, mergeTerminSnapshotAfterFetch(map.get(id), t));
   });
   return Array.from(map.values());
 }

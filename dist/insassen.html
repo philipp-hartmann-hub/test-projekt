@@ -1290,6 +1290,15 @@
           updateNotificationBadge();
         }
       });
+
+      window.addEventListener('terminVereinbart', (ev) => {
+        if (!currentSession || currentSession.type !== 'insasse') return;
+        const insasseId = String(currentSession.userId);
+        const detailId = ev.detail?.insasseId != null ? String(ev.detail.insasseId) : null;
+        if (!detailId || detailId === insasseId) {
+          safeRenderInsasseKalender();
+        }
+      });
       
       // Event-Listener für Daten-Reload vom Server
       window.addEventListener('dataReloaded', (event) => {

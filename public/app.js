@@ -1337,6 +1337,12 @@ class UserSystem {
           changed = true;
         }
       }
+      if (user.type === 'mitarbeiter') {
+        if (!Array.isArray(user.verfuegbarkeiten) || user.verfuegbarkeiten.length === 0) {
+          user.verfuegbarkeiten = getDefaultMitarbeiterVerfuegbarkeiten(user.rolle);
+          changed = true;
+        }
+      }
     });
     if (changed) {
       this.saveUsers();
@@ -2202,6 +2208,156 @@ class ExternePartnerSystem {
 
 const externePartnerSystem = new ExternePartnerSystem();
 
+/** Standard-Slots für interne Terminbuchung (ohne Leistungen/Services). */
+const INTERNE_TERMIN_DAUER_MIN = 30;
+
+function getDefaultMitarbeiterVerfuegbarkeiten(rolle) {
+  const r = String(rolle || '').toLowerCase();
+  if (r === 'kammer' || r === 'revision' || r === 'medizinischer-dienst' || r === 'psychologe') {
+    return [
+      { wochentag: 2, von: '10:00', bis: '14:00' },
+      { wochentag: 4, von: '10:00', bis: '14:00' }
+    ];
+  }
+  if (r === 'zahlstelle' || r === 'arbeitskoordination') {
+    return [
+      { wochentag: 1, von: '09:00', bis: '12:00' },
+      { wochentag: 3, von: '09:00', bis: '12:00' },
+      { wochentag: 5, von: '09:00', bis: '11:00' }
+    ];
+  }
+  return [
+    { wochentag: 1, von: '09:00', bis: '12:00' },
+    { wochentag: 1, von: '13:00', bis: '16:00' },
+    { wochentag: 2, von: '09:00', bis: '12:00' },
+    { wochentag: 3, von: '10:00', bis: '15:00' },
+    { wochentag: 4, von: '09:00', bis: '12:00' },
+    { wochentag: 5, von: '09:00', bis: '11:00' }
+  ];
+}
+
+function getMitarbeiterVerfuegbarkeiten(userId) {
+  if (typeof userSystem === 'undefined' || !userId) return [];
+  const u = userSystem.users.find((x) => x.type === 'mitarbeiter' && String(x.id) === String(userId));
+  if (!u) return [];
+  if (Array.isArray(u.verfuegbarkeiten) && u.verfuegbarkeiten.length > 0) {
+    return u.verfuegbarkeiten;
+  }
+  return getDefaultMitarbeiterVerfuegbarkeiten(u.rolle);
+}
+
+/** Vereinigte Verfügbarkeitsfenster einer Gruppe (aggregiert aus allen Mitgliedern). */
+function getGruppeVerfuegbarkeiten(gruppe) {
+  if (!gruppe || typeof userSystem === 'undefined' || typeof antragSystem === 'undefined') {
+    return [];
+  }
+  const fensterMap = new Map();
+  userSystem.users
+    .filter((u) => u.type === 'mitarbeiter' && antragSystem._mitarbeiterGehoertZuGruppe(u, gruppe))
+    .forEach((u) => {
+      getMitarbeiterVerfuegbarkeiten(u.id).forEach((v) => {
+        const key = `${v.wochentag}|${v.von}|${v.bis}`;
+        if (!fensterMap.has(key)) fensterMap.set(key, { ...v });
+      });
+    });
+  return Array.from(fensterMap.values());
+}
+
+function _internerTerminBelegtFuerZuweisung(datum, uhrzeit, dauerMinuten, zuweisung) {
+  if (typeof terminSystem === 'undefined' || !zuweisung) return false;
+  const normDatum = normalizeDatumIso(datum);
+  const start = parseZeitZuMinuten(normalizeUhrzeit(uhrzeit));
+  const end = start + (dauerMinuten || INTERNE_TERMIN_DAUER_MIN);
+
+  return terminSystem.termine.some((t) => {
+    if (t.typ !== 'vereinbarung' || t.teilnehmerArt !== 'intern') return false;
+    if (normalizeDatumIso(t.datum) !== normDatum) return false;
+    const tDauer = t.dauerMinuten || INTERNE_TERMIN_DAUER_MIN;
+    const tStart = parseZeitZuMinuten(normalizeUhrzeit(t.uhrzeit));
+    const tEnd = tStart + tDauer;
+    if (!(start < tEnd && end > tStart)) return false;
+
+    if (zuweisung.typ === 'mitarbeiter' && zuweisung.id) {
+      return (
+        t.zugewiesenAnTyp === 'mitarbeiter' &&
+        String(t.zugewiesenAnId) === String(zuweisung.id)
+      );
+    }
+    if (zuweisung.typ === 'gruppe' && zuweisung.gruppe) {
+      const g = t.zugewiesenAnGruppe;
+      if (!g || t.zugewiesenAnTyp !== 'gruppe') return false;
+      return (
+        String(g.typ) === String(zuweisung.gruppe.typ) &&
+        String(g.hausId || '') === String(zuweisung.gruppe.hausId || '') &&
+        String(g.station || g.stationId || '') ===
+          String(zuweisung.gruppe.station || zuweisung.gruppe.stationId || '')
+      );
+    }
+    return false;
+  });
+}
+
+function getInterneVerfuegbareSlots(zuweisung, options = {}) {
+  const dauer = options.dauerMinuten || INTERNE_TERMIN_DAUER_MIN;
+  const tage = options.tage != null ? options.tage : 42;
+  const ab = options.abDatum ? new Date(options.abDatum) : new Date();
+  ab.setHours(0, 0, 0, 0);
+
+  let fenster = [];
+  let prefixLabel = '';
+  if (!zuweisung || zuweisung.typ === 'selbst') {
+    return [];
+  }
+  if (zuweisung.typ === 'mitarbeiter' && zuweisung.id) {
+    fenster = getMitarbeiterVerfuegbarkeiten(zuweisung.id);
+    const u = userSystem?.users?.find((x) => String(x.id) === String(zuweisung.id));
+    prefixLabel = u ? `${u.vorname || ''} ${u.nachname || ''}`.trim() : 'Mitarbeiter';
+  } else if (zuweisung.typ === 'gruppe' && zuweisung.gruppe) {
+    fenster = getGruppeVerfuegbarkeiten(zuweisung.gruppe);
+    prefixLabel = zuweisung.gruppenLabel || 'Gruppe';
+  }
+
+  const slots = [];
+  const WOCHENTAGE_KURZ = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+
+  for (let d = 0; d < tage; d++) {
+    const tag = new Date(ab);
+    tag.setDate(tag.getDate() + d);
+    const wd = tag.getDay();
+    const datumIso = datumIsoLocal(tag);
+    const tagesfenster = fenster.filter((v) => parseInt(v.wochentag, 10) === wd);
+
+    tagesfenster.forEach((fen) => {
+      let cursor = parseZeitZuMinuten(fen.von);
+      const ende = parseZeitZuMinuten(fen.bis);
+      while (cursor + dauer <= ende) {
+        const uhrzeit = minutenZuZeit(cursor);
+        if (!_internerTerminBelegtFuerZuweisung(datumIso, uhrzeit, dauer, zuweisung)) {
+          const datumObj = new Date(datumIso + 'T12:00:00');
+          const label = `${prefixLabel} · ${WOCHENTAGE_KURZ[wd]}, ${datumObj.toLocaleDateString('de-DE')} · ${uhrzeit} Uhr`;
+          slots.push({
+            datum: datumIso,
+            uhrzeit,
+            dauerMinuten: dauer,
+            label,
+            slotKey: `${datumIso}|${uhrzeit}`,
+            zuweisungTyp: zuweisung.typ
+          });
+        }
+        cursor += dauer;
+      }
+    });
+  }
+  return slots;
+}
+
+if (typeof window !== 'undefined') {
+  window.getInterneVerfuegbareSlots = getInterneVerfuegbareSlots;
+  window.getGruppeVerfuegbarkeiten = getGruppeVerfuegbarkeiten;
+  window.getMitarbeiterVerfuegbarkeiten = getMitarbeiterVerfuegbarkeiten;
+  window.INTERNE_TERMIN_DAUER_MIN = INTERNE_TERMIN_DAUER_MIN;
+}
+
 /** Ohne TDZ-Zugriff auf const antragSystem (wichtig vor Zeile der AntragSystem-Instanz). */
 function getAntragSystemRef() {
   try {
@@ -2504,7 +2660,9 @@ class TerminSystem {
 
     const uhrzeit = linked?.uhrzeit || aufgabe.terminUhrzeit || null;
     const titelBasis = linked?.betreff || linked?.titel || this._getAufgabeText(aufgabe.kurzbeschreibung);
-    const titelRaw = `Begleitung: ${titelBasis}`;
+    const titelRaw = aufgabe.terminBegleitung
+      ? `Begleitung: ${titelBasis}`
+      : `Termin: ${titelBasis}`;
     const titelKurz = titelRaw.length > 80 ? `${titelRaw.substring(0, 77)}…` : titelRaw;
     const beschreibung =
       this._getAufgabeText(aufgabe.beschreibung) ||
@@ -2628,6 +2786,14 @@ class TerminSystem {
   }
 
   createVereinbarungsTermin(data) {
+    const sichtbarFuerSet = new Set();
+    (data.sichtbarFuer || []).forEach((id) => {
+      if (id != null && String(id) !== '') sichtbarFuerSet.add(String(id));
+    });
+    if (data.insasseId != null && String(data.insasseId) !== '') {
+      sichtbarFuerSet.add(String(data.insasseId));
+    }
+
     const termin = {
       id: this.generateId(),
       typ: 'vereinbarung',
@@ -2639,7 +2805,7 @@ class TerminSystem {
       ort: data.ort || '',
       teamsLink: data.teamsLink || null,
       antragId: data.antragId || null,
-      insasseId: data.insasseId,
+      insasseId: data.insasseId != null ? String(data.insasseId) : null,
       insasseName: data.insasseName || '',
       teilnehmerArt: data.teilnehmerArt,
       externKontakt: data.externKontakt || null,
@@ -2651,7 +2817,7 @@ class TerminSystem {
       zugewiesenAnId: data.zugewiesenAnId || null,
       zugewiesenAnName: data.zugewiesenAnName || null,
       zugewiesenAnGruppe: data.zugewiesenAnGruppe || null,
-      sichtbarFuer: data.sichtbarFuer || [],
+      sichtbarFuer: Array.from(sichtbarFuerSet),
       erstelltVonId: data.erstelltVonId,
       erstelltVonName: data.erstelltVonName,
       begleitungErforderlich: data.begleitungErforderlich === true,
@@ -2814,8 +2980,12 @@ class AufgabenSystem {
       benutzerName: data.erstelltVonName
     });
     
-    // Automatisch Termin erstellen, wenn Frist gesetzt (nur für Mitarbeiter-Aufgaben)
-    if (data.fristDatum && data.zugewiesenAnTyp === 'mitarbeiter') {
+    // Kalender: bei Termin-Aufgaben erst nach Übernahme/Bestätigung (nicht bei Gruppenzuweisung)
+    if (
+      data.fristDatum &&
+      data.zugewiesenAnTyp === 'mitarbeiter' &&
+      !(data.terminId && data.terminKalenderNachUebernahme)
+    ) {
       terminSystem.createAufgabenTermin(aufgabe);
     }
 
@@ -3500,10 +3670,23 @@ class AntragSystem {
       console.log('[Debug] nehmeAntrag Fall 3: Antrag nicht veraktet (Status: ' + antrag.status + '), suche Gruppenaufgaben...');
       
       const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, mitarbeiter);
-      console.log('[Debug] nehmeAntrag: Gefundene Gruppenaufgaben:', gruppenAufgaben.length);
-      
-      if (gruppenAufgaben.length > 0) {
-        gruppenAufgaben.forEach((aufgabe) => {
+      const selfId = String(mitarbeiter.userId ?? mitarbeiter.id ?? '');
+      const persoenlicheTerminAufgaben = aufgabenSystem.aufgaben.filter(
+        (a) =>
+          a.antragId === antragId &&
+          a.status === 'offen' &&
+          a.zugewiesenAnTyp === 'mitarbeiter' &&
+          String(a.zugewiesenAnId) === selfId &&
+          a.terminId
+      );
+      const alleZuUebernehmen = [...gruppenAufgaben];
+      persoenlicheTerminAufgaben.forEach((a) => {
+        if (!alleZuUebernehmen.some((x) => x.id === a.id)) alleZuUebernehmen.push(a);
+      });
+      console.log('[Debug] nehmeAntrag: Gruppen-/Termin-Aufgaben:', alleZuUebernehmen.length);
+
+      if (alleZuUebernehmen.length > 0) {
+        alleZuUebernehmen.forEach((aufgabe) => {
           console.log('[Debug] Konvertiere Aufgabe:', aufgabe.id);
           aufgabe.zugewiesenAnTyp = 'mitarbeiter';
           aufgabe.zugewiesenAnId = mitarbeiter.userId;
@@ -3517,7 +3700,7 @@ class AntragSystem {
         aktivitaetenSystem.logAktivitaet({
           antragId: antragId,
           typ: 'aufgaben-genommen',
-          beschreibung: `${gruppenAufgaben.length} Gruppenaufgabe(n) übernommen`,
+          beschreibung: `${alleZuUebernehmen.length} Aufgabe(n) übernommen (inkl. Termine)`,
           benutzerTyp: 'mitarbeiter',
           benutzerId: mitarbeiter.userId,
           benutzerName: mitarbeiter.name
@@ -5413,6 +5596,76 @@ function erstelleBegleitungAufgabeFuerTermin(termin, meta) {
 }
 
 /**
+ * Interner Termin: Aufgabe im Gruppen- oder Mitarbeiterpostfach (Kalender erst nach Übernahme).
+ */
+function erstelleInterneTerminAufgabe(termin, meta) {
+  if (!termin || typeof aufgabenSystem === 'undefined') return null;
+
+  const antrag = antragSystem.getAntrag(meta.antragId);
+  const datumFmt = new Date(termin.datum).toLocaleDateString('de-DE');
+  const zeitInfo = termin.uhrzeit ? ` um ${termin.uhrzeit} Uhr` : '';
+  const ortInfo = termin.ort ? `\nOrt: ${termin.ort}` : '';
+  const insasseLabel = meta.insasseName || termin.insasseName || 'Insasse';
+  const beschreibung =
+    `Termin mit ${insasseLabel}:\n\n` +
+    `„${termin.betreff || termin.titel}“\n` +
+    `Datum: ${datumFmt}${zeitInfo}${ortInfo}`;
+
+  const aufgabenPayload = {
+    antragId: meta.antragId,
+    antragsNummer: antrag?.antragsNummer || null,
+    erstelltVonId: meta.erstelltVonId,
+    erstelltVonName: meta.erstelltVonName,
+    kurzbeschreibung: `Termin: ${(termin.betreff || 'Vereinbarung').substring(0, 35)}`,
+    beschreibung,
+    fristDatum: termin.datum,
+    terminId: termin.id,
+    terminUhrzeit: termin.uhrzeit || null,
+    terminKalenderNachUebernahme: true
+  };
+
+  if (meta.zugewiesenAnTyp === 'gruppe' && meta.zugewiesenAnGruppe) {
+    Object.assign(aufgabenPayload, {
+      zugewiesenAnTyp: 'gruppe',
+      zugewiesenAnGruppe: meta.zugewiesenAnGruppe,
+      zugewiesenAnName: meta.zugewiesenAnName || 'Gruppe'
+    });
+  } else if (meta.zugewiesenAnTyp === 'mitarbeiter' && meta.zugewiesenAnId) {
+    Object.assign(aufgabenPayload, {
+      zugewiesenAnTyp: 'mitarbeiter',
+      zugewiesenAnId: meta.zugewiesenAnId,
+      zugewiesenAnName: meta.zugewiesenAnName
+    });
+  } else {
+    return null;
+  }
+
+  const aufgabe = aufgabenSystem.createAufgabe(aufgabenPayload);
+
+  if (
+    meta.zugewiesenAnTyp === 'mitarbeiter' &&
+    String(meta.zugewiesenAnId) === String(meta.erstelltVonId)
+  ) {
+    aufgabenSystem.syncKalenderNachGruppenuebernahme(aufgabe);
+    aufgabenSystem.saveAufgaben();
+  }
+
+  if (typeof aktivitaetenSystem !== 'undefined') {
+    aktivitaetenSystem.logAktivitaet({
+      antragId: meta.antragId,
+      typ: 'termin-aufgabe',
+      beschreibung: `Termin-Aufgabe angelegt (${meta.zugewiesenAnName || meta.zugewiesenAnTyp})`,
+      details: { terminId: termin.id, aufgabeId: aufgabe.id },
+      benutzerTyp: 'mitarbeiter',
+      benutzerId: meta.erstelltVonId,
+      benutzerName: meta.erstelltVonName
+    });
+  }
+
+  return aufgabe;
+}
+
+/**
  * Termin vereinbaren: Kalendereinträge und Plattform-Benachrichtigungen (intern nur Portal).
  */
 function vereinbareTerminAusAntrag(params) {
@@ -5447,14 +5700,10 @@ function vereinbareTerminAusAntrag(params) {
 
   const sichtbarFuer = new Set([String(resolvedInsasseId), String(erstelltVonId)]);
   const emailEmpfaenger = [];
-
-  if (teilnehmerArt === 'intern') {
-    if (zugewiesenAnTyp === 'mitarbeiter' && zugewiesenAnId) {
-      sichtbarFuer.add(String(zugewiesenAnId));
-    } else if (zugewiesenAnTyp === 'gruppe' && zugewiesenAnGruppe) {
-      getMitarbeiterIdsFuerGruppe(zugewiesenAnGruppe).forEach((id) => sichtbarFuer.add(id));
-    }
-  }
+  const internMitAufgabe =
+    teilnehmerArt === 'intern' &&
+    (zugewiesenAnTyp === 'gruppe' ||
+      (zugewiesenAnTyp === 'mitarbeiter' && zugewiesenAnId && String(zugewiesenAnId) !== String(erstelltVonId)));
 
   const termin = terminSystem.createVereinbarungsTermin({
     betreff,
@@ -5469,7 +5718,7 @@ function vereinbareTerminAusAntrag(params) {
     externKontakt: externKontakt || null,
     externPartnerId: externPartnerId || null,
     externServiceId: externServiceId || null,
-    dauerMinuten: dauerMinuten || null,
+    dauerMinuten: dauerMinuten || INTERNE_TERMIN_DAUER_MIN,
     durchfuehrungArt: durchfuehrungArt || null,
     zugewiesenAnTyp,
     zugewiesenAnId,
@@ -5492,6 +5741,21 @@ function vereinbareTerminAusAntrag(params) {
     });
   }
 
+  let terminAufgabe = null;
+  if (teilnehmerArt === 'intern' && (zugewiesenAnTyp === 'gruppe' || zugewiesenAnTyp === 'mitarbeiter')) {
+    terminAufgabe = erstelleInterneTerminAufgabe(termin, {
+      antragId,
+      insasseId: resolvedInsasseId,
+      insasseName,
+      zugewiesenAnTyp,
+      zugewiesenAnId,
+      zugewiesenAnName,
+      zugewiesenAnGruppe,
+      erstelltVonId,
+      erstelltVonName
+    });
+  }
+
   const datumFmt = new Date(termin.datum).toLocaleDateString('de-DE');
   const zeitInfo = termin.uhrzeit ? ` um ${termin.uhrzeit} Uhr` : '';
   const ortInfo = termin.ort ? ` · Ort: ${termin.ort}` : '';
@@ -5507,21 +5771,24 @@ function vereinbareTerminAusAntrag(params) {
   );
 
   if (teilnehmerArt === 'intern') {
+    const aufgabenHinweis = internMitAufgabe
+      ? ' Bitte Aufgabe im Postfach übernehmen – der Termin erscheint danach in Ihrem Kalender.'
+      : '';
     if (zugewiesenAnTyp === 'mitarbeiter' && zugewiesenAnId) {
       notificationSystem.createNotification(
         zugewiesenAnId,
-        'termin-vereinbart',
-        'Termin vereinbart',
-        `${msgBase} (Insasse: ${insasseName})`,
+        internMitAufgabe ? 'aufgabe-neu' : 'termin-vereinbart',
+        internMitAufgabe ? 'Neue Termin-Aufgabe' : 'Termin vereinbart',
+        `${msgBase} (Insasse: ${insasseName})${aufgabenHinweis}`,
         antragId
       );
     } else if (zugewiesenAnGruppe) {
       getMitarbeiterIdsFuerGruppe(zugewiesenAnGruppe).forEach((mid) => {
         notificationSystem.createNotification(
           mid,
-          'termin-vereinbart',
-          'Termin vereinbart',
-          `${msgBase} (Insasse: ${insasseName})`,
+          'aufgabe-neu',
+          'Neue Termin-Aufgabe (Gruppe)',
+          `${msgBase} (Insasse: ${insasseName})${aufgabenHinweis}`,
           antragId
         );
       });
@@ -5549,7 +5816,23 @@ function vereinbareTerminAusAntrag(params) {
     });
   }
 
-  return { termin, emailEmpfaenger, begleitungAufgabe };
+  if (typeof terminSystem.migrateInsasseTermine === 'function') {
+    terminSystem.migrateInsasseTermine();
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('terminVereinbart', {
+        detail: {
+          terminId: termin.id,
+          antragId,
+          insasseId: resolvedInsasseId
+        }
+      })
+    );
+  }
+
+  return { termin, emailEmpfaenger, begleitungAufgabe, terminAufgabe };
 }
 
 /**
