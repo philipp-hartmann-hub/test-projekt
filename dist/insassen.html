@@ -2995,7 +2995,14 @@
       if (isForm) {
         const type = options.type || getSelectedNewAntragType();
         if (type) rememberNewAntragType(type);
-        const label = type ? getAntragTypLabel(type) : 'Antrag ausfüllen';
+        const label =
+          type
+            ? (typeof _getAntragTypLabelForPicker === 'function'
+                ? _getAntragTypLabelForPicker(type)
+                : (typeof antragSystem !== 'undefined' && typeof antragSystem.getAntragTypLabel === 'function'
+                    ? antragSystem.getAntragTypLabel(type)
+                    : type))
+            : 'Antrag ausfüllen';
         if (title) title.textContent = label;
         if (context) {
           // Hinweis direkt im Formular (nicht nur im Modal-Titel)
@@ -3040,7 +3047,14 @@
       setWizardPanelVisible(footerForm, isForm, 'flex');
       if (isForm) {
         const type = options.type || getSelectedEntwurfType();
-        const label = type ? getAntragTypLabel(type) : 'Entwurf bearbeiten';
+        const label =
+          type
+            ? (typeof _getAntragTypLabelForPicker === 'function'
+                ? _getAntragTypLabelForPicker(type)
+                : (typeof antragSystem !== 'undefined' && typeof antragSystem.getAntragTypLabel === 'function'
+                    ? antragSystem.getAntragTypLabel(type)
+                    : type))
+            : 'Entwurf bearbeiten';
         if (title) title.textContent = label;
         if (context) {
           context.innerHTML = type ? `Entwurf: <strong>${label}</strong>` : '';
