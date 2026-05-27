@@ -2425,6 +2425,21 @@
           <p><strong>Überweisungsquelle:</strong> ${quelleLbl}</p>
           ${begr ? `<p><strong>Begründung:</strong> ${begr}</p>` : ''}
         `;
+      } else if (antrag.type === 'einkauf-bestellung') {
+        typeLabel = 'Einkauf & Bestellung';
+        const zahlLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'gebundenes-eigengeld': 'Gebundenes Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' }[antrag.zahlungsart] || antrag.zahlungsart || '–';
+        const summe = antrag.gesamtbetragCent != null ? (antrag.gesamtbetragCent / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) : '–';
+        const pos = Array.isArray(antrag.bestellpositionen) ? antrag.bestellpositionen : [];
+        const posHtml = pos.length
+          ? `<ul>${pos.map((p) => `<li>${p.menge}× ${p.name} (${p.hersteller}) – ${((p.preisCent * p.menge) / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</li>`).join('')}</ul>`
+          : '<p>–</p>';
+        const begr = antrag.antragBegruendung ? getTranslatedUserText(antrag.antragBegruendung) : '';
+        detailsHtml = `
+          ${posHtml}
+          <p><strong>Gesamtbetrag:</strong> ${summe}</p>
+          <p><strong>Zahlungsart:</strong> ${zahlLbl}</p>
+          ${begr ? `<p><strong>Begründung:</strong> ${begr}</p>` : ''}
+        `;
       } else if (antrag.type === 'freistellung-40-hmbstv') {
         typeLabel = 'Freistellung nach § 40 HmbStVollzG';
         const datum = antrag.freistellungWerktag
@@ -3232,6 +3247,46 @@ Persönlich eröffnet
             <p class="verfuegungsreihenfolge">${verfuegungKetteTelio}</p>
             <p class="verfuegungs-hinweis">${verfuegungVlHinweisTelio}</p>
             <p class="verfuegungs-hinweis">${verfuegungHinweisTelio}</p>
+          </div>
+        `;
+      } else if (antrag.type === 'einkauf-bestellung') {
+        const verfuegungTitelEinkauf = currentLanguage === 'en' ? 'Suggested procedure sequence (reference Ist process)' : currentLanguage === 'fr' ? 'Suggestion de séquence (processus cible)' : 'Verfügungsvorschlag';
+        const verfuegungHinweisEinkauf = currentLanguage === 'en' ? 'This is a suggestion only; it does not replace a professional decision.' : currentLanguage === 'fr' ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle." : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
+        const zahlLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'gebundenes-eigengeld': 'Gebundenes Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' }[antrag.zahlungsart] || antrag.zahlungsart || '–';
+        const summe = antrag.gesamtbetragCent != null ? (antrag.gesamtbetragCent / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) : '–';
+        const pos = Array.isArray(antrag.bestellpositionen) ? antrag.bestellpositionen : [];
+        const posRows = pos
+          .map(
+            (p) => `
+            <div class="detail-row">
+              <span class="detail-label">${p.menge}× ${p.name}:</span>
+              <span class="detail-value">${p.hersteller} – ${((p.preisCent * p.menge) / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
+            </div>`
+          )
+          .join('');
+        const verfuegungKetteEinkauf = 'Station zur Prüfung → VAL zur Prüfung → Zahlstelle zur Abwicklung → GPA';
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>Einkauf &amp; Bestellung</h4>
+            ${posRows || '<div class="detail-row"><span class="detail-value">–</span></div>'}
+            <div class="detail-row">
+              <span class="detail-label">Gesamtbetrag:</span>
+              <span class="detail-value">${summe}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Zahlungsart:</span>
+              <span class="detail-value">${zahlLbl}</span>
+            </div>
+            ${antrag.antragBegruendung ? `
+            <div class="detail-row">
+              <span class="detail-label">${t('application.justification')}:</span>
+              <span class="detail-value">${getTranslatedUserText(antrag.antragBegruendung)}</span>
+            </div>` : ''}
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitelEinkauf}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKetteEinkauf}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweisEinkauf}</p>
           </div>
         `;
       } else if (antrag.type === 'kuendigung-tv-mietvertrag') {
@@ -4240,6 +4295,11 @@ ${t('action.archive')}
       } else if (antrag.type === 'telio-ueberweisung') {
         const quelleLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'gebundenes-eigengeld': 'Gebundenes Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' }[antrag.ueberweisungsquelle] || antrag.ueberweisungsquelle || '–';
         anliegenText = `${t('notice.applicationFor')} Telio-Überweisung (${antrag.betrag || '–'} €, ${quelleLbl})`;
+      } else if (antrag.type === 'einkauf-bestellung') {
+        const summe = antrag.gesamtbetragCent != null ? (antrag.gesamtbetragCent / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) : '–';
+        const zahlLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'gebundenes-eigengeld': 'Gebundenes Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' }[antrag.zahlungsart] || antrag.zahlungsart || '–';
+        const anzahl = Array.isArray(antrag.bestellpositionen) ? antrag.bestellpositionen.length : 0;
+        anliegenText = `${t('notice.applicationFor')} Einkauf & Bestellung (${anzahl} Position(en), ${summe}, ${zahlLbl})`;
       } else if (antrag.type === 'freistellung-40-hmbstv') {
         const datum = antrag.freistellungWerktag
           ? new Date(antrag.freistellungWerktag + 'T12:00:00').toLocaleDateString('de-DE')
@@ -6111,6 +6171,25 @@ ${t('action.archive')}
         doc.text(`Betrag: ${antrag.betrag ? antrag.betrag + ' €' : '–'}`, 25, yPos + 7);
         let y = yPos + 14;
         doc.text(`Überweisungsquelle: ${quelleLbl}`, 25, y);
+        y += 7;
+        if (antrag.antragBegruendung) {
+          doc.text(`Begründung: ${getTranslatedUserText(antrag.antragBegruendung)}`, 25, y);
+          y += 7;
+        }
+        yPos = y + 7;
+      } else if (antrag.type === 'einkauf-bestellung') {
+        const zahlLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'gebundenes-eigengeld': 'Gebundenes Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' }[antrag.zahlungsart] || antrag.zahlungsart || '–';
+        const summe = antrag.gesamtbetragCent != null ? (antrag.gesamtbetragCent / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) : '–';
+        doc.text('Art: Einkauf & Bestellung', 25, yPos);
+        let y = yPos + 7;
+        const pos = Array.isArray(antrag.bestellpositionen) ? antrag.bestellpositionen : [];
+        pos.forEach((p) => {
+          doc.text(`${p.menge}× ${p.name} (${p.hersteller})`, 25, y);
+          y += 7;
+        });
+        doc.text(`Gesamtbetrag: ${summe}`, 25, y);
+        y += 7;
+        doc.text(`Zahlungsart: ${zahlLbl}`, 25, y);
         y += 7;
         if (antrag.antragBegruendung) {
           doc.text(`Begründung: ${getTranslatedUserText(antrag.antragBegruendung)}`, 25, y);

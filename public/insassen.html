@@ -136,11 +136,23 @@
         </section>
 
         <!-- Neuer Antrag Button -->
-        <div class="action-bar">
+        <div class="action-bar action-bar-split">
           <button class="btn btn-primary" onclick="openNewAntragModal()">
             + Neuer Antrag
           </button>
+          <button class="btn btn-secondary" onclick="openEinkaufModal()">
+            Einkauf &amp; Bestellungen
+          </button>
         </div>
+
+        <!-- Einkauf & Bestellungen -->
+        <section class="section einkauf-teaser-section" id="einkaufTeaserSection">
+          <div class="section-header">
+            <h2>Einkauf &amp; Bestellungen</h2>
+          </div>
+          <p class="section-hint">Durchsuchen Sie den Artikelkatalog, legen Sie Waren in den Warenkorb und reichen Sie Ihre Bestellung mit gewünschter Zahlungsart als Antrag ein.</p>
+          <button type="button" class="btn btn-primary" onclick="openEinkaufModal()">Zum Einkauf</button>
+        </section>
 
         <!-- Aufgaben-Bereich für Insassen -->
         <section class="section aufgaben-section" id="aufgabenSection" style="display: none;">
@@ -1191,6 +1203,80 @@
         <button class="btn btn-danger" onclick="deleteEntwurf()">Löschen</button>
         <button class="btn btn-outline" onclick="updateEntwurf()">Speichern</button>
         <button class="btn btn-primary" onclick="submitEntwurf()">Einreichen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Einkauf & Bestellungen -->
+  <div class="modal-overlay" id="einkaufModal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3 id="einkaufModalTitle">Einkauf &amp; Bestellungen</h3>
+        <button type="button" class="modal-close" onclick="closeModal('einkaufModal')">&times;</button>
+      </div>
+      <div class="modal-body einkauf-modal-body">
+        <div id="einkaufStepKatalog" class="einkauf-wizard-step">
+          <div class="form-group">
+            <label for="einkaufSuche">Artikel suchen</label>
+            <input type="search" id="einkaufSuche" placeholder="Name, Hersteller oder Kategorie…" autocomplete="off" oninput="renderEinkaufKatalog()">
+          </div>
+          <div class="einkauf-layout">
+            <div class="einkauf-katalog-wrap">
+              <div class="einkauf-katalog-grid" id="einkaufKatalogGrid"></div>
+              <p class="einkauf-empty-hint" id="einkaufKatalogLeer" style="display: none;">Keine Artikel gefunden. Bitte passen Sie Ihre Suche an.</p>
+            </div>
+            <aside class="einkauf-warenkorb" aria-label="Warenkorb">
+              <h4>Warenkorb <span class="count" id="einkaufWarenkorbCount">0</span></h4>
+              <ul class="einkauf-warenkorb-liste" id="einkaufWarenkorbListe"></ul>
+              <p class="einkauf-warenkorb-leer" id="einkaufWarenkorbLeer">Noch keine Artikel ausgewählt.</p>
+              <div class="einkauf-warenkorb-summe">
+                <span>Gesamtbetrag</span>
+                <strong id="einkaufWarenkorbSumme">0,00 €</strong>
+              </div>
+            </aside>
+          </div>
+        </div>
+        <div id="einkaufStepZahlung" class="einkauf-wizard-step wizard-panel-hidden" hidden>
+          <div class="info-box">
+            <strong>Bestellübersicht</strong>
+            <div id="einkaufCheckoutUebersicht"></div>
+          </div>
+          <div class="form-group">
+            <label>Zahlungsart <span class="required">*</span></label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="einkaufZahlungsart" value="hausgeld" onchange="toggleEinkaufBegruendung()">
+                <span class="radio-label">Hausgeld</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="einkaufZahlungsart" value="freies-eigengeld" onchange="toggleEinkaufBegruendung()">
+                <span class="radio-label">Freies Eigengeld</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="einkaufZahlungsart" value="gebundenes-eigengeld" onchange="toggleEinkaufBegruendung()">
+                <span class="radio-label">Gebundenes Eigengeld</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="einkaufZahlungsart" value="ueberbrueckungsgeld" onchange="toggleEinkaufBegruendung()">
+                <span class="radio-label">Überbrückungsgeld</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group" id="einkaufBegruendungGroup" style="display: none;">
+            <label for="einkaufBegruendung">Begründung <span class="required">*</span></label>
+            <textarea id="einkaufBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag…"></textarea>
+            <p class="field-hint">Erforderlich nur bei gebundenem Eigengeld und Überbrückungsgeld (nicht bei Hausgeld oder freiem Eigengeld).</p>
+          </div>
+        </div>
+      </div>
+      <div id="einkaufFooterKatalog" class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('einkaufModal')">Abbrechen</button>
+        <button type="button" class="btn btn-primary" onclick="proceedEinkaufToZahlung()">Weiter zur Zahlungsart</button>
+      </div>
+      <div id="einkaufFooterZahlung" class="modal-footer modal-footer-triple wizard-panel-hidden" hidden>
+        <button type="button" class="btn btn-secondary" onclick="backEinkaufToKatalog()">Zurück</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('einkaufModal')">Abbrechen</button>
+        <button type="button" class="btn btn-primary" onclick="submitEinkaufBestellung()">Bestellung einreichen</button>
       </div>
     </div>
   </div>
@@ -3984,6 +4070,20 @@
           ${antrag.ueberweisungsquelle ? `<p><strong>Überweisungsquelle:</strong> ${getTelioUeberweisungsquelleLabel(antrag.ueberweisungsquelle)}</p>` : '<p class="incomplete"><em>Überweisungsquelle noch nicht gewählt</em></p>'}
           ${begrText ? `<p><strong>Begründung:</strong> ${begrText}</p>` : (telioQuelleBrauchtBegruendung(antrag.ueberweisungsquelle) ? '<p class="incomplete"><em>Begründung noch nicht angegeben</em></p>' : '')}
         `;
+      } else if (antrag.type === 'einkauf-bestellung') {
+        typeLabel = 'Einkauf & Bestellung';
+        const zahlLbl = getTelioUeberweisungsquelleLabel(antrag.zahlungsart);
+        const summe = formatEuroFromCent(antrag.gesamtbetragCent || 0);
+        const posHtml = formatEinkaufPositionenHtml(antrag.bestellpositionen);
+        const begrText = antrag.antragBegruendung
+          ? (typeof antrag.antragBegruendung === 'object' ? (antrag.antragBegruendung.text || '') : antrag.antragBegruendung)
+          : '';
+        detailsHtml = `
+          ${posHtml}
+          <p><strong>Gesamtbetrag:</strong> ${summe}</p>
+          ${antrag.zahlungsart ? `<p><strong>Zahlungsart:</strong> ${zahlLbl}</p>` : '<p class="incomplete"><em>Zahlungsart noch nicht gewählt</em></p>'}
+          ${begrText ? `<p><strong>Begründung:</strong> ${begrText}</p>` : (telioQuelleBrauchtBegruendung(antrag.zahlungsart) ? '<p class="incomplete"><em>Begründung noch nicht angegeben</em></p>' : '')}
+        `;
       } else if (antrag.type === 'freistellung-40-hmbstv') {
         typeLabel = 'Freistellung nach § 40 HmbStVollzG';
         const begrText = antrag.antragBegruendung
@@ -4449,6 +4549,260 @@
       showAlert(erledigungsTyp === 'kenntnisnahme' ? 'Zur Kenntnis genommen' : 'Erfolgreich übermittelt');
       renderAntraege();
     }
+
+    const EINKAUF_KATALOG = [
+      { id: 'art-zahnpasta', name: 'Zahnpasta Classic', hersteller: 'Colgate', kategorie: 'Hygiene', preisCent: 249, bild: 'https://images.unsplash.com/photo-1620916297395-a4a3054c8a31?w=400&h=300&fit=crop' },
+      { id: 'art-duschgel', name: 'Duschgel Fresh', hersteller: 'Nivea', kategorie: 'Hygiene', preisCent: 329, bild: 'https://images.unsplash.com/photo-1556228578-0b198f5a6a7e?w=400&h=300&fit=crop' },
+      { id: 'art-snacks', name: 'Snack-Mix ungesalzen', hersteller: 'Ültje', kategorie: 'Lebensmittel', preisCent: 189, bild: 'https://images.unsplash.com/photo-1599490659213-e2b9527bd087?w=400&h=300&fit=crop' },
+      { id: 'art-briefpapier', name: 'Briefpapier A4 (50 Blatt)', hersteller: 'Pelikan', kategorie: 'Schreibwaren', preisCent: 450, bild: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400&h=300&fit=crop' },
+      { id: 'art-kaffee', name: 'Kaffeepulver 200 g', hersteller: 'Melitta', kategorie: 'Lebensmittel', preisCent: 599, bild: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=300&fit=crop' },
+      { id: 'art-socken', name: 'Sockenpaar weiß', hersteller: 'Schiesser', kategorie: 'Bekleidung', preisCent: 650, bild: 'https://images.unsplash.com/photo-1586350977771-b3b0a50c4b10?w=400&h=300&fit=crop' },
+      { id: 'art-notizblock', name: 'Notizblock A6', hersteller: 'Oxford', kategorie: 'Schreibwaren', preisCent: 220, bild: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=400&h=300&fit=crop' },
+      { id: 'art-shampoo', name: 'Anti-Schuppen-Shampoo', hersteller: 'Head & Shoulders', kategorie: 'Hygiene', preisCent: 479, bild: 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400&h=300&fit=crop' }
+    ];
+
+    let einkaufWarenkorb = {};
+    let einkaufWizardStep = 'katalog';
+
+    function formatEuroFromCent(cent) {
+      const n = Number(cent) || 0;
+      return (n / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+    }
+
+    function getEinkaufKatalogArtikel(id) {
+      return EINKAUF_KATALOG.find((a) => a.id === id) || null;
+    }
+
+    function getEinkaufWarenkorbPositionen() {
+      return Object.entries(einkaufWarenkorb)
+        .map(([id, menge]) => {
+          const art = getEinkaufKatalogArtikel(id);
+          if (!art || menge < 1) return null;
+          return {
+            id: art.id,
+            name: art.name,
+            hersteller: art.hersteller,
+            preisCent: art.preisCent,
+            bild: art.bild,
+            menge
+          };
+        })
+        .filter(Boolean);
+    }
+
+    function getEinkaufGesamtbetragCent() {
+      return getEinkaufWarenkorbPositionen().reduce((sum, p) => sum + p.preisCent * p.menge, 0);
+    }
+
+    function formatEinkaufPositionenHtml(positionen) {
+      const list = Array.isArray(positionen) ? positionen : [];
+      if (!list.length) {
+        return '<p class="incomplete"><em>Noch keine Artikel ausgewählt</em></p>';
+      }
+      const items = list
+        .map((p) => `<li>${p.menge}× ${p.name} (${p.hersteller}) – ${formatEuroFromCent(p.preisCent * p.menge)}</li>`)
+        .join('');
+      return `<p><strong>Bestellung:</strong></p><ul class="einkauf-positionen-liste">${items}</ul>`;
+    }
+
+    function escapeHtmlEinkauf(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function setEinkaufWizardStep(step) {
+      einkaufWizardStep = step;
+      const isKatalog = step === 'katalog';
+      document.getElementById('einkaufStepKatalog').classList.toggle('wizard-panel-hidden', !isKatalog);
+      document.getElementById('einkaufStepKatalog').hidden = !isKatalog;
+      document.getElementById('einkaufStepZahlung').classList.toggle('wizard-panel-hidden', isKatalog);
+      document.getElementById('einkaufStepZahlung').hidden = isKatalog;
+      document.getElementById('einkaufFooterKatalog').classList.toggle('wizard-panel-hidden', !isKatalog);
+      document.getElementById('einkaufFooterKatalog').hidden = !isKatalog;
+      document.getElementById('einkaufFooterZahlung').classList.toggle('wizard-panel-hidden', isKatalog);
+      document.getElementById('einkaufFooterZahlung').hidden = isKatalog;
+      document.getElementById('einkaufModalTitle').textContent = isKatalog
+        ? 'Einkauf & Bestellungen – Artikel wählen'
+        : 'Einkauf & Bestellungen – Zahlungsart';
+    }
+
+    function resetEinkaufModal() {
+      einkaufWarenkorb = {};
+      const suche = document.getElementById('einkaufSuche');
+      if (suche) suche.value = '';
+      document.querySelectorAll('input[name="einkaufZahlungsart"]').forEach((r) => { r.checked = false; });
+      const begr = document.getElementById('einkaufBegruendung');
+      if (begr) begr.value = '';
+      toggleEinkaufBegruendung();
+      setEinkaufWizardStep('katalog');
+      renderEinkaufKatalog();
+      renderEinkaufWarenkorb();
+    }
+
+    function openEinkaufModal() {
+      resetEinkaufModal();
+      openModal('einkaufModal');
+    }
+    window.openEinkaufModal = openEinkaufModal;
+
+    function renderEinkaufKatalog() {
+      const grid = document.getElementById('einkaufKatalogGrid');
+      const leer = document.getElementById('einkaufKatalogLeer');
+      if (!grid) return;
+      const q = (document.getElementById('einkaufSuche')?.value || '').trim().toLowerCase();
+      const gefiltert = EINKAUF_KATALOG.filter((a) => {
+        if (!q) return true;
+        const hay = `${a.name} ${a.hersteller} ${a.kategorie}`.toLowerCase();
+        return hay.includes(q);
+      });
+      if (leer) leer.style.display = gefiltert.length ? 'none' : 'block';
+      grid.innerHTML = gefiltert
+        .map((a) => {
+          const menge = einkaufWarenkorb[a.id] || 0;
+          return `
+            <article class="einkauf-artikel-karte">
+              <img src="${escapeHtmlEinkauf(a.bild)}" alt="" class="einkauf-artikel-bild" loading="lazy">
+              <div class="einkauf-artikel-body">
+                <h4>${escapeHtmlEinkauf(a.name)}</h4>
+                <p class="einkauf-artikel-meta">${escapeHtmlEinkauf(a.hersteller)} · ${escapeHtmlEinkauf(a.kategorie)}</p>
+                <p class="einkauf-artikel-preis">${formatEuroFromCent(a.preisCent)}</p>
+                <div class="einkauf-artikel-actions">
+                  <button type="button" class="btn btn-sm btn-secondary" onclick="changeEinkaufMenge('${a.id}', -1)" ${menge < 1 ? 'disabled' : ''}>−</button>
+                  <span class="einkauf-menge">${menge}</span>
+                  <button type="button" class="btn btn-sm btn-primary" onclick="changeEinkaufMenge('${a.id}', 1)">+ Hinzufügen</button>
+                </div>
+              </div>
+            </article>
+          `;
+        })
+        .join('');
+    }
+    window.renderEinkaufKatalog = renderEinkaufKatalog;
+
+    function changeEinkaufMenge(artikelId, delta) {
+      const current = einkaufWarenkorb[artikelId] || 0;
+      const next = Math.max(0, current + delta);
+      if (next === 0) delete einkaufWarenkorb[artikelId];
+      else einkaufWarenkorb[artikelId] = next;
+      renderEinkaufKatalog();
+      renderEinkaufWarenkorb();
+    }
+    window.changeEinkaufMenge = changeEinkaufMenge;
+
+    function renderEinkaufWarenkorb() {
+      const liste = document.getElementById('einkaufWarenkorbListe');
+      const leer = document.getElementById('einkaufWarenkorbLeer');
+      const countEl = document.getElementById('einkaufWarenkorbCount');
+      const summeEl = document.getElementById('einkaufWarenkorbSumme');
+      const positionen = getEinkaufWarenkorbPositionen();
+      const stueck = positionen.reduce((s, p) => s + p.menge, 0);
+      if (countEl) countEl.textContent = String(stueck);
+      if (summeEl) summeEl.textContent = formatEuroFromCent(getEinkaufGesamtbetragCent());
+      if (!liste || !leer) return;
+      if (!positionen.length) {
+        liste.innerHTML = '';
+        leer.style.display = 'block';
+        return;
+      }
+      leer.style.display = 'none';
+      liste.innerHTML = positionen
+        .map(
+          (p) => `
+          <li class="einkauf-warenkorb-item">
+            <div>
+              <strong>${escapeHtmlEinkauf(p.name)}</strong>
+              <span class="einkauf-warenkorb-meta">${p.menge}× · ${formatEuroFromCent(p.preisCent * p.menge)}</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="changeEinkaufMenge('${p.id}', -1)" title="Entfernen">×</button>
+          </li>
+        `
+        )
+        .join('');
+    }
+
+    function toggleEinkaufBegruendung() {
+      const selected = document.querySelector('input[name="einkaufZahlungsart"]:checked');
+      const group = document.getElementById('einkaufBegruendungGroup');
+      if (!group) return;
+      const show = selected && telioQuelleBrauchtBegruendung(selected.value);
+      group.style.display = show ? 'block' : 'none';
+      if (!show) {
+        const ta = document.getElementById('einkaufBegruendung');
+        if (ta) ta.value = '';
+      }
+    }
+    window.toggleEinkaufBegruendung = toggleEinkaufBegruendung;
+
+    function proceedEinkaufToZahlung() {
+      if (!getEinkaufWarenkorbPositionen().length) {
+        insasseHinweis('Bitte wählen Sie mindestens einen Artikel aus.');
+        return;
+      }
+      const uebersicht = document.getElementById('einkaufCheckoutUebersicht');
+      if (uebersicht) {
+        uebersicht.innerHTML = `
+          <ul class="einkauf-checkout-liste">
+            ${getEinkaufWarenkorbPositionen()
+              .map(
+                (p) =>
+                  `<li>${p.menge}× ${escapeHtmlEinkauf(p.name)} (${escapeHtmlEinkauf(p.hersteller)}) – ${formatEuroFromCent(p.preisCent * p.menge)}</li>`
+              )
+              .join('')}
+          </ul>
+          <p><strong>Gesamtbetrag:</strong> ${formatEuroFromCent(getEinkaufGesamtbetragCent())}</p>
+        `;
+      }
+      setEinkaufWizardStep('zahlung');
+    }
+    window.proceedEinkaufToZahlung = proceedEinkaufToZahlung;
+
+    function backEinkaufToKatalog() {
+      setEinkaufWizardStep('katalog');
+    }
+    window.backEinkaufToKatalog = backEinkaufToKatalog;
+
+    async function submitEinkaufBestellung() {
+      const session = getInsasseSession();
+      const sys = getAntragSystem();
+      if (!session) {
+        insasseHinweis('Bitte melden Sie sich erneut an.');
+        return;
+      }
+      if (!sys) {
+        insasseHinweis('Antragssystem ist nicht geladen. Bitte Seite neu laden.');
+        return;
+      }
+      const positionen = getEinkaufWarenkorbPositionen();
+      if (!positionen.length) {
+        insasseHinweis('Bitte wählen Sie mindestens einen Artikel aus.');
+        return;
+      }
+      const zahlEl = document.querySelector('input[name="einkaufZahlungsart"]:checked');
+      const zahlungsart = zahlEl ? zahlEl.value : '';
+      if (!zahlungsart) {
+        insasseHinweis('Bitte wählen Sie eine Zahlungsart aus.');
+        return;
+      }
+      const begr = (document.getElementById('einkaufBegruendung')?.value || '').trim();
+      if (telioQuelleBrauchtBegruendung(zahlungsart) && !begr) {
+        insasseHinweis('Bitte geben Sie eine Begründung an (erforderlich bei gebundenem Eigengeld und Überbrückungsgeld).');
+        return;
+      }
+      const data = {
+        bestellpositionen: positionen,
+        zahlungsart,
+        gesamtbetragCent: getEinkaufGesamtbetragCent(),
+        antragBegruendung: begr || null
+      };
+      const antrag = sys.createAntrag('einkauf-bestellung', data, session, false);
+      closeModal('einkaufModal');
+      insasseHinweis(`Ihre Bestellung wurde als Antrag ${antrag.antragsNummer || ''} eingereicht.`.trim());
+      renderAntraege();
+    }
+    window.submitEinkaufBestellung = submitEinkaufBestellung;
   </script>
   <script src="insassen-picker-boot.js?v=20260527-wizard3"></script>
 </body>

@@ -3451,6 +3451,7 @@ class AntragSystem {
       'laufzettel-mietgeraete': 'Eintragung in Laufzettel Mietgeräte (TV oder Radio)',
       'kuendigung-tv-mietvertrag': 'Kündigung des TV-Mietvertrags',
       'telio-ueberweisung': 'Antrag auf Überweisung auf das Telio-Konto',
+      'einkauf-bestellung': 'Einkauf & Bestellung',
       'telefonkonto-einrichtung': 'Antrag zur Einrichtung eines Telefonkontos',
       'freistellung-40-hmbstv': 'Freistellung nach § 40 HmbStVollzG'
     };
@@ -5077,7 +5078,7 @@ const ANTRAG_TYPE_GRUPPEN = [
   {
     id: 'finanzen-unterbringung',
     titel: 'Finanzen & Unterbringung',
-    typen: ['teilhabegeld', 'eigentum', 'elektro-geraete', 'laufzettel-mietgeraete', 'kuendigung-tv-mietvertrag', 'telio-ueberweisung']
+    typen: ['teilhabegeld', 'eigentum', 'elektro-geraete', 'laufzettel-mietgeraete', 'kuendigung-tv-mietvertrag', 'telio-ueberweisung', 'einkauf-bestellung']
   },
   {
     id: 'arbeit',

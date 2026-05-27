@@ -2508,6 +2508,168 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   margin-bottom: 1.5rem;
 }
 
+.action-bar-split {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.einkauf-teaser-section {
+  margin-bottom: 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--jhh-border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+}
+
+.modal-wide {
+  max-width: min(960px, 96vw);
+  width: 100%;
+}
+
+.einkauf-modal-body {
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+}
+
+.einkauf-layout {
+  display: grid;
+  grid-template-columns: 1fr minmax(220px, 280px);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .einkauf-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.einkauf-katalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.einkauf-artikel-karte {
+  border: 1px solid var(--jhh-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+}
+
+.einkauf-artikel-bild {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  background: var(--bg-muted, #f0f2f5);
+}
+
+.einkauf-artikel-body {
+  padding: 0.75rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.einkauf-artikel-body h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.einkauf-artikel-meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted, #5c6570);
+}
+
+.einkauf-artikel-preis {
+  margin: 0.25rem 0 0;
+  font-weight: 600;
+  color: var(--jhh-primary, #003366);
+}
+
+.einkauf-artikel-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+.einkauf-menge {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.einkauf-warenkorb {
+  border: 1px solid var(--jhh-border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: var(--bg-muted, #f8f9fb);
+  position: sticky;
+  top: 0;
+}
+
+.einkauf-warenkorb h4 {
+  margin: 0 0 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.einkauf-warenkorb-liste {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+}
+
+.einkauf-warenkorb-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--jhh-border);
+  font-size: 0.875rem;
+}
+
+.einkauf-warenkorb-meta {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted, #5c6570);
+}
+
+.einkauf-warenkorb-leer {
+  font-size: 0.875rem;
+  color: var(--text-muted, #5c6570);
+  margin: 0 0 0.75rem;
+}
+
+.einkauf-warenkorb-summe {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.75rem;
+  border-top: 2px solid var(--jhh-border);
+  font-size: 0.95rem;
+}
+
+.einkauf-empty-hint,
+.einkauf-checkout-liste {
+  font-size: 0.9rem;
+}
+
+.einkauf-positionen-liste {
+  margin: 0.25rem 0 0.5rem 1.1rem;
+  padding: 0;
+}
+
 /* Zweispaltiges Layout für Insassen-Portal */
 .two-column-layout {
   display: grid;
