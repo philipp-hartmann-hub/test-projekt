@@ -3123,6 +3123,12 @@ Persönlich eröffnet
         const verfuegungKetteTelio = brauchtVL
           ? 'VAL zur Prüfung → Zustimmung VL → Station zur Eröffnung bei Ablehnung → Zahlstelle bei Genehmigung zur Überweisung → GPA'
           : 'VAL zur Prüfung → Station zur Eröffnung bei Ablehnung → Zahlstelle bei Genehmigung zur Überweisung → GPA';
+        const verfuegungVlHinweisTelio =
+          currentLanguage === 'en'
+            ? 'Note: VL approval is required only for bound own funds and bridging funds (not for house money or free own funds).'
+            : currentLanguage === 'fr'
+              ? "Remarque : l'accord du chef d'établissement (VL) n'est requis que pour l'argent personnel lié et l'argent de pontage."
+              : 'Hinweis: Die Zustimmung der VL ist nur bei gebundenem Eigengeld und Überbrückungsgeld erforderlich (nicht bei Hausgeld oder freiem Eigengeld).';
         anliegenHtml = `
           <div class="detail-box">
             <h4>Antrag auf Überweisung auf das Telio-Konto</h4>
@@ -3143,6 +3149,7 @@ Persönlich eröffnet
           <div class="detail-box verfuegungsvorschlag-box">
             <h4>${verfuegungTitelTelio}</h4>
             <p class="verfuegungsreihenfolge">${verfuegungKetteTelio}</p>
+            <p class="verfuegungs-hinweis">${verfuegungVlHinweisTelio}</p>
             <p class="verfuegungs-hinweis">${verfuegungHinweisTelio}</p>
           </div>
         `;
