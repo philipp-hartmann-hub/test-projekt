@@ -209,19 +209,20 @@
   <div class="modal-overlay" id="newAntragModal">
     <div class="modal">
       <div class="modal-header">
-        <h3>Neuer Antrag</h3>
+        <h3 id="newAntragModalTitle">Neuer Antrag</h3>
         <button class="modal-close" onclick="closeModal('newAntragModal')">&times;</button>
       </div>
       <div class="modal-body">
+        <div id="newAntragStepType" class="antrag-wizard-step">
         <div class="form-group">
           <label>Antragsart</label>
-          <p class="section-hint" style="margin-top: 0.25rem;">Bitte wählen Sie zuerst die gewünschte Antragsart.</p>
+          <p class="section-hint" style="margin-top: 0.25rem;">Wählen Sie die passende Antragsart und klicken Sie auf „Weiter“, um die Angaben einzutragen.</p>
           <div id="newAntragTypePicker" class="antrag-type-picker" data-picker-fallback>
             <div class="antrag-type-flat-list">
               <div class="antrag-type-group-block" data-gruppe="finanzen-unterbringung">
                 <p class="antrag-type-group-title">Finanzen &amp; Unterbringung</p>
                 <div class="radio-group antrag-type-group-options">
-                  <label class="radio-option"><input type="radio" name="antragType" value="teilhabegeld" checked onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Teilhabegeld</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="teilhabegeld" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Teilhabegeld</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="eigentum" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Eigentum in der Kammer</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="elektro-geraete" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Elektro-Geräte und sonstige Gegenstände</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="laufzettel-mietgeraete" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Eintragung in Laufzettel Mietgeräte (TV oder Radio)</span></label>
@@ -255,6 +256,10 @@
             </div>
           </div>
         </div>
+        </div>
+
+        <div id="newAntragStepForm" class="antrag-wizard-step" hidden>
+        <p id="newAntragStepContext" class="antrag-wizard-kicker" hidden></p>
 
         <!-- Teilhabegeld Felder -->
         <div id="teilhabegeldFields">
@@ -661,10 +666,15 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
       <div id="newAntragFormError" class="insassen-form-error" role="alert" hidden></div>
-      <div class="modal-footer modal-footer-triple">
+      <div id="newAntragFooterStepType" class="modal-footer">
         <button type="button" class="btn btn-secondary" data-action="cancel-new-antrag" onclick="typeof closeModal==='function'&&closeModal('newAntragModal')">Abbrechen</button>
+        <button type="button" class="btn btn-primary" data-action="proceed-new-antrag" onclick="typeof proceedNewAntragToForm==='function'&&proceedNewAntragToForm()">Weiter</button>
+      </div>
+      <div id="newAntragFooterStepForm" class="modal-footer modal-footer-triple" hidden>
+        <button type="button" class="btn btn-secondary" data-action="back-new-antrag-type" onclick="typeof backNewAntragToType==='function'&&backNewAntragToType()">Zurück</button>
         <button type="button" class="btn btn-outline" data-action="draft-new-antrag" onclick="typeof saveAsEntwurf==='function'&&saveAsEntwurf()">Als Entwurf speichern</button>
         <button type="button" class="btn btn-primary" data-action="submit-new-antrag" onclick="typeof submitNewAntrag==='function'&&submitNewAntrag()">Einreichen</button>
       </div>
@@ -675,18 +685,20 @@
   <div class="modal-overlay" id="entwurfModal">
     <div class="modal">
       <div class="modal-header">
-        <h3>Entwurf bearbeiten</h3>
+        <h3 id="entwurfModalTitle">Entwurf bearbeiten</h3>
         <button class="modal-close" onclick="closeModal('entwurfModal')">&times;</button>
       </div>
       <div class="modal-body">
+        <div id="entwurfStepType" class="antrag-wizard-step" hidden>
         <div class="form-group">
           <label>Antragsart</label>
+          <p class="section-hint" style="margin-top: 0.25rem;">Wählen Sie die Antragsart und klicken Sie auf „Weiter“.</p>
           <div id="entwurfAntragTypePicker" class="antrag-type-picker" data-picker-fallback>
             <div class="antrag-type-flat-list">
               <div class="antrag-type-group-block" data-gruppe="finanzen-unterbringung">
                 <p class="antrag-type-group-title">Finanzen &amp; Unterbringung</p>
                 <div class="radio-group antrag-type-group-options">
-                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="teilhabegeld" checked><span class="radio-label">Teilhabegeld</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="teilhabegeld"><span class="radio-label">Teilhabegeld</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="eigentum"><span class="radio-label">Eigentum in der Kammer</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="elektro-geraete"><span class="radio-label">Elektro-Geräte und sonstige Gegenstände</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="laufzettel-mietgeraete"><span class="radio-label">Eintragung in Laufzettel Mietgeräte (TV oder Radio)</span></label>
@@ -720,6 +732,10 @@
             </div>
           </div>
         </div>
+        </div>
+
+        <div id="entwurfStepForm" class="antrag-wizard-step">
+        <p id="entwurfStepContext" class="antrag-wizard-kicker" hidden></p>
 
         <!-- Teilhabegeld Felder -->
         <div id="entwurfTeilhabegeldFields">
@@ -1128,8 +1144,14 @@
         </div>
 
         <input type="hidden" id="entwurfId">
+        </div>
       </div>
-      <div class="modal-footer modal-footer-triple">
+      <div id="entwurfFooterStepType" class="modal-footer" hidden>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('entwurfModal')">Abbrechen</button>
+        <button type="button" class="btn btn-primary" onclick="typeof proceedEntwurfToForm==='function'&&proceedEntwurfToForm()">Weiter</button>
+      </div>
+      <div id="entwurfFooterStepForm" class="modal-footer modal-footer-triple">
+        <button type="button" class="btn btn-secondary" onclick="typeof backEntwurfToType==='function'&&backEntwurfToType()">Zurück</button>
         <button class="btn btn-danger" onclick="deleteEntwurf()">Löschen</button>
         <button class="btn btn-outline" onclick="updateEntwurf()">Speichern</button>
         <button class="btn btn-primary" onclick="submitEntwurf()">Einreichen</button>
@@ -1357,10 +1379,12 @@
           initFn(containerId, inputName, onChangeHandler);
         }
         if (inputName === 'antragType' && typeof toggleAntragFields === 'function') {
-          toggleAntragFields();
+          const stepForm = document.getElementById('newAntragStepForm');
+          if (!stepForm || !stepForm.hidden) toggleAntragFields();
         }
         if (inputName === 'entwurfType' && typeof toggleEntwurfFields === 'function') {
-          toggleEntwurfFields();
+          const stepForm = document.getElementById('entwurfStepForm');
+          if (!stepForm || !stepForm.hidden) toggleEntwurfFields();
         }
       } catch (err) {
         console.error('mountAntragTypePicker', containerId, err);
@@ -2700,7 +2724,126 @@
       }
     }
 
+    const NEW_ANTRAG_FIELD_PANEL_IDS = [
+      'teilhabegeldFields', 'eigentumFields', 'elektroGeraeteFields', 'laufzettelMietgeraeteFields',
+      'kuendigungTvMietvertragFields', 'telioUeberweisungFields', 'telefonkontoEinrichtungFields',
+      'beratungUnterstuetzungFields', 'gespraechsterminFields', 'gesundheitMedizinFields',
+      'freizeitWeiterbildungFields', 'besuchLangzeitFields', 'besuchTerminFields', 'besuchVideoFields'
+    ];
+
+    function hideAllNewAntragFieldPanels() {
+      NEW_ANTRAG_FIELD_PANEL_IDS.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+    }
+
+    function getSelectedNewAntragType() {
+      const selected =
+        document.querySelector('#newAntragTypePicker input[name="antragType"]:checked') ||
+        document.querySelector('input[name="antragType"]:checked');
+      return selected ? selected.value : null;
+    }
+
+    function getSelectedEntwurfType() {
+      const selected =
+        document.querySelector('#entwurfAntragTypePicker input[name="entwurfType"]:checked') ||
+        document.querySelector('input[name="entwurfType"]:checked');
+      return selected ? selected.value : null;
+    }
+
+    function setNewAntragWizardStep(step) {
+      const isForm = step === 'form';
+      const stepType = document.getElementById('newAntragStepType');
+      const stepForm = document.getElementById('newAntragStepForm');
+      const footerType = document.getElementById('newAntragFooterStepType');
+      const footerForm = document.getElementById('newAntragFooterStepForm');
+      const title = document.getElementById('newAntragModalTitle');
+      const context = document.getElementById('newAntragStepContext');
+      if (stepType) stepType.hidden = isForm;
+      if (stepForm) stepForm.hidden = !isForm;
+      if (footerType) footerType.hidden = isForm;
+      if (footerForm) footerForm.hidden = !isForm;
+      showNewAntragFormError('');
+      if (isForm) {
+        const type = getSelectedNewAntragType();
+        const label = type ? getAntragTypLabel(type) : 'Antrag ausfüllen';
+        if (title) title.textContent = label;
+        if (context) {
+          context.innerHTML = type
+            ? `Antragsart: <strong>${label}</strong> — bitte füllen Sie die Felder aus.`
+            : '';
+          context.hidden = !type;
+        }
+        toggleAntragFields();
+      } else {
+        if (title) title.textContent = 'Neuer Antrag';
+        if (context) context.hidden = true;
+        hideAllNewAntragFieldPanels();
+      }
+    }
+
+    function proceedNewAntragToForm() {
+      const type = getSelectedNewAntragType();
+      if (!type) {
+        showNewAntragFormError('Bitte wählen Sie eine Antragsart aus.');
+        return;
+      }
+      setNewAntragWizardStep('form');
+    }
+
+    function backNewAntragToType() {
+      setNewAntragWizardStep('type');
+    }
+
+    function setEntwurfWizardStep(step) {
+      const isForm = step === 'form';
+      const stepType = document.getElementById('entwurfStepType');
+      const stepForm = document.getElementById('entwurfStepForm');
+      const footerType = document.getElementById('entwurfFooterStepType');
+      const footerForm = document.getElementById('entwurfFooterStepForm');
+      const title = document.getElementById('entwurfModalTitle');
+      const context = document.getElementById('entwurfStepContext');
+      if (stepType) stepType.hidden = isForm;
+      if (stepForm) stepForm.hidden = !isForm;
+      if (footerType) footerType.hidden = isForm;
+      if (footerForm) footerForm.hidden = !isForm;
+      if (isForm) {
+        const type = getSelectedEntwurfType();
+        const label = type ? getAntragTypLabel(type) : 'Entwurf bearbeiten';
+        if (title) title.textContent = label;
+        if (context) {
+          context.innerHTML = type
+            ? `Antragsart: <strong>${label}</strong>`
+            : '';
+          context.hidden = !type;
+        }
+        toggleEntwurfFields();
+      } else {
+        if (title) title.textContent = 'Entwurf — Antragsart wählen';
+        if (context) context.hidden = true;
+        document.querySelectorAll('[id^="entwurf"][id$="Fields"]').forEach((el) => {
+          if (el.id && el.id.endsWith('Fields')) el.style.display = 'none';
+        });
+      }
+    }
+
+    function proceedEntwurfToForm() {
+      const type = getSelectedEntwurfType();
+      if (!type) {
+        insasseHinweis('Bitte wählen Sie eine Antragsart aus.');
+        return;
+      }
+      setEntwurfWizardStep('form');
+    }
+
+    function backEntwurfToType() {
+      setEntwurfWizardStep('type');
+    }
+
     function toggleAntragFields() {
+      const stepForm = document.getElementById('newAntragStepForm');
+      if (stepForm && stepForm.hidden) return;
       const selected =
         document.querySelector('#newAntragTypePicker input[name="antragType"]:checked') ||
         document.querySelector('input[name="antragType"]:checked');
@@ -2734,6 +2877,8 @@
     window.toggleAntragFields = toggleAntragFields;
 
     function toggleEntwurfFields() {
+      const stepForm = document.getElementById('entwurfStepForm');
+      if (stepForm && stepForm.hidden) return;
       const selected =
         document.querySelector('#entwurfAntragTypePicker input[name="entwurfType"]:checked') ||
         document.querySelector('input[name="entwurfType"]:checked');
@@ -3246,8 +3391,8 @@
       } catch (e) {
         console.error('resetNewAntragForm:', e);
         showAlert('Antragsformular konnte nicht vollständig zurückgesetzt werden. Sie können trotzdem einen Antrag stellen.');
-        mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
-        toggleAntragFields();
+        mountAntragTypePicker('newAntragTypePicker', 'antragType', '', 'toggleAntragFields');
+        setNewAntragWizardStep('type');
       }
     }
 
@@ -3290,13 +3435,15 @@
       const kuendigungDatum = document.getElementById('kuendigungTvMietvertragDatum');
       if (kuendigungDatum) kuendigungDatum.value = '';
       if (!document.querySelector('#newAntragTypePicker input[name="antragType"]')) {
-        mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
+        mountAntragTypePicker('newAntragTypePicker', 'antragType', '', 'toggleAntragFields');
       } else {
-        setAntragTypePickerSelection('newAntragTypePicker', 'antragType', 'teilhabegeld');
+        document.querySelectorAll('#newAntragTypePicker input[name="antragType"]').forEach((r) => {
+          r.checked = false;
+        });
       }
       const eigentumRadio = document.querySelector('input[name="eigentumAktion"][value="aufstocken"]');
       if (eigentumRadio) eigentumRadio.checked = true;
-      toggleAntragFields();
+      setNewAntragWizardStep('type');
     }
 
     bindNewAntragModalFooter();
@@ -3308,6 +3455,12 @@
     window.insasseHinweis = insasseHinweis;
     window.toggleAntragFields = toggleAntragFields;
     window.toggleEntwurfFields = toggleEntwurfFields;
+    window.setNewAntragWizardStep = setNewAntragWizardStep;
+    window.proceedNewAntragToForm = proceedNewAntragToForm;
+    window.backNewAntragToType = backNewAntragToType;
+    window.setEntwurfWizardStep = setEntwurfWizardStep;
+    window.proceedEntwurfToForm = proceedEntwurfToForm;
+    window.backEntwurfToType = backEntwurfToType;
     window.resetNewAntragForm = resetNewAntragForm;
     window.mountAntragTypePicker = mountAntragTypePicker;
     window.setAntragTypePickerSelection = setAntragTypePickerSelection;
@@ -3316,8 +3469,9 @@
     if (typeof window.refreshInsassenAntragPickers === 'function') {
       window.refreshInsassenAntragPickers();
     } else {
-      mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
-      mountAntragTypePicker('entwurfAntragTypePicker', 'entwurfType', 'teilhabegeld', 'toggleEntwurfFields');
+      mountAntragTypePicker('newAntragTypePicker', 'antragType', '', 'toggleAntragFields');
+      mountAntragTypePicker('entwurfAntragTypePicker', 'entwurfType', '', 'toggleEntwurfFields');
+      setNewAntragWizardStep('type');
     }
 
     // ============================================
@@ -3386,6 +3540,7 @@
         setTelefonkontoForm('entwurf', entwurf);
       }
       
+      setEntwurfWizardStep('form');
       openModal('entwurfModal');
     }
 

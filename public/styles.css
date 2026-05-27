@@ -1786,6 +1786,33 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
 
 .modal-footer-triple {
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.antrag-wizard-step[hidden] {
+  display: none !important;
+}
+
+.antrag-wizard-kicker {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  line-height: 1.45;
+}
+
+.antrag-wizard-kicker strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+#newAntragStepType .antrag-type-picker,
+#entwurfStepType .antrag-type-picker {
+  max-height: min(62vh, 520px);
 }
 
 .modal-footer-triple .btn:first-child {

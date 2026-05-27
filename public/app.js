@@ -5134,7 +5134,10 @@ function _getAntragTypLabelForPicker(type) {
 }
 
 function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
-  const selected = selectedValue || 'teilhabegeld';
+  const selected =
+    selectedValue === '' || selectedValue === null || selectedValue === undefined
+      ? null
+      : (selectedValue || 'teilhabegeld');
   const handlerAttr = onChangeHandler
     ? ` onchange="typeof window['${onChangeHandler}']==='function'&&window['${onChangeHandler}']()"`
     : '';
@@ -5142,7 +5145,7 @@ function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
     const options = gruppe.typen
       .map((type) => {
         const label = _getAntragTypLabelForPicker(type);
-        const checked = type === selected ? ' checked' : '';
+        const checked = selected && type === selected ? ' checked' : '';
         return `<label class="radio-option">
           <input type="radio" name="${inputName}" value="${type}"${checked}${handlerAttr}>
           <span class="radio-label">${label}</span>

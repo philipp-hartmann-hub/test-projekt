@@ -25,7 +25,11 @@
       return el.querySelector('input[type="radio"]') != null;
     }
     try {
-      const html = render(inputName, selectedValue || 'teilhabegeld', handlerName);
+      const pickValue =
+        selectedValue === '' || selectedValue === null || selectedValue === undefined
+          ? ''
+          : (selectedValue || 'teilhabegeld');
+      const html = render(inputName, pickValue, handlerName);
       if (!html || !String(html).trim()) {
         console.error('[insassen-picker-boot] leeres Picker-HTML für', containerId);
         return el.querySelector('input[type="radio"]') != null;
@@ -43,13 +47,10 @@
   }
 
   function refreshInsassenAntragPickers() {
-    const okNew = mountPicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
-    const okEntwurf = mountPicker('entwurfAntragTypePicker', 'entwurfType', 'teilhabegeld', 'toggleEntwurfFields');
-    if (typeof window.toggleAntragFields === 'function') {
-      window.toggleAntragFields();
-    }
-    if (typeof window.toggleEntwurfFields === 'function') {
-      window.toggleEntwurfFields();
+    const okNew = mountPicker('newAntragTypePicker', 'antragType', '', 'toggleAntragFields');
+    const okEntwurf = mountPicker('entwurfAntragTypePicker', 'entwurfType', '', 'toggleEntwurfFields');
+    if (typeof window.setNewAntragWizardStep === 'function') {
+      window.setNewAntragWizardStep('type');
     }
     return okNew && okEntwurf;
   }
