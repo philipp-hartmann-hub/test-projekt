@@ -225,6 +225,7 @@
                   <label class="radio-option"><input type="radio" name="antragType" value="eigentum" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Eigentum in der Kammer</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="elektro-geraete" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Elektro-Geräte und sonstige Gegenstände</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="laufzettel-mietgeraete" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Eintragung in Laufzettel Mietgeräte (TV oder Radio)</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="kuendigung-tv-mietvertrag" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Kündigung des TV-Mietvertrags</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="beratung-gesundheit">
@@ -361,6 +362,14 @@
                 <span class="radio-label">Durch Dritte</span>
               </label>
             </div>
+          </div>
+        </div>
+
+        <!-- Kündigung des TV-Mietvertrags -->
+        <div id="kuendigungTvMietvertragFields" style="display: none;">
+          <div class="form-group">
+            <label for="kuendigungTvMietvertragDatum">Kündigung des Mietverhältnisses zum <span class="required">*</span></label>
+            <input type="date" id="kuendigungTvMietvertragDatum">
           </div>
         </div>
 
@@ -604,6 +613,7 @@
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="eigentum"><span class="radio-label">Eigentum in der Kammer</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="elektro-geraete"><span class="radio-label">Elektro-Geräte und sonstige Gegenstände</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="laufzettel-mietgeraete"><span class="radio-label">Eintragung in Laufzettel Mietgeräte (TV oder Radio)</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="kuendigung-tv-mietvertrag"><span class="radio-label">Kündigung des TV-Mietvertrags</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="beratung-gesundheit">
@@ -740,6 +750,14 @@
                 <span class="radio-label">Durch Dritte</span>
               </label>
             </div>
+          </div>
+        </div>
+
+        <!-- Kündigung des TV-Mietvertrags (Entwurf) -->
+        <div id="entwurfKuendigungTvMietvertragFields" style="display: none;">
+          <div class="form-group">
+            <label for="entwurfKuendigungTvMietvertragDatum">Kündigung des Mietverhältnisses zum <span class="required">*</span></label>
+            <input type="date" id="entwurfKuendigungTvMietvertragDatum">
           </div>
         </div>
 
@@ -2331,6 +2349,7 @@
       document.getElementById('eigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
       document.getElementById('elektroGeraeteFields').style.display = type === 'elektro-geraete' ? 'block' : 'none';
       document.getElementById('laufzettelMietgeraeteFields').style.display = type === 'laufzettel-mietgeraete' ? 'block' : 'none';
+      document.getElementById('kuendigungTvMietvertragFields').style.display = type === 'kuendigung-tv-mietvertrag' ? 'block' : 'none';
       document.getElementById('beratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
       document.getElementById('gespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
       document.getElementById('gesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
@@ -2359,6 +2378,7 @@
       document.getElementById('entwurfEigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
       document.getElementById('entwurfElektroGeraeteFields').style.display = type === 'elektro-geraete' ? 'block' : 'none';
       document.getElementById('entwurfLaufzettelMietgeraeteFields').style.display = type === 'laufzettel-mietgeraete' ? 'block' : 'none';
+      document.getElementById('entwurfKuendigungTvMietvertragFields').style.display = type === 'kuendigung-tv-mietvertrag' ? 'block' : 'none';
       document.getElementById('entwurfBeratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
       document.getElementById('entwurfGespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
       document.getElementById('entwurfGesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
@@ -2723,6 +2743,13 @@
           return { type, data: {}, valid: false, error: 'Bitte wählen Sie aus, ob Sie einen TV oder ein Radio mieten möchten.' };
         }
         return { type, data: { mietgeraet }, valid: true, error: null };
+      } else if (type === 'kuendigung-tv-mietvertrag') {
+        const datumEl = document.getElementById('kuendigungTvMietvertragDatum');
+        const kuendigungZum = datumEl ? datumEl.value.trim() : '';
+        if (!kuendigungZum) {
+          return { type, data: {}, valid: false, error: 'Bitte geben Sie das Kündigungsdatum an.' };
+        }
+        return { type, data: { kuendigungZum }, valid: true, error: null };
       }
       return { type, data: {}, valid: false, error: 'Unbekannter Antragstyp.' };
     }
@@ -2879,6 +2906,8 @@
       if (elKosten) elKosten.value = '';
       document.querySelectorAll('input[name="elektroGeraeteBezahlung"]').forEach((r) => { r.checked = false; });
       document.querySelectorAll('input[name="laufzettelMietgeraet"]').forEach((r) => { r.checked = false; });
+      const kuendigungDatum = document.getElementById('kuendigungTvMietvertragDatum');
+      if (kuendigungDatum) kuendigungDatum.value = '';
       if (!document.querySelector('#newAntragTypePicker input[name="antragType"]')) {
         mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
       } else {
@@ -2967,6 +2996,9 @@
           const r = document.querySelector(`input[name="entwurfLaufzettelMietgeraet"][value="${entwurf.mietgeraet}"]`);
           if (r) r.checked = true;
         }
+      } else if (entwurf.type === 'kuendigung-tv-mietvertrag') {
+        const el = document.getElementById('entwurfKuendigungTvMietvertragDatum');
+        if (el) el.value = entwurf.kuendigungZum || '';
       }
       
       openModal('entwurfModal');
@@ -3055,6 +3087,11 @@
         const mietgeraet = mietgeraetEl ? mietgeraetEl.value : '';
         if (!mietgeraet) return { type, valid: false, error: 'Bitte wählen Sie aus, ob Sie einen TV oder ein Radio mieten möchten.' };
         return { type, mietgeraet, valid: true, error: null };
+      } else if (type === 'kuendigung-tv-mietvertrag') {
+        const datumEl = document.getElementById('entwurfKuendigungTvMietvertragDatum');
+        const kuendigungZum = datumEl ? datumEl.value.trim() : '';
+        if (!kuendigungZum) return { type, valid: false, error: 'Bitte geben Sie das Kündigungsdatum an.' };
+        return { type, kuendigungZum, valid: true, error: null };
       }
       return { type, valid: false, error: 'Unbekannter Antragstyp.' };
     }
@@ -3232,6 +3269,18 @@
         detailsHtml = geraetLbl
           ? `<p><strong>Gerät:</strong> ${geraetLbl}</p>`
           : '<p class="incomplete"><em>Gerät noch nicht gewählt</em></p>';
+      } else if (antrag.type === 'kuendigung-tv-mietvertrag') {
+        typeLabel = 'Kündigung des TV-Mietvertrags';
+        if (antrag.kuendigungZum) {
+          try {
+            const d = new Date(antrag.kuendigungZum + 'T12:00:00');
+            detailsHtml = `<p><strong>Kündigung zum:</strong> ${d.toLocaleDateString('de-DE')}</p>`;
+          } catch (e) {
+            detailsHtml = `<p><strong>Kündigung zum:</strong> ${antrag.kuendigungZum}</p>`;
+          }
+        } else {
+          detailsHtml = '<p class="incomplete"><em>Kündigungsdatum noch nicht angegeben</em></p>';
+        }
       } else {
         // Unbekannter Typ - trotzdem anzeigen
         typeLabel = antrag.type || 'Antrag';

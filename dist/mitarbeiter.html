@@ -2399,6 +2399,12 @@
         typeLabel = 'Eintragung in Laufzettel Mietgeräte (TV oder Radio)';
         const geraetLabel = antrag.mietgeraet === 'tv' ? 'TV' : antrag.mietgeraet === 'radio' ? 'Radio' : (antrag.mietgeraet || '–');
         detailsHtml = `<p><strong>Gerät:</strong> ${geraetLabel}</p>`;
+      } else if (antrag.type === 'kuendigung-tv-mietvertrag') {
+        typeLabel = 'Kündigung des TV-Mietvertrags';
+        const kuendDatum = antrag.kuendigungZum
+          ? new Date(antrag.kuendigungZum + 'T12:00:00').toLocaleDateString('de-DE')
+          : '–';
+        detailsHtml = `<p><strong>Kündigung des Mietverhältnisses zum:</strong> ${kuendDatum}</p>`;
       }
       
       // Antrags-Nummer anzeigen
@@ -3098,6 +3104,27 @@ Persönlich eröffnet
             <h4>${verfuegungTitel}</h4>
             <p class="verfuegungsreihenfolge">${verfuegungKetteVideo}</p>
             <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
+          </div>
+        `;
+      } else if (antrag.type === 'kuendigung-tv-mietvertrag') {
+        const verfuegungTitelKV = currentLanguage === 'en' ? 'Suggested procedure sequence (reference Ist process)' : currentLanguage === 'fr' ? 'Suggestion de séquence (processus cible)' : 'Verfügungsvorschlag';
+        const verfuegungHinweisKV = currentLanguage === 'en' ? 'This is a suggestion only; it does not replace a professional decision.' : currentLanguage === 'fr' ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle." : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
+        const kuendDatumKV = antrag.kuendigungZum
+          ? new Date(antrag.kuendigungZum + 'T12:00:00').toLocaleDateString('de-DE')
+          : '–';
+        const verfuegungKetteKV = 'Zahlstelle → Revision zur Bestätigung, dass das Gerät abgegeben wurde → GPA';
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>Kündigung des TV-Mietvertrags</h4>
+            <div class="detail-row">
+              <span class="detail-label">Kündigung des Mietverhältnisses zum:</span>
+              <span class="detail-value">${kuendDatumKV}</span>
+            </div>
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitelKV}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKetteKV}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweisKV}</p>
           </div>
         `;
       } else if (antrag.type === 'laufzettel-mietgeraete') {
@@ -4044,6 +4071,11 @@ ${t('action.archive')}
       } else if (antrag.type === 'laufzettel-mietgeraete') {
         const geraetLbl = antrag.mietgeraet === 'tv' ? 'TV' : antrag.mietgeraet === 'radio' ? 'Radio' : (antrag.mietgeraet || '–');
         anliegenText = `${t('notice.applicationFor')} Eintragung in Laufzettel Mietgeräte (${geraetLbl})`;
+      } else if (antrag.type === 'kuendigung-tv-mietvertrag') {
+        const kuendDatum = antrag.kuendigungZum
+          ? new Date(antrag.kuendigungZum + 'T12:00:00').toLocaleDateString('de-DE')
+          : '–';
+        anliegenText = `${t('notice.applicationFor')} Kündigung des TV-Mietvertrags (zum ${kuendDatum})`;
       }
       
       // Entscheidungstext (übersetzt)
@@ -5889,6 +5921,13 @@ ${t('action.archive')}
         const geraetLbl = antrag.mietgeraet === 'tv' ? 'TV' : antrag.mietgeraet === 'radio' ? 'Radio' : (antrag.mietgeraet || '–');
         doc.text('Art: Eintragung in Laufzettel Mietgeräte (TV oder Radio)', 25, yPos);
         doc.text(`Gerät: ${geraetLbl}`, 25, yPos + 7);
+        yPos += 14;
+      } else if (antrag.type === 'kuendigung-tv-mietvertrag') {
+        const kuendDatum = antrag.kuendigungZum
+          ? new Date(antrag.kuendigungZum + 'T12:00:00').toLocaleDateString('de-DE')
+          : '–';
+        doc.text('Art: Kündigung des TV-Mietvertrags', 25, yPos);
+        doc.text(`Kündigung des Mietverhältnisses zum: ${kuendDatum}`, 25, yPos + 7);
         yPos += 14;
       }
       
