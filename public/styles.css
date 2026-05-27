@@ -1815,9 +1815,39 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   font-weight: 600;
 }
 
+#newAntragModal .modal-body:has(#newAntragStepType:not([hidden])),
+#entwurfModal .modal-body:has(#entwurfStepType:not([hidden])) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#newAntragStepType,
+#entwurfStepType {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#newAntragStepType .form-group,
+#entwurfStepType .form-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: 0;
+}
+
 #newAntragStepType .antrag-type-picker,
 #entwurfStepType .antrag-type-picker {
-  max-height: min(62vh, 520px);
+  flex: 1 1 auto;
+  min-height: 12rem;
+  max-height: calc(90vh - 11rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .modal-footer-triple .btn:first-child {
@@ -4909,6 +4939,9 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
 /* Antragstypen: Accordion & Listenfilter */
 .antrag-type-picker {
   max-height: min(52vh, 420px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .antrag-type-flat-list {
@@ -4944,25 +4977,32 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-height: inherit;
-  overflow-y: auto;
   padding-right: 0.25rem;
 }
 
 .antrag-type-accordion-item {
+  flex-shrink: 0;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
   overflow: hidden;
 }
 
+.antrag-type-accordion-item.expanded {
+  overflow: visible;
+}
+
 .antrag-type-accordion-item .antrag-type-accordion-panel {
   display: none;
   padding: 0 1rem 0.85rem;
+  max-height: none;
+  overflow: visible;
 }
 
 .antrag-type-accordion-item.expanded .antrag-type-accordion-panel {
   display: block;
+  max-height: none;
+  overflow: visible;
 }
 
 .antrag-type-accordion-trigger {
@@ -5023,6 +5063,8 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
 
 .antrag-type-accordion-panel .radio-group {
   gap: 0.4rem;
+  max-height: none;
+  overflow: visible;
 }
 
 .antrag-filter-wrap {
