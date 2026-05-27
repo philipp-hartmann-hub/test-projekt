@@ -5133,6 +5133,14 @@ function _getAntragTypLabelForPicker(type) {
   return fallback[type] || type;
 }
 
+function _antragTypePickerGruppeHint(gruppe, selected, inputName) {
+  if (selected && gruppe.typen.includes(selected)) {
+    return _getAntragTypLabelForPicker(selected);
+  }
+  const n = gruppe.typen.length;
+  return n === 1 ? '1 Antrag' : `${n} Anträge`;
+}
+
 function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
   const selected =
     selectedValue === '' || selectedValue === null || selectedValue === undefined
@@ -5141,7 +5149,8 @@ function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
   const handlerAttr = onChangeHandler
     ? ` onchange="typeof window['${onChangeHandler}']==='function'&&window['${onChangeHandler}']()"`
     : '';
-  return `<div class="antrag-type-flat-list">${ANTRAG_TYPE_GRUPPEN.map((gruppe) => {
+  return `<div class="antrag-type-accordion">${ANTRAG_TYPE_GRUPPEN.map((gruppe) => {
+    const hasSelected = Boolean(selected && gruppe.typen.includes(selected));
     const options = gruppe.typen
       .map((type) => {
         const label = _getAntragTypLabelForPicker(type);
@@ -5152,11 +5161,36 @@ function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
         </label>`;
       })
       .join('');
-    return `<div class="antrag-type-group-block" data-gruppe="${gruppe.id}">
-      <p class="antrag-type-group-title">${gruppe.titel}</p>
-      <div class="radio-group antrag-type-group-options">${options}</div>
+    const hint = _antragTypePickerGruppeHint(gruppe, selected, inputName);
+    return `<div class="antrag-type-accordion-item${hasSelected ? ' expanded' : ''}" data-gruppe="${gruppe.id}">
+      <button type="button" class="antrag-type-accordion-trigger" aria-expanded="${hasSelected ? 'true' : 'false'}">
+        <span class="antrag-type-accordion-heading">
+          <span class="antrag-type-accordion-title">${gruppe.titel}</span>
+          <span class="antrag-type-accordion-hint" data-accordion-hint>${hint}</span>
+        </span>
+        <span class="antrag-type-accordion-icon" aria-hidden="true"></span>
+      </button>
+      <div class="antrag-type-accordion-panel">
+        <div class="radio-group antrag-type-group-options">${options}</div>
+      </div>
     </div>`;
   }).join('')}</div>`;
+}
+
+function updateAntragTypePickerAccordionHints(container, inputName) {
+  if (!container) return;
+  container.querySelectorAll('.antrag-type-accordion-item').forEach((item) => {
+    const hint = item.querySelector('[data-accordion-hint]');
+    if (!hint) return;
+    const radio = item.querySelector(`input[name="${inputName}"]:checked`);
+    if (radio) {
+      const labelEl = radio.closest('label')?.querySelector('.radio-label');
+      hint.textContent = labelEl ? labelEl.textContent.trim() : _getAntragTypLabelForPicker(radio.value);
+    } else {
+      const count = item.querySelectorAll(`input[name="${inputName}"]`).length;
+      hint.textContent = count === 1 ? '1 Antrag' : `${count} Anträge`;
+    }
+  });
 }
 
 function _resolveAntragTypePickerHandler(onChangeHandler) {
@@ -5169,20 +5203,68 @@ function _resolveAntragTypePickerHandler(onChangeHandler) {
 
 function initAntragTypePickerAccordion(containerId, inputName, onChangeHandler) {
   const container = document.getElementById(containerId);
-  if (!container || !onChangeHandler) return;
-  if (container._antragPickerChangeHandler) return;
+  if (!container) return;
+
+  if (container._antragPickerClickHandler) {
+    container.removeEventListener('click', container._antragPickerClickHandler);
+  }
+  if (container._antragPickerChangeHandler) {
+    container.removeEventListener('change', container._antragPickerChangeHandler);
+  }
+
+  container._antragPickerClickHandler = (ev) => {
+    const trigger = ev.target.closest('.antrag-type-accordion-trigger');
+    if (trigger) {
+      ev.preventDefault();
+      const item = trigger.closest('.antrag-type-accordion-item');
+      if (!item) return;
+      const willExpand = !item.classList.contains('expanded');
+      container.querySelectorAll('.antrag-type-accordion-item').forEach((el) => {
+        el.classList.remove('expanded');
+        const btn = el.querySelector('.antrag-type-accordion-trigger');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      });
+      if (willExpand) {
+        item.classList.add('expanded');
+        trigger.setAttribute('aria-expanded', 'true');
+      }
+      return;
+    }
+    const input = ev.target;
+    if (!input || input.name !== inputName || input.type !== 'radio') return;
+    const item = input.closest('.antrag-type-accordion-item');
+    container.querySelectorAll('.antrag-type-accordion-item').forEach((el) => {
+      el.classList.remove('expanded');
+      const btn = el.querySelector('.antrag-type-accordion-trigger');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    });
+    if (item) {
+      item.classList.add('expanded');
+      const btn = item.querySelector('.antrag-type-accordion-trigger');
+      if (btn) btn.setAttribute('aria-expanded', 'true');
+    }
+    updateAntragTypePickerAccordionHints(container, inputName);
+    const handler = _resolveAntragTypePickerHandler(onChangeHandler);
+    if (handler) handler(input.value);
+  };
+  container.addEventListener('click', container._antragPickerClickHandler);
+
   container._antragPickerChangeHandler = (ev) => {
     const input = ev.target;
     if (!input || input.name !== inputName || input.type !== 'radio') return;
+    updateAntragTypePickerAccordionHints(container, inputName);
     const handler = _resolveAntragTypePickerHandler(onChangeHandler);
-    if (handler) handler();
+    if (handler) handler(input.value);
   };
   container.addEventListener('change', container._antragPickerChangeHandler);
+
+  updateAntragTypePickerAccordionHints(container, inputName);
 }
 
 if (typeof window !== 'undefined') {
   window.renderAntragTypePickerHtml = renderAntragTypePickerHtml;
   window.initAntragTypePickerAccordion = initAntragTypePickerAccordion;
+  window.updateAntragTypePickerAccordionHints = updateAntragTypePickerAccordionHints;
   window._getAntragTypLabelForPicker = _getAntragTypLabelForPicker;
 }
 

@@ -1790,8 +1790,13 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   gap: 0.5rem;
 }
 
-.antrag-wizard-step[hidden] {
+.antrag-wizard-step[hidden],
+.antrag-wizard-step.is-hidden {
   display: none !important;
+}
+
+.antrag-wizard-step:not([hidden]):not(.is-hidden) {
+  display: block;
 }
 
 .antrag-wizard-kicker {

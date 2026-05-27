@@ -262,7 +262,7 @@
         <p id="newAntragStepContext" class="antrag-wizard-kicker" hidden></p>
 
         <!-- Teilhabegeld Felder -->
-        <div id="teilhabegeldFields">
+        <div id="teilhabegeldFields" style="display: none;">
           <div class="form-group">
             <label for="monatSelect">Monat auswählen</label>
             <select id="monatSelect">
@@ -1274,7 +1274,7 @@
   </div>
 
   <script src="data-sync.js?v=20260519-tdzfix"></script>
-  <script src="app.js?v=20260519-tdzfix"></script>
+  <script src="app.js?v=20260527-wizard"></script>
   <script>
     let currentSession = null;
 
@@ -1378,13 +1378,23 @@
         if (typeof initFn === 'function') {
           initFn(containerId, inputName, onChangeHandler);
         }
+        if (inputName === 'antragType' && typeof rememberNewAntragType === 'function') {
+          const checked = el.querySelector(`input[name="${inputName}"]:checked`);
+          if (checked) rememberNewAntragType(checked.value);
+        }
         if (inputName === 'antragType' && typeof toggleAntragFields === 'function') {
           const stepForm = document.getElementById('newAntragStepForm');
-          if (!stepForm || !stepForm.hidden) toggleAntragFields();
+          if (!stepForm || !stepForm.hasAttribute('hidden')) {
+            const checked = el.querySelector(`input[name="${inputName}"]:checked`);
+            toggleAntragFields(checked ? checked.value : undefined);
+          }
         }
         if (inputName === 'entwurfType' && typeof toggleEntwurfFields === 'function') {
           const stepForm = document.getElementById('entwurfStepForm');
-          if (!stepForm || !stepForm.hidden) toggleEntwurfFields();
+          if (!stepForm || !stepForm.hasAttribute('hidden')) {
+            const checked = el.querySelector(`input[name="${inputName}"]:checked`);
+            toggleEntwurfFields(checked ? checked.value : undefined);
+          }
         }
       } catch (err) {
         console.error('mountAntragTypePicker', containerId, err);
@@ -2739,10 +2749,31 @@
     }
 
     function getSelectedNewAntragType() {
-      const selected =
+      const modal = document.getElementById('newAntragModal');
+      const fromPicker =
         document.querySelector('#newAntragTypePicker input[name="antragType"]:checked') ||
         document.querySelector('input[name="antragType"]:checked');
-      return selected ? selected.value : null;
+      if (fromPicker) return fromPicker.value;
+      if (modal && modal.dataset.wizardType) return modal.dataset.wizardType;
+      return null;
+    }
+
+    function rememberNewAntragType(type) {
+      const modal = document.getElementById('newAntragModal');
+      if (modal && type) modal.dataset.wizardType = type;
+    }
+
+    function setWizardPanelVisible(el, visible) {
+      if (!el) return;
+      if (visible) {
+        el.removeAttribute('hidden');
+        el.classList.remove('is-hidden');
+        el.setAttribute('aria-hidden', 'false');
+      } else {
+        el.setAttribute('hidden', '');
+        el.classList.add('is-hidden');
+        el.setAttribute('aria-hidden', 'true');
+      }
     }
 
     function getSelectedEntwurfType() {
@@ -2752,7 +2783,7 @@
       return selected ? selected.value : null;
     }
 
-    function setNewAntragWizardStep(step) {
+    function setNewAntragWizardStep(step, options = {}) {
       const isForm = step === 'form';
       const stepType = document.getElementById('newAntragStepType');
       const stepForm = document.getElementById('newAntragStepForm');
@@ -2760,13 +2791,15 @@
       const footerForm = document.getElementById('newAntragFooterStepForm');
       const title = document.getElementById('newAntragModalTitle');
       const context = document.getElementById('newAntragStepContext');
-      if (stepType) stepType.hidden = isForm;
-      if (stepForm) stepForm.hidden = !isForm;
-      if (footerType) footerType.hidden = isForm;
-      if (footerForm) footerForm.hidden = !isForm;
+      const modal = document.getElementById('newAntragModal');
+      setWizardPanelVisible(stepType, !isForm);
+      setWizardPanelVisible(stepForm, isForm);
+      setWizardPanelVisible(footerType, !isForm);
+      setWizardPanelVisible(footerForm, isForm);
       showNewAntragFormError('');
       if (isForm) {
-        const type = getSelectedNewAntragType();
+        const type = options.type || getSelectedNewAntragType();
+        if (type) rememberNewAntragType(type);
         const label = type ? getAntragTypLabel(type) : 'Antrag ausfüllen';
         if (title) title.textContent = label;
         if (context) {
@@ -2775,8 +2808,14 @@
             : '';
           context.hidden = !type;
         }
-        toggleAntragFields();
+        const showFields = () => toggleAntragFields(type);
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(showFields);
+        } else {
+          showFields();
+        }
       } else {
+        if (modal) delete modal.dataset.wizardType;
         if (title) title.textContent = 'Neuer Antrag';
         if (context) context.hidden = true;
         hideAllNewAntragFieldPanels();
@@ -2789,14 +2828,15 @@
         showNewAntragFormError('Bitte wählen Sie eine Antragsart aus.');
         return;
       }
-      setNewAntragWizardStep('form');
+      rememberNewAntragType(type);
+      setNewAntragWizardStep('form', { type });
     }
 
     function backNewAntragToType() {
       setNewAntragWizardStep('type');
     }
 
-    function setEntwurfWizardStep(step) {
+    function setEntwurfWizardStep(step, options = {}) {
       const isForm = step === 'form';
       const stepType = document.getElementById('entwurfStepType');
       const stepForm = document.getElementById('entwurfStepForm');
@@ -2804,12 +2844,12 @@
       const footerForm = document.getElementById('entwurfFooterStepForm');
       const title = document.getElementById('entwurfModalTitle');
       const context = document.getElementById('entwurfStepContext');
-      if (stepType) stepType.hidden = isForm;
-      if (stepForm) stepForm.hidden = !isForm;
-      if (footerType) footerType.hidden = isForm;
-      if (footerForm) footerForm.hidden = !isForm;
+      setWizardPanelVisible(stepType, !isForm);
+      setWizardPanelVisible(stepForm, isForm);
+      setWizardPanelVisible(footerType, !isForm);
+      setWizardPanelVisible(footerForm, isForm);
       if (isForm) {
-        const type = getSelectedEntwurfType();
+        const type = options.type || getSelectedEntwurfType();
         const label = type ? getAntragTypLabel(type) : 'Entwurf bearbeiten';
         if (title) title.textContent = label;
         if (context) {
@@ -2818,7 +2858,12 @@
             : '';
           context.hidden = !type;
         }
-        toggleEntwurfFields();
+        const showFields = () => toggleEntwurfFields(type);
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(showFields);
+        } else {
+          showFields();
+        }
       } else {
         if (title) title.textContent = 'Entwurf — Antragsart wählen';
         if (context) context.hidden = true;
@@ -2834,37 +2879,45 @@
         insasseHinweis('Bitte wählen Sie eine Antragsart aus.');
         return;
       }
-      setEntwurfWizardStep('form');
+      setEntwurfWizardStep('form', { type });
     }
 
     function backEntwurfToType() {
       setEntwurfWizardStep('type');
     }
 
-    function toggleAntragFields() {
+    function setFieldPanelVisible(id, visible) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = visible ? 'block' : 'none';
+    }
+
+    function toggleAntragFields(forceType) {
       const stepForm = document.getElementById('newAntragStepForm');
-      if (stepForm && stepForm.hidden) return;
-      const selected =
-        document.querySelector('#newAntragTypePicker input[name="antragType"]:checked') ||
-        document.querySelector('input[name="antragType"]:checked');
-      if (!selected) return;
-      const type = selected.value;
-      document.getElementById('teilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
-      document.getElementById('eigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
-      document.getElementById('elektroGeraeteFields').style.display = type === 'elektro-geraete' ? 'block' : 'none';
-      document.getElementById('laufzettelMietgeraeteFields').style.display = type === 'laufzettel-mietgeraete' ? 'block' : 'none';
-      document.getElementById('kuendigungTvMietvertragFields').style.display = type === 'kuendigung-tv-mietvertrag' ? 'block' : 'none';
-      document.getElementById('telioUeberweisungFields').style.display = type === 'telio-ueberweisung' ? 'block' : 'none';
+      if (stepForm && stepForm.hasAttribute('hidden')) return;
+      let type = forceType || getSelectedNewAntragType();
+      if (!type) return;
+      rememberNewAntragType(type);
+      NEW_ANTRAG_FIELD_PANEL_IDS.forEach((id) => setFieldPanelVisible(id, false));
+      const panelByType = {
+        teilhabegeld: 'teilhabegeldFields',
+        eigentum: 'eigentumFields',
+        'elektro-geraete': 'elektroGeraeteFields',
+        'laufzettel-mietgeraete': 'laufzettelMietgeraeteFields',
+        'kuendigung-tv-mietvertrag': 'kuendigungTvMietvertragFields',
+        'telio-ueberweisung': 'telioUeberweisungFields',
+        'telefonkonto-einrichtung': 'telefonkontoEinrichtungFields',
+        'beratung-unterstuetzung': 'beratungUnterstuetzungFields',
+        gespraechstermin: 'gespraechsterminFields',
+        'gesundheit-medizin': 'gesundheitMedizinFields',
+        'freizeit-weiterbildung': 'freizeitWeiterbildungFields',
+        'besuch-langzeit': 'besuchLangzeitFields',
+        'besuch-termin': 'besuchTerminFields',
+        'besuch-video': 'besuchVideoFields'
+      };
+      const panelId = panelByType[type];
+      if (panelId) setFieldPanelVisible(panelId, true);
       if (type === 'telio-ueberweisung') toggleTelioBegruendung('');
-      document.getElementById('telefonkontoEinrichtungFields').style.display = type === 'telefonkonto-einrichtung' ? 'block' : 'none';
       if (type === 'telefonkonto-einrichtung') toggleTelefonkontoFelder('');
-      document.getElementById('beratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
-      document.getElementById('gespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
-      document.getElementById('gesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
-      document.getElementById('freizeitWeiterbildungFields').style.display = type === 'freizeit-weiterbildung' ? 'block' : 'none';
-      document.getElementById('besuchLangzeitFields').style.display = type === 'besuch-langzeit' ? 'block' : 'none';
-      document.getElementById('besuchTerminFields').style.display = type === 'besuch-termin' ? 'block' : 'none';
-      document.getElementById('besuchVideoFields').style.display = type === 'besuch-video' ? 'block' : 'none';
       if (type === 'besuch-langzeit') {
         const liste = document.getElementById('langzeitBesucherListe');
         if (liste && !liste.querySelector('.langzeit-besucher-block')) {
@@ -2876,14 +2929,17 @@
     }
     window.toggleAntragFields = toggleAntragFields;
 
-    function toggleEntwurfFields() {
+    function toggleEntwurfFields(forceType) {
       const stepForm = document.getElementById('entwurfStepForm');
-      if (stepForm && stepForm.hidden) return;
-      const selected =
-        document.querySelector('#entwurfAntragTypePicker input[name="entwurfType"]:checked') ||
-        document.querySelector('input[name="entwurfType"]:checked');
-      if (!selected) return;
-      const type = selected.value;
+      if (stepForm && stepForm.hasAttribute('hidden')) return;
+      let type = forceType;
+      if (!type) {
+        const selected =
+          document.querySelector('#entwurfAntragTypePicker input[name="entwurfType"]:checked') ||
+          document.querySelector('input[name="entwurfType"]:checked');
+        if (!selected) return;
+        type = selected.value;
+      }
       document.getElementById('entwurfTeilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
       document.getElementById('entwurfEigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
       document.getElementById('entwurfElektroGeraeteFields').style.display = type === 'elektro-geraete' ? 'block' : 'none';
@@ -3540,7 +3596,7 @@
         setTelefonkontoForm('entwurf', entwurf);
       }
       
-      setEntwurfWizardStep('form');
+      setEntwurfWizardStep('form', { type: entwurf.type });
       openModal('entwurfModal');
     }
 
@@ -4295,6 +4351,6 @@
       renderAntraege();
     }
   </script>
-  <script src="insassen-picker-boot.js?v=20260519-tdzfix"></script>
+  <script src="insassen-picker-boot.js?v=20260527-wizard"></script>
 </body>
 </html>
