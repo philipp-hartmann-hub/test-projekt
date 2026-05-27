@@ -1820,17 +1820,6 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   display: flex;
 }
 
-/* Aktives Formularfeld-Panel in Schritt 2 (überschreibt inline display:none) */
-#newAntragStepForm [id$="Fields"],
-#entwurfStepForm [id$="Fields"] {
-  display: none !important;
-}
-
-#newAntragStepForm [id$="Fields"].is-active,
-#entwurfStepForm [id$="Fields"].is-active {
-  display: block !important;
-}
-
 .antrag-wizard-kicker {
   margin: 0 0 1rem;
   padding: 0.65rem 0.85rem;
