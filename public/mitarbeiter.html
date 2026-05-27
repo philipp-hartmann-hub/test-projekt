@@ -2386,6 +2386,15 @@
           <p><strong>Wochentag:</strong> ${antrag.wochentag || '–'}</p>
           <p><strong>Tageszeit:</strong> ${antrag.tageszeit === 'vormittags' ? 'Vormittags' : antrag.tageszeit === 'nachmittags' ? 'Nachmittags' : (antrag.tageszeit || '–')}</p>
         `;
+      } else if (antrag.type === 'elektro-geraete') {
+        typeLabel = 'Elektro-Geräte und sonstige Gegenstände';
+        const bezahlungLabel = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'durch-dritte': 'Durch Dritte' }[antrag.bezahlung] || antrag.bezahlung || '–';
+        detailsHtml = `
+          <p><strong>Gegenstand:</strong> ${antrag.gegenstand || '–'}</p>
+          ${antrag.firma ? `<p><strong>Anlieferung durch:</strong> ${antrag.firma}</p>` : ''}
+          <p><strong>Kosten:</strong> ${antrag.kosten ? antrag.kosten + ' €' : '–'}</p>
+          <p><strong>Bezahlung:</strong> ${bezahlungLabel}</p>
+        `;
       }
       
       // Antrags-Nummer anzeigen
@@ -2739,15 +2748,18 @@ Persönlich eröffnet
       // Prüfen ob es Gruppenaufgaben für diesen Mitarbeiter gibt
       const meineGruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, currentSession);
       const hatGruppenaufgaben = meineGruppenAufgaben.length > 0;
+      // Nur Termin-Aufgaben, die noch nicht übernommen wurden (Kalender-Sync ausstehend)
       const offeneTerminAufgaben = aufgabenSystem.aufgaben.filter(
         (a) =>
           a.antragId === antragId &&
           a.status === 'offen' &&
           a.terminId &&
+          a.terminKalenderNachUebernahme === true &&
           a.zugewiesenAnTyp === 'mitarbeiter' &&
           String(a.zugewiesenAnId) === String(currentSession.userId)
       );
       const hatTerminAufgabe = offeneTerminAufgaben.length > 0;
+      const hatAufgabeZurUebernahme = hatGruppenaufgaben || hatTerminAufgabe;
       
       // Prüfen ob eine Hauptbearbeitungsübergabe wartet
       const hatWartendeUebergabe = antrag.hauptbearbeitungWartetAufUebernahme && 
@@ -2760,7 +2772,7 @@ Persönlich eröffnet
       
       // Kann der Mitarbeiter diesen Antrag/Aufgabe übernehmen?
       const kannUebernehmen =
-        istOffen || hatGruppenaufgaben || hatTerminAufgabe || hatWartendeUebergabe || kannValUebernehmen;
+        istOffen || hatAufgabeZurUebernahme || hatWartendeUebergabe || kannValUebernehmen;
       
       // Prüfen ob der aktuelle Benutzer berechtigt ist
       const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(antragId);
@@ -2801,6 +2813,13 @@ Persönlich eröffnet
         }
       }
       const hatOffeneAufgabe = !!meineOffeneAufgabe;
+      // „Aufgabe bearbeiten“ erst nach Übernahme (persönliche Zuweisung, nicht Gruppenpostfach / Termin vor Kalender-Sync)
+      const kannAufgabeBearbeiten =
+        hatOffeneAufgabe &&
+        meineOffeneAufgabe &&
+        meineOffeneAufgabe.zugewiesenAnTyp === 'mitarbeiter' &&
+        String(meineOffeneAufgabe.zugewiesenAnId) === String(currentSession.userId) &&
+        !meineOffeneAufgabe.terminKalenderNachUebernahme;
       const aufgabeMussErstErledigtWerden = hatOffeneAufgabe;
       
       // Der aktuelle Bearbeiter hat IMMER Zugriff (bis zur Veraktung).
@@ -3075,6 +3094,41 @@ Persönlich eröffnet
             <h4>${verfuegungTitel}</h4>
             <p class="verfuegungsreihenfolge">${verfuegungKetteVideo}</p>
             <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
+          </div>
+        `;
+      } else if (antrag.type === 'elektro-geraete') {
+        const verfuegungTitelEG = currentLanguage === 'en' ? 'Suggested procedure sequence (reference Ist process)' : currentLanguage === 'fr' ? 'Suggestion de séquence (processus cible)' : 'Verfügungsvorschlag';
+        const verfuegungHinweisEG = currentLanguage === 'en' ? 'This is a suggestion only; it does not replace a professional decision.' : currentLanguage === 'fr' ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle." : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
+        const bezahlungLabelEG = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'durch-dritte': 'Durch Dritte' }[antrag.bezahlung] || antrag.bezahlung || '–';
+        // Verfügungskette je nach Bezahlungsart (bei freiem Eigengeld zusätzlich VAL)
+        const verfuegungKetteEG = antrag.bezahlung === 'freies-eigengeld'
+          ? 'Station zur Prüfung → VAL zur Prüfung → Station zur Eröffnung → Zahlstelle zur Sperrung des genehmigten Betrags → Paketstelle zur Annahme → Revision → GPA'
+          : 'Station zur Prüfung → Station zur Eröffnung → Zahlstelle zur Sperrung des genehmigten Betrags → Paketstelle zur Annahme → Revision → GPA';
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>Elektro-Geräte und sonstige Gegenstände</h4>
+            <div class="detail-row">
+              <span class="detail-label">Gegenstand:</span>
+              <span class="detail-value">${antrag.gegenstand || '–'}</span>
+            </div>
+            ${antrag.firma ? `
+            <div class="detail-row">
+              <span class="detail-label">Anlieferung durch Firma:</span>
+              <span class="detail-value">${antrag.firma}</span>
+            </div>` : ''}
+            <div class="detail-row">
+              <span class="detail-label">Entstehende Kosten:</span>
+              <span class="detail-value">${antrag.kosten ? antrag.kosten + ' €' : '–'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Bezahlung erfolgt:</span>
+              <span class="detail-value">${bezahlungLabelEG}</span>
+            </div>
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitelEG}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKetteEG}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweisEG}</p>
           </div>
         `;
       } else if (antrag.type === 'gesundheit-medizin') {
@@ -3579,7 +3633,7 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                 ${kannUebernehmen && !istBearbeiter ? `
                   <button class="btn btn-primary btn-large" onclick="${istHausleitung() ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
                     ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : 
-                      (hatGruppenaufgaben || hatTerminAufgabe) ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche') : 
+                      hatAufgabeZurUebernahme ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche') : 
                       t('button.takeApplication')}
                   </button>
                 ` : ''}
@@ -3594,7 +3648,7 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                   <span>${currentLanguage === 'en' ? 'Please complete the open task first.' : currentLanguage === 'fr' ? 'Veuillez d’abord terminer la tâche ouverte.' : 'Bitte zuerst die offene Aufgabe erledigen.'}</span>
                 </div>
               ` : ''}
-              ${hatOffeneAufgabe ? `
+              ${kannAufgabeBearbeiten ? `
                   <button class="btn btn-primary btn-large" onclick="openAufgabeLoesungModal('${meineOffeneAufgabe.id}')">
                     ${t('task.edit')}
                   </button>
@@ -3962,6 +4016,8 @@ ${t('action.archive')}
       } else if (antrag.type === 'besuch-video') {
         const bn = [antrag.besucherVorname, antrag.besucherNachname].filter(Boolean).join(' ');
         anliegenText = `${t('notice.applicationFor')} ${t('application.type.besuch_video')} (${bn || '–'}, ${antrag.wochentag || '–'})`;
+      } else if (antrag.type === 'elektro-geraete') {
+        anliegenText = `${t('notice.applicationFor')} Elektro-Geräte und sonstige Gegenstände: ${antrag.gegenstand || '–'} (${antrag.kosten ? antrag.kosten + ' €' : '–'})`;
       }
       
       // Entscheidungstext (übersetzt)
@@ -5794,6 +5850,15 @@ ${t('action.archive')}
         doc.text(`Wochentag: ${antrag.wochentag || '–'}`, 25, yPos + 21);
         doc.text(`Tageszeit: ${antrag.tageszeit || '–'}`, 25, yPos + 28);
         yPos += 35;
+      } else if (antrag.type === 'elektro-geraete') {
+        doc.text('Art: Elektro-Geräte und sonstige Gegenstände', 25, yPos);
+        doc.text(`Gegenstand: ${antrag.gegenstand || '–'}`, 25, yPos + 7);
+        let y = yPos + 14;
+        if (antrag.firma) { doc.text(`Anlieferung durch Firma: ${antrag.firma}`, 25, y); y += 7; }
+        doc.text(`Kosten: ${antrag.kosten ? antrag.kosten + ' €' : '–'}`, 25, y); y += 7;
+        const bezLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'durch-dritte': 'Durch Dritte' }[antrag.bezahlung] || antrag.bezahlung || '–';
+        doc.text(`Bezahlung: ${bezLbl}`, 25, y);
+        yPos = y + 14;
       }
       
       // Sachliche/fachliche Prüfung (wenn erfolgt)

@@ -223,6 +223,7 @@
                 <div class="radio-group antrag-type-group-options">
                   <label class="radio-option"><input type="radio" name="antragType" value="teilhabegeld" checked onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Teilhabegeld</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="eigentum" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Eigentum in der Kammer</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="elektro-geraete" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Elektro-Geräte und sonstige Gegenstände</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="beratung-gesundheit">
@@ -319,6 +320,46 @@
             <label for="eigentumBegruendung">Begründung <span class="required">*</span></label>
             <textarea id="eigentumBegruendung" placeholder="Bitte begründen Sie Ihren Antrag..." rows="3" required></textarea>
             <p class="field-hint">Eine Begründung ist für diesen Antrag erforderlich.</p>
+          </div>
+        </div>
+
+        <!-- Elektro-Geräte und sonstige Gegenstände -->
+        <div id="elektroGeraeteFields" style="display: none;">
+          <div class="pruefung-hinweis" role="note" style="margin-bottom: 1rem;">
+            <span class="hinweis-icon" aria-hidden="true">ℹ</span>
+            <p>Hinweis: Dieser Antrag gilt <strong>nicht</strong> für Bekleidung. Pro Antrag kann nur <strong>1 Elektro-Gerät bzw. 1 sonstiger Gegenstand</strong> beantragt werden.</p>
+          </div>
+          <div class="form-group">
+            <label for="elektroGeraeteGegenstand">Bitte um Annahme und Aushändigung von <span class="required">*</span></label>
+            <textarea id="elektroGeraeteGegenstand" rows="3" placeholder="Beschreiben Sie den Gegenstand (z. B. Radiowecker, Tischventilator ...)"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="elektroGeraeteFirma">Anlieferung durch Firma</label>
+            <input type="text" id="elektroGeraeteFirma" placeholder="Name der Firma, die den Gegenstand anliefert">
+          </div>
+          <div class="form-group">
+            <label for="elektroGeraeteKosten">Entstehende Kosten <span class="required">*</span></label>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <input type="number" id="elektroGeraeteKosten" min="0" step="0.01" placeholder="0,00" style="max-width: 160px;">
+              <span>€</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Bezahlung erfolgt <span class="required">*</span></label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="elektroGeraeteBezahlung" value="hausgeld">
+                <span class="radio-label">Hausgeld</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="elektroGeraeteBezahlung" value="freies-eigengeld">
+                <span class="radio-label">Freies Eigengeld</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="elektroGeraeteBezahlung" value="durch-dritte">
+                <span class="radio-label">Durch Dritte</span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -543,6 +584,7 @@
                 <div class="radio-group antrag-type-group-options">
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="teilhabegeld" checked><span class="radio-label">Teilhabegeld</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="eigentum"><span class="radio-label">Eigentum in der Kammer</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="elektro-geraete"><span class="radio-label">Elektro-Geräte und sonstige Gegenstände</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="beratung-gesundheit">
@@ -639,6 +681,46 @@
             <label for="entwurfEigentumBegruendung">Begründung <span class="required">*</span></label>
             <textarea id="entwurfEigentumBegruendung" placeholder="Bitte begründen Sie Ihren Antrag..." rows="3" required></textarea>
             <p class="field-hint">Eine Begründung ist für diesen Antrag erforderlich.</p>
+          </div>
+        </div>
+
+        <!-- Elektro-Geräte und sonstige Gegenstände (Entwurf) -->
+        <div id="entwurfElektroGeraeteFields" style="display: none;">
+          <div class="pruefung-hinweis" role="note" style="margin-bottom: 1rem;">
+            <span class="hinweis-icon" aria-hidden="true">ℹ</span>
+            <p>Hinweis: Dieser Antrag gilt <strong>nicht</strong> für Bekleidung. Pro Antrag kann nur <strong>1 Elektro-Gerät bzw. 1 sonstiger Gegenstand</strong> beantragt werden.</p>
+          </div>
+          <div class="form-group">
+            <label for="entwurfElektroGeraeteGegenstand">Bitte um Annahme und Aushändigung von <span class="required">*</span></label>
+            <textarea id="entwurfElektroGeraeteGegenstand" rows="3" placeholder="Beschreiben Sie den Gegenstand (z. B. Radiowecker, Tischventilator ...)"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="entwurfElektroGeraeteFirma">Anlieferung durch Firma</label>
+            <input type="text" id="entwurfElektroGeraeteFirma" placeholder="Name der Firma, die den Gegenstand anliefert">
+          </div>
+          <div class="form-group">
+            <label for="entwurfElektroGeraeteKosten">Entstehende Kosten <span class="required">*</span></label>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <input type="number" id="entwurfElektroGeraeteKosten" min="0" step="0.01" placeholder="0,00" style="max-width: 160px;">
+              <span>€</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Bezahlung erfolgt <span class="required">*</span></label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="entwurfElektroGeraeteBezahlung" value="hausgeld">
+                <span class="radio-label">Hausgeld</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="entwurfElektroGeraeteBezahlung" value="freies-eigengeld">
+                <span class="radio-label">Freies Eigengeld</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="entwurfElektroGeraeteBezahlung" value="durch-dritte">
+                <span class="radio-label">Durch Dritte</span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -2211,6 +2293,7 @@
       const type = selected.value;
       document.getElementById('teilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
       document.getElementById('eigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
+      document.getElementById('elektroGeraeteFields').style.display = type === 'elektro-geraete' ? 'block' : 'none';
       document.getElementById('beratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
       document.getElementById('gespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
       document.getElementById('gesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
@@ -2237,6 +2320,7 @@
       const type = selected.value;
       document.getElementById('entwurfTeilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
       document.getElementById('entwurfEigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
+      document.getElementById('entwurfElektroGeraeteFields').style.display = type === 'elektro-geraete' ? 'block' : 'none';
       document.getElementById('entwurfBeratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
       document.getElementById('entwurfGespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
       document.getElementById('entwurfGesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
@@ -2575,6 +2659,25 @@
           return { type, data: { aktion, kleidung, antragBegruendung }, valid: false, error: 'Dieses Feld ist erforderlich.' };
         }
         return { type, data: { aktion, kleidung, antragBegruendung }, valid: true, error: null };
+      } else if (type === 'elektro-geraete') {
+        const gegenstandEl = document.getElementById('elektroGeraeteGegenstand');
+        const firmaEl = document.getElementById('elektroGeraeteFirma');
+        const kostenEl = document.getElementById('elektroGeraeteKosten');
+        const bezahlungEl = document.querySelector('input[name="elektroGeraeteBezahlung"]:checked');
+        const gegenstand = gegenstandEl ? gegenstandEl.value.trim() : '';
+        const firma = firmaEl ? firmaEl.value.trim() : '';
+        const kosten = kostenEl ? kostenEl.value.trim() : '';
+        const bezahlung = bezahlungEl ? bezahlungEl.value : '';
+        if (!gegenstand) {
+          return { type, data: {}, valid: false, error: 'Bitte beschreiben Sie den Gegenstand, den Sie beantragen möchten.' };
+        }
+        if (!kosten) {
+          return { type, data: {}, valid: false, error: 'Bitte geben Sie die entstehenden Kosten an.' };
+        }
+        if (!bezahlung) {
+          return { type, data: {}, valid: false, error: 'Bitte wählen Sie die Zahlungsart aus.' };
+        }
+        return { type, data: { gegenstand, firma: firma || null, kosten, bezahlung }, valid: true, error: null };
       }
       return { type, data: {}, valid: false, error: 'Unbekannter Antragstyp.' };
     }
@@ -2723,6 +2826,13 @@
       });
       const eigentumBegr = document.getElementById('eigentumBegruendung');
       if (eigentumBegr) eigentumBegr.value = '';
+      const elGegenstand = document.getElementById('elektroGeraeteGegenstand');
+      if (elGegenstand) elGegenstand.value = '';
+      const elFirma = document.getElementById('elektroGeraeteFirma');
+      if (elFirma) elFirma.value = '';
+      const elKosten = document.getElementById('elektroGeraeteKosten');
+      if (elKosten) elKosten.value = '';
+      document.querySelectorAll('input[name="elektroGeraeteBezahlung"]').forEach((r) => { r.checked = false; });
       if (!document.querySelector('#newAntragTypePicker input[name="antragType"]')) {
         mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
       } else {
@@ -2797,6 +2907,15 @@
           cb.checked = entwurf.kleidung && entwurf.kleidung.includes(cb.value);
         });
         document.getElementById('entwurfEigentumBegruendung').value = entwurf.antragBegruendung || '';
+      } else if (entwurf.type === 'elektro-geraete') {
+        const el = (id) => document.getElementById(id);
+        if (el('entwurfElektroGeraeteGegenstand')) el('entwurfElektroGeraeteGegenstand').value = entwurf.gegenstand || '';
+        if (el('entwurfElektroGeraeteFirma')) el('entwurfElektroGeraeteFirma').value = entwurf.firma || '';
+        if (el('entwurfElektroGeraeteKosten')) el('entwurfElektroGeraeteKosten').value = entwurf.kosten || '';
+        if (entwurf.bezahlung) {
+          const r = document.querySelector(`input[name="entwurfElektroGeraeteBezahlung"][value="${entwurf.bezahlung}"]`);
+          if (r) r.checked = true;
+        }
       }
       
       openModal('entwurfModal');
@@ -2870,6 +2989,16 @@
           return { type, aktion, kleidung, antragBegruendung, valid: false, error: 'Bitte geben Sie eine Begründung für Ihren Antrag an.' };
         }
         return { type, aktion, kleidung, antragBegruendung, valid: true, error: null };
+      } else if (type === 'elektro-geraete') {
+        const gegenstand = (document.getElementById('entwurfElektroGeraeteGegenstand') || {}).value?.trim() || '';
+        const firma = (document.getElementById('entwurfElektroGeraeteFirma') || {}).value?.trim() || '';
+        const kosten = (document.getElementById('entwurfElektroGeraeteKosten') || {}).value?.trim() || '';
+        const bezahlungEl = document.querySelector('input[name="entwurfElektroGeraeteBezahlung"]:checked');
+        const bezahlung = bezahlungEl ? bezahlungEl.value : '';
+        if (!gegenstand) return { type, valid: false, error: 'Bitte beschreiben Sie den Gegenstand.' };
+        if (!kosten) return { type, valid: false, error: 'Bitte geben Sie die entstehenden Kosten an.' };
+        if (!bezahlung) return { type, valid: false, error: 'Bitte wählen Sie die Zahlungsart aus.' };
+        return { type, gegenstand, firma: firma || null, kosten, bezahlung, valid: true, error: null };
       }
       return { type, valid: false, error: 'Unbekannter Antragstyp.' };
     }

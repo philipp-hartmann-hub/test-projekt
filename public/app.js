@@ -90,6 +90,7 @@ const TRANSLATIONS = {
     'application.type.besuch_langzeit': 'Langzeitbesuch (Genehmigung)',
     'application.type.besuch_termin': 'Besuchstermin',
     'application.type.besuch_video': 'Videobesuch',
+    'application.type.elektro_geraete': 'Elektro-Geräte und sonstige Gegenstände',
     'application.type.sonstiges': 'Sonstiges Anliegen',
     
     // Status
@@ -3010,6 +3011,10 @@ class AufgabenSystem {
   /** Nach Übernahme einer Gruppenaufgabe: Kalender des Bearbeiters aktualisieren. */
   syncKalenderNachGruppenuebernahme(aufgabe) {
     if (!aufgabe || typeof terminSystem === 'undefined') return;
+    if (aufgabe.terminKalenderNachUebernahme) {
+      aufgabe.terminKalenderNachUebernahme = false;
+      this.saveAufgaben();
+    }
     if (aufgabe.terminBegleitung || aufgabe.terminId) {
       terminSystem.syncBegleitungKalenderFuerAufgabe(aufgabe);
     } else if (aufgabe.fristDatum && aufgabe.zugewiesenAnTyp === 'mitarbeiter') {
@@ -3434,7 +3439,8 @@ class AntragSystem {
       'freizeit-weiterbildung': 'Freizeitaktivitäten inkl. Weiterbildungskosten',
       'besuch-langzeit': 'Langzeitbesuch (Genehmigung)',
       'besuch-termin': 'Besuchstermin',
-      'besuch-video': 'Videobesuch'
+      'besuch-video': 'Videobesuch',
+      'elektro-geraete': 'Elektro-Geräte und sonstige Gegenstände'
     };
     return labels[type] || 'Antrag';
   }
@@ -5059,7 +5065,7 @@ const ANTRAG_TYPE_GRUPPEN = [
   {
     id: 'finanzen-unterbringung',
     titel: 'Finanzen & Unterbringung',
-    typen: ['teilhabegeld', 'eigentum']
+    typen: ['teilhabegeld', 'eigentum', 'elektro-geraete']
   },
   {
     id: 'beratung-gesundheit',
