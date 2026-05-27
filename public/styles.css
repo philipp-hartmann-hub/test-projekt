@@ -1827,6 +1827,7 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   color: var(--text-secondary);
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
+  border-left: 4px solid var(--jhh-secondary);
   border-radius: var(--radius-sm);
   line-height: 1.45;
 }

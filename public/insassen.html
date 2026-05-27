@@ -2998,9 +2998,8 @@
         const label = type ? getAntragTypLabel(type) : 'Antrag ausfüllen';
         if (title) title.textContent = label;
         if (context) {
-          context.innerHTML = type
-            ? `Antragsart: <strong>${label}</strong> — bitte füllen Sie die Felder aus.`
-            : '';
+          // Hinweis direkt im Formular (nicht nur im Modal-Titel)
+          context.innerHTML = type ? `Sie füllen jetzt aus: <strong>${label}</strong>` : '';
           context.hidden = !type;
         }
         // Felder erst anzeigen, wenn Schritt-2-Container sichtbar ist
@@ -3044,9 +3043,7 @@
         const label = type ? getAntragTypLabel(type) : 'Entwurf bearbeiten';
         if (title) title.textContent = label;
         if (context) {
-          context.innerHTML = type
-            ? `Antragsart: <strong>${label}</strong>`
-            : '';
+          context.innerHTML = type ? `Entwurf: <strong>${label}</strong>` : '';
           context.hidden = !type;
         }
         toggleEntwurfFields(type);
