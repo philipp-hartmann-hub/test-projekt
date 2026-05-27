@@ -443,7 +443,7 @@
           <div class="form-group" id="telioUeberweisungBegruendungGroup" style="display: none;">
             <label for="telioUeberweisungBegruendung">Begründung <span class="required">*</span></label>
             <textarea id="telioUeberweisungBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
-            <p class="field-hint">Erforderlich bei freiem Eigengeld, gebundenem Eigengeld und Überbrückungsgeld (nicht bei Hausgeld).</p>
+            <p class="field-hint">Erforderlich nur bei gebundenem Eigengeld und Überbrückungsgeld (nicht bei Hausgeld oder freiem Eigengeld).</p>
           </div>
         </div>
 
@@ -919,7 +919,7 @@
           <div class="form-group" id="entwurfTelioUeberweisungBegruendungGroup" style="display: none;">
             <label for="entwurfTelioUeberweisungBegruendung">Begründung <span class="required">*</span></label>
             <textarea id="entwurfTelioUeberweisungBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
-            <p class="field-hint">Erforderlich bei freiem Eigengeld, gebundenem Eigengeld und Überbrückungsgeld (nicht bei Hausgeld).</p>
+            <p class="field-hint">Erforderlich nur bei gebundenem Eigengeld und Überbrückungsgeld (nicht bei Hausgeld oder freiem Eigengeld).</p>
           </div>
         </div>
 
@@ -2630,11 +2630,7 @@
     bindTelefonkontoListeners();
 
     function telioQuelleBrauchtBegruendung(quelle) {
-      return (
-        quelle === 'freies-eigengeld' ||
-        quelle === 'gebundenes-eigengeld' ||
-        quelle === 'ueberbrueckungsgeld'
-      );
+      return quelle === 'gebundenes-eigengeld' || quelle === 'ueberbrueckungsgeld';
     }
 
     function getTelioUeberweisungsquelleLabel(quelle) {
@@ -2702,7 +2698,7 @@
         return {
           valid: false,
           error:
-            'Bitte geben Sie eine Begründung an (erforderlich bei freiem, gebundenem Eigengeld und Überbrückungsgeld).'
+            'Bitte geben Sie eine Begründung an (erforderlich nur bei gebundenem Eigengeld und Überbrückungsgeld).'
         };
       }
       return { valid: true, error: null };
