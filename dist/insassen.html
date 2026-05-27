@@ -226,6 +226,7 @@
                   <label class="radio-option"><input type="radio" name="antragType" value="elektro-geraete" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Elektro-Geräte und sonstige Gegenstände</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="laufzettel-mietgeraete" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Eintragung in Laufzettel Mietgeräte (TV oder Radio)</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="kuendigung-tv-mietvertrag" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Kündigung des TV-Mietvertrags</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="telio-ueberweisung" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Antrag auf Überweisung auf das Telio-Konto</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="beratung-gesundheit">
@@ -362,6 +363,43 @@
                 <span class="radio-label">Durch Dritte</span>
               </label>
             </div>
+          </div>
+        </div>
+
+        <!-- Telio-Überweisung -->
+        <div id="telioUeberweisungFields" style="display: none;">
+          <div class="form-group">
+            <label for="telioUeberweisungBetrag">Betrag in €, der überwiesen werden soll <span class="required">*</span></label>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <input type="number" id="telioUeberweisungBetrag" min="0.01" step="0.01" placeholder="0,00" style="max-width: 160px;">
+              <span>€</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Überweisungsquelle <span class="required">*</span></label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="telioUeberweisungsquelle" value="hausgeld" onchange="toggleTelioBegruendung('')">
+                <span class="radio-label">Hausgeld</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="telioUeberweisungsquelle" value="freies-eigengeld" onchange="toggleTelioBegruendung('')">
+                <span class="radio-label">Freies Eigengeld</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="telioUeberweisungsquelle" value="gebundenes-eigengeld" onchange="toggleTelioBegruendung('')">
+                <span class="radio-label">Gebundenes Eigengeld</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="telioUeberweisungsquelle" value="ueberbrueckungsgeld" onchange="toggleTelioBegruendung('')">
+                <span class="radio-label">Überbrückungsgeld</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group" id="telioUeberweisungBegruendungGroup" style="display: none;">
+            <label for="telioUeberweisungBegruendung">Begründung <span class="required">*</span></label>
+            <textarea id="telioUeberweisungBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
+            <p class="field-hint">Erforderlich bei freiem Eigengeld und Überbrückungsgeld.</p>
           </div>
         </div>
 
@@ -614,6 +652,7 @@
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="elektro-geraete"><span class="radio-label">Elektro-Geräte und sonstige Gegenstände</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="laufzettel-mietgeraete"><span class="radio-label">Eintragung in Laufzettel Mietgeräte (TV oder Radio)</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="kuendigung-tv-mietvertrag"><span class="radio-label">Kündigung des TV-Mietvertrags</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="telio-ueberweisung"><span class="radio-label">Antrag auf Überweisung auf das Telio-Konto</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="beratung-gesundheit">
@@ -750,6 +789,43 @@
                 <span class="radio-label">Durch Dritte</span>
               </label>
             </div>
+          </div>
+        </div>
+
+        <!-- Telio-Überweisung (Entwurf) -->
+        <div id="entwurfTelioUeberweisungFields" style="display: none;">
+          <div class="form-group">
+            <label for="entwurfTelioUeberweisungBetrag">Betrag in €, der überwiesen werden soll <span class="required">*</span></label>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <input type="number" id="entwurfTelioUeberweisungBetrag" min="0.01" step="0.01" placeholder="0,00" style="max-width: 160px;">
+              <span>€</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Überweisungsquelle <span class="required">*</span></label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="entwurfTelioUeberweisungsquelle" value="hausgeld" onchange="toggleTelioBegruendung('entwurf')">
+                <span class="radio-label">Hausgeld</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="entwurfTelioUeberweisungsquelle" value="freies-eigengeld" onchange="toggleTelioBegruendung('entwurf')">
+                <span class="radio-label">Freies Eigengeld</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="entwurfTelioUeberweisungsquelle" value="gebundenes-eigengeld" onchange="toggleTelioBegruendung('entwurf')">
+                <span class="radio-label">Gebundenes Eigengeld</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="entwurfTelioUeberweisungsquelle" value="ueberbrueckungsgeld" onchange="toggleTelioBegruendung('entwurf')">
+                <span class="radio-label">Überbrückungsgeld</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group" id="entwurfTelioUeberweisungBegruendungGroup" style="display: none;">
+            <label for="entwurfTelioUeberweisungBegruendung">Begründung <span class="required">*</span></label>
+            <textarea id="entwurfTelioUeberweisungBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
+            <p class="field-hint">Erforderlich bei freiem Eigengeld und Überbrückungsgeld.</p>
           </div>
         </div>
 
@@ -2339,6 +2415,88 @@
       }
     }
 
+    function telioQuelleBrauchtBegruendung(quelle) {
+      return quelle === 'freies-eigengeld' || quelle === 'ueberbrueckungsgeld';
+    }
+
+    function getTelioUeberweisungsquelleLabel(quelle) {
+      const labels = {
+        hausgeld: 'Hausgeld',
+        'freies-eigengeld': 'Freies Eigengeld',
+        'gebundenes-eigengeld': 'Gebundenes Eigengeld',
+        ueberbrueckungsgeld: 'Überbrückungsgeld'
+      };
+      return labels[quelle] || quelle || '–';
+    }
+
+    function toggleTelioBegruendung(prefix) {
+      const isEntwurf = prefix === 'entwurf';
+      const quelleName = isEntwurf ? 'entwurfTelioUeberweisungsquelle' : 'telioUeberweisungsquelle';
+      const groupId = isEntwurf ? 'entwurfTelioUeberweisungBegruendungGroup' : 'telioUeberweisungBegruendungGroup';
+      const selected = document.querySelector(`input[name="${quelleName}"]:checked`);
+      const group = document.getElementById(groupId);
+      if (!group) return;
+      const show = selected && telioQuelleBrauchtBegruendung(selected.value);
+      group.style.display = show ? 'block' : 'none';
+      if (!show) {
+        const ta = document.getElementById(isEntwurf ? 'entwurfTelioUeberweisungBegruendung' : 'telioUeberweisungBegruendung');
+        if (ta) ta.value = '';
+      }
+    }
+    window.toggleTelioBegruendung = toggleTelioBegruendung;
+
+    function readTelioUeberweisungForm(prefix) {
+      const isEntwurf = prefix === 'entwurf';
+      const betragEl = document.getElementById(isEntwurf ? 'entwurfTelioUeberweisungBetrag' : 'telioUeberweisungBetrag');
+      const quelleName = isEntwurf ? 'entwurfTelioUeberweisungsquelle' : 'telioUeberweisungsquelle';
+      const begrEl = document.getElementById(isEntwurf ? 'entwurfTelioUeberweisungBegruendung' : 'telioUeberweisungBegruendung');
+      const quelleEl = document.querySelector(`input[name="${quelleName}"]:checked`);
+      return {
+        betrag: betragEl ? betragEl.value.trim() : '',
+        ueberweisungsquelle: quelleEl ? quelleEl.value : '',
+        antragBegruendung: begrEl ? begrEl.value.trim() : ''
+      };
+    }
+
+    function validateTelioUeberweisungData(data) {
+      if (!data.betrag || Number(data.betrag) <= 0) {
+        return { valid: false, error: 'Bitte geben Sie einen gültigen Betrag in € an.' };
+      }
+      if (!data.ueberweisungsquelle) {
+        return { valid: false, error: 'Bitte wählen Sie eine Überweisungsquelle aus.' };
+      }
+      if (telioQuelleBrauchtBegruendung(data.ueberweisungsquelle) && !data.antragBegruendung) {
+        return { valid: false, error: 'Bitte geben Sie eine Begründung an (erforderlich bei freiem Eigengeld und Überbrückungsgeld).' };
+      }
+      return { valid: true, error: null };
+    }
+
+    function resetTelioUeberweisungForm(prefix) {
+      const isEntwurf = prefix === 'entwurf';
+      const betragEl = document.getElementById(isEntwurf ? 'entwurfTelioUeberweisungBetrag' : 'telioUeberweisungBetrag');
+      const begrEl = document.getElementById(isEntwurf ? 'entwurfTelioUeberweisungBegruendung' : 'telioUeberweisungBegruendung');
+      if (betragEl) betragEl.value = '';
+      if (begrEl) begrEl.value = '';
+      document.querySelectorAll(`input[name="${isEntwurf ? 'entwurfTelioUeberweisungsquelle' : 'telioUeberweisungsquelle'}"]`).forEach((r) => { r.checked = false; });
+      toggleTelioBegruendung(prefix);
+    }
+
+    function setTelioUeberweisungForm(prefix, antrag) {
+      const isEntwurf = prefix === 'entwurf';
+      const betragEl = document.getElementById(isEntwurf ? 'entwurfTelioUeberweisungBetrag' : 'telioUeberweisungBetrag');
+      const begrEl = document.getElementById(isEntwurf ? 'entwurfTelioUeberweisungBegruendung' : 'telioUeberweisungBegruendung');
+      if (betragEl) betragEl.value = antrag.betrag || '';
+      if (antrag.ueberweisungsquelle) {
+        const r = document.querySelector(`input[name="${isEntwurf ? 'entwurfTelioUeberweisungsquelle' : 'telioUeberweisungsquelle'}"][value="${antrag.ueberweisungsquelle}"]`);
+        if (r) r.checked = true;
+      }
+      toggleTelioBegruendung(prefix);
+      if (begrEl) {
+        const b = antrag.antragBegruendung;
+        begrEl.value = typeof b === 'object' ? (b.text || '') : (b || '');
+      }
+    }
+
     function toggleAntragFields() {
       const selected =
         document.querySelector('#newAntragTypePicker input[name="antragType"]:checked') ||
@@ -2350,6 +2508,8 @@
       document.getElementById('elektroGeraeteFields').style.display = type === 'elektro-geraete' ? 'block' : 'none';
       document.getElementById('laufzettelMietgeraeteFields').style.display = type === 'laufzettel-mietgeraete' ? 'block' : 'none';
       document.getElementById('kuendigungTvMietvertragFields').style.display = type === 'kuendigung-tv-mietvertrag' ? 'block' : 'none';
+      document.getElementById('telioUeberweisungFields').style.display = type === 'telio-ueberweisung' ? 'block' : 'none';
+      if (type === 'telio-ueberweisung') toggleTelioBegruendung('');
       document.getElementById('beratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
       document.getElementById('gespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
       document.getElementById('gesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
@@ -2379,6 +2539,8 @@
       document.getElementById('entwurfElektroGeraeteFields').style.display = type === 'elektro-geraete' ? 'block' : 'none';
       document.getElementById('entwurfLaufzettelMietgeraeteFields').style.display = type === 'laufzettel-mietgeraete' ? 'block' : 'none';
       document.getElementById('entwurfKuendigungTvMietvertragFields').style.display = type === 'kuendigung-tv-mietvertrag' ? 'block' : 'none';
+      document.getElementById('entwurfTelioUeberweisungFields').style.display = type === 'telio-ueberweisung' ? 'block' : 'none';
+      if (type === 'telio-ueberweisung') toggleTelioBegruendung('entwurf');
       document.getElementById('entwurfBeratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
       document.getElementById('entwurfGespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
       document.getElementById('entwurfGesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
@@ -2750,6 +2912,10 @@
           return { type, data: {}, valid: false, error: 'Bitte geben Sie das Kündigungsdatum an.' };
         }
         return { type, data: { kuendigungZum }, valid: true, error: null };
+      } else if (type === 'telio-ueberweisung') {
+        const data = readTelioUeberweisungForm('');
+        const check = validateTelioUeberweisungData(data);
+        return { type, data, valid: check.valid, error: check.error };
       }
       return { type, data: {}, valid: false, error: 'Unbekannter Antragstyp.' };
     }
@@ -2893,6 +3059,7 @@
       resetLangzeitbesuchForm('');
       resetBesuchTerminForm('');
       resetBesuchVideoForm('');
+      resetTelioUeberweisungForm('');
       document.querySelectorAll('input[name="kleidung"]').forEach((cb) => {
         cb.checked = false;
       });
@@ -2999,6 +3166,8 @@
       } else if (entwurf.type === 'kuendigung-tv-mietvertrag') {
         const el = document.getElementById('entwurfKuendigungTvMietvertragDatum');
         if (el) el.value = entwurf.kuendigungZum || '';
+      } else if (entwurf.type === 'telio-ueberweisung') {
+        setTelioUeberweisungForm('entwurf', entwurf);
       }
       
       openModal('entwurfModal');
@@ -3092,6 +3261,10 @@
         const kuendigungZum = datumEl ? datumEl.value.trim() : '';
         if (!kuendigungZum) return { type, valid: false, error: 'Bitte geben Sie das Kündigungsdatum an.' };
         return { type, kuendigungZum, valid: true, error: null };
+      } else if (type === 'telio-ueberweisung') {
+        const data = readTelioUeberweisungForm('entwurf');
+        const check = validateTelioUeberweisungData(data);
+        return { type, ...data, valid: check.valid, error: check.error };
       }
       return { type, valid: false, error: 'Unbekannter Antragstyp.' };
     }
@@ -3281,6 +3454,16 @@
         } else {
           detailsHtml = '<p class="incomplete"><em>Kündigungsdatum noch nicht angegeben</em></p>';
         }
+      } else if (antrag.type === 'telio-ueberweisung') {
+        typeLabel = 'Antrag auf Überweisung auf das Telio-Konto';
+        const begrText = antrag.antragBegruendung
+          ? (typeof antrag.antragBegruendung === 'object' ? (antrag.antragBegruendung.text || '') : antrag.antragBegruendung)
+          : '';
+        detailsHtml = `
+          ${antrag.betrag ? `<p><strong>Betrag:</strong> ${antrag.betrag} €</p>` : '<p class="incomplete"><em>Betrag noch nicht angegeben</em></p>'}
+          ${antrag.ueberweisungsquelle ? `<p><strong>Überweisungsquelle:</strong> ${getTelioUeberweisungsquelleLabel(antrag.ueberweisungsquelle)}</p>` : '<p class="incomplete"><em>Überweisungsquelle noch nicht gewählt</em></p>'}
+          ${begrText ? `<p><strong>Begründung:</strong> ${begrText}</p>` : (telioQuelleBrauchtBegruendung(antrag.ueberweisungsquelle) ? '<p class="incomplete"><em>Begründung noch nicht angegeben</em></p>' : '')}
+        `;
       } else {
         // Unbekannter Typ - trotzdem anzeigen
         typeLabel = antrag.type || 'Antrag';

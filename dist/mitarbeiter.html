@@ -2405,6 +2405,15 @@
           ? new Date(antrag.kuendigungZum + 'T12:00:00').toLocaleDateString('de-DE')
           : '–';
         detailsHtml = `<p><strong>Kündigung des Mietverhältnisses zum:</strong> ${kuendDatum}</p>`;
+      } else if (antrag.type === 'telio-ueberweisung') {
+        typeLabel = 'Antrag auf Überweisung auf das Telio-Konto';
+        const quelleLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'gebundenes-eigengeld': 'Gebundenes Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' }[antrag.ueberweisungsquelle] || antrag.ueberweisungsquelle || '–';
+        const begr = antrag.antragBegruendung ? getTranslatedUserText(antrag.antragBegruendung) : '';
+        detailsHtml = `
+          <p><strong>Betrag:</strong> ${antrag.betrag ? antrag.betrag + ' €' : '–'}</p>
+          <p><strong>Überweisungsquelle:</strong> ${quelleLbl}</p>
+          ${begr ? `<p><strong>Begründung:</strong> ${begr}</p>` : ''}
+        `;
       }
       
       // Antrags-Nummer anzeigen
@@ -3104,6 +3113,37 @@ Persönlich eröffnet
             <h4>${verfuegungTitel}</h4>
             <p class="verfuegungsreihenfolge">${verfuegungKetteVideo}</p>
             <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
+          </div>
+        `;
+      } else if (antrag.type === 'telio-ueberweisung') {
+        const verfuegungTitelTelio = currentLanguage === 'en' ? 'Suggested procedure sequence (reference Ist process)' : currentLanguage === 'fr' ? 'Suggestion de séquence (processus cible)' : 'Verfügungsvorschlag';
+        const verfuegungHinweisTelio = currentLanguage === 'en' ? 'This is a suggestion only; it does not replace a professional decision.' : currentLanguage === 'fr' ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle." : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
+        const quelleLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'gebundenes-eigengeld': 'Gebundenes Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' }[antrag.ueberweisungsquelle] || antrag.ueberweisungsquelle || '–';
+        const brauchtVL = antrag.ueberweisungsquelle === 'gebundenes-eigengeld' || antrag.ueberweisungsquelle === 'ueberbrueckungsgeld';
+        const verfuegungKetteTelio = brauchtVL
+          ? 'VAL zur Prüfung → Zustimmung VL → Station zur Eröffnung bei Ablehnung → Zahlstelle bei Genehmigung zur Überweisung → GPA'
+          : 'VAL zur Prüfung → Station zur Eröffnung bei Ablehnung → Zahlstelle bei Genehmigung zur Überweisung → GPA';
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>Antrag auf Überweisung auf das Telio-Konto</h4>
+            <div class="detail-row">
+              <span class="detail-label">Betrag:</span>
+              <span class="detail-value">${antrag.betrag ? antrag.betrag + ' €' : '–'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Überweisungsquelle:</span>
+              <span class="detail-value">${quelleLbl}</span>
+            </div>
+            ${antrag.antragBegruendung ? `
+            <div class="detail-row">
+              <span class="detail-label">${t('application.justification')}:</span>
+              <span class="detail-value">${getTranslatedUserText(antrag.antragBegruendung)}</span>
+            </div>` : ''}
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitelTelio}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKetteTelio}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweisTelio}</p>
           </div>
         `;
       } else if (antrag.type === 'kuendigung-tv-mietvertrag') {
@@ -4076,6 +4116,9 @@ ${t('action.archive')}
           ? new Date(antrag.kuendigungZum + 'T12:00:00').toLocaleDateString('de-DE')
           : '–';
         anliegenText = `${t('notice.applicationFor')} Kündigung des TV-Mietvertrags (zum ${kuendDatum})`;
+      } else if (antrag.type === 'telio-ueberweisung') {
+        const quelleLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'gebundenes-eigengeld': 'Gebundenes Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' }[antrag.ueberweisungsquelle] || antrag.ueberweisungsquelle || '–';
+        anliegenText = `${t('notice.applicationFor')} Telio-Überweisung (${antrag.betrag || '–'} €, ${quelleLbl})`;
       }
       
       // Entscheidungstext (übersetzt)
@@ -5929,6 +5972,18 @@ ${t('action.archive')}
         doc.text('Art: Kündigung des TV-Mietvertrags', 25, yPos);
         doc.text(`Kündigung des Mietverhältnisses zum: ${kuendDatum}`, 25, yPos + 7);
         yPos += 14;
+      } else if (antrag.type === 'telio-ueberweisung') {
+        const quelleLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'gebundenes-eigengeld': 'Gebundenes Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' }[antrag.ueberweisungsquelle] || antrag.ueberweisungsquelle || '–';
+        doc.text('Art: Antrag auf Überweisung auf das Telio-Konto', 25, yPos);
+        doc.text(`Betrag: ${antrag.betrag ? antrag.betrag + ' €' : '–'}`, 25, yPos + 7);
+        let y = yPos + 14;
+        doc.text(`Überweisungsquelle: ${quelleLbl}`, 25, y);
+        y += 7;
+        if (antrag.antragBegruendung) {
+          doc.text(`Begründung: ${getTranslatedUserText(antrag.antragBegruendung)}`, 25, y);
+          y += 7;
+        }
+        yPos = y + 7;
       }
       
       // Sachliche/fachliche Prüfung (wenn erfolgt)
