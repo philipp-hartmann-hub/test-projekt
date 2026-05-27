@@ -2138,10 +2138,21 @@
       antragSystem.addKommentar(antragId, text, currentSession.userId, currentSession.name, typ);
       
       if (window.DataSync && window.DataSync.syncAntragToServer) {
-        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-        const ok = await window.DataSync.syncAntragToServer(antragId);
-        if (typeof showSyncStatus === 'function') {
-          showSyncStatus(ok ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', ok ? 'success' : 'error');
+        const canSync =
+          typeof window.DataSync.isConnected === 'function' &&
+          typeof window.DataSync.isLoaded === 'function' &&
+          window.DataSync.isConnected() &&
+          window.DataSync.isLoaded();
+        if (!canSync) {
+          if (typeof showSyncStatus === 'function') {
+            showSyncStatus('Offline: Änderung lokal gespeichert (Synchronisation später möglich).', 'info');
+          }
+        } else {
+          if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
+          const ok = await window.DataSync.syncAntragToServer(antragId);
+          if (typeof showSyncStatus === 'function') {
+            showSyncStatus(ok ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', ok ? 'success' : 'error');
+          }
         }
       }
       
@@ -3979,17 +3990,33 @@ ${t('action.archive')}
       let syncHinweis = null;
       // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
       if (window.DataSync && window.DataSync.syncAntragToServer) {
-        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-        const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-        if (typeof showSyncStatus === 'function') {
-          showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
-        }
-        if (!syncSuccess) {
+        const canSync =
+          typeof window.DataSync.isConnected === 'function' &&
+          typeof window.DataSync.isLoaded === 'function' &&
+          window.DataSync.isConnected() &&
+          window.DataSync.isLoaded();
+        if (!canSync) {
+          if (typeof showSyncStatus === 'function') {
+            showSyncStatus('Offline: Änderung lokal gespeichert (Synchronisation später möglich).', 'info');
+          }
           syncHinweis = currentLanguage === 'en'
-            ? 'Synchronization failed. The phase transition is saved locally; you can continue, but please sync later.'
+            ? 'Offline: the change is saved locally; you can continue and sync later.'
             : currentLanguage === 'fr'
-            ? 'Échec de la synchronisation. La transition de phase est enregistrée localement; vous pouvez continuer, mais veuillez synchroniser plus tard.'
-            : 'Synchronisation fehlgeschlagen. Der Phasenübergang ist lokal gespeichert; Sie können fortfahren, bitte später synchronisieren.';
+            ? 'Hors ligne : la modification est enregistrée localement ; vous pouvez continuer et synchroniser plus tard.'
+            : 'Offline: Änderung lokal gespeichert; Sie können fortfahren und später synchronisieren.';
+        } else {
+          if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
+          const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
+          if (typeof showSyncStatus === 'function') {
+            showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
+          }
+          if (!syncSuccess) {
+            syncHinweis = currentLanguage === 'en'
+              ? 'Synchronization failed. The phase transition is saved locally; you can continue, but please sync later.'
+              : currentLanguage === 'fr'
+              ? 'Échec de la synchronisation. La transition de phase est enregistrée localement; vous pouvez continuer, mais veuillez synchroniser plus tard.'
+              : 'Synchronisation fehlgeschlagen. Der Phasenübergang ist lokal gespeichert; Sie können fortfahren, bitte später synchronisieren.';
+          }
         }
       }
       
@@ -4043,13 +4070,30 @@ ${t('action.archive')}
       let entscheidSyncHinweis = null;
       // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
       if (window.DataSync && window.DataSync.syncAntragToServer) {
-        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-        const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-        if (typeof showSyncStatus === 'function') {
-          showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
-        }
-        if (!syncSuccess) {
-          entscheidSyncHinweis = 'Entscheidung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.';
+        const canSync =
+          typeof window.DataSync.isConnected === 'function' &&
+          typeof window.DataSync.isLoaded === 'function' &&
+          window.DataSync.isConnected() &&
+          window.DataSync.isLoaded();
+        if (!canSync) {
+          if (typeof showSyncStatus === 'function') {
+            showSyncStatus('Offline: Änderung lokal gespeichert (Synchronisation später möglich).', 'info');
+          }
+          entscheidSyncHinweis =
+            currentLanguage === 'en'
+              ? 'Offline: decision saved locally; you can continue and sync later.'
+              : currentLanguage === 'fr'
+                ? 'Hors ligne : décision enregistrée localement ; vous pouvez continuer et synchroniser plus tard.'
+                : 'Offline: Entscheidung lokal gespeichert; Sie können fortfahren und später synchronisieren.';
+        } else {
+          if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
+          const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
+          if (typeof showSyncStatus === 'function') {
+            showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
+          }
+          if (!syncSuccess) {
+            entscheidSyncHinweis = 'Entscheidung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.';
+          }
         }
       }
       
@@ -7823,6 +7867,21 @@ ${t('action.archive')}
     window.bestaeigeHausleitungUebernahme = bestaeigeHausleitungUebernahme;
     // Visuelle Debug-Anzeige für Synchronisation (für Tablet ohne Console)
     function showSyncStatus(message, type = 'info') {
+      // Wenn keine Serververbindung besteht, Fehler nicht als "kaputt" anzeigen:
+      // Bearbeitung ist lokal gespeichert, Sync kann später nachgeholt werden.
+      try {
+        const offline =
+          type === 'error' &&
+          window.DataSync &&
+          typeof window.DataSync.isConnected === 'function' &&
+          typeof window.DataSync.isLoaded === 'function' &&
+          (!window.DataSync.isConnected() || !window.DataSync.isLoaded());
+        if (offline) {
+          type = 'info';
+          message = 'Offline: Änderung lokal gespeichert (Synchronisation später möglich).';
+        }
+      } catch (_) {}
+
       // Entferne bestehende Status-Anzeige
       const existingStatus = document.getElementById('syncStatusDisplay');
       if (existingStatus) {
