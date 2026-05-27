@@ -2414,6 +2414,16 @@
           <p><strong>Überweisungsquelle:</strong> ${quelleLbl}</p>
           ${begr ? `<p><strong>Begründung:</strong> ${begr}</p>` : ''}
         `;
+      } else if (antrag.type === 'telefonkonto-einrichtung') {
+        typeLabel = 'Antrag zur Einrichtung eines Telefonkontos';
+        if (antrag.benutzerkontoAndereJva === true) {
+          detailsHtml = `<p><strong>Benutzerkonto andere JVA:</strong> Ja – ${antrag.andereJva || '–'}</p>`;
+        } else if (antrag.benutzerkontoAndereJva === false) {
+          const spr = Array.isArray(antrag.telefonansageSprachen) ? antrag.telefonansageSprachen.join(', ') : '–';
+          detailsHtml = `<p><strong>Sprache(n) Telefonansage:</strong> ${spr}</p>`;
+        } else {
+          detailsHtml = '<p><strong>Angaben:</strong> –</p>';
+        }
       }
       
       // Antrags-Nummer anzeigen
@@ -3113,6 +3123,29 @@ Persönlich eröffnet
             <h4>${verfuegungTitel}</h4>
             <p class="verfuegungsreihenfolge">${verfuegungKetteVideo}</p>
             <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
+          </div>
+        `;
+      } else if (antrag.type === 'telefonkonto-einrichtung') {
+        const verfuegungTitelTf = currentLanguage === 'en' ? 'Suggested procedure sequence (reference Ist process)' : currentLanguage === 'fr' ? 'Suggestion de séquence (processus cible)' : 'Verfügungsvorschlag';
+        const verfuegungHinweisTf = currentLanguage === 'en' ? 'This is a suggestion only; it does not replace a professional decision.' : currentLanguage === 'fr' ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle." : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
+        const verfuegungKetteTf =
+          'Station zur Prüfung → VAL zur Entscheidung → Revision zur Beifügung des PIN-Briefes und Bestätigung der Einrichtung → Station zur Eröffnung → GPA';
+        const kontoAndereJvaHtml =
+          antrag.benutzerkontoAndereJva === true
+            ? `<div class="detail-row"><span class="detail-label">Benutzerkonto in anderer JVA:</span><span class="detail-value">Ja – ${antrag.andereJva || '–'}</span></div>`
+            : antrag.benutzerkontoAndereJva === false
+              ? `<div class="detail-row"><span class="detail-label">Benutzerkonto in anderer JVA:</span><span class="detail-value">Nein</span></div>
+                 <div class="detail-row"><span class="detail-label">Sprache(n) Telefonansage:</span><span class="detail-value">${Array.isArray(antrag.telefonansageSprachen) && antrag.telefonansageSprachen.length ? antrag.telefonansageSprachen.join(', ') : '–'}</span></div>`
+              : '';
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>Antrag zur Einrichtung eines Telefonkontos</h4>
+            ${kontoAndereJvaHtml}
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitelTf}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKetteTf}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweisTf}</p>
           </div>
         `;
       } else if (antrag.type === 'telio-ueberweisung') {
@@ -4126,6 +4159,13 @@ ${t('action.archive')}
       } else if (antrag.type === 'telio-ueberweisung') {
         const quelleLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'gebundenes-eigengeld': 'Gebundenes Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' }[antrag.ueberweisungsquelle] || antrag.ueberweisungsquelle || '–';
         anliegenText = `${t('notice.applicationFor')} Telio-Überweisung (${antrag.betrag || '–'} €, ${quelleLbl})`;
+      } else if (antrag.type === 'telefonkonto-einrichtung') {
+        if (antrag.benutzerkontoAndereJva === true) {
+          anliegenText = `${t('notice.applicationFor')} Einrichtung Telefonkonto (Benutzerkonto in anderer JVA: ${antrag.andereJva || '–'})`;
+        } else {
+          const spr = Array.isArray(antrag.telefonansageSprachen) ? antrag.telefonansageSprachen.join(', ') : '–';
+          anliegenText = `${t('notice.applicationFor')} Einrichtung Telefonkonto (Sprachen: ${spr})`;
+        }
       }
       
       // Entscheidungstext (übersetzt)
@@ -5991,6 +6031,18 @@ ${t('action.archive')}
           y += 7;
         }
         yPos = y + 7;
+      } else if (antrag.type === 'telefonkonto-einrichtung') {
+        doc.text('Art: Antrag zur Einrichtung eines Telefonkontos', 25, yPos);
+        let y = yPos + 7;
+        if (antrag.benutzerkontoAndereJva === true) {
+          doc.text(`Benutzerkonto in anderer JVA: Ja (${antrag.andereJva || '–'})`, 25, y);
+        } else if (antrag.benutzerkontoAndereJva === false) {
+          doc.text('Benutzerkonto in anderer JVA: Nein', 25, y);
+          y += 7;
+          const spr = Array.isArray(antrag.telefonansageSprachen) ? antrag.telefonansageSprachen.join(', ') : '–';
+          doc.text(`Sprache(n) Telefonansage: ${spr}`, 25, y);
+        }
+        yPos = y + 14;
       }
       
       // Sachliche/fachliche Prüfung (wenn erfolgt)

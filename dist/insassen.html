@@ -235,6 +235,7 @@
                   <label class="radio-option"><input type="radio" name="antragType" value="beratung-unterstuetzung" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Beratungs- und Unterstützungsleistungen</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="gespraechstermin" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Gesprächstermine</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="gesundheit-medizin" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Gesundheit: Termin medizinischer Dienst</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="telefonkonto-einrichtung" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Antrag zur Einrichtung eines Telefonkontos</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="freizeit">
@@ -362,6 +363,44 @@
                 <input type="radio" name="elektroGeraeteBezahlung" value="durch-dritte">
                 <span class="radio-label">Durch Dritte</span>
               </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Telefonkonto einrichten -->
+        <div id="telefonkontoEinrichtungFields" style="display: none;">
+          <div class="form-group">
+            <label>Benutzerkonto in einer anderen JVA <span class="required">*</span></label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="telefonkontoAndereJva" value="ja" onchange="toggleTelefonkontoFelder('')">
+                <span class="radio-label">Ich habe bereits ein Benutzerkonto in einer anderen JVA</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="telefonkontoAndereJva" value="nein" onchange="toggleTelefonkontoFelder('')">
+                <span class="radio-label">Nein, ich habe noch kein Benutzerkonto in einer anderen JVA</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group" id="telefonkontoJvaGroup" style="display: none;">
+            <label for="telefonkontoAndereJvaName">Angabe JVA <span class="required">*</span></label>
+            <input type="text" id="telefonkontoAndereJvaName" placeholder="Name der JVA">
+          </div>
+          <div class="form-group" id="telefonkontoSprachenGroup" style="display: none;">
+            <label>Sprache(n) für die Telefonansage <span class="required">*</span></label>
+            <p class="field-hint">Mehrfachauswahl möglich.</p>
+            <div class="checkbox-group" id="telefonkontoSprachenListe">
+              <label class="checkbox-option"><input type="checkbox" name="telefonkontoSprache" value="Deutsch"><span class="checkbox-label">Deutsch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="telefonkontoSprache" value="Englisch"><span class="checkbox-label">Englisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="telefonkontoSprache" value="Türkisch"><span class="checkbox-label">Türkisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="telefonkontoSprache" value="Arabisch"><span class="checkbox-label">Arabisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="telefonkontoSprache" value="Polnisch"><span class="checkbox-label">Polnisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="telefonkontoSprache" value="Russisch"><span class="checkbox-label">Russisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="telefonkontoSprache" value="Französisch"><span class="checkbox-label">Französisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="telefonkontoSprache" value="Spanisch"><span class="checkbox-label">Spanisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="telefonkontoSprache" value="Italienisch"><span class="checkbox-label">Italienisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="telefonkontoSprache" value="Persisch"><span class="checkbox-label">Persisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="telefonkontoSprache" value="Kurdisch"><span class="checkbox-label">Kurdisch</span></label>
             </div>
           </div>
         </div>
@@ -661,6 +700,7 @@
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="beratung-unterstuetzung"><span class="radio-label">Beratungs- und Unterstützungsleistungen</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="gespraechstermin"><span class="radio-label">Gesprächstermine</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="gesundheit-medizin"><span class="radio-label">Gesundheit: Termin medizinischer Dienst</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="telefonkonto-einrichtung"><span class="radio-label">Antrag zur Einrichtung eines Telefonkontos</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="freizeit">
@@ -788,6 +828,44 @@
                 <input type="radio" name="entwurfElektroGeraeteBezahlung" value="durch-dritte">
                 <span class="radio-label">Durch Dritte</span>
               </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Telefonkonto einrichten (Entwurf) -->
+        <div id="entwurfTelefonkontoEinrichtungFields" style="display: none;">
+          <div class="form-group">
+            <label>Benutzerkonto in einer anderen JVA <span class="required">*</span></label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="entwurfTelefonkontoAndereJva" value="ja" onchange="toggleTelefonkontoFelder('entwurf')">
+                <span class="radio-label">Ich habe bereits ein Benutzerkonto in einer anderen JVA</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="entwurfTelefonkontoAndereJva" value="nein" onchange="toggleTelefonkontoFelder('entwurf')">
+                <span class="radio-label">Nein, ich habe noch kein Benutzerkonto in einer anderen JVA</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group" id="entwurfTelefonkontoJvaGroup" style="display: none;">
+            <label for="entwurfTelefonkontoAndereJvaName">Angabe JVA <span class="required">*</span></label>
+            <input type="text" id="entwurfTelefonkontoAndereJvaName" placeholder="Name der JVA">
+          </div>
+          <div class="form-group" id="entwurfTelefonkontoSprachenGroup" style="display: none;">
+            <label>Sprache(n) für die Telefonansage <span class="required">*</span></label>
+            <p class="field-hint">Mehrfachauswahl möglich.</p>
+            <div class="checkbox-group">
+              <label class="checkbox-option"><input type="checkbox" name="entwurfTelefonkontoSprache" value="Deutsch"><span class="checkbox-label">Deutsch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="entwurfTelefonkontoSprache" value="Englisch"><span class="checkbox-label">Englisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="entwurfTelefonkontoSprache" value="Türkisch"><span class="checkbox-label">Türkisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="entwurfTelefonkontoSprache" value="Arabisch"><span class="checkbox-label">Arabisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="entwurfTelefonkontoSprache" value="Polnisch"><span class="checkbox-label">Polnisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="entwurfTelefonkontoSprache" value="Russisch"><span class="checkbox-label">Russisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="entwurfTelefonkontoSprache" value="Französisch"><span class="checkbox-label">Französisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="entwurfTelefonkontoSprache" value="Spanisch"><span class="checkbox-label">Spanisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="entwurfTelefonkontoSprache" value="Italienisch"><span class="checkbox-label">Italienisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="entwurfTelefonkontoSprache" value="Persisch"><span class="checkbox-label">Persisch</span></label>
+              <label class="checkbox-option"><input type="checkbox" name="entwurfTelefonkontoSprache" value="Kurdisch"><span class="checkbox-label">Kurdisch</span></label>
             </div>
           </div>
         </div>
@@ -2415,6 +2493,108 @@
       }
     }
 
+    function toggleTelefonkontoFelder(prefix) {
+      const isEntwurf = prefix === 'entwurf';
+      const jvaRadioName = isEntwurf ? 'entwurfTelefonkontoAndereJva' : 'telefonkontoAndereJva';
+      const jvaGroupId = isEntwurf ? 'entwurfTelefonkontoJvaGroup' : 'telefonkontoJvaGroup';
+      const sprachenGroupId = isEntwurf ? 'entwurfTelefonkontoSprachenGroup' : 'telefonkontoSprachenGroup';
+      const jvaInputId = isEntwurf ? 'entwurfTelefonkontoAndereJvaName' : 'telefonkontoAndereJvaName';
+      const spracheName = isEntwurf ? 'entwurfTelefonkontoSprache' : 'telefonkontoSprache';
+      const selected = document.querySelector(`input[name="${jvaRadioName}"]:checked`);
+      const jvaGroup = document.getElementById(jvaGroupId);
+      const sprachenGroup = document.getElementById(sprachenGroupId);
+      const istJa = selected && selected.value === 'ja';
+      if (jvaGroup) jvaGroup.style.display = istJa ? 'block' : 'none';
+      if (sprachenGroup) sprachenGroup.style.display = selected && !istJa ? 'block' : 'none';
+      if (!istJa) {
+        const jvaInput = document.getElementById(jvaInputId);
+        if (jvaInput) jvaInput.value = '';
+      }
+      if (!selected || istJa) {
+        document.querySelectorAll(`input[name="${spracheName}"]`).forEach((cb) => { cb.checked = false; });
+      }
+    }
+    window.toggleTelefonkontoFelder = toggleTelefonkontoFelder;
+
+    function readTelefonkontoForm(prefix) {
+      const isEntwurf = prefix === 'entwurf';
+      const jvaRadioName = isEntwurf ? 'entwurfTelefonkontoAndereJva' : 'telefonkontoAndereJva';
+      const jvaInputId = isEntwurf ? 'entwurfTelefonkontoAndereJvaName' : 'telefonkontoAndereJvaName';
+      const spracheName = isEntwurf ? 'entwurfTelefonkontoSprache' : 'telefonkontoSprache';
+      const jvaRadio = document.querySelector(`input[name="${jvaRadioName}"]:checked`);
+      const benutzerkontoAndereJva = jvaRadio ? jvaRadio.value === 'ja' : null;
+      const andereJvaEl = document.getElementById(jvaInputId);
+      const sprachen = Array.from(document.querySelectorAll(`input[name="${spracheName}"]:checked`)).map((cb) => cb.value);
+      const istJa = benutzerkontoAndereJva === true;
+      return {
+        benutzerkontoAndereJva,
+        andereJva: istJa ? (andereJvaEl ? andereJvaEl.value.trim() : '') : null,
+        telefonansageSprachen: benutzerkontoAndereJva === false ? sprachen : null
+      };
+    }
+
+    function validateTelefonkontoData(data) {
+      if (data.benutzerkontoAndereJva === null || data.benutzerkontoAndereJva === undefined) {
+        return { valid: false, error: 'Bitte geben Sie an, ob Sie bereits ein Benutzerkonto in einer anderen JVA haben.' };
+      }
+      if (data.benutzerkontoAndereJva === true) {
+        if (!data.andereJva) {
+          return { valid: false, error: 'Bitte geben Sie die JVA an, in der Sie bereits ein Benutzerkonto haben.' };
+        }
+        return { valid: true, error: null };
+      }
+      if (!data.telefonansageSprachen || data.telefonansageSprachen.length === 0) {
+        return { valid: false, error: 'Bitte wählen Sie mindestens eine Sprache für die Telefonansage aus.' };
+      }
+      return { valid: true, error: null };
+    }
+
+    function resetTelefonkontoForm(prefix) {
+      const isEntwurf = prefix === 'entwurf';
+      const jvaRadioName = isEntwurf ? 'entwurfTelefonkontoAndereJva' : 'telefonkontoAndereJva';
+      const jvaInputId = isEntwurf ? 'entwurfTelefonkontoAndereJvaName' : 'telefonkontoAndereJvaName';
+      const spracheName = isEntwurf ? 'entwurfTelefonkontoSprache' : 'telefonkontoSprache';
+      document.querySelectorAll(`input[name="${jvaRadioName}"]`).forEach((r) => { r.checked = false; });
+      const jvaInput = document.getElementById(jvaInputId);
+      if (jvaInput) jvaInput.value = '';
+      document.querySelectorAll(`input[name="${spracheName}"]`).forEach((cb) => { cb.checked = false; });
+      toggleTelefonkontoFelder(prefix);
+    }
+
+    function setTelefonkontoForm(prefix, antrag) {
+      const isEntwurf = prefix === 'entwurf';
+      const jvaRadioName = isEntwurf ? 'entwurfTelefonkontoAndereJva' : 'telefonkontoAndereJva';
+      const jvaInputId = isEntwurf ? 'entwurfTelefonkontoAndereJvaName' : 'telefonkontoAndereJvaName';
+      const spracheName = isEntwurf ? 'entwurfTelefonkontoSprache' : 'telefonkontoSprache';
+      const val = antrag.benutzerkontoAndereJva === true ? 'ja' : antrag.benutzerkontoAndereJva === false ? 'nein' : null;
+      if (val) {
+        const r = document.querySelector(`input[name="${jvaRadioName}"][value="${val}"]`);
+        if (r) r.checked = true;
+      }
+      const jvaInput = document.getElementById(jvaInputId);
+      if (jvaInput) jvaInput.value = antrag.andereJva || '';
+      document.querySelectorAll(`input[name="${spracheName}"]`).forEach((cb) => {
+        cb.checked = Array.isArray(antrag.telefonansageSprachen) && antrag.telefonansageSprachen.includes(cb.value);
+      });
+      toggleTelefonkontoFelder(prefix);
+    }
+
+    function bindTelefonkontoListeners() {
+      ['newAntragModal', 'entwurfModal'].forEach((modalId) => {
+        const modal = document.getElementById(modalId);
+        if (!modal || modal.dataset.telefonkontoBound === '1') return;
+        modal.dataset.telefonkontoBound = '1';
+        modal.addEventListener('change', (ev) => {
+          const t = ev.target;
+          if (!t) return;
+          if (t.name === 'telefonkontoAndereJva' || t.name === 'entwurfTelefonkontoAndereJva') {
+            toggleTelefonkontoFelder(t.name.startsWith('entwurf') ? 'entwurf' : '');
+          }
+        });
+      });
+    }
+    bindTelefonkontoListeners();
+
     function telioQuelleBrauchtBegruendung(quelle) {
       return (
         quelle === 'freies-eigengeld' ||
@@ -2533,6 +2713,8 @@
       document.getElementById('kuendigungTvMietvertragFields').style.display = type === 'kuendigung-tv-mietvertrag' ? 'block' : 'none';
       document.getElementById('telioUeberweisungFields').style.display = type === 'telio-ueberweisung' ? 'block' : 'none';
       if (type === 'telio-ueberweisung') toggleTelioBegruendung('');
+      document.getElementById('telefonkontoEinrichtungFields').style.display = type === 'telefonkonto-einrichtung' ? 'block' : 'none';
+      if (type === 'telefonkonto-einrichtung') toggleTelefonkontoFelder('');
       document.getElementById('beratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
       document.getElementById('gespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
       document.getElementById('gesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
@@ -2564,6 +2746,8 @@
       document.getElementById('entwurfKuendigungTvMietvertragFields').style.display = type === 'kuendigung-tv-mietvertrag' ? 'block' : 'none';
       document.getElementById('entwurfTelioUeberweisungFields').style.display = type === 'telio-ueberweisung' ? 'block' : 'none';
       if (type === 'telio-ueberweisung') toggleTelioBegruendung('entwurf');
+      document.getElementById('entwurfTelefonkontoEinrichtungFields').style.display = type === 'telefonkonto-einrichtung' ? 'block' : 'none';
+      if (type === 'telefonkonto-einrichtung') toggleTelefonkontoFelder('entwurf');
       document.getElementById('entwurfBeratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
       document.getElementById('entwurfGespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
       document.getElementById('entwurfGesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
@@ -2939,6 +3123,10 @@
         const data = readTelioUeberweisungForm('');
         const check = validateTelioUeberweisungData(data);
         return { type, data, valid: check.valid, error: check.error };
+      } else if (type === 'telefonkonto-einrichtung') {
+        const data = readTelefonkontoForm('');
+        const check = validateTelefonkontoData(data);
+        return { type, data, valid: check.valid, error: check.error };
       }
       return { type, data: {}, valid: false, error: 'Unbekannter Antragstyp.' };
     }
@@ -3050,6 +3238,7 @@
     function openNewAntragModal() {
       bindNewAntragModalFooter();
       bindTelioUeberweisungQuelleListeners();
+      bindTelefonkontoListeners();
       showNewAntragFormError('');
       openModal('newAntragModal');
       try {
@@ -3084,6 +3273,7 @@
       resetBesuchTerminForm('');
       resetBesuchVideoForm('');
       resetTelioUeberweisungForm('');
+      resetTelefonkontoForm('');
       document.querySelectorAll('input[name="kleidung"]').forEach((cb) => {
         cb.checked = false;
       });
@@ -3192,6 +3382,8 @@
         if (el) el.value = entwurf.kuendigungZum || '';
       } else if (entwurf.type === 'telio-ueberweisung') {
         setTelioUeberweisungForm('entwurf', entwurf);
+      } else if (entwurf.type === 'telefonkonto-einrichtung') {
+        setTelefonkontoForm('entwurf', entwurf);
       }
       
       openModal('entwurfModal');
@@ -3288,6 +3480,10 @@
       } else if (type === 'telio-ueberweisung') {
         const data = readTelioUeberweisungForm('entwurf');
         const check = validateTelioUeberweisungData(data);
+        return { type, ...data, valid: check.valid, error: check.error };
+      } else if (type === 'telefonkonto-einrichtung') {
+        const data = readTelefonkontoForm('entwurf');
+        const check = validateTelefonkontoData(data);
         return { type, ...data, valid: check.valid, error: check.error };
       }
       return { type, valid: false, error: 'Unbekannter Antragstyp.' };
@@ -3488,6 +3684,20 @@
           ${antrag.ueberweisungsquelle ? `<p><strong>Überweisungsquelle:</strong> ${getTelioUeberweisungsquelleLabel(antrag.ueberweisungsquelle)}</p>` : '<p class="incomplete"><em>Überweisungsquelle noch nicht gewählt</em></p>'}
           ${begrText ? `<p><strong>Begründung:</strong> ${begrText}</p>` : (telioQuelleBrauchtBegruendung(antrag.ueberweisungsquelle) ? '<p class="incomplete"><em>Begründung noch nicht angegeben</em></p>' : '')}
         `;
+      } else if (antrag.type === 'telefonkonto-einrichtung') {
+        typeLabel = 'Antrag zur Einrichtung eines Telefonkontos';
+        if (antrag.benutzerkontoAndereJva === true) {
+          detailsHtml = `<p><strong>Benutzerkonto in anderer JVA:</strong> Ja${antrag.andereJva ? ` (${antrag.andereJva})` : ''}</p>`;
+        } else if (antrag.benutzerkontoAndereJva === false) {
+          const sprachen = Array.isArray(antrag.telefonansageSprachen) && antrag.telefonansageSprachen.length
+            ? antrag.telefonansageSprachen.join(', ')
+            : null;
+          detailsHtml = sprachen
+            ? `<p><strong>Sprache(n) Telefonansage:</strong> ${sprachen}</p>`
+            : '<p class="incomplete"><em>Sprachen noch nicht gewählt</em></p>';
+        } else {
+          detailsHtml = '<p class="incomplete"><em>Angaben noch nicht vollständig</em></p>';
+        }
       } else {
         // Unbekannter Typ - trotzdem anzeigen
         typeLabel = antrag.type || 'Antrag';

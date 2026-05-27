@@ -94,6 +94,7 @@ const TRANSLATIONS = {
     'application.type.laufzettel_mietgeraete': 'Eintragung in Laufzettel Mietgeräte (TV oder Radio)',
     'application.type.kuendigung_tv_mietvertrag': 'Kündigung des TV-Mietvertrags',
     'application.type.telio_ueberweisung': 'Antrag auf Überweisung auf das Telio-Konto',
+    'application.type.telefonkonto_einrichtung': 'Antrag zur Einrichtung eines Telefonkontos',
     'application.type.sonstiges': 'Sonstiges Anliegen',
     
     // Status
@@ -3446,7 +3447,8 @@ class AntragSystem {
       'elektro-geraete': 'Elektro-Geräte und sonstige Gegenstände',
       'laufzettel-mietgeraete': 'Eintragung in Laufzettel Mietgeräte (TV oder Radio)',
       'kuendigung-tv-mietvertrag': 'Kündigung des TV-Mietvertrags',
-      'telio-ueberweisung': 'Antrag auf Überweisung auf das Telio-Konto'
+      'telio-ueberweisung': 'Antrag auf Überweisung auf das Telio-Konto',
+      'telefonkonto-einrichtung': 'Antrag zur Einrichtung eines Telefonkontos'
     };
     return labels[type] || 'Antrag';
   }
@@ -5076,7 +5078,7 @@ const ANTRAG_TYPE_GRUPPEN = [
   {
     id: 'beratung-gesundheit',
     titel: 'Beratung, Gespräche & Gesundheit',
-    typen: ['beratung-unterstuetzung', 'gespraechstermin', 'gesundheit-medizin']
+    typen: ['beratung-unterstuetzung', 'gespraechstermin', 'gesundheit-medizin', 'telefonkonto-einrichtung']
   },
   {
     id: 'freizeit',
