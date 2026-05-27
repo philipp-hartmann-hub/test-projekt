@@ -1790,13 +1790,45 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   gap: 0.5rem;
 }
 
+.wizard-panel-hidden {
+  display: none !important;
+}
+
 .antrag-wizard-step[hidden],
 .antrag-wizard-step.is-hidden {
   display: none !important;
 }
 
-.antrag-wizard-step:not([hidden]):not(.is-hidden) {
+.antrag-wizard-step:not([hidden]):not(.is-hidden):not(.wizard-panel-hidden) {
   display: block;
+}
+
+#newAntragFooterStepType.wizard-panel-hidden,
+#newAntragFooterStepForm.wizard-panel-hidden,
+#entwurfFooterStepType.wizard-panel-hidden,
+#entwurfFooterStepForm.wizard-panel-hidden {
+  display: none !important;
+}
+
+#newAntragFooterStepType:not(.wizard-panel-hidden),
+#entwurfFooterStepType:not(.wizard-panel-hidden) {
+  display: flex;
+}
+
+#newAntragFooterStepForm:not(.wizard-panel-hidden),
+#entwurfFooterStepForm:not(.wizard-panel-hidden) {
+  display: flex;
+}
+
+/* Aktives Formularfeld-Panel in Schritt 2 (überschreibt inline display:none) */
+#newAntragStepForm [id$="Fields"],
+#entwurfStepForm [id$="Fields"] {
+  display: none !important;
+}
+
+#newAntragStepForm [id$="Fields"].is-active,
+#entwurfStepForm [id$="Fields"].is-active {
+  display: block !important;
 }
 
 .antrag-wizard-kicker {
@@ -1815,39 +1847,18 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   font-weight: 600;
 }
 
-#newAntragModal .modal-body:has(#newAntragStepType:not([hidden])),
-#entwurfModal .modal-body:has(#entwurfStepType:not([hidden])) {
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-#newAntragStepType,
-#entwurfStepType {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-#newAntragStepType .form-group,
-#entwurfStepType .form-group {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  margin-bottom: 0;
-}
-
 #newAntragStepType .antrag-type-picker,
 #entwurfStepType .antrag-type-picker {
-  flex: 1 1 auto;
-  min-height: 12rem;
-  max-height: calc(90vh - 11rem);
+  max-height: calc(90vh - 14rem);
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+}
+
+#newAntragStepForm:not(.wizard-panel-hidden),
+#entwurfStepForm:not(.wizard-panel-hidden) {
+  min-height: 8rem;
 }
 
 .modal-footer-triple .btn:first-child {

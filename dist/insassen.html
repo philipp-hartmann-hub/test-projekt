@@ -258,7 +258,7 @@
         </div>
         </div>
 
-        <div id="newAntragStepForm" class="antrag-wizard-step" hidden>
+        <div id="newAntragStepForm" class="antrag-wizard-step wizard-panel-hidden" hidden>
         <p id="newAntragStepContext" class="antrag-wizard-kicker" hidden></p>
 
         <!-- Teilhabegeld Felder -->
@@ -673,7 +673,7 @@
         <button type="button" class="btn btn-secondary" data-action="cancel-new-antrag" onclick="typeof closeModal==='function'&&closeModal('newAntragModal')">Abbrechen</button>
         <button type="button" class="btn btn-primary" data-action="proceed-new-antrag" onclick="typeof proceedNewAntragToForm==='function'&&proceedNewAntragToForm()">Weiter</button>
       </div>
-      <div id="newAntragFooterStepForm" class="modal-footer modal-footer-triple" hidden>
+      <div id="newAntragFooterStepForm" class="modal-footer modal-footer-triple wizard-panel-hidden" hidden>
         <button type="button" class="btn btn-secondary" data-action="back-new-antrag-type" onclick="typeof backNewAntragToType==='function'&&backNewAntragToType()">Zurück</button>
         <button type="button" class="btn btn-outline" data-action="draft-new-antrag" onclick="typeof saveAsEntwurf==='function'&&saveAsEntwurf()">Als Entwurf speichern</button>
         <button type="button" class="btn btn-primary" data-action="submit-new-antrag" onclick="typeof submitNewAntrag==='function'&&submitNewAntrag()">Einreichen</button>
@@ -734,7 +734,7 @@
         </div>
         </div>
 
-        <div id="entwurfStepForm" class="antrag-wizard-step">
+        <div id="entwurfStepForm" class="antrag-wizard-step wizard-panel-hidden">
         <p id="entwurfStepContext" class="antrag-wizard-kicker" hidden></p>
 
         <!-- Teilhabegeld Felder -->
@@ -1150,7 +1150,7 @@
         <button type="button" class="btn btn-secondary" onclick="closeModal('entwurfModal')">Abbrechen</button>
         <button type="button" class="btn btn-primary" onclick="typeof proceedEntwurfToForm==='function'&&proceedEntwurfToForm()">Weiter</button>
       </div>
-      <div id="entwurfFooterStepForm" class="modal-footer modal-footer-triple">
+      <div id="entwurfFooterStepForm" class="modal-footer modal-footer-triple wizard-panel-hidden" hidden>
         <button type="button" class="btn btn-secondary" onclick="typeof backEntwurfToType==='function'&&backEntwurfToType()">Zurück</button>
         <button class="btn btn-danger" onclick="deleteEntwurf()">Löschen</button>
         <button class="btn btn-outline" onclick="updateEntwurf()">Speichern</button>
@@ -1274,7 +1274,7 @@
   </div>
 
   <script src="data-sync.js?v=20260519-tdzfix"></script>
-  <script src="app.js?v=20260527-wizard"></script>
+  <script src="app.js?v=20260527-wizard2"></script>
   <script>
     let currentSession = null;
 
@@ -1384,14 +1384,14 @@
         }
         if (inputName === 'antragType' && typeof toggleAntragFields === 'function') {
           const stepForm = document.getElementById('newAntragStepForm');
-          if (!stepForm || !stepForm.hasAttribute('hidden')) {
+          if (stepForm && !stepForm.classList.contains('wizard-panel-hidden')) {
             const checked = el.querySelector(`input[name="${inputName}"]:checked`);
             toggleAntragFields(checked ? checked.value : undefined);
           }
         }
         if (inputName === 'entwurfType' && typeof toggleEntwurfFields === 'function') {
           const stepForm = document.getElementById('entwurfStepForm');
-          if (!stepForm || !stepForm.hasAttribute('hidden')) {
+          if (stepForm && !stepForm.classList.contains('wizard-panel-hidden')) {
             const checked = el.querySelector(`input[name="${inputName}"]:checked`);
             toggleEntwurfFields(checked ? checked.value : undefined);
           }
@@ -2734,17 +2734,15 @@
       }
     }
 
-    const NEW_ANTRAG_FIELD_PANEL_IDS = [
-      'teilhabegeldFields', 'eigentumFields', 'elektroGeraeteFields', 'laufzettelMietgeraeteFields',
-      'kuendigungTvMietvertragFields', 'telioUeberweisungFields', 'telefonkontoEinrichtungFields',
-      'beratungUnterstuetzungFields', 'gespraechsterminFields', 'gesundheitMedizinFields',
-      'freizeitWeiterbildungFields', 'besuchLangzeitFields', 'besuchTerminFields', 'besuchVideoFields'
-    ];
-
     function hideAllNewAntragFieldPanels() {
-      NEW_ANTRAG_FIELD_PANEL_IDS.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
+      document.querySelectorAll('#newAntragStepForm [id$="Fields"]').forEach((el) => {
+        el.classList.remove('is-active');
+      });
+    }
+
+    function hideAllEntwurfFieldPanels() {
+      document.querySelectorAll('#entwurfStepForm [id$="Fields"]').forEach((el) => {
+        el.classList.remove('is-active');
       });
     }
 
@@ -2765,14 +2763,21 @@
 
     function setWizardPanelVisible(el, visible) {
       if (!el) return;
+      const isFooter = el.classList.contains('modal-footer');
       if (visible) {
+        el.classList.remove('wizard-panel-hidden', 'is-hidden');
         el.removeAttribute('hidden');
-        el.classList.remove('is-hidden');
         el.setAttribute('aria-hidden', 'false');
+        if (isFooter) {
+          el.style.display = 'flex';
+        } else {
+          el.style.removeProperty('display');
+        }
       } else {
+        el.classList.add('wizard-panel-hidden');
         el.setAttribute('hidden', '');
-        el.classList.add('is-hidden');
         el.setAttribute('aria-hidden', 'true');
+        el.style.display = 'none';
       }
     }
 
@@ -2808,12 +2813,7 @@
             : '';
           context.hidden = !type;
         }
-        const showFields = () => toggleAntragFields(type);
-        if (typeof requestAnimationFrame === 'function') {
-          requestAnimationFrame(showFields);
-        } else {
-          showFields();
-        }
+        toggleAntragFields(type);
       } else {
         if (modal) delete modal.dataset.wizardType;
         if (title) title.textContent = 'Neuer Antrag';
@@ -2858,18 +2858,11 @@
             : '';
           context.hidden = !type;
         }
-        const showFields = () => toggleEntwurfFields(type);
-        if (typeof requestAnimationFrame === 'function') {
-          requestAnimationFrame(showFields);
-        } else {
-          showFields();
-        }
+        toggleEntwurfFields(type);
       } else {
         if (title) title.textContent = 'Entwurf — Antragsart wählen';
         if (context) context.hidden = true;
-        document.querySelectorAll('[id^="entwurf"][id$="Fields"]').forEach((el) => {
-          if (el.id && el.id.endsWith('Fields')) el.style.display = 'none';
-        });
+        hideAllEntwurfFieldPanels();
       }
     }
 
@@ -2886,36 +2879,61 @@
       setEntwurfWizardStep('type');
     }
 
-    function setFieldPanelVisible(id, visible) {
-      const el = document.getElementById(id);
-      if (el) el.style.display = visible ? 'block' : 'none';
+    const ANTRAG_FORM_PANEL_BY_TYPE = {
+      teilhabegeld: 'teilhabegeldFields',
+      eigentum: 'eigentumFields',
+      'elektro-geraete': 'elektroGeraeteFields',
+      'laufzettel-mietgeraete': 'laufzettelMietgeraeteFields',
+      'kuendigung-tv-mietvertrag': 'kuendigungTvMietvertragFields',
+      'telio-ueberweisung': 'telioUeberweisungFields',
+      'telefonkonto-einrichtung': 'telefonkontoEinrichtungFields',
+      'beratung-unterstuetzung': 'beratungUnterstuetzungFields',
+      gespraechstermin: 'gespraechsterminFields',
+      'gesundheit-medizin': 'gesundheitMedizinFields',
+      'freizeit-weiterbildung': 'freizeitWeiterbildungFields',
+      'besuch-langzeit': 'besuchLangzeitFields',
+      'besuch-termin': 'besuchTerminFields',
+      'besuch-video': 'besuchVideoFields'
+    };
+
+    const ENTWURF_FORM_PANEL_BY_TYPE = {
+      teilhabegeld: 'entwurfTeilhabegeldFields',
+      eigentum: 'entwurfEigentumFields',
+      'elektro-geraete': 'entwurfElektroGeraeteFields',
+      'laufzettel-mietgeraete': 'entwurfLaufzettelMietgeraeteFields',
+      'kuendigung-tv-mietvertrag': 'entwurfKuendigungTvMietvertragFields',
+      'telio-ueberweisung': 'entwurfTelioUeberweisungFields',
+      'telefonkonto-einrichtung': 'entwurfTelefonkontoEinrichtungFields',
+      'beratung-unterstuetzung': 'entwurfBeratungUnterstuetzungFields',
+      gespraechstermin: 'entwurfGespraechsterminFields',
+      'gesundheit-medizin': 'entwurfGesundheitMedizinFields',
+      'freizeit-weiterbildung': 'entwurfFreizeitWeiterbildungFields',
+      'besuch-langzeit': 'entwurfBesuchLangzeitFields',
+      'besuch-termin': 'entwurfBesuchTerminFields',
+      'besuch-video': 'entwurfBesuchVideoFields'
+    };
+
+    function activateAntragFormPanel(containerSelector, type) {
+      const root = document.querySelector(containerSelector);
+      if (!root || !type) return null;
+      root.querySelectorAll('[id$="Fields"]').forEach((el) => el.classList.remove('is-active'));
+      const panelId = ANTRAG_FORM_PANEL_BY_TYPE[type];
+      const panel = panelId ? document.getElementById(panelId) : null;
+      if (panel) panel.classList.add('is-active');
+      return panel;
     }
 
     function toggleAntragFields(forceType) {
       const stepForm = document.getElementById('newAntragStepForm');
-      if (stepForm && stepForm.hasAttribute('hidden')) return;
-      let type = forceType || getSelectedNewAntragType();
+      if (!stepForm || stepForm.classList.contains('wizard-panel-hidden')) return;
+      const type = forceType || getSelectedNewAntragType();
       if (!type) return;
       rememberNewAntragType(type);
-      NEW_ANTRAG_FIELD_PANEL_IDS.forEach((id) => setFieldPanelVisible(id, false));
-      const panelByType = {
-        teilhabegeld: 'teilhabegeldFields',
-        eigentum: 'eigentumFields',
-        'elektro-geraete': 'elektroGeraeteFields',
-        'laufzettel-mietgeraete': 'laufzettelMietgeraeteFields',
-        'kuendigung-tv-mietvertrag': 'kuendigungTvMietvertragFields',
-        'telio-ueberweisung': 'telioUeberweisungFields',
-        'telefonkonto-einrichtung': 'telefonkontoEinrichtungFields',
-        'beratung-unterstuetzung': 'beratungUnterstuetzungFields',
-        gespraechstermin: 'gespraechsterminFields',
-        'gesundheit-medizin': 'gesundheitMedizinFields',
-        'freizeit-weiterbildung': 'freizeitWeiterbildungFields',
-        'besuch-langzeit': 'besuchLangzeitFields',
-        'besuch-termin': 'besuchTerminFields',
-        'besuch-video': 'besuchVideoFields'
-      };
-      const panelId = panelByType[type];
-      if (panelId) setFieldPanelVisible(panelId, true);
+      const panel = activateAntragFormPanel('#newAntragStepForm', type);
+      if (!panel) {
+        console.warn('toggleAntragFields: kein Panel für Typ', type);
+        return;
+      }
       if (type === 'telio-ueberweisung') toggleTelioBegruendung('');
       if (type === 'telefonkonto-einrichtung') toggleTelefonkontoFelder('');
       if (type === 'besuch-langzeit') {
@@ -2931,7 +2949,7 @@
 
     function toggleEntwurfFields(forceType) {
       const stepForm = document.getElementById('entwurfStepForm');
-      if (stepForm && stepForm.hasAttribute('hidden')) return;
+      if (!stepForm || stepForm.classList.contains('wizard-panel-hidden')) return;
       let type = forceType;
       if (!type) {
         const selected =
@@ -2940,22 +2958,12 @@
         if (!selected) return;
         type = selected.value;
       }
-      document.getElementById('entwurfTeilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
-      document.getElementById('entwurfEigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
-      document.getElementById('entwurfElektroGeraeteFields').style.display = type === 'elektro-geraete' ? 'block' : 'none';
-      document.getElementById('entwurfLaufzettelMietgeraeteFields').style.display = type === 'laufzettel-mietgeraete' ? 'block' : 'none';
-      document.getElementById('entwurfKuendigungTvMietvertragFields').style.display = type === 'kuendigung-tv-mietvertrag' ? 'block' : 'none';
-      document.getElementById('entwurfTelioUeberweisungFields').style.display = type === 'telio-ueberweisung' ? 'block' : 'none';
+      document.querySelectorAll('#entwurfStepForm [id$="Fields"]').forEach((el) => el.classList.remove('is-active'));
+      const panelId = ENTWURF_FORM_PANEL_BY_TYPE[type];
+      const panel = panelId ? document.getElementById(panelId) : null;
+      if (panel) panel.classList.add('is-active');
       if (type === 'telio-ueberweisung') toggleTelioBegruendung('entwurf');
-      document.getElementById('entwurfTelefonkontoEinrichtungFields').style.display = type === 'telefonkonto-einrichtung' ? 'block' : 'none';
       if (type === 'telefonkonto-einrichtung') toggleTelefonkontoFelder('entwurf');
-      document.getElementById('entwurfBeratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
-      document.getElementById('entwurfGespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
-      document.getElementById('entwurfGesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
-      document.getElementById('entwurfFreizeitWeiterbildungFields').style.display = type === 'freizeit-weiterbildung' ? 'block' : 'none';
-      document.getElementById('entwurfBesuchLangzeitFields').style.display = type === 'besuch-langzeit' ? 'block' : 'none';
-      document.getElementById('entwurfBesuchTerminFields').style.display = type === 'besuch-termin' ? 'block' : 'none';
-      document.getElementById('entwurfBesuchVideoFields').style.display = type === 'besuch-video' ? 'block' : 'none';
       if (type === 'besuch-langzeit') {
         const liste = document.getElementById('entwurfLangzeitBesucherListe');
         if (liste && !liste.querySelector('.langzeit-besucher-block')) {
@@ -3433,6 +3441,14 @@
       overlay.dataset.footerBound = '1';
       overlay.querySelectorAll('[data-action="submit-new-antrag"]').forEach((btn) => {
         btn.disabled = false;
+      });
+      overlay.querySelector('[data-action="proceed-new-antrag"]')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        proceedNewAntragToForm();
+      });
+      overlay.querySelector('[data-action="back-new-antrag-type"]')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        backNewAntragToType();
       });
     }
 
@@ -4351,6 +4367,6 @@
       renderAntraege();
     }
   </script>
-  <script src="insassen-picker-boot.js?v=20260527-wizard"></script>
+  <script src="insassen-picker-boot.js?v=20260527-wizard2"></script>
 </body>
 </html>
