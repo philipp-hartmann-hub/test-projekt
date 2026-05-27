@@ -9,6 +9,61 @@ const API_BASE = window.location.origin + '/api';
 let serverConnected = false;
 let initialDataLoaded = false;
 
+// ============================================
+// RECONNECT / RETRY
+// ============================================
+
+let reconnectTimer = null;
+let reconnectDelayMs = 5000; // startet kurz, wächst bis max
+const RECONNECT_DELAY_MAX_MS = 60000;
+
+function _setConnectedState(connected, loaded) {
+  serverConnected = Boolean(connected);
+  initialDataLoaded = Boolean(loaded);
+  if (serverConnected && initialDataLoaded) {
+    // Reset Backoff bei Erfolg
+    reconnectDelayMs = 5000;
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+  }
+}
+
+function scheduleReconnect(reason) {
+  // Reconnect nur wenn nicht verbunden oder noch nicht geladen
+  if (serverConnected && initialDataLoaded) return;
+  if (reconnectTimer) return;
+  const delay = Math.min(reconnectDelayMs, RECONNECT_DELAY_MAX_MS);
+  reconnectTimer = setTimeout(async () => {
+    reconnectTimer = null;
+    try {
+      const ok = await loadInitialData();
+      if (!ok) {
+        reconnectDelayMs = Math.min(Math.round(reconnectDelayMs * 1.6), RECONNECT_DELAY_MAX_MS);
+        scheduleReconnect('retry');
+      }
+    } catch (e) {
+      reconnectDelayMs = Math.min(Math.round(reconnectDelayMs * 1.6), RECONNECT_DELAY_MAX_MS);
+      scheduleReconnect('retry-error');
+    }
+  }, delay);
+  try {
+    console.warn('[Sync] Reconnect geplant in', delay, 'ms', reason ? '(' + reason + ')' : '');
+  } catch (_) {}
+}
+
+async function ensureConnected() {
+  if (serverConnected && initialDataLoaded) return true;
+  try {
+    const ok = await loadInitialData();
+    return ok === true;
+  } catch (e) {
+    scheduleReconnect('ensureConnected');
+    return false;
+  }
+}
+
 // Storage Keys die synchronisiert werden sollen
 const SYNC_KEYS = {
   'gefaengnis_users': '/users',
@@ -80,6 +135,8 @@ async function apiCall(endpoint, options = {}) {
     return await response.json();
   } catch (error) {
     console.error(`API-Fehler bei ${endpoint}:`, error);
+    // Wenn Netzwerk/Server hakt, nicht "für immer offline" bleiben
+    scheduleReconnect('apiCall ' + endpoint);
     throw error;
   }
 }
@@ -129,8 +186,7 @@ async function loadInitialData() {
       JSON.stringify(mergeTermineArraysAfterFetch(prevTermineInit, termine))
     );
 
-    serverConnected = true;
-    initialDataLoaded = true;
+    _setConnectedState(true, true);
     console.log('Alle Daten vom Server geladen und in localStorage gespeichert');
     if (userMergeResult.shouldPushToServer) {
       console.log('[Sync] Lokale Benutzer ergänzen Server — Upload wird eingeplant.');
@@ -151,7 +207,8 @@ async function loadInitialData() {
     return true;
   } catch (error) {
     console.warn('Server nicht erreichbar, verwende lokale Daten:', error.message);
-    serverConnected = false;
+    _setConnectedState(false, false);
+    scheduleReconnect('loadInitialData failed');
     return false;
   }
 }
@@ -524,7 +581,11 @@ async function syncToServerImpl(key) {
 }
 
 function scheduleSyncToServer(key) {
-  if (!serverConnected || !initialDataLoaded) return Promise.resolve();
+  if (!serverConnected || !initialDataLoaded) {
+    // Verbindung später automatisch nachholen
+    scheduleReconnect('scheduleSyncToServer ' + key);
+    return Promise.resolve();
+  }
   return enqueueSyncJob(key, () => syncToServerImpl(key));
 }
 
@@ -534,7 +595,10 @@ let isSyncing = false;
 // Explizite Synchronisation eines einzelnen Antrags UND aller Aufgaben
 // Läuft in derselben Warteschlange wie Hintergrund-Syncs für gefaengnis_antraege (kein Überschreiben durch veraltete Jobs).
 async function syncAntragToServer(antragId) {
-  if (!serverConnected) return false;
+  if (!serverConnected || !initialDataLoaded) {
+    const okConn = await ensureConnected();
+    if (!okConn) return false;
+  }
   return enqueueSyncJob('gefaengnis_antraege', async () => {
     isSyncing = true;
     try {
@@ -596,6 +660,7 @@ async function syncAntragToServer(antragId) {
       return true;
     } catch (error) {
       console.warn('Explizite Antrag-Synchronisation fehlgeschlagen:', error);
+      scheduleReconnect('syncAntragToServer failed');
       return false;
     } finally {
       isSyncing = false;
@@ -655,7 +720,10 @@ async function serverLogin(username, password, portalTyp) {
 // ============================================
 
 async function syncUsersNow() {
-  if (!serverConnected) return;
+  if (!serverConnected || !initialDataLoaded) {
+    const okConn = await ensureConnected();
+    if (!okConn) return;
+  }
   try {
     await enqueueSyncJob('gefaengnis_users', () => syncToServerImpl('gefaengnis_users'));
   } catch (e) {
