@@ -95,6 +95,7 @@ const TRANSLATIONS = {
     'application.type.kuendigung_tv_mietvertrag': 'Kündigung des TV-Mietvertrags',
     'application.type.telio_ueberweisung': 'Antrag auf Überweisung auf das Telio-Konto',
     'application.type.telefonkonto_einrichtung': 'Antrag zur Einrichtung eines Telefonkontos',
+    'application.type.freistellung_40_hmbstv': 'Freistellung nach § 40 HmbStVollzG',
     'application.type.sonstiges': 'Sonstiges Anliegen',
     
     // Status
@@ -400,6 +401,7 @@ const TRANSLATIONS = {
     'application.type.besuch_langzeit': 'Long-term visit (approval)',
     'application.type.besuch_termin': 'Visit appointment',
     'application.type.besuch_video': 'Video visit',
+    'application.type.freistellung_40_hmbstv': 'Exemption from work (Section 40 HmbStVollzG)',
     'application.type.sonstiges': 'Other Concerns',
     
     // Status
@@ -697,6 +699,7 @@ const TRANSLATIONS = {
     'application.type.besuch_langzeit': 'Visite longue durée (autorisation)',
     'application.type.besuch_termin': 'Rendez-vous de visite',
     'application.type.besuch_video': 'Visite vidéo',
+    'application.type.freistellung_40_hmbstv': 'Dispense de travail (article 40 HmbStVollzG)',
     'application.type.sonstiges': 'Autres préoccupations',
     
     // Statut
@@ -3448,7 +3451,8 @@ class AntragSystem {
       'laufzettel-mietgeraete': 'Eintragung in Laufzettel Mietgeräte (TV oder Radio)',
       'kuendigung-tv-mietvertrag': 'Kündigung des TV-Mietvertrags',
       'telio-ueberweisung': 'Antrag auf Überweisung auf das Telio-Konto',
-      'telefonkonto-einrichtung': 'Antrag zur Einrichtung eines Telefonkontos'
+      'telefonkonto-einrichtung': 'Antrag zur Einrichtung eines Telefonkontos',
+      'freistellung-40-hmbstv': 'Freistellung nach § 40 HmbStVollzG'
     };
     return labels[type] || 'Antrag';
   }
@@ -5076,6 +5080,11 @@ const ANTRAG_TYPE_GRUPPEN = [
     typen: ['teilhabegeld', 'eigentum', 'elektro-geraete', 'laufzettel-mietgeraete', 'kuendigung-tv-mietvertrag', 'telio-ueberweisung']
   },
   {
+    id: 'arbeit',
+    titel: 'Arbeit',
+    typen: ['freistellung-40-hmbstv']
+  },
+  {
     id: 'beratung-gesundheit',
     titel: 'Beratung, Gespräche & Gesundheit',
     typen: ['beratung-unterstuetzung', 'gespraechstermin', 'gesundheit-medizin', 'telefonkonto-einrichtung']
@@ -5129,6 +5138,8 @@ function _getAntragTypLabelForPicker(type) {
     'besuch-langzeit': 'Langzeitbesuch (Genehmigung)',
     'besuch-termin': 'Besuchstermin',
     'besuch-video': 'Videobesuch'
+    ,
+    'freistellung-40-hmbstv': 'Freistellung nach § 40 HmbStVollzG'
   };
   return fallback[type] || type;
 }

@@ -2414,6 +2414,16 @@
           <p><strong>Überweisungsquelle:</strong> ${quelleLbl}</p>
           ${begr ? `<p><strong>Begründung:</strong> ${begr}</p>` : ''}
         `;
+      } else if (antrag.type === 'freistellung-40-hmbstv') {
+        typeLabel = 'Freistellung nach § 40 HmbStVollzG';
+        const datum = antrag.freistellungWerktag
+          ? new Date(antrag.freistellungWerktag + 'T12:00:00').toLocaleDateString('de-DE')
+          : '–';
+        const begr = antrag.antragBegruendung ? getTranslatedUserText(antrag.antragBegruendung) : '';
+        detailsHtml = `
+          <p><strong>Werktag:</strong> ${datum}</p>
+          ${begr ? `<p><strong>Begründung:</strong> ${begr}</p>` : ''}
+        `;
       } else if (antrag.type === 'telefonkonto-einrichtung') {
         typeLabel = 'Antrag zur Einrichtung eines Telefonkontos';
         if (antrag.benutzerkontoAndereJva === true) {
@@ -3146,6 +3156,33 @@ Persönlich eröffnet
             <h4>${verfuegungTitelTf}</h4>
             <p class="verfuegungsreihenfolge">${verfuegungKetteTf}</p>
             <p class="verfuegungs-hinweis">${verfuegungHinweisTf}</p>
+          </div>
+        `;
+      } else if (antrag.type === 'freistellung-40-hmbstv') {
+        const verfuegungTitelF40 = currentLanguage === 'en' ? 'Suggested procedure sequence (reference Ist process)' : currentLanguage === 'fr' ? 'Suggestion de séquence (processus cible)' : 'Verfügungsvorschlag';
+        const verfuegungHinweisF40 = currentLanguage === 'en' ? 'This is a suggestion only; it does not replace a professional decision.' : currentLanguage === 'fr' ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle." : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
+        const verfuegungKetteF40 =
+          'Arbeitsabteilung → Betrieb zur z. K. und zur Abfrage, ob Einwände bestehen → Station zur Kenntnis und Eröffnung → Arbeitsabteilung';
+        const datum = antrag.freistellungWerktag
+          ? new Date(antrag.freistellungWerktag + 'T12:00:00').toLocaleDateString('de-DE')
+          : '–';
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>Freistellung nach § 40 HmbStVollzG</h4>
+            <div class="detail-row">
+              <span class="detail-label">Werktag:</span>
+              <span class="detail-value">${datum}</span>
+            </div>
+            ${antrag.antragBegruendung ? `
+            <div class="detail-row">
+              <span class="detail-label">${t('application.justification')}:</span>
+              <span class="detail-value">${getTranslatedUserText(antrag.antragBegruendung)}</span>
+            </div>` : ''}
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitelF40}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKetteF40}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweisF40}</p>
           </div>
         `;
       } else if (antrag.type === 'telio-ueberweisung') {
@@ -4159,6 +4196,11 @@ ${t('action.archive')}
       } else if (antrag.type === 'telio-ueberweisung') {
         const quelleLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'gebundenes-eigengeld': 'Gebundenes Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' }[antrag.ueberweisungsquelle] || antrag.ueberweisungsquelle || '–';
         anliegenText = `${t('notice.applicationFor')} Telio-Überweisung (${antrag.betrag || '–'} €, ${quelleLbl})`;
+      } else if (antrag.type === 'freistellung-40-hmbstv') {
+        const datum = antrag.freistellungWerktag
+          ? new Date(antrag.freistellungWerktag + 'T12:00:00').toLocaleDateString('de-DE')
+          : '–';
+        anliegenText = `${t('notice.applicationFor')} Freistellung § 40 (Werktag: ${datum})`;
       } else if (antrag.type === 'telefonkonto-einrichtung') {
         if (antrag.benutzerkontoAndereJva === true) {
           anliegenText = `${t('notice.applicationFor')} Einrichtung Telefonkonto (Benutzerkonto in anderer JVA: ${antrag.andereJva || '–'})`;
@@ -6026,6 +6068,18 @@ ${t('action.archive')}
         let y = yPos + 14;
         doc.text(`Überweisungsquelle: ${quelleLbl}`, 25, y);
         y += 7;
+        if (antrag.antragBegruendung) {
+          doc.text(`Begründung: ${getTranslatedUserText(antrag.antragBegruendung)}`, 25, y);
+          y += 7;
+        }
+        yPos = y + 7;
+      } else if (antrag.type === 'freistellung-40-hmbstv') {
+        const datum = antrag.freistellungWerktag
+          ? new Date(antrag.freistellungWerktag + 'T12:00:00').toLocaleDateString('de-DE')
+          : '–';
+        doc.text('Art: Freistellung nach § 40 HmbStVollzG', 25, yPos);
+        doc.text(`Werktag: ${datum}`, 25, yPos + 7);
+        let y = yPos + 14;
         if (antrag.antragBegruendung) {
           doc.text(`Begründung: ${getTranslatedUserText(antrag.antragBegruendung)}`, 25, y);
           y += 7;

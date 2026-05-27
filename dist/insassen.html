@@ -230,6 +230,12 @@
                   <label class="radio-option"><input type="radio" name="antragType" value="telio-ueberweisung" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Antrag auf Überweisung auf das Telio-Konto</span></label>
                 </div>
               </div>
+              <div class="antrag-type-group-block" data-gruppe="arbeit">
+                <p class="antrag-type-group-title">Arbeit</p>
+                <div class="radio-group antrag-type-group-options">
+                  <label class="radio-option"><input type="radio" name="antragType" value="freistellung-40-hmbstv" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Freistellung nach § 40 HmbStVollzG</span></label>
+                </div>
+              </div>
               <div class="antrag-type-group-block" data-gruppe="beratung-gesundheit">
                 <p class="antrag-type-group-title">Beratung, Gespräche &amp; Gesundheit</p>
                 <div class="radio-group antrag-type-group-options">
@@ -444,6 +450,18 @@
             <label for="telioUeberweisungBegruendung">Begründung <span class="required">*</span></label>
             <textarea id="telioUeberweisungBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
             <p class="field-hint">Erforderlich nur bei gebundenem Eigengeld und Überbrückungsgeld (nicht bei Hausgeld oder freiem Eigengeld).</p>
+          </div>
+        </div>
+
+        <!-- Freistellung nach § 40 HmbStVollzG -->
+        <div id="freistellung40HmbStvFields" style="display: none;">
+          <div class="form-group">
+            <label for="freistellung40HmbStvDatum">Beantragung auf Freistellung von der Arbeit nach § 40 HmbStVollzG für folgenden Werktag <span class="required">*</span></label>
+            <input type="date" id="freistellung40HmbStvDatum">
+          </div>
+          <div class="form-group">
+            <label for="freistellung40HmbStvBegruendung">Begründung <span class="required">*</span></label>
+            <textarea id="freistellung40HmbStvBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
           </div>
         </div>
 
@@ -706,6 +724,12 @@
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="telio-ueberweisung"><span class="radio-label">Antrag auf Überweisung auf das Telio-Konto</span></label>
                 </div>
               </div>
+              <div class="antrag-type-group-block" data-gruppe="arbeit">
+                <p class="antrag-type-group-title">Arbeit</p>
+                <div class="radio-group antrag-type-group-options">
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="freistellung-40-hmbstv"><span class="radio-label">Freistellung nach § 40 HmbStVollzG</span></label>
+                </div>
+              </div>
               <div class="antrag-type-group-block" data-gruppe="beratung-gesundheit">
                 <p class="antrag-type-group-title">Beratung, Gespräche &amp; Gesundheit</p>
                 <div class="radio-group antrag-type-group-options">
@@ -920,6 +944,18 @@
             <label for="entwurfTelioUeberweisungBegruendung">Begründung <span class="required">*</span></label>
             <textarea id="entwurfTelioUeberweisungBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
             <p class="field-hint">Erforderlich nur bei gebundenem Eigengeld und Überbrückungsgeld (nicht bei Hausgeld oder freiem Eigengeld).</p>
+          </div>
+        </div>
+
+        <!-- Freistellung nach § 40 HmbStVollzG (Entwurf) -->
+        <div id="entwurfFreistellung40HmbStvFields" style="display: none;">
+          <div class="form-group">
+            <label for="entwurfFreistellung40HmbStvDatum">Beantragung auf Freistellung von der Arbeit nach § 40 HmbStVollzG für folgenden Werktag <span class="required">*</span></label>
+            <input type="date" id="entwurfFreistellung40HmbStvDatum">
+          </div>
+          <div class="form-group">
+            <label for="entwurfFreistellung40HmbStvBegruendung">Begründung <span class="required">*</span></label>
+            <textarea id="entwurfFreistellung40HmbStvBegruendung" rows="3" placeholder="Bitte begründen Sie Ihren Antrag..."></textarea>
           </div>
         </div>
 
@@ -1344,6 +1380,7 @@
         'besuch-langzeit': 'Langzeitbesuch (Genehmigung)',
         'besuch-termin': 'Besuchstermin',
         'besuch-video': 'Videobesuch',
+        'freistellung-40-hmbstv': 'Freistellung nach § 40 HmbStVollzG',
         'sonstiges': 'Sonstiges'
       };
       return typeMap[type] || type;
@@ -2730,6 +2767,42 @@
       }
     }
 
+    function readFreistellung40HmbStvForm(prefix) {
+      const isEntwurf = prefix === 'entwurf';
+      const datumEl = document.getElementById(isEntwurf ? 'entwurfFreistellung40HmbStvDatum' : 'freistellung40HmbStvDatum');
+      const begrEl = document.getElementById(isEntwurf ? 'entwurfFreistellung40HmbStvBegruendung' : 'freistellung40HmbStvBegruendung');
+      return {
+        freistellungWerktag: datumEl ? datumEl.value.trim() : '',
+        antragBegruendung: begrEl ? begrEl.value.trim() : ''
+      };
+    }
+
+    function validateFreistellung40HmbStvData(data) {
+      if (!data.freistellungWerktag) {
+        return { valid: false, error: 'Bitte geben Sie den Werktag (Datum) an.' };
+      }
+      if (!data.antragBegruendung) {
+        return { valid: false, error: 'Bitte geben Sie eine Begründung an.' };
+      }
+      return { valid: true, error: null };
+    }
+
+    function resetFreistellung40HmbStvForm(prefix) {
+      const isEntwurf = prefix === 'entwurf';
+      const datumEl = document.getElementById(isEntwurf ? 'entwurfFreistellung40HmbStvDatum' : 'freistellung40HmbStvDatum');
+      const begrEl = document.getElementById(isEntwurf ? 'entwurfFreistellung40HmbStvBegruendung' : 'freistellung40HmbStvBegruendung');
+      if (datumEl) datumEl.value = '';
+      if (begrEl) begrEl.value = '';
+    }
+
+    function setFreistellung40HmbStvForm(prefix, antrag) {
+      const isEntwurf = prefix === 'entwurf';
+      const datumEl = document.getElementById(isEntwurf ? 'entwurfFreistellung40HmbStvDatum' : 'freistellung40HmbStvDatum');
+      const begrEl = document.getElementById(isEntwurf ? 'entwurfFreistellung40HmbStvBegruendung' : 'freistellung40HmbStvBegruendung');
+      if (datumEl) datumEl.value = antrag.freistellungWerktag || '';
+      if (begrEl) begrEl.value = antrag.antragBegruendung || '';
+    }
+
     const ANTRAG_FORM_PANEL_BY_TYPE = {
       teilhabegeld: 'teilhabegeldFields',
       eigentum: 'eigentumFields',
@@ -2737,6 +2810,7 @@
       'laufzettel-mietgeraete': 'laufzettelMietgeraeteFields',
       'kuendigung-tv-mietvertrag': 'kuendigungTvMietvertragFields',
       'telio-ueberweisung': 'telioUeberweisungFields',
+      'freistellung-40-hmbstv': 'freistellung40HmbStvFields',
       'telefonkonto-einrichtung': 'telefonkontoEinrichtungFields',
       'beratung-unterstuetzung': 'beratungUnterstuetzungFields',
       gespraechstermin: 'gespraechsterminFields',
@@ -2754,6 +2828,7 @@
       'laufzettel-mietgeraete': 'entwurfLaufzettelMietgeraeteFields',
       'kuendigung-tv-mietvertrag': 'entwurfKuendigungTvMietvertragFields',
       'telio-ueberweisung': 'entwurfTelioUeberweisungFields',
+      'freistellung-40-hmbstv': 'entwurfFreistellung40HmbStvFields',
       'telefonkonto-einrichtung': 'entwurfTelefonkontoEinrichtungFields',
       'beratung-unterstuetzung': 'entwurfBeratungUnterstuetzungFields',
       gespraechstermin: 'entwurfGespraechsterminFields',
@@ -3307,6 +3382,10 @@
         const data = readTelioUeberweisungForm('');
         const check = validateTelioUeberweisungData(data);
         return { type, data, valid: check.valid, error: check.error };
+      } else if (type === 'freistellung-40-hmbstv') {
+        const data = readFreistellung40HmbStvForm('');
+        const check = validateFreistellung40HmbStvData(data);
+        return { type, data, valid: check.valid, error: check.error };
       } else if (type === 'telefonkonto-einrichtung') {
         const data = readTelefonkontoForm('');
         const check = validateTelefonkontoData(data);
@@ -3477,6 +3556,7 @@
       resetBesuchTerminForm('');
       resetBesuchVideoForm('');
       resetTelioUeberweisungForm('');
+      resetFreistellung40HmbStvForm('');
       resetTelefonkontoForm('');
       document.querySelectorAll('input[name="kleidung"]').forEach((cb) => {
         cb.checked = false;
@@ -3595,6 +3675,8 @@
         if (el) el.value = entwurf.kuendigungZum || '';
       } else if (entwurf.type === 'telio-ueberweisung') {
         setTelioUeberweisungForm('entwurf', entwurf);
+      } else if (entwurf.type === 'freistellung-40-hmbstv') {
+        setFreistellung40HmbStvForm('entwurf', entwurf);
       } else if (entwurf.type === 'telefonkonto-einrichtung') {
         setTelefonkontoForm('entwurf', entwurf);
       }
@@ -3694,6 +3776,10 @@
       } else if (type === 'telio-ueberweisung') {
         const data = readTelioUeberweisungForm('entwurf');
         const check = validateTelioUeberweisungData(data);
+        return { type, ...data, valid: check.valid, error: check.error };
+      } else if (type === 'freistellung-40-hmbstv') {
+        const data = readFreistellung40HmbStvForm('entwurf');
+        const check = validateFreistellung40HmbStvData(data);
         return { type, ...data, valid: check.valid, error: check.error };
       } else if (type === 'telefonkonto-einrichtung') {
         const data = readTelefonkontoForm('entwurf');
@@ -3897,6 +3983,16 @@
           ${antrag.betrag ? `<p><strong>Betrag:</strong> ${antrag.betrag} €</p>` : '<p class="incomplete"><em>Betrag noch nicht angegeben</em></p>'}
           ${antrag.ueberweisungsquelle ? `<p><strong>Überweisungsquelle:</strong> ${getTelioUeberweisungsquelleLabel(antrag.ueberweisungsquelle)}</p>` : '<p class="incomplete"><em>Überweisungsquelle noch nicht gewählt</em></p>'}
           ${begrText ? `<p><strong>Begründung:</strong> ${begrText}</p>` : (telioQuelleBrauchtBegruendung(antrag.ueberweisungsquelle) ? '<p class="incomplete"><em>Begründung noch nicht angegeben</em></p>' : '')}
+        `;
+      } else if (antrag.type === 'freistellung-40-hmbstv') {
+        typeLabel = 'Freistellung nach § 40 HmbStVollzG';
+        const begrText = antrag.antragBegruendung
+          ? (typeof antrag.antragBegruendung === 'object' ? (antrag.antragBegruendung.text || '') : antrag.antragBegruendung)
+          : '';
+        const datum = antrag.freistellungWerktag || '';
+        detailsHtml = `
+          ${datum ? `<p><strong>Werktag:</strong> ${datum}</p>` : '<p class="incomplete"><em>Datum noch nicht angegeben</em></p>'}
+          ${begrText ? `<p><strong>Begründung:</strong> ${begrText}</p>` : '<p class="incomplete"><em>Begründung noch nicht angegeben</em></p>'}
         `;
       } else if (antrag.type === 'telefonkonto-einrichtung') {
         typeLabel = 'Antrag zur Einrichtung eines Telefonkontos';
