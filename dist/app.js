@@ -91,6 +91,7 @@ const TRANSLATIONS = {
     'application.type.besuch_termin': 'Besuchstermin',
     'application.type.besuch_video': 'Videobesuch',
     'application.type.elektro_geraete': 'Elektro-Geräte und sonstige Gegenstände',
+    'application.type.laufzettel_mietgeraete': 'Eintragung in Laufzettel Mietgeräte (TV oder Radio)',
     'application.type.sonstiges': 'Sonstiges Anliegen',
     
     // Status
@@ -3440,7 +3441,8 @@ class AntragSystem {
       'besuch-langzeit': 'Langzeitbesuch (Genehmigung)',
       'besuch-termin': 'Besuchstermin',
       'besuch-video': 'Videobesuch',
-      'elektro-geraete': 'Elektro-Geräte und sonstige Gegenstände'
+      'elektro-geraete': 'Elektro-Geräte und sonstige Gegenstände',
+      'laufzettel-mietgeraete': 'Eintragung in Laufzettel Mietgeräte (TV oder Radio)'
     };
     return labels[type] || 'Antrag';
   }
@@ -5065,7 +5067,7 @@ const ANTRAG_TYPE_GRUPPEN = [
   {
     id: 'finanzen-unterbringung',
     titel: 'Finanzen & Unterbringung',
-    typen: ['teilhabegeld', 'eigentum', 'elektro-geraete']
+    typen: ['teilhabegeld', 'eigentum', 'elektro-geraete', 'laufzettel-mietgeraete']
   },
   {
     id: 'beratung-gesundheit',

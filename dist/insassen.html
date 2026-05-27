@@ -224,6 +224,7 @@
                   <label class="radio-option"><input type="radio" name="antragType" value="teilhabegeld" checked onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Teilhabegeld</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="eigentum" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Eigentum in der Kammer</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="elektro-geraete" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Elektro-Geräte und sonstige Gegenstände</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="laufzettel-mietgeraete" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Eintragung in Laufzettel Mietgeräte (TV oder Radio)</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="beratung-gesundheit">
@@ -358,6 +359,23 @@
               <label class="radio-option">
                 <input type="radio" name="elektroGeraeteBezahlung" value="durch-dritte">
                 <span class="radio-label">Durch Dritte</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Laufzettel Mietgeräte (TV oder Radio) -->
+        <div id="laufzettelMietgeraeteFields" style="display: none;">
+          <div class="form-group">
+            <label>Welches Gerät möchten Sie mieten? <span class="required">*</span></label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="laufzettelMietgeraet" value="tv">
+                <span class="radio-label">TV</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="laufzettelMietgeraet" value="radio">
+                <span class="radio-label">Radio</span>
               </label>
             </div>
           </div>
@@ -585,6 +603,7 @@
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="teilhabegeld" checked><span class="radio-label">Teilhabegeld</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="eigentum"><span class="radio-label">Eigentum in der Kammer</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="elektro-geraete"><span class="radio-label">Elektro-Geräte und sonstige Gegenstände</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="laufzettel-mietgeraete"><span class="radio-label">Eintragung in Laufzettel Mietgeräte (TV oder Radio)</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="beratung-gesundheit">
@@ -719,6 +738,23 @@
               <label class="radio-option">
                 <input type="radio" name="entwurfElektroGeraeteBezahlung" value="durch-dritte">
                 <span class="radio-label">Durch Dritte</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Laufzettel Mietgeräte (Entwurf) -->
+        <div id="entwurfLaufzettelMietgeraeteFields" style="display: none;">
+          <div class="form-group">
+            <label>Welches Gerät möchten Sie mieten? <span class="required">*</span></label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="entwurfLaufzettelMietgeraet" value="tv">
+                <span class="radio-label">TV</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="entwurfLaufzettelMietgeraet" value="radio">
+                <span class="radio-label">Radio</span>
               </label>
             </div>
           </div>
@@ -2294,6 +2330,7 @@
       document.getElementById('teilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
       document.getElementById('eigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
       document.getElementById('elektroGeraeteFields').style.display = type === 'elektro-geraete' ? 'block' : 'none';
+      document.getElementById('laufzettelMietgeraeteFields').style.display = type === 'laufzettel-mietgeraete' ? 'block' : 'none';
       document.getElementById('beratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
       document.getElementById('gespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
       document.getElementById('gesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
@@ -2321,6 +2358,7 @@
       document.getElementById('entwurfTeilhabegeldFields').style.display = type === 'teilhabegeld' ? 'block' : 'none';
       document.getElementById('entwurfEigentumFields').style.display = type === 'eigentum' ? 'block' : 'none';
       document.getElementById('entwurfElektroGeraeteFields').style.display = type === 'elektro-geraete' ? 'block' : 'none';
+      document.getElementById('entwurfLaufzettelMietgeraeteFields').style.display = type === 'laufzettel-mietgeraete' ? 'block' : 'none';
       document.getElementById('entwurfBeratungUnterstuetzungFields').style.display = type === 'beratung-unterstuetzung' ? 'block' : 'none';
       document.getElementById('entwurfGespraechsterminFields').style.display = type === 'gespraechstermin' ? 'block' : 'none';
       document.getElementById('entwurfGesundheitMedizinFields').style.display = type === 'gesundheit-medizin' ? 'block' : 'none';
@@ -2678,6 +2716,13 @@
           return { type, data: {}, valid: false, error: 'Bitte wählen Sie die Zahlungsart aus.' };
         }
         return { type, data: { gegenstand, firma: firma || null, kosten, bezahlung }, valid: true, error: null };
+      } else if (type === 'laufzettel-mietgeraete') {
+        const mietgeraetEl = document.querySelector('input[name="laufzettelMietgeraet"]:checked');
+        const mietgeraet = mietgeraetEl ? mietgeraetEl.value : '';
+        if (!mietgeraet) {
+          return { type, data: {}, valid: false, error: 'Bitte wählen Sie aus, ob Sie einen TV oder ein Radio mieten möchten.' };
+        }
+        return { type, data: { mietgeraet }, valid: true, error: null };
       }
       return { type, data: {}, valid: false, error: 'Unbekannter Antragstyp.' };
     }
@@ -2833,6 +2878,7 @@
       const elKosten = document.getElementById('elektroGeraeteKosten');
       if (elKosten) elKosten.value = '';
       document.querySelectorAll('input[name="elektroGeraeteBezahlung"]').forEach((r) => { r.checked = false; });
+      document.querySelectorAll('input[name="laufzettelMietgeraet"]').forEach((r) => { r.checked = false; });
       if (!document.querySelector('#newAntragTypePicker input[name="antragType"]')) {
         mountAntragTypePicker('newAntragTypePicker', 'antragType', 'teilhabegeld', 'toggleAntragFields');
       } else {
@@ -2914,6 +2960,11 @@
         if (el('entwurfElektroGeraeteKosten')) el('entwurfElektroGeraeteKosten').value = entwurf.kosten || '';
         if (entwurf.bezahlung) {
           const r = document.querySelector(`input[name="entwurfElektroGeraeteBezahlung"][value="${entwurf.bezahlung}"]`);
+          if (r) r.checked = true;
+        }
+      } else if (entwurf.type === 'laufzettel-mietgeraete') {
+        if (entwurf.mietgeraet) {
+          const r = document.querySelector(`input[name="entwurfLaufzettelMietgeraet"][value="${entwurf.mietgeraet}"]`);
           if (r) r.checked = true;
         }
       }
@@ -2999,6 +3050,11 @@
         if (!kosten) return { type, valid: false, error: 'Bitte geben Sie die entstehenden Kosten an.' };
         if (!bezahlung) return { type, valid: false, error: 'Bitte wählen Sie die Zahlungsart aus.' };
         return { type, gegenstand, firma: firma || null, kosten, bezahlung, valid: true, error: null };
+      } else if (type === 'laufzettel-mietgeraete') {
+        const mietgeraetEl = document.querySelector('input[name="entwurfLaufzettelMietgeraet"]:checked');
+        const mietgeraet = mietgeraetEl ? mietgeraetEl.value : '';
+        if (!mietgeraet) return { type, valid: false, error: 'Bitte wählen Sie aus, ob Sie einen TV oder ein Radio mieten möchten.' };
+        return { type, mietgeraet, valid: true, error: null };
       }
       return { type, valid: false, error: 'Unbekannter Antragstyp.' };
     }
@@ -3161,6 +3217,21 @@
           ${antrag.wochentag ? `<p><strong>Wochentag:</strong> ${antrag.wochentag}</p>` : '<p class="incomplete"><em>Wochentag noch nicht gewählt</em></p>'}
           ${antrag.tageszeit ? `<p><strong>Tageszeit:</strong> ${antrag.tageszeit === 'vormittags' ? 'Vormittags' : antrag.tageszeit === 'nachmittags' ? 'Nachmittags' : antrag.tageszeit}</p>` : '<p class="incomplete"><em>Tageszeit noch nicht gewählt</em></p>'}
         `;
+      } else if (antrag.type === 'elektro-geraete') {
+        typeLabel = 'Elektro-Geräte und sonstige Gegenstände';
+        const bezLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'durch-dritte': 'Durch Dritte' }[antrag.bezahlung] || antrag.bezahlung || '–';
+        detailsHtml = `
+          ${antrag.gegenstand ? `<p><strong>Gegenstand:</strong> ${antrag.gegenstand}</p>` : '<p class="incomplete"><em>Gegenstand noch nicht angegeben</em></p>'}
+          ${antrag.firma ? `<p><strong>Anlieferung durch:</strong> ${antrag.firma}</p>` : ''}
+          ${antrag.kosten ? `<p><strong>Kosten:</strong> ${antrag.kosten} €</p>` : '<p class="incomplete"><em>Kosten noch nicht angegeben</em></p>'}
+          ${antrag.bezahlung ? `<p><strong>Bezahlung:</strong> ${bezLbl}</p>` : '<p class="incomplete"><em>Bezahlungsart noch nicht gewählt</em></p>'}
+        `;
+      } else if (antrag.type === 'laufzettel-mietgeraete') {
+        typeLabel = 'Eintragung in Laufzettel Mietgeräte (TV oder Radio)';
+        const geraetLbl = antrag.mietgeraet === 'tv' ? 'TV' : antrag.mietgeraet === 'radio' ? 'Radio' : null;
+        detailsHtml = geraetLbl
+          ? `<p><strong>Gerät:</strong> ${geraetLbl}</p>`
+          : '<p class="incomplete"><em>Gerät noch nicht gewählt</em></p>';
       } else {
         // Unbekannter Typ - trotzdem anzeigen
         typeLabel = antrag.type || 'Antrag';
