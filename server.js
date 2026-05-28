@@ -622,6 +622,20 @@ app.put('/api/notifications/:id', async (req, res) => {
   }
 });
 
+app.delete('/api/notifications/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await dbLayer.remove('notifications', id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Benachrichtigung nicht gefunden' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Fehler beim Löschen der Benachrichtigung:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Löschen der Benachrichtigung' });
+  }
+});
+
 // ============================================
 // API ROUTEN - AKTIVITAETEN
 // ============================================
@@ -659,6 +673,20 @@ app.post('/api/aktivitaeten', async (req, res) => {
   } catch (error) {
     console.error('Fehler beim Erstellen der Aktivität:', error);
     res.status(500).json({ success: false, error: 'Fehler beim Erstellen der Aktivität' });
+  }
+});
+
+app.delete('/api/aktivitaeten/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await dbLayer.remove('aktivitaeten', id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Aktivität nicht gefunden' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Fehler beim Löschen der Aktivität:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Löschen der Aktivität' });
   }
 });
 
