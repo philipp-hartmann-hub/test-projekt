@@ -759,7 +759,6 @@
       if (!a || typeof a !== 'object') return false;
       if (a.status === 'entwurf') return false;
       if (a.veraktet === true) return false;
-      if (['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(a.status) && a.erledigt === true) return false;
       return true;
     }
 
