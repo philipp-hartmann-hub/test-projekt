@@ -441,6 +441,8 @@ app.post('/api/antraege', async (req, res) => {
     antrag.id = antrag.id || generateId('ANT');
     antrag.antragsNummer = antrag.antragsNummer || 'A-' + Date.now().toString().slice(-6);
     antrag.erstelltAm = antrag.erstelltAm || new Date().toISOString();
+    antrag.updatedAt = antrag.updatedAt || new Date().toISOString();
+    antrag.syncVersion = Number.isFinite(Number(antrag.syncVersion)) ? Number(antrag.syncVersion) : 1;
     antrag.kommentare = antrag.kommentare || [];
     antrag.dokumente = antrag.dokumente || [];
     // Sicherstellen, dass id ein String ist (PostgreSQL TEXT)
@@ -463,12 +465,32 @@ app.put('/api/antraege/:id', async (req, res) => {
     const { id } = req.params;
     const antragData = req.body;
     const existing = await dbLayer.getById('antraege', id);
-    const payload = mergeAntragPutPayload(existing, antragData);
-
-    const updated = await dbLayer.update('antraege', id, payload);
-    if (!updated) {
+    if (!existing) {
       return res.status(404).json({ success: false, error: 'Antrag nicht gefunden' });
     }
+
+    // Optimistic locking: veraltete Clients duerfen keinen neueren Stand ueberschreiben.
+    const baseUpdatedAt = antragData && typeof antragData === 'object' ? antragData._baseUpdatedAt : null;
+    if (baseUpdatedAt && existing.updatedAt && String(baseUpdatedAt) !== String(existing.updatedAt)) {
+      return res.status(409).json({
+        success: false,
+        error: 'Konflikt: Antrag wurde zwischenzeitlich auf einem anderen Geraet aktualisiert.',
+        latestAntrag: existing
+      });
+    }
+
+    const payload = mergeAntragPutPayload(existing, antragData);
+    if (payload && typeof payload === 'object') {
+      delete payload._baseUpdatedAt;
+      payload.updatedAt = new Date().toISOString();
+      payload.syncVersion = Math.max(
+        Number(existing.syncVersion) || 0,
+        Number(antragData && antragData.syncVersion) || 0,
+        0
+      ) + 1;
+    }
+
+    const updated = await dbLayer.update('antraege', id, payload);
     
     // Aktualisierten Antrag zurückgeben, damit Frontend die Änderungen bestätigen kann
     res.json(updated);

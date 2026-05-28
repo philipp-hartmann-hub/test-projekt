@@ -547,10 +547,34 @@ async function syncToServerImpl(key) {
         const serverStr = JSON.stringify(serverItem);
 
         if (localStr !== serverStr) {
-          const response = await apiCall(`${endpoint}/${localItem.id}`, {
-            method: 'PUT',
-            body: JSON.stringify(localItem)
-          });
+          let response;
+          try {
+            const putPayload =
+              key === 'gefaengnis_antraege'
+                ? { ...localItem, _baseUpdatedAt: localItem.updatedAt || null }
+                : localItem;
+            response = await apiCall(`${endpoint}/${localItem.id}`, {
+              method: 'PUT',
+              body: JSON.stringify(putPayload)
+            });
+          } catch (err) {
+            // Bei Konflikt (409) nie erneut blind drueberschreiben: Serverstand uebernehmen.
+            if (key === 'gefaengnis_antraege' && err && /409/.test(String(err.message || err))) {
+              try {
+                const latest = await apiCall(`${endpoint}`);
+                const latestItem = Array.isArray(latest) ? latest.find((s) => s.id === localItem.id) : null;
+                if (latestItem) {
+                  const idx = localData.findIndex((l) => l.id === localItem.id);
+                  if (idx !== -1) {
+                    localData[idx] = mergeAntragSnapshotAfterPut(localData[idx], latestItem);
+                    originalSetItem('gefaengnis_antraege', JSON.stringify(localData));
+                  }
+                }
+              } catch (_) {}
+              continue;
+            }
+            throw err;
+          }
           if (response && response.id) {
             const index = localData.findIndex(l => l.id === response.id);
             if (index !== -1) {
@@ -612,13 +636,34 @@ async function syncAntragToServer(antragId) {
       if (!antrag) return false;
 
       console.log('[Sync] Synchronisiere Antrag:', antragId, 'Bearbeiter:', antrag.bearbeiterId);
+      const putPayload = { ...antrag, _baseUpdatedAt: antrag.updatedAt || null };
       const antragResponse = await fetch(base + '/antraege/' + antragId, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(antrag)
+        body: JSON.stringify(putPayload)
       });
 
       if (!antragResponse.ok) {
+        if (antragResponse.status === 409) {
+          const conflict = await antragResponse.json().catch(() => null);
+          const latest = conflict && conflict.latestAntrag ? conflict.latestAntrag : null;
+          if (latest) {
+            const freshConflict = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
+            const idx = freshConflict.findIndex((a) => a.id === latest.id);
+            if (idx !== -1) {
+              freshConflict[idx] = mergeAntragSnapshotAfterPut(freshConflict[idx], latest);
+              originalSetItem('gefaengnis_antraege', JSON.stringify(freshConflict));
+            } else {
+              freshConflict.push(latest);
+              originalSetItem('gefaengnis_antraege', JSON.stringify(freshConflict));
+            }
+            if (typeof window.reloadDataFromStorage === 'function') {
+              window.reloadDataFromStorage();
+            }
+          }
+          // Konflikt ist kein harter Fehler mehr; wir haben den neuesten Serverstand lokal.
+          return true;
+        }
         throw new Error(`HTTP ${antragResponse.status}: ${antragResponse.statusText}`);
       }
 
@@ -749,16 +794,32 @@ async function reloadDataFromServer() {
   
   try {
     console.log('Lade aktuelle Daten vom Server...');
-    
-    // Alle Daten parallel laden
-    const [users, antraege, aufgaben, notifications, aktivitaeten, termine] = await Promise.all([
-      apiCall('/users'),
-      apiCall('/antraege'),
-      apiCall('/aufgaben'),
-      apiCall('/notifications'),
-      apiCall('/aktivitaeten'),
-      apiCall('/termine')
-    ]);
+    const endpoints = {
+      users: '/users',
+      antraege: '/antraege',
+      aufgaben: '/aufgaben',
+      notifications: '/notifications',
+      aktivitaeten: '/aktivitaeten',
+      termine: '/termine'
+    };
+    const settled = await Promise.allSettled(
+      Object.entries(endpoints).map(async ([k, endpoint]) => {
+        const val = await apiCall(endpoint);
+        return { key: k, value: val };
+      })
+    );
+    const fetched = {};
+    settled.forEach((s) => {
+      if (s.status === 'fulfilled' && s.value) {
+        fetched[s.value.key] = s.value.value;
+      }
+    });
+    const users = Array.isArray(fetched.users) ? fetched.users : JSON.parse(localStorage.getItem('gefaengnis_users') || '[]');
+    const antraege = Array.isArray(fetched.antraege) ? fetched.antraege : JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
+    const aufgaben = Array.isArray(fetched.aufgaben) ? fetched.aufgaben : JSON.parse(localStorage.getItem('gefaengnis_aufgaben') || '[]');
+    const notifications = Array.isArray(fetched.notifications) ? fetched.notifications : JSON.parse(localStorage.getItem('gefaengnis_notifications') || '[]');
+    const aktivitaeten = Array.isArray(fetched.aktivitaeten) ? fetched.aktivitaeten : JSON.parse(localStorage.getItem('gefaengnis_aktivitaeten') || '[]');
+    const termine = Array.isArray(fetched.termine) ? fetched.termine : JSON.parse(localStorage.getItem('gefaengnis_termine') || '[]');
 
     const prevUsers = readLocalUsersArray();
     const serverMapped = users.map(mapServerUserToFrontend);
@@ -841,11 +902,13 @@ async function reloadDataFromServer() {
       detail: { 
         antraege: antraege.length,
         aufgaben: aufgaben.length,
-        aufgabenErledigt: aufgaben.filter(a => a.status === 'erledigt').length
+        aufgabenErledigt: aufgaben.filter(a => a.status === 'erledigt').length,
+        partialReload:
+          settled.some((s) => s.status === 'rejected')
       } 
     }));
     
-    return true;
+    return settled.some((s) => s.status === 'fulfilled');
   } catch (error) {
     console.warn('Fehler beim Neuladen der Daten:', error.message);
     return false;
