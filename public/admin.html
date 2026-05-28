@@ -132,6 +132,22 @@
             Alte Daten im Browser: F12 → Application → Local Storage → gefaengnis_antraege / gefaengnis_aufgaben.
             Backup von einem anderen Gerät hier importieren.
           </p>
+          <hr style="margin: 1.25rem 0;">
+          <div class="section-header">
+            <h3>Systemweite Bereinigung aktiver Anträge</h3>
+          </div>
+          <p class="section-hint">
+            Zeigt alle aktuell aktiven Anträge aus dem Server. Die Löschfunktion entfernt diese Anträge samt verknüpfter Aufgaben, Termine,
+            Benachrichtigungen und Aktivitäten systemweit (alle Profile/Geräte).
+          </p>
+          <div id="aktiveAntraegeStatusBox" class="info-box" style="margin-bottom: 0.75rem;">
+            <p>Lade aktive Anträge …</p>
+          </div>
+          <div class="antrag-list" id="aktiveAntraegeAdminList" style="margin-bottom: 0.75rem;"></div>
+          <div class="form-group">
+            <button type="button" class="btn btn-secondary" onclick="renderAktiveAntraegeStatus()">Aktive Anträge neu laden</button>
+            <button type="button" class="btn btn-danger" onclick="adminLoescheAktiveAntraegeKomplett()">Alle aktiven Anträge inkl. verknüpfter Daten löschen</button>
+          </div>
         </section>
       </div>
     </main>
@@ -736,6 +752,136 @@
         <p><strong>Lokal (dieser Browser):</strong> ${lokalAntraege} Anträge (davon Demo: ${demo}), ${lokalAufgaben} Aufgaben</p>
         ${serverHtml}
       `;
+      await renderAktiveAntraegeStatus();
+    }
+
+    function istAktiverAntragFuerAdmin(a) {
+      if (!a || typeof a !== 'object') return false;
+      if (a.status === 'entwurf') return false;
+      if (a.veraktet === true) return false;
+      if (['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(a.status) && a.erledigt === true) return false;
+      return true;
+    }
+
+    async function fetchServerListe(endpoint) {
+      const res = await fetch(endpoint, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`${endpoint} HTTP ${res.status}`);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    }
+
+    function escapeHtmlAdmin(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function renderAktiveAntraegeStatus() {
+      const box = document.getElementById('aktiveAntraegeStatusBox');
+      const listEl = document.getElementById('aktiveAntraegeAdminList');
+      if (!box || !listEl) return;
+      try {
+        const antraege = await fetchServerListe('/api/antraege');
+        const aktive = antraege.filter(istAktiverAntragFuerAdmin);
+        box.innerHTML = `<p><strong>Server:</strong> ${aktive.length} aktive Anträge gefunden.</p>`;
+        if (!aktive.length) {
+          listEl.innerHTML = '<p class="empty-state">Keine aktiven Anträge vorhanden.</p>';
+          return;
+        }
+        listEl.innerHTML = aktive
+          .slice(0, 100)
+          .map((a) => {
+            const titel = a.antragsNummer || a.id;
+            const status = a.status || 'offen';
+            const insasse = a.insasseName || 'Unbekannt';
+            return `
+              <div class="antrag-card">
+                <div class="antrag-header">
+                  <span class="antrag-type">${escapeHtmlAdmin(titel)}</span>
+                  <span class="status-badge ${escapeHtmlAdmin(status)}">${escapeHtmlAdmin(status)}</span>
+                </div>
+                <div class="antrag-body">
+                  <p><strong>Insasse:</strong> ${escapeHtmlAdmin(insasse)}</p>
+                  <p><strong>Typ:</strong> ${escapeHtmlAdmin(a.type || 'Antrag')}</p>
+                </div>
+              </div>
+            `;
+          })
+          .join('') + (aktive.length > 100 ? `<p class="section-hint">… und ${aktive.length - 100} weitere aktive Anträge.</p>` : '');
+      } catch (e) {
+        box.innerHTML = `<p>Fehler beim Laden: ${escapeHtmlAdmin(e.message || e)}</p>`;
+        listEl.innerHTML = '';
+      }
+    }
+
+    async function adminLoescheAktiveAntraegeKomplett() {
+      const bestaetigt = await showConfirm(
+        'Wirklich alle aktiven Anträge systemweit löschen? Verknüpfte Aufgaben, Termine, Benachrichtigungen und Aktivitäten werden ebenfalls entfernt.'
+      );
+      if (!bestaetigt) return;
+      const zweitBestaetigt = await showConfirm('Diese Aktion kann nicht rückgängig gemacht werden. Fortfahren?');
+      if (!zweitBestaetigt) return;
+
+      const box = document.getElementById('aktiveAntraegeStatusBox');
+      if (box) box.innerHTML = '<p>Bereinigung läuft …</p>';
+
+      try {
+        const [antraege, aufgaben, termine, notifications, aktivitaeten] = await Promise.all([
+          fetchServerListe('/api/antraege'),
+          fetchServerListe('/api/aufgaben'),
+          fetchServerListe('/api/termine'),
+          fetchServerListe('/api/notifications'),
+          fetchServerListe('/api/aktivitaeten')
+        ]);
+
+        const aktive = antraege.filter(istAktiverAntragFuerAdmin);
+        const aktiveIds = new Set(aktive.map((a) => String(a.id)));
+        if (!aktive.length) {
+          await showAlert('Keine aktiven Anträge vorhanden.');
+          await renderAktiveAntraegeStatus();
+          return;
+        }
+
+        const zuLoeschendeAufgaben = aufgaben.filter((a) => a && a.antragId != null && aktiveIds.has(String(a.antragId)));
+        const zuLoeschendeTermine = termine.filter((t) => t && t.antragId != null && aktiveIds.has(String(t.antragId)));
+        const zuLoeschendeNotifications = notifications.filter((n) => n && n.antragId != null && aktiveIds.has(String(n.antragId)));
+        const zuLoeschendeAktivitaeten = aktivitaeten.filter((x) => x && x.antragId != null && aktiveIds.has(String(x.antragId)));
+
+        async function deleteBatch(endpoint, list) {
+          let deleted = 0;
+          for (const item of list) {
+            const id = item && item.id != null ? String(item.id) : null;
+            if (!id) continue;
+            const res = await fetch(`${endpoint}/${encodeURIComponent(id)}`, { method: 'DELETE' });
+            if (res.ok || res.status === 404) deleted++;
+          }
+          return deleted;
+        }
+
+        const geloeschteAufgaben = await deleteBatch('/api/aufgaben', zuLoeschendeAufgaben);
+        const geloeschteTermine = await deleteBatch('/api/termine', zuLoeschendeTermine);
+        const geloeschteNotifications = await deleteBatch('/api/notifications', zuLoeschendeNotifications);
+        const geloeschteAktivitaeten = await deleteBatch('/api/aktivitaeten', zuLoeschendeAktivitaeten);
+        const geloeschteAntraege = await deleteBatch('/api/antraege', aktive);
+
+        if (window.DataSync && typeof window.DataSync.reloadDataFromServer === 'function') {
+          await window.DataSync.reloadDataFromServer();
+        }
+        if (typeof window.reloadDataFromStorage === 'function') {
+          window.reloadDataFromStorage();
+        }
+
+        await showAlert(
+          `Bereinigung abgeschlossen.\n\nGelöscht:\n- ${geloeschteAntraege} aktive Anträge\n- ${geloeschteAufgaben} Aufgaben\n- ${geloeschteTermine} Termine\n- ${geloeschteNotifications} Benachrichtigungen\n- ${geloeschteAktivitaeten} Aktivitäten`
+        );
+        await renderDatenBackupStatus();
+      } catch (e) {
+        await showAlert('Bereinigung fehlgeschlagen: ' + (e.message || e));
+        await renderAktiveAntraegeStatus();
+      }
     }
 
     function adminDownloadBackup() {
