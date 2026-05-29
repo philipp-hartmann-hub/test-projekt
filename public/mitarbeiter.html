@@ -2450,6 +2450,35 @@
           <p><strong>Werktag:</strong> ${datum}</p>
           ${begr ? `<p><strong>Begründung:</strong> ${begr}</p>` : ''}
         `;
+      } else if (antrag.type === 'vollzugslockerung') {
+        typeLabel = 'Antrag auf Vollzugslockerung';
+        const ausgLbl = { begleitausgang: 'Begleitausgang', ausgang: 'Ausgang' }[antrag.ausgangsart] || antrag.ausgangsart || '–';
+        const gesetzLbl = { hambsvvollzg: 'HambSVVollzG', hmbstvollzg: 'HmbStVollzG', hmbjstvollzg: 'HmbJSTVollzG' }[antrag.rechtsgrundlageGesetz] || antrag.rechtsgrundlageGesetz || '';
+        const rg = antrag.rechtsgrundlageParagraph
+          ? `§ ${antrag.rechtsgrundlageParagraph}${gesetzLbl ? ' ' + gesetzLbl : ''}`
+          : '–';
+        const fmtDt = (v) => (v ? new Date(v).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '–');
+        const checks = [];
+        if (antrag.freistellungArbeitspflichtAntrag) checks.push('Freistellung Arbeitspflicht beantragt');
+        if (antrag.wirdGeholtGebracht) checks.push('Wird geholt/gebracht');
+        if (antrag.schliessfachVorhanden) checks.push('Schließfach vorhanden');
+        if (antrag.schliessfachBenoetigt) checks.push('Schließfach benötigt');
+        const quellenLbl = { hausgeld: 'Hausgeld', eigengeld: 'Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' };
+        const quellen = Array.isArray(antrag.lebensunterhaltQuellen)
+          ? antrag.lebensunterhaltQuellen.map((q) => quellenLbl[q] || q).join(', ')
+          : '';
+        const begr = antrag.antragBegruendung ? getTranslatedUserText(antrag.antragBegruendung) : '';
+        detailsHtml = `
+          <p><strong>Ausgangsart:</strong> ${ausgLbl}</p>
+          <p><strong>Rechtsgrundlage:</strong> ${rg}</p>
+          <p><strong>Von:</strong> ${fmtDt(antrag.vonDatetime)}</p>
+          <p><strong>Bis:</strong> ${fmtDt(antrag.bisDatetime)}</p>
+          <p><strong>Ort:</strong> ${antrag.ort || '–'}</p>
+          ${begr ? `<p><strong>Begründung:</strong> ${begr}</p>` : ''}
+          ${checks.length ? `<p><strong>Weitere Angaben:</strong> ${checks.join('; ')}</p>` : ''}
+          ${antrag.fahrkosten != null && antrag.fahrkosten !== '' ? `<p><strong>Fahrkosten:</strong> ${antrag.fahrkosten} €</p>` : ''}
+          ${antrag.lebensunterhaltBetrag != null && antrag.lebensunterhaltBetrag !== '' ? `<p><strong>Lebensunterhalt:</strong> ${antrag.lebensunterhaltBetrag} €${quellen ? ` (${quellen})` : ''}</p>` : ''}
+        `;
       } else if (antrag.type === 'telefonkonto-einrichtung') {
         typeLabel = 'Antrag zur Einrichtung eines Telefonkontos';
         if (antrag.benutzerkontoAndereJva === true) {
@@ -3209,6 +3238,76 @@ Persönlich eröffnet
             <h4>${verfuegungTitelF40}</h4>
             <p class="verfuegungsreihenfolge">${verfuegungKetteF40}</p>
             <p class="verfuegungs-hinweis">${verfuegungHinweisF40}</p>
+          </div>
+        `;
+      } else if (antrag.type === 'vollzugslockerung') {
+        const verfuegungTitelVl = currentLanguage === 'en' ? 'Suggested procedure sequence (reference Ist process)' : currentLanguage === 'fr' ? 'Suggestion de séquence (processus cible)' : 'Verfügungsvorschlag';
+        const verfuegungHinweisVl = currentLanguage === 'en' ? 'This is a suggestion only; it does not replace a professional decision.' : currentLanguage === 'fr' ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle." : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
+        const verfuegungKetteVl =
+          'Prüfung, ob Station Bedenken hat → VAL zur Prüfung der Checkliste in Sopart und Entscheidung → Bekanntgabe unter Nennung Ausgangsart inkl. Rechtsgrundlage und Bereitstellung finanzieller Mittel → Station zur Eröffnung → GPA';
+        const ausgLbl = { begleitausgang: 'Begleitausgang', ausgang: 'Ausgang' }[antrag.ausgangsart] || antrag.ausgangsart || '–';
+        const gesetzLbl = { hambsvvollzg: 'HambSVVollzG', hmbstvollzg: 'HmbStVollzG', hmbjstvollzg: 'HmbJSTVollzG' }[antrag.rechtsgrundlageGesetz] || antrag.rechtsgrundlageGesetz || '';
+        const rg = antrag.rechtsgrundlageParagraph
+          ? `§ ${antrag.rechtsgrundlageParagraph}${gesetzLbl ? ' ' + gesetzLbl : ''}`
+          : '–';
+        const fmtDt = (v) => (v ? new Date(v).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '–');
+        const checks = [];
+        if (antrag.freistellungArbeitspflichtAntrag) checks.push('Freistellung Arbeitspflicht beantragt');
+        if (antrag.wirdGeholtGebracht) checks.push('Wird geholt/gebracht');
+        if (antrag.schliessfachVorhanden) checks.push('Schließfach vorhanden');
+        if (antrag.schliessfachBenoetigt) checks.push('Schließfach benötigt');
+        const quellenLbl = { hausgeld: 'Hausgeld', eigengeld: 'Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' };
+        const quellen = Array.isArray(antrag.lebensunterhaltQuellen)
+          ? antrag.lebensunterhaltQuellen.map((q) => quellenLbl[q] || q).join(', ')
+          : '';
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>Antrag auf Vollzugslockerung</h4>
+            <div class="detail-row">
+              <span class="detail-label">Ausgangsart:</span>
+              <span class="detail-value">${ausgLbl}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Rechtsgrundlage:</span>
+              <span class="detail-value">${rg}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Von:</span>
+              <span class="detail-value">${fmtDt(antrag.vonDatetime)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Bis:</span>
+              <span class="detail-value">${fmtDt(antrag.bisDatetime)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Ort:</span>
+              <span class="detail-value">${antrag.ort || '–'}</span>
+            </div>
+            ${antrag.antragBegruendung ? `
+            <div class="detail-row">
+              <span class="detail-label">${t('application.justification')}:</span>
+              <span class="detail-value">${getTranslatedUserText(antrag.antragBegruendung)}</span>
+            </div>` : ''}
+            ${checks.length ? `
+            <div class="detail-row">
+              <span class="detail-label">Weitere Angaben:</span>
+              <span class="detail-value">${checks.join('; ')}</span>
+            </div>` : ''}
+            ${antrag.fahrkosten != null && antrag.fahrkosten !== '' ? `
+            <div class="detail-row">
+              <span class="detail-label">Fahrkosten:</span>
+              <span class="detail-value">${antrag.fahrkosten} €</span>
+            </div>` : ''}
+            ${antrag.lebensunterhaltBetrag != null && antrag.lebensunterhaltBetrag !== '' ? `
+            <div class="detail-row">
+              <span class="detail-label">Lebensunterhalt:</span>
+              <span class="detail-value">${antrag.lebensunterhaltBetrag} €${quellen ? ` (${quellen})` : ''}</span>
+            </div>` : ''}
+          </div>
+          <div class="detail-box verfuegungsvorschlag-box">
+            <h4>${verfuegungTitelVl}</h4>
+            <p class="verfuegungsreihenfolge">${verfuegungKetteVl}</p>
+            <p class="verfuegungs-hinweis">${verfuegungHinweisVl}</p>
           </div>
         `;
       } else if (antrag.type === 'telio-ueberweisung') {
@@ -4305,6 +4404,12 @@ ${t('action.archive')}
           ? new Date(antrag.freistellungWerktag + 'T12:00:00').toLocaleDateString('de-DE')
           : '–';
         anliegenText = `${t('notice.applicationFor')} Freistellung § 40 (Werktag: ${datum})`;
+      } else if (antrag.type === 'vollzugslockerung') {
+        const ausgLbl = { begleitausgang: 'Begleitausgang', ausgang: 'Ausgang' }[antrag.ausgangsart] || antrag.ausgangsart || '–';
+        const von = antrag.vonDatetime
+          ? new Date(antrag.vonDatetime).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
+          : '–';
+        anliegenText = `${t('notice.applicationFor')} Vollzugslockerung (${ausgLbl}, ab ${von})`;
       } else if (antrag.type === 'telefonkonto-einrichtung') {
         if (antrag.benutzerkontoAndereJva === true) {
           anliegenText = `${t('notice.applicationFor')} Einrichtung Telefonkonto (Benutzerkonto in anderer JVA: ${antrag.andereJva || '–'})`;
@@ -6205,6 +6310,35 @@ ${t('action.archive')}
         let y = yPos + 14;
         if (antrag.antragBegruendung) {
           doc.text(`Begründung: ${getTranslatedUserText(antrag.antragBegruendung)}`, 25, y);
+          y += 7;
+        }
+        yPos = y + 7;
+      } else if (antrag.type === 'vollzugslockerung') {
+        const ausgLbl = { begleitausgang: 'Begleitausgang', ausgang: 'Ausgang' }[antrag.ausgangsart] || antrag.ausgangsart || '–';
+        const gesetzLbl = { hambsvvollzg: 'HambSVVollzG', hmbstvollzg: 'HmbStVollzG', hmbjstvollzg: 'HmbJSTVollzG' }[antrag.rechtsgrundlageGesetz] || '';
+        const rg = antrag.rechtsgrundlageParagraph ? `§ ${antrag.rechtsgrundlageParagraph} ${gesetzLbl}`.trim() : '–';
+        const fmtDt = (v) => (v ? new Date(v).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '–');
+        doc.text('Art: Antrag auf Vollzugslockerung', 25, yPos);
+        let y = yPos + 7;
+        doc.text(`Ausgangsart: ${ausgLbl}`, 25, y); y += 7;
+        doc.text(`Rechtsgrundlage: ${rg}`, 25, y); y += 7;
+        doc.text(`Von: ${fmtDt(antrag.vonDatetime)}`, 25, y); y += 7;
+        doc.text(`Bis: ${fmtDt(antrag.bisDatetime)}`, 25, y); y += 7;
+        doc.text(`Ort: ${antrag.ort || '–'}`, 25, y); y += 7;
+        if (antrag.antragBegruendung) {
+          doc.text(`Begründung: ${getTranslatedUserText(antrag.antragBegruendung)}`, 25, y);
+          y += 7;
+        }
+        if (antrag.fahrkosten != null && antrag.fahrkosten !== '') {
+          doc.text(`Fahrkosten: ${antrag.fahrkosten} €`, 25, y);
+          y += 7;
+        }
+        if (antrag.lebensunterhaltBetrag != null && antrag.lebensunterhaltBetrag !== '') {
+          const quellenLbl = { hausgeld: 'Hausgeld', eigengeld: 'Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' };
+          const quellen = Array.isArray(antrag.lebensunterhaltQuellen)
+            ? antrag.lebensunterhaltQuellen.map((q) => quellenLbl[q] || q).join(', ')
+            : '';
+          doc.text(`Lebensunterhalt: ${antrag.lebensunterhaltBetrag} €${quellen ? ` (${quellen})` : ''}`, 25, y);
           y += 7;
         }
         yPos = y + 7;

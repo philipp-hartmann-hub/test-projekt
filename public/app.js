@@ -3453,7 +3453,8 @@ class AntragSystem {
       'telio-ueberweisung': 'Antrag auf Überweisung auf das Telio-Konto',
       'einkauf-bestellung': 'Einkauf & Bestellung',
       'telefonkonto-einrichtung': 'Antrag zur Einrichtung eines Telefonkontos',
-      'freistellung-40-hmbstv': 'Freistellung nach § 40 HmbStVollzG'
+      'freistellung-40-hmbstv': 'Freistellung nach § 40 HmbStVollzG',
+      vollzugslockerung: 'Antrag auf Vollzugslockerung'
     };
     return labels[type] || 'Antrag';
   }
@@ -5093,7 +5094,7 @@ const ANTRAG_TYPE_GRUPPEN = [
   {
     id: 'freizeit',
     titel: 'Freizeit & Weiterbildung',
-    typen: ['freizeit-weiterbildung']
+    typen: ['freizeit-weiterbildung', 'vollzugslockerung']
   },
   {
     id: 'besuche',
@@ -5140,7 +5141,8 @@ function _getAntragTypLabelForPicker(type) {
     'besuch-termin': 'Besuchstermin',
     'besuch-video': 'Videobesuch'
     ,
-    'freistellung-40-hmbstv': 'Freistellung nach § 40 HmbStVollzG'
+    'freistellung-40-hmbstv': 'Freistellung nach § 40 HmbStVollzG',
+    vollzugslockerung: 'Antrag auf Vollzugslockerung'
   };
   return fallback[type] || type;
 }
