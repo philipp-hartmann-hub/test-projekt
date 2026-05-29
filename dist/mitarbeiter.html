@@ -4064,42 +4064,9 @@ ${t('action.archive')}
       `;
       
       document.getElementById('antragDetailContent').innerHTML = html;
-      relocateDetailContextToSidebar();
       document.getElementById('dashboardView').style.display = 'none';
       document.getElementById('antragDetailView').style.display = 'block';
       syncWelcomeBannerBackButton();
-    }
-
-    /** Verfügungsvorschlag in die Sidebar (über Verlauf), damit er bei Modals sichtbar bleibt */
-    function relocateDetailContextToSidebar() {
-      const root = document.getElementById('antragDetailContent');
-      if (!root) return;
-      const main = root.querySelector('.detail-main');
-      const sidebar = root.querySelector('.detail-sidebar');
-      if (!main || !sidebar) return;
-
-      const existingPanel = root.querySelector('#detailVerfuegungsvorschlagPanel');
-      const boxes = main.querySelectorAll('.verfuegungsvorschlag-box');
-
-      if (!boxes.length) {
-        if (existingPanel) existingPanel.remove();
-        return;
-      }
-
-      let panel = existingPanel;
-      if (!panel) {
-        panel = document.createElement('div');
-        panel.id = 'detailVerfuegungsvorschlagPanel';
-        panel.className = 'detail-section detail-verfuegungsvorschlag-panel';
-        const wrap = document.createElement('div');
-        wrap.className = 'detail-verfuegungsvorschlag-content';
-        panel.appendChild(wrap);
-        sidebar.insertBefore(panel, sidebar.firstChild);
-      }
-
-      const wrap = panel.querySelector('.detail-verfuegungsvorschlag-content');
-      wrap.innerHTML = '';
-      boxes.forEach((box) => wrap.appendChild(box));
     }
     
     // Sortierung des Bearbeitungsverlaufs ändern
@@ -4114,12 +4081,6 @@ ${t('action.archive')}
     window.verlaufSortierung = 'neueste';
     
     function closeAntragDetail() {
-      document.querySelectorAll('.modal-overlay.active').forEach((m) => {
-        if (m.id) closeModal(m.id);
-      });
-      if (typeof undockAllModalsFromDetailMain === 'function') {
-        undockAllModalsFromDetailMain();
-      }
       document.getElementById('antragDetailView').style.display = 'none';
       document.getElementById('dashboardView').style.display = 'block';
       currentAntragId = null;
