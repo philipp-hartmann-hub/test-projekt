@@ -2846,6 +2846,32 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
 
 .detail-main {
   min-width: 0;
+  position: relative;
+}
+
+/* Mitarbeiter-Detail: Modal nur über Hauptspalte, Sidebar bleibt lesbar */
+.modal-overlay.modal-overlay--detail-main {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  padding: 1rem;
+}
+
+.modal-overlay.modal-overlay--detail-main .modal {
+  max-height: calc(100% - 2rem);
+}
+
+.detail-verfuegungsvorschlag-panel .verfuegungsvorschlag-box {
+  margin-bottom: 0.75rem;
+}
+
+.detail-verfuegungsvorschlag-panel .verfuegungsvorschlag-box:last-child {
+  margin-bottom: 0;
+}
+
+.detail-verfuegungsvorschlag-panel .verfuegungsreihenfolge {
+  font-size: 0.85rem;
+  line-height: 1.45;
 }
 
 .detail-sidebar {

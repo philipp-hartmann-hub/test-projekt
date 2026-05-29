@@ -6280,9 +6280,45 @@ function istValWeitPortalRolle(rolle) {
 }
 
 // Modal-Funktionen
+function isMitarbeiterAntragDetailVisible() {
+  const detail = document.getElementById('antragDetailView');
+  if (!detail) return false;
+  return window.getComputedStyle(detail).display !== 'none';
+}
+
+/** Im Antragsdetail: Overlay nur über .detail-main, Sidebar (Verlauf/Vorschlag) bleibt sichtbar */
+function dockModalToDetailMain(modal) {
+  if (!modal || modal.id === 'customDialogOverlay') return;
+  const main = document.querySelector('#antragDetailContent .detail-main');
+  if (!main) return;
+  if (!modal._detailDockRestore) {
+    modal._detailDockRestore = { parent: modal.parentNode, next: modal.nextSibling };
+  }
+  main.appendChild(modal);
+  modal.classList.add('modal-overlay--detail-main');
+}
+
+function undockModalFromDetailMain(modal) {
+  if (!modal || !modal._detailDockRestore) return;
+  const { parent, next } = modal._detailDockRestore;
+  if (parent) {
+    if (next && next.parentNode === parent) parent.insertBefore(modal, next);
+    else parent.appendChild(modal);
+  }
+  modal.classList.remove('modal-overlay--detail-main');
+  delete modal._detailDockRestore;
+}
+
+function undockAllModalsFromDetailMain() {
+  document.querySelectorAll('.modal-overlay.modal-overlay--detail-main').forEach(undockModalFromDetailMain);
+}
+
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
+    if (isMitarbeiterAntragDetailVisible()) {
+      dockModalToDetailMain(modal);
+    }
     modal.classList.add('active');
   } else {
     console.error('Modal nicht gefunden:', modalId);
