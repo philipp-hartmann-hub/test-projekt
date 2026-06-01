@@ -2676,11 +2676,32 @@ Persönlich eröffnet
       `;
     }
 
+    /** Nur bei „Hauptbearbeitung übertragen“ (persönliche Mitarbeiter-Aufgabe) darf der Empfänger den Antrag bearbeiten */
+    function aufgabeErlaubtAntragsbearbeitung(aufgabe) {
+      if (!aufgabe || aufgabe.status !== 'offen') return false;
+      if (aufgabe.terminBegleitung === true) return false;
+      if (aufgabe.terminKalenderNachUebernahme === true) return false;
+      if (aufgabe.zugewiesenAnTyp !== 'mitarbeiter') return false;
+      return aufgabe.bearbeitungNachErledigung === 'uebertragen';
+    }
+
+    function istHauptverantwortungFuerAntrag(antrag) {
+      return !!(
+        antrag &&
+        antrag.bearbeiterId != null &&
+        antrag.bearbeiterId !== '' &&
+        String(antrag.bearbeiterId) === String(currentSession.userId) &&
+        !antrag.veraktet
+      );
+    }
+
     // Aufgaben-Karte rendern
     function renderAufgabeCard(aufgabe) {
       const antrag = antragSystem.getAntrag(aufgabe.antragId);
       const antragsNummer = antrag ? antrag.antragsNummer : aufgabe.antragsNummer;
       const istErsteller = aufgabe.erstelltVonId === currentSession.userId;
+      const darfAntragOeffnen =
+        istHauptverantwortungFuerAntrag(antrag) || aufgabeErlaubtAntragsbearbeitung(aufgabe);
       const dateLocale = currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE';
       const overdueText = currentLanguage === 'en' ? 'Overdue!' : currentLanguage === 'fr' ? 'En retard!' : 'Überfällig!';
       const completedText = currentLanguage === 'en' ? 'Completed' : currentLanguage === 'fr' ? 'Terminé' : 'Erledigt';
@@ -2718,9 +2739,11 @@ Persönlich eröffnet
               <button class="btn btn-primary btn-sm" onclick="openAufgabeLoesungModal('${aufgabe.id}')">
                 ${t('task.edit')}
               </button>
+              ${darfAntragOeffnen ? `
               <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${aufgabe.antragId}')">
                 ${t('button.openApplication')}
               </button>
+              ` : ''}
               ${istErsteller ? `
                 <button class="btn btn-danger btn-sm" onclick="loescheAufgabeUndUebernehme('${aufgabe.id}')">
                   ${deleteAndTakeText}
@@ -2914,44 +2937,28 @@ Persönlich eröffnet
         meineOffeneAufgabe.zugewiesenAnTyp === 'mitarbeiter' &&
         String(meineOffeneAufgabe.zugewiesenAnId) === String(currentSession.userId) &&
         !meineOffeneAufgabe.terminKalenderNachUebernahme;
-      const aufgabeMussErstErledigtWerden = hatOffeneAufgabe;
-      
-      // Der aktuelle Bearbeiter hat IMMER Zugriff (bis zur Veraktung).
-      // WICHTIG für VAL-Übernahmen:
-      // Sobald bearbeiterId auf den aktuellen Nutzer zeigt (inkl. Übernahme mit Begründung),
-      // gelten die regulären Phasen-Schaltflächen. Historische Weiterleitungen dürfen das
-      // NICHT mehr blockieren.
-      const weiterleitungen = (antrag.weiterleitungen || []).filter(Boolean);
-      const parseWeiterleitungsZeit = (w) => {
-        const raw = w?.erstelltAm || w?.datum || w?.am || null;
-        const ts = raw ? new Date(raw).getTime() : NaN;
-        return Number.isFinite(ts) ? ts : 0;
-      };
-      const letzteAbgabeWeg = weiterleitungen
-        .filter((w) => w && w.anId && String(w.vonId) === String(currentSession.userId) && String(w.anId) !== String(currentSession.userId))
-        .reduce((max, w) => Math.max(max, parseWeiterleitungsZeit(w)), 0);
-      const letzteRueckleitungZuMir = weiterleitungen
-        .filter((w) => w && w.anId && String(w.anId) === String(currentSession.userId) && String(w.vonId) !== String(currentSession.userId))
-        .reduce((max, w) => Math.max(max, parseWeiterleitungsZeit(w)), 0);
-      const uebernahmeVonMir = String(antrag.uebernahmeVonId || '') === String(currentSession.userId);
-      const uebernahmeZeit = (() => {
-        const ts = antrag.uebernahmeAm ? new Date(antrag.uebernahmeAm).getTime() : NaN;
-        return Number.isFinite(ts) ? ts : 0;
-      })();
-      const hattePersoenlicheWeiterleitungWeg =
-        letzteAbgabeWeg > 0 &&
-        letzteAbgabeWeg > letzteRueckleitungZuMir &&
-        (!uebernahmeVonMir || uebernahmeZeit <= letzteAbgabeWeg);
-      const istBearbeiter =
-        String(antrag.bearbeiterId) === String(currentSession.userId) && !hattePersoenlicheWeiterleitungWeg;
+      // Hauptverantwortung = aktueller bearbeiterId (nach Übernahme/„Antrag nehmen“)
+      const hatHauptverantwortung =
+        antrag.bearbeiterId != null &&
+        antrag.bearbeiterId !== '' &&
+        String(antrag.bearbeiterId) === String(currentSession.userId) &&
+        !antrag.veraktet;
+      const istBearbeiter = hatHauptverantwortung;
+      // Offene Aufgabe blockiert nur Mitwirkende ohne Hauptverantwortung
+      const aufgabeMussErstErledigtWerden = hatOffeneAufgabe && !hatHauptverantwortung;
+      const kannPhasenBearbeiten = hatHauptverantwortung;
+      const darfAntragInhaltBearbeiten =
+        hatHauptverantwortung ||
+        (meineOffeneAufgabe && aufgabeErlaubtAntragsbearbeitung(meineOffeneAufgabe));
+      const nurAufgabenbearbeitungErlaubt =
+        hatOffeneAufgabe && !hatHauptverantwortung && !aufgabeErlaubtAntragsbearbeitung(meineOffeneAufgabe);
       
       // Prüfen ob der Benutzer den Antrag "abgegeben" hat (durch Aufgabenerledigung mit Antwort/Zurück)
-      // WICHTIG: Wenn jemand jetzt der Bearbeiter ist (durch Weiterleitung), ist er NICHT mehr "abgegeben"
-      const hatAntragAbgegeben = !istBearbeiter && antragSystem.hatAntragAbgegeben(antragId, currentSession.userId);
+      const hatAntragAbgegeben =
+        !hatHauptverantwortung && antragSystem.hatAntragAbgegeben(antragId, currentSession.userId);
       
       let hatAktuellenZugriff = false;
-      if (istBearbeiter) {
-        // Aktueller Bearbeiter hat immer vollen Zugriff (auch wenn er früher abgegeben hatte)
+      if (hatHauptverantwortung) {
         hatAktuellenZugriff = true;
       } else if (hatOffeneAufgabe) {
         // Hat eine offene Aufgabe - kann sie bearbeiten (auch wenn vorher abgegeben)
@@ -2965,10 +2972,10 @@ Persönlich eröffnet
       }
       
       // Berechtigungen:
-      // - istBearbeiter: Ursprünglicher Bearbeiter (hat immer vollen Zugriff)
-      // - hatAktuellenZugriff: Aufgabenempfänger mit aktivem Zugriff (bis zur nächsten Aufgabenerstellung)
+      // - hatHauptverantwortung: alle Phasen-Aktionen der aktuellen Bearbeitungsphase
+      // - hatAktuellenZugriff: Aufgabenempfänger ohne Hauptverantwortung (begrenzt)
       const istAufgabenBeteiligter = hatAktuellenZugriff;
-      const kannVollziehenVerakten = istBearbeiter || hatAktuellenZugriff;
+      const kannVollziehenVerakten = hatHauptverantwortung;
       
       // Prozess-Status berechnen
       const prozessStatus = berechneProzessStatus(antrag);
@@ -3888,7 +3895,7 @@ ${currentLanguage === 'en' ? 'Download notice' : currentLanguage === 'fr' ? 'Té
                 </div>
               ` : ''}
               
-              ${antrag.wartetAufEroeffnung ? `
+              ${antrag.wartetAufEroeffnung && kannPhasenBearbeiten ? `
                 <div class="warten-hinweis persoenlich-warten">
                   <span class="hinweis-icon"></span>
                   <span>${currentLanguage === 'en' ? 'Waiting for personal opening' : currentLanguage === 'fr' ? 'En attente d\'ouverture personnelle' : 'Wartet auf persönliche Eröffnung'} - ${currentLanguage === 'en' ? 'Planned decision' : currentLanguage === 'fr' ? 'Décision prévue' : 'Geplante Entscheidung'}: ${getStatusText(antrag.geplantesErgebnis)}</span>
@@ -3900,7 +3907,7 @@ ${currentLanguage === 'en' ? 'Confirm personal opening' : currentLanguage === 'f
                 </div>
               ` : ''}
               
-              ${antrag.wartetAufVollzug ? `
+              ${antrag.wartetAufVollzug && kannPhasenBearbeiten ? `
                 <div class="warten-hinweis vollzug-warten">
                   <span class="hinweis-icon"></span>
                   <span>${currentLanguage === 'en' ? 'Execution before notification planned' : currentLanguage === 'fr' ? 'Exécution avant notification prévue' : 'Vollzug vor Bekanntgabe geplant'} - ${currentLanguage === 'en' ? 'Planned decision' : currentLanguage === 'fr' ? 'Décision prévue' : 'Geplante Entscheidung'}: ${getStatusText(antrag.geplantesErgebnis)}</span>
@@ -3961,20 +3968,27 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                 </div>
               ` : ''}
               
+              ${nurAufgabenbearbeitungErlaubt ? `
+                <div class="offen-hinweis" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin: 12px 0;">
+                  <span class="hinweis-icon"></span>
+                  <span>${currentLanguage === 'de' ? 'Sie können nur Ihre Aufgabe bearbeiten, nicht den Antrag. Eine Antragsbearbeitung ist nur mit Option „Hauptbearbeitung übertragen“ oder als Hauptverantwortliche Person möglich.' : currentLanguage === 'en' ? 'You can only complete your task, not edit the application. Application editing requires “transfer main responsibility” or being the main responsible person.' : 'Vous ne pouvez traiter que votre tâche, pas la demande. La modification de la demande nécessite le transfert de la responsabilité principale ou d’en être responsable.'}</span>
+                </div>
+              ` : ''}
+              
               <div class="action-buttons">
-                ${kannUebernehmen && !istBearbeiter ? `
+                ${kannUebernehmen && !hatHauptverantwortung ? `
                   <button class="btn btn-primary btn-large" onclick="${istHausleitung() ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
                     ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : 
                       hatAufgabeZurUebernahme ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche') : 
                       t('button.takeApplication')}
                   </button>
                 ` : ''}
-                ${!kannUebernehmen && !istBearbeiter && istHausleitung() && antrag.status === 'in-bearbeitung' ? `
+                ${!kannUebernehmen && !hatHauptverantwortung && istHausleitung() && antrag.status === 'in-bearbeitung' ? `
                   <button class="btn btn-warning btn-large" onclick="openHausleitungUebernahmeModal('${antrag.id}')">
                     Antrag übernehmen
                   </button>
                 ` : ''}
-                ${hatOffeneAufgabe ? `
+                ${aufgabeMussErstErledigtWerden ? `
                 <div class="offen-hinweis">
                   <span class="hinweis-icon"></span>
                   <span>${currentLanguage === 'en' ? 'Please complete the open task first.' : currentLanguage === 'fr' ? 'Veuillez d’abord terminer la tâche ouverte.' : 'Bitte zuerst die offene Aufgabe erledigen.'}</span>
@@ -3985,7 +3999,7 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                     ${t('task.edit')}
                   </button>
                 ` : ''}
-                ${!aufgabeMussErstErledigtWerden && !istOffen && !istErledigt && istBearbeiter && !antrag.entscheidungGetroffen ? `
+                ${kannPhasenBearbeiten && !istOffen && !istErledigt && !antrag.entscheidungGetroffen ? `
                   ${!antrag.sachlichGeprueft ? `
                     <button class="btn btn-warning btn-large" onclick="markiereAlsGeprueft('${antrag.id}')">
                       ${t('action.technicalReview')}
@@ -3996,26 +4010,18 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                           ${!antrag.sachlichGeprueft ? `title="${t('error.reviewRequired')}"` : ''}>
                     ${t('decision.title')}
                   </button>
-                  <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
-${t('task.create')}
-                  </button>
                 ` : ''}
-                ${!aufgabeMussErstErledigtWerden && (prozessStatus.bekanntgabe === 'aktiv' || prozessStatus.vollzug === 'aktiv') && istBearbeiter ? `
+                ${kannPhasenBearbeiten && (prozessStatus.bekanntgabe === 'aktiv' || prozessStatus.vollzug === 'aktiv' || prozessStatus.pruefung === 'aktiv' || prozessStatus.entscheiden === 'aktiv') ? `
                   <button class="btn btn-primary btn-large" onclick="openTerminVereinbarenModal('${antrag.id}')">
                     Termin vereinbaren
                   </button>
                 ` : ''}
-                ${!aufgabeMussErstErledigtWerden && antrag.entscheidungGetroffen && !antrag.erledigt && istBearbeiter ? `
+                ${kannPhasenBearbeiten && !istOffen && !antrag.veraktet ? `
                   <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
 ${t('task.create')}
                   </button>
                 ` : ''}
-                ${!aufgabeMussErstErledigtWerden && istErledigt && !antrag.veraktet && istBearbeiter ? `
-                  <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
-${t('task.create')}
-                  </button>
-                ` : ''}
-                ${!aufgabeMussErstErledigtWerden && !antrag.veraktet && istBearbeiter && prozessStatus.abschluss === 'aktiv' ? `
+                ${kannPhasenBearbeiten && !antrag.veraktet && prozessStatus.abschluss === 'aktiv' ? `
                   <button class="btn btn-secondary btn-large" onclick="veraktenAntrag('${antrag.id}')">
 ${t('action.archive')}
                   </button>
@@ -4029,7 +4035,7 @@ ${t('action.archive')}
             <!-- Dokumente-Bereich -->
             <div class="detail-section dokumente-section">
               <h3>${currentLanguage === 'en' ? 'Documents' : currentLanguage === 'fr' ? 'Documents' : 'Dokumente'}</h3>
-              ${!antrag.veraktet && hatAktuellenZugriff ? `
+              ${!antrag.veraktet && darfAntragInhaltBearbeiten ? `
                 <div class="dokument-upload">
                   <label class="btn btn-secondary btn-sm upload-btn">
                     ${currentLanguage === 'en' ? '+ Upload PDF' : currentLanguage === 'fr' ? '+ Télécharger PDF' : '+ PDF hochladen'}
@@ -4038,14 +4044,14 @@ ${t('action.archive')}
                 </div>
               ` : ''}
               <div class="dokument-liste" id="antragDokumentListe">
-                ${renderAntragDokumente(antrag.dokumente || [], antrag.id, !antrag.veraktet && hatAktuellenZugriff)}
+                ${renderAntragDokumente(antrag.dokumente || [], antrag.id, !antrag.veraktet && darfAntragInhaltBearbeiten)}
               </div>
             </div>
             
             <!-- Kommentar-Bereich -->
             <div class="detail-section kommentar-section">
               <h3>${currentLanguage === 'en' ? 'Notes' : currentLanguage === 'fr' ? 'Notes' : 'Notizen'}</h3>
-              ${!antrag.veraktet && hatAktuellenZugriff ? `
+              ${!antrag.veraktet && darfAntragInhaltBearbeiten ? `
                 <div class="kommentar-eingabe">
                   <textarea id="neuerKommentar" placeholder="${currentLanguage === 'en' ? 'Add a note...' : currentLanguage === 'fr' ? 'Ajouter une note...' : 'Notiz hinzufuegen...'}" rows="3"></textarea>
                   <button class="btn btn-primary btn-sm" onclick="addKommentar('${antrag.id}')">
@@ -5282,15 +5288,35 @@ ${t('action.archive')}
       // PDF-Upload zurücksetzen
       clearAntwortPdfs();
       
-      // Prüfen ob die Hauptbearbeitung übertragen werden soll
-      const sollUebertragen = aufgabe.bearbeitungNachErledigung === 'uebertragen';
+      const istBegleitungsaufgabe = aufgabe.terminBegleitung === true;
+      const sollUebertragen = !istBegleitungsaufgabe && aufgabe.bearbeitungNachErledigung === 'uebertragen';
       
       // Option "Mit Antwort" nur anzeigen, wenn keine Hauptbearbeitungsübergabe
       const antwortOption = document.getElementById('aufgabeOptionAntwort');
       const kenntnisHint = document.getElementById('aufgabeKenntnisHint');
       const kenntnisnahmeInfo = document.getElementById('aufgabeKenntnisnahmeInfo');
+      const erledigungsTypGroup = document.querySelector('#aufgabeLoesungModal .radio-group');
       
-      if (sollUebertragen) {
+      if (istBegleitungsaufgabe) {
+        if (erledigungsTypGroup) erledigungsTypGroup.style.display = 'none';
+        antwortOption.style.display = 'none';
+        document.querySelector('input[name="aufgabeErledigungsTyp"][value="kenntnisnahme"]').checked = true;
+        document.getElementById('aufgabeAntwortGruppe').style.display = 'none';
+        document.getElementById('aufgabeAntwortPdfGruppe').style.display = 'none';
+        document.getElementById('aufgabeKenntnisnahmeOptionen').style.display = 'block';
+        kenntnisHint.style.display = 'block';
+        kenntnisHint.textContent =
+          currentLanguage === 'de'
+            ? 'Bitte bestätigen Sie, dass die Begleitung zum Termin stattgefunden hat. Die Hauptbearbeitung des Antrags bleibt beim Aufgabensteller.'
+            : currentLanguage === 'en'
+              ? 'Please confirm that accompaniment for the appointment took place. Main responsibility for the application remains with the task creator.'
+              : 'Veuillez confirmer que l\'accompagnement au rendez-vous a eu lieu. La responsabilité principale reste chez l\'auteur de la tâche.';
+        kenntnisnahmeInfo.innerHTML =
+          currentLanguage === 'de'
+            ? '<p style="color: #0c5460;"><strong>Begleitungsaufgabe:</strong> Sie übernehmen nicht die Hauptbearbeitung. Für weitere Schritte am Antrag ist eine eigene Aufgabe mit Option „Hauptbearbeitung übertragen“ erforderlich.</p>'
+            : '<p><strong>Accompaniment task:</strong> You do not take over main responsibility. Further work on the application requires a separate task with transfer of main responsibility.</p>';
+      } else if (sollUebertragen) {
+        if (erledigungsTypGroup) erledigungsTypGroup.style.display = '';
         // "Mit Antwort" ausblenden, nur "Zur Kenntnis" erlauben
         antwortOption.style.display = 'none';
         document.querySelector('input[name="aufgabeErledigungsTyp"][value="kenntnisnahme"]').checked = true;
@@ -5305,6 +5331,7 @@ ${t('action.archive')}
                                    'Vous deviendrez le responsable principal après l\'achèvement';
         kenntnisnahmeInfo.innerHTML = `<p style="color: #0c5460;"><strong>Hauptbearbeitung wird übertragen:</strong> Nach der Kenntnisnahme werden Sie der neue Hauptbearbeiter dieses Antrags.</p>`;
       } else {
+        if (erledigungsTypGroup) erledigungsTypGroup.style.display = '';
         // Normale Ansicht: beide Optionen anzeigen
         antwortOption.style.display = 'flex';
         kenntnisHint.style.display = 'none';
@@ -5452,8 +5479,14 @@ ${t('action.archive')}
     
     async function erledigeAufgabe() {
       const aufgabeId = document.getElementById('aufgabeLoesungId').value;
-      const erledigungsTyp = document.querySelector('input[name="aufgabeErledigungsTyp"]:checked').value;
+      let erledigungsTyp = document.querySelector('input[name="aufgabeErledigungsTyp"]:checked')?.value || 'kenntnisnahme';
       const antwortText = document.getElementById('aufgabeAntwortText').value.trim();
+      
+      const aufgabeVorab = aufgabenSystem.getAufgabe(aufgabeId);
+      const istBegleitungsaufgabe = !!(aufgabeVorab && aufgabeVorab.terminBegleitung === true);
+      if (istBegleitungsaufgabe) {
+        erledigungsTyp = 'kenntnisnahme';
+      }
       
       // Bei "Antwort" ist eine Eingabe erforderlich, bei "Kenntnisnahme" nicht
       if (erledigungsTyp === 'antwort' && !antwortText) {
@@ -5461,9 +5494,11 @@ ${t('action.archive')}
         return;
       }
       
-      // Aufgabe-Objekt vorab laden um bearbeitungNachErledigung zu prüfen
-      const aufgabeVorab = aufgabenSystem.getAufgabe(aufgabeId);
-      const sollUebertragen = !!(aufgabeVorab && aufgabeVorab.bearbeitungNachErledigung === 'uebertragen');
+      const sollUebertragen = !!(
+        aufgabeVorab &&
+        !istBegleitungsaufgabe &&
+        aufgabeVorab.bearbeitungNachErledigung === 'uebertragen'
+      );
       // Bei Kenntnisnahme + geplanter Hauptbearbeitungsübergabe: nur die spez. „übernommen“-Meldung, nicht doppelt „erledigt“
       const omitCreatorNotify = erledigungsTyp === 'kenntnisnahme' && sollUebertragen;
       
@@ -5513,6 +5548,32 @@ ${t('action.archive')}
       }
       
       const antrag = antragSystem.getAntrag(aufgabe.antragId);
+      const warHauptbearbeiter =
+        antrag && String(antrag.bearbeiterId) === String(currentSession.userId);
+      
+      if (istBegleitungsaufgabe) {
+        if (!warHauptbearbeiter) {
+          antragSystem.markiereAufgabeAbgegeben(aufgabe.antragId, currentSession.userId);
+        }
+        if (window.DataSync && window.DataSync.syncAntragToServer) {
+          await window.DataSync.syncAntragToServer(aufgabe.antragId);
+        }
+        closeModal('aufgabeLoesungModal');
+        if (warHauptbearbeiter && currentAntragId === aufgabe.antragId) {
+          openAntragDetail(aufgabe.antragId);
+        } else {
+          closeAntragDetail();
+        }
+        renderAntraege();
+        const msgBegleitung =
+          currentLanguage === 'de'
+            ? 'Begleitung bestätigt. Der Antrag bleibt bei der Hauptverantwortlichen Person.'
+            : currentLanguage === 'en'
+              ? 'Accompaniment confirmed. The application remains with the person with main responsibility.'
+              : 'Accompagnement confirmé. La demande reste auprès du responsable principal.';
+        showAlert(msgBegleitung);
+        return;
+      }
       
       // Logik basierend auf Erledigungstyp und der Einstellung des Aufgabenstellers
       if (erledigungsTyp === 'antwort' || (erledigungsTyp === 'kenntnisnahme' && !sollUebertragen)) {

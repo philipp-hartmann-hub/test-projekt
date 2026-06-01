@@ -3646,6 +3646,9 @@ class AntragSystem {
       // Hauptbearbeitung übertragen
       antrag.bearbeiterId = mitarbeiter.userId;
       antrag.bearbeiterName = mitarbeiter.name;
+      if (antrag.abgegebenVon && antrag.abgegebenVon.includes(mitarbeiter.userId)) {
+        antrag.abgegebenVon = antrag.abgegebenVon.filter((id) => id !== mitarbeiter.userId);
+      }
       
       // Gruppenzuweisung und Markierungen löschen
       antrag.zugewiesenAnGruppe = null;
@@ -3706,6 +3709,9 @@ class AntragSystem {
       console.log('[Debug] nehmeAntrag: Gruppen-/Termin-Aufgaben:', alleZuUebernehmen.length);
 
       if (alleZuUebernehmen.length > 0) {
+        const nurBegleitungsaufgaben =
+          alleZuUebernehmen.length > 0 &&
+          alleZuUebernehmen.every((aufgabe) => aufgabe.terminBegleitung === true);
         alleZuUebernehmen.forEach((aufgabe) => {
           console.log('[Debug] Konvertiere Aufgabe:', aufgabe.id);
           aufgabe.zugewiesenAnTyp = 'mitarbeiter';
@@ -3714,6 +3720,9 @@ class AntragSystem {
           aufgabe.zugewiesenAnGruppe = null;
           aufgabenSystem.syncKalenderNachGruppenuebernahme(aufgabe);
         });
+        if (nurBegleitungsaufgaben) {
+          console.log('[nehmeAntrag] Nur Begleitungsaufgabe(n) – Hauptbearbeitung bleibt unverändert');
+        }
         aufgabenSystem.saveAufgaben();
         
         // Aktivität protokollieren
@@ -3820,6 +3829,9 @@ class AntragSystem {
     // Hausleitung als neuen Bearbeiter setzen
     antrag.bearbeiterId = hausleitung.userId;
     antrag.bearbeiterName = hausleitung.name;
+    if (antrag.abgegebenVon && antrag.abgegebenVon.includes(hausleitung.userId)) {
+      antrag.abgegebenVon = antrag.abgegebenVon.filter((id) => id !== hausleitung.userId);
+    }
     
     // Übernahme-Informationen speichern
     antrag.uebernommenVonHausleitung = true;
@@ -4530,43 +4542,57 @@ class AntragSystem {
     return false;
   }
 
-  // In Bearbeitung befindliche Anträge (nur nicht abgeschlossene)
+  // In Bearbeitung befindliche Anträge (bis Veraktung für Hauptbearbeiter)
   getInBearbeitungAntraege(mitarbeiter) {
     return this.antraege.filter(a => {
-      // Sobald abgeschlossen, nicht mehr in "Bearbeitung" anzeigen
-      if (a.erledigt === true) return false;
-      if (a.status !== 'in-bearbeitung') return false;
-      
-      // Prüfen ob Mitarbeiter berechtigt ist (Bearbeiter, Aufgaben-Beteiligter oder hat bereits am Antrag gearbeitet)
-      const istBearbeiter = String(a.bearbeiterId) === String(mitarbeiter.userId);
+      if (a.veraktet === true) return false;
+
+      const istHauptbearbeiter =
+        a.bearbeiterId != null &&
+        a.bearbeiterId !== '' &&
+        String(a.bearbeiterId) === String(mitarbeiter.userId);
+
       const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(a.id);
-      // Aufgabenkette: Jeder der eine Aufgabe erstellt oder erhalten hat, hat Zugriff
-      const hatAufgabeErhalten = aufgabenZuAntrag.some(auf => String(auf.zugewiesenAnId) === String(mitarbeiter.userId));
-      const hatAufgabeErstellt = aufgabenZuAntrag.some(auf => String(auf.erstelltVonId) === String(mitarbeiter.userId));
-      // Aktivitätsbezug: Jeder der bereits eine Aktion am Antrag durchgeführt hat
+      const hatAufgabeErhalten = aufgabenZuAntrag.some(
+        (auf) => String(auf.zugewiesenAnId) === String(mitarbeiter.userId)
+      );
+      const hatAufgabeErstellt = aufgabenZuAntrag.some(
+        (auf) => String(auf.erstelltVonId) === String(mitarbeiter.userId)
+      );
       const hatAmAntragGearbeitet = aktivitaetenSystem.istMitarbeiterBeteiligt(a.id, mitarbeiter.userId);
       const hatAufgabenbezug = hatAufgabeErhalten || hatAufgabeErstellt || hatAmAntragGearbeitet;
-      
-      // VAL sieht in "Meine Anträge und Aufgaben" NUR Anträge, bei denen:
-      // 1. Sie der Hauptbearbeiter ist (hat Antrag übernommen)
-      // 2. Sie persönlich (nicht über Gruppe) eine Aufgabe erhalten hat
-      // 3. Sie am Antrag gearbeitet hat (z.B. Aufgabe erstellt)
-      // Alle anderen Anträge des Hauses erscheinen in "Anträge und Aufgaben meiner Gruppe"
+
+      // Hauptverantwortliche sehen den Antrag in allen Phasen (auch nach Entscheidung/Vollzug), bis veraktet
+      if (istHauptbearbeiter) {
+        if (this._istValWeitMitarbeiter(mitarbeiter)) {
+          return this._valAntragSichtbar(mitarbeiter, a);
+        }
+        if (mitarbeiter.rolle === 'stationsleitung') {
+          return (
+            this._matchesHaus(mitarbeiter.jvas, a.insasseJva) &&
+            a.insasseStation === mitarbeiter.station
+          );
+        }
+        return true;
+      }
+
+      // Ohne Hauptverantwortung: nur laufende Bearbeitung (nicht erledigte Entscheidungsphase)
+      if (a.erledigt === true) return false;
+      if (a.status !== 'in-bearbeitung') return false;
+
       if (this._istValWeitMitarbeiter(mitarbeiter)) {
         if (!this._valAntragSichtbar(mitarbeiter, a)) return false;
-        
-        // Nur wenn persönlicher Bezug besteht
-        return istBearbeiter || hatAufgabenbezug;
+        return hatAufgabenbezug;
       }
-      
-      // Stationsleitung sieht alle "in Bearbeitung" Anträge ihrer Station
+
       if (mitarbeiter.rolle === 'stationsleitung') {
-        return this._matchesHaus(mitarbeiter.jvas, a.insasseJva) && 
-               a.insasseStation === mitarbeiter.station;
+        return (
+          this._matchesHaus(mitarbeiter.jvas, a.insasseJva) &&
+          a.insasseStation === mitarbeiter.station
+        );
       }
-      
-      // Normale Mitarbeiter sehen ihre persönlich bearbeiteten Anträge ODER Anträge mit Aufgabenbezug
-      return istBearbeiter || hatAufgabenbezug;
+
+      return hatAufgabenbezug;
     }).sort((a, b) => new Date(a.erstelltAm) - new Date(b.erstelltAm));
   }
 
@@ -5690,7 +5716,8 @@ function erstelleBegleitungAufgabeFuerTermin(termin, meta) {
     fristDatum: termin.datum,
     terminId: termin.id,
     terminBegleitung: true,
-    terminUhrzeit: termin.uhrzeit || null
+    terminUhrzeit: termin.uhrzeit || null,
+    bearbeitungNachErledigung: 'zurueck'
   });
 
   if (typeof aktivitaetenSystem !== 'undefined') {
