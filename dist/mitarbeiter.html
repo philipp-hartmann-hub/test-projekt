@@ -629,7 +629,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('aufgabeLoesungModal')">Abbrechen</button>
-        <button class="btn btn-success" onclick="erledigeAufgabe()">Aufgabe abschließen</button>
+        <button class="btn btn-success" id="aufgabeAbschliessenBtn" onclick="erledigeAufgabe()">Aufgabe abschließen</button>
       </div>
     </div>
   </div>
@@ -958,7 +958,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeModal('terminVereinbarenModal')">Abbrechen</button>
-        <button type="button" class="btn btn-primary" onclick="sendeTerminEinladung()">Einladung absenden</button>
+        <button type="button" class="btn btn-primary" id="tvEinladungAbsendenBtn" onclick="sendeTerminEinladung()">Einladung absenden</button>
       </div>
     </div>
   </div>
@@ -996,6 +996,66 @@
   <script>
     let currentSession = null;
     let currentAntragId = null;
+    const laufendeUiAktionen = new Set();
+
+    async function runUiAction(key, actionFn) {
+      if (!key || typeof actionFn !== 'function') return null;
+      if (laufendeUiAktionen.has(key)) {
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus('Aktion läuft bereits …', 'info');
+        }
+        return null;
+      }
+      laufendeUiAktionen.add(key);
+      try {
+        return await actionFn();
+      } finally {
+        laufendeUiAktionen.delete(key);
+      }
+    }
+
+    function setButtonBusy(buttonId, busy, busyLabel = 'Bitte warten …') {
+      const btn = document.getElementById(buttonId);
+      if (!btn) return;
+      if (busy) {
+        if (!btn.dataset.originalLabel) btn.dataset.originalLabel = btn.textContent;
+        btn.textContent = busyLabel;
+        btn.disabled = true;
+      } else {
+        btn.disabled = false;
+        if (btn.dataset.originalLabel) {
+          btn.textContent = btn.dataset.originalLabel;
+        }
+      }
+    }
+
+    async function refreshUiNachAktion({ antragId = null, detailAnsicht = 'auto' } = {}) {
+      try {
+        if (window.DataSync && typeof window.DataSync.reloadDataFromServer === 'function') {
+          await window.DataSync.reloadDataFromServer();
+        } else if (typeof window.reloadDataFromStorage === 'function') {
+          window.reloadDataFromStorage();
+        }
+      } catch (e) {
+        console.warn('[UI Refresh] reload fehlgeschlagen:', e);
+      }
+
+      renderAntraege();
+      renderNotifications();
+      renderKalender();
+
+      if (detailAnsicht === 'close') {
+        closeAntragDetail();
+        return;
+      }
+      if (detailAnsicht === 'open' && antragId) {
+        openAntragDetail(antragId);
+        return;
+      }
+      if (detailAnsicht === 'auto' && antragId && currentAntragId === antragId) {
+        openAntragDetail(antragId);
+      }
+    }
 
     // ============================================
     // SPRACHSTEUERUNG
@@ -2567,8 +2627,10 @@
             </div>
           `;
         } else {
-          // Für andere Rollen oder offene Anträge: Standard-Verhalten
-          // VAL kann auch offene Anträge mit Gruppenzuweisung übernehmen
+          // Für andere Rollen oder offene Anträge: Übernahme nur wenn fachlich möglich.
+          // Sonst nur öffnen (kein irreführender "Übernehmen"-Button, der später fehlschlägt).
+          const kannAusKachelUebernehmen =
+            antrag.status === 'offen' || hatGruppenaufgaben || hatWartendeUebergabe;
           let buttonText = t('button.takeApplication');
           if (hatWartendeUebergabe) {
             buttonText = currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande';
@@ -2581,9 +2643,11 @@
               <button class="btn btn-secondary btn-sm" onclick="openAntragDetail('${antrag.id}', false, true)">
                 ${t('button.open')}
               </button>
+              ${kannAusKachelUebernehmen ? `
               <button class="btn btn-primary btn-sm" onclick="${istHausleitung() ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntrag('${antrag.id}')`}">
 ${buttonText}
               </button>
+              ` : ''}
             </div>
           `;
         }
@@ -5489,6 +5553,10 @@ ${t('action.archive')}
     
     async function erledigeAufgabe() {
       const aufgabeId = document.getElementById('aufgabeLoesungId').value;
+      if (!aufgabeId) return;
+      return runUiAction(`erledigeAufgabe:${aufgabeId}`, async () => {
+      setButtonBusy('aufgabeAbschliessenBtn', true, 'Speichert …');
+      try {
       let erledigungsTyp = document.querySelector('input[name="aufgabeErledigungsTyp"]:checked')?.value || 'kenntnisnahme';
       const antwortText = document.getElementById('aufgabeAntwortText').value.trim();
       
@@ -5569,12 +5637,10 @@ ${t('action.archive')}
           await window.DataSync.syncAntragToServer(aufgabe.antragId);
         }
         closeModal('aufgabeLoesungModal');
-        if (warHauptbearbeiter && currentAntragId === aufgabe.antragId) {
-          openAntragDetail(aufgabe.antragId);
-        } else {
-          closeAntragDetail();
-        }
-        renderAntraege();
+        await refreshUiNachAktion({
+          antragId: aufgabe.antragId,
+          detailAnsicht: warHauptbearbeiter && currentAntragId === aufgabe.antragId ? 'open' : 'close'
+        });
         const msgBegleitung =
           currentLanguage === 'de'
             ? 'Begleitung bestätigt. Der Antrag bleibt bei der Hauptverantwortlichen Person.'
@@ -5606,8 +5672,7 @@ ${t('action.archive')}
         closeModal('aufgabeLoesungModal');
         
         // Zurück zur Übersicht (da kein Zugriff mehr)
-        closeAntragDetail();
-        renderAntraege();
+        await refreshUiNachAktion({ antragId: aufgabe.antragId, detailAnsicht: 'close' });
         
         const msgZurueck = currentLanguage === 'en' ? 'Task completed. The application has been returned to the task creator.'
                         : currentLanguage === 'fr' ? 'Tâche terminée. La demande a été renvoyée au créateur de la tâche.'
@@ -5655,13 +5720,17 @@ ${t('action.archive')}
         closeModal('aufgabeLoesungModal');
         
         // Antrag direkt öffnen mit vollen Bearbeitungsrechten
-        openAntragDetail(aufgabe.antragId);
+        await refreshUiNachAktion({ antragId: aufgabe.antragId, detailAnsicht: 'open' });
         
         const msgUebernommen = currentLanguage === 'en' ? 'You are now the main processor of this application.'
                              : currentLanguage === 'fr' ? 'Vous êtes maintenant le responsable principal de cette demande.'
                              : 'Sie sind jetzt der Hauptbearbeiter dieses Antrags.';
         showAlert(msgUebernommen);
       }
+      } finally {
+        setButtonBusy('aufgabeAbschliessenBtn', false);
+      }
+      });
     }
 
     // ============================================
@@ -6620,125 +6689,128 @@ ${t('action.archive')}
     }
 
     async function nehmeAntrag(antragId) {
-      if (!currentSession) {
-        alert('Fehler: Keine Session vorhanden');
-        return;
-      }
-      if (istHausleitung()) {
-        const antragVal = antragSystem.getAntrag(antragId);
-        if (antragVal && antragVal.bearbeiterId !== currentSession.userId) {
-          openHausleitungUebernahmeModal(antragId);
+      return runUiAction(`nehmeAntrag:${antragId}`, async () => {
+        if (!currentSession) {
+          alert('Fehler: Keine Session vorhanden');
           return;
         }
-      }
-      
-      console.log('[Debug Frontend] nehmeAntrag wird aufgerufen für:', antragId);
-      
-      const result = antragSystem.nehmeAntrag(antragId, currentSession);
-      console.log('[Debug Frontend] nehmeAntrag Ergebnis:', result);
-      
-      if (result) {
-        // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
-        let syncStatus = '';
-        if (window.DataSync && window.DataSync.syncAntragToServer) {
-          console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
-          showSyncStatus('Synchronisiere mit Server...');
-          const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-          if (syncSuccess) {
-            console.log('[Debug] Antrag-Übernahme erfolgreich synchronisiert:', antragId);
-            syncStatus = '✓ Synchronisiert';
-            showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
-          } else {
-            console.warn('[Debug] Antrag-Übernahme Synchronisation fehlgeschlagen');
-            syncStatus = '✗ Synchronisation fehlgeschlagen';
-            showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
+        if (istHausleitung()) {
+          const antragVal = antragSystem.getAntrag(antragId);
+          if (antragVal && antragVal.bearbeiterId !== currentSession.userId) {
+            openHausleitungUebernahmeModal(antragId);
+            return;
           }
         }
         
-        renderAntraege();
-        // Automatisch zum "Meine Anträge und Aufgaben" Tab wechseln
-        switchTab('bearbeitung');
+        console.log('[Debug Frontend] nehmeAntrag wird aufgerufen für:', antragId);
         
-        // Erfolgsmeldung mit Sync-Status
-        const msg = currentLanguage === 'de' ? `Erfolgreich übernommen! ${syncStatus}` : 
-                    currentLanguage === 'en' ? `Successfully taken! ${syncStatus}` : `Repris avec succès! ${syncStatus}`;
-        alert(msg);
-      } else {
-        // Fehlermeldung mit Debug-Info
-        const antrag = antragSystem.getAntrag(antragId);
-        const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, currentSession);
-        const alleGruppenAufgaben = aufgabenSystem.getAlleOffenenGruppenAufgabenFuerMitarbeiter(currentSession);
+        const result = antragSystem.nehmeAntrag(antragId, currentSession);
+        console.log('[Debug Frontend] nehmeAntrag Ergebnis:', result);
         
-        console.error('[Debug] nehmeAntrag fehlgeschlagen:', {
-          antragId,
-          antragStatus: antrag?.status,
-          antragBearbeiterId: antrag?.bearbeiterId,
-          hauptbearbeitungWartetAufUebernahme: antrag?.hauptbearbeitungWartetAufUebernahme,
-          zugewiesenAnGruppe: antrag?.zugewiesenAnGruppe,
-          gruppenAufgabenFuerAntrag: gruppenAufgaben.length,
-          alleGruppenAufgaben: alleGruppenAufgaben.length,
-          currentUserId: currentSession.userId
-        });
-        
-        alert(`Fehler: Antrag konnte nicht übernommen werden.\n\nDebug-Info:\n- Antrag-Status: ${antrag?.status}\n- Gruppenaufgaben für diesen Antrag: ${gruppenAufgaben.length}\n- Alle Gruppenaufgaben: ${alleGruppenAufgaben.length}\n\nBitte prüfen Sie die Browser-Konsole (F12) für Details.`);
-      }
+        if (result) {
+          // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
+          let syncStatus = '';
+          if (window.DataSync && window.DataSync.syncAntragToServer) {
+            console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
+            showSyncStatus('Synchronisiere mit Server...');
+            const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
+            if (syncSuccess) {
+              console.log('[Debug] Antrag-Übernahme erfolgreich synchronisiert:', antragId);
+              syncStatus = '✓ Synchronisiert';
+              showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
+            } else {
+              console.warn('[Debug] Antrag-Übernahme Synchronisation fehlgeschlagen');
+              syncStatus = '✗ Synchronisation fehlgeschlagen';
+              showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
+            }
+          }
+          
+          await refreshUiNachAktion({ antragId, detailAnsicht: 'auto' });
+          // Automatisch zum "Meine Anträge und Aufgaben" Tab wechseln
+          switchTab('bearbeitung');
+          
+          // Erfolgsmeldung mit Sync-Status
+          const msg = currentLanguage === 'de' ? `Erfolgreich übernommen! ${syncStatus}` : 
+                      currentLanguage === 'en' ? `Successfully taken! ${syncStatus}` : `Repris avec succès! ${syncStatus}`;
+          alert(msg);
+        } else {
+          // Fehlermeldung mit Debug-Info
+          const antrag = antragSystem.getAntrag(antragId);
+          const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, currentSession);
+          const alleGruppenAufgaben = aufgabenSystem.getAlleOffenenGruppenAufgabenFuerMitarbeiter(currentSession);
+          
+          console.error('[Debug] nehmeAntrag fehlgeschlagen:', {
+            antragId,
+            antragStatus: antrag?.status,
+            antragBearbeiterId: antrag?.bearbeiterId,
+            hauptbearbeitungWartetAufUebernahme: antrag?.hauptbearbeitungWartetAufUebernahme,
+            zugewiesenAnGruppe: antrag?.zugewiesenAnGruppe,
+            gruppenAufgabenFuerAntrag: gruppenAufgaben.length,
+            alleGruppenAufgaben: alleGruppenAufgaben.length,
+            currentUserId: currentSession.userId
+          });
+          
+          alert(`Fehler: Antrag konnte nicht übernommen werden.\n\nDebug-Info:\n- Antrag-Status: ${antrag?.status}\n- Gruppenaufgaben für diesen Antrag: ${gruppenAufgaben.length}\n- Alle Gruppenaufgaben: ${alleGruppenAufgaben.length}\n\nBitte prüfen Sie die Browser-Konsole (F12) für Details.`);
+        }
+      });
     }
     
     async function nehmeAntragUndBleibeInDetail(antragId) {
-      if (!currentSession) {
-        alert('Fehler: Keine Session vorhanden');
-        return;
-      }
-      if (istHausleitung()) {
-        const antragVal = antragSystem.getAntrag(antragId);
-        if (antragVal && antragVal.bearbeiterId !== currentSession.userId) {
-          openHausleitungUebernahmeModal(antragId);
+      return runUiAction(`nehmeAntragDetail:${antragId}`, async () => {
+        if (!currentSession) {
+          alert('Fehler: Keine Session vorhanden');
           return;
         }
-      }
-      
-      console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail wird aufgerufen für:', antragId);
-      
-      const result = antragSystem.nehmeAntrag(antragId, currentSession);
-      console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail Ergebnis:', result);
-      
-      if (result) {
-        // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
-        if (window.DataSync && window.DataSync.syncAntragToServer) {
-          console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
-          showSyncStatus('Synchronisiere mit Server...');
-          const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-          if (syncSuccess) {
-            console.log('[Debug] Antrag-Übernahme erfolgreich synchronisiert:', antragId);
-            showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
-          } else {
-            console.warn('[Debug] Antrag-Übernahme Synchronisation fehlgeschlagen');
-            showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
+        if (istHausleitung()) {
+          const antragVal = antragSystem.getAntrag(antragId);
+          if (antragVal && antragVal.bearbeiterId !== currentSession.userId) {
+            openHausleitungUebernahmeModal(antragId);
+            return;
           }
         }
         
-        renderAntraege();
-        // Direkt in der Detailansicht weiterarbeiten (keine Weiterleitungs-Abfrage)
-        openAntragDetail(antragId);
-      } else {
-        // Fehlermeldung mit Debug-Info
-        const antrag = antragSystem.getAntrag(antragId);
-        const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, currentSession);
-        const alleGruppenAufgaben = aufgabenSystem.getAlleOffenenGruppenAufgabenFuerMitarbeiter(currentSession);
+        console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail wird aufgerufen für:', antragId);
         
-        console.error('[Debug] nehmeAntragUndBleibeInDetail fehlgeschlagen:', {
-          antragId,
-          antragStatus: antrag?.status,
-          antragBearbeiterId: antrag?.bearbeiterId,
-          hauptbearbeitungWartetAufUebernahme: antrag?.hauptbearbeitungWartetAufUebernahme,
-          zugewiesenAnGruppe: antrag?.zugewiesenAnGruppe,
-          gruppenAufgabenFuerAntrag: gruppenAufgaben.length,
-          alleGruppenAufgaben: alleGruppenAufgaben.length,
-          currentUserId: currentSession.userId
-        });
+        const result = antragSystem.nehmeAntrag(antragId, currentSession);
+        console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail Ergebnis:', result);
         
-        alert(`Fehler: Antrag konnte nicht übernommen werden.\n\nDebug-Info:\n- Antrag-Status: ${antrag?.status}\n- Gruppenaufgaben für diesen Antrag: ${gruppenAufgaben.length}\n- Alle Gruppenaufgaben: ${alleGruppenAufgaben.length}\n\nBitte prüfen Sie die Browser-Konsole (F12) für Details.`);
-      }
+        if (result) {
+          // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
+          if (window.DataSync && window.DataSync.syncAntragToServer) {
+            console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
+            showSyncStatus('Synchronisiere mit Server...');
+            const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
+            if (syncSuccess) {
+              console.log('[Debug] Antrag-Übernahme erfolgreich synchronisiert:', antragId);
+              showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
+            } else {
+              console.warn('[Debug] Antrag-Übernahme Synchronisation fehlgeschlagen');
+              showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
+            }
+          }
+          
+          // Direkt in der Detailansicht weiterarbeiten (keine Weiterleitungs-Abfrage)
+          await refreshUiNachAktion({ antragId, detailAnsicht: 'open' });
+        } else {
+          // Fehlermeldung mit Debug-Info
+          const antrag = antragSystem.getAntrag(antragId);
+          const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, currentSession);
+          const alleGruppenAufgaben = aufgabenSystem.getAlleOffenenGruppenAufgabenFuerMitarbeiter(currentSession);
+          
+          console.error('[Debug] nehmeAntragUndBleibeInDetail fehlgeschlagen:', {
+            antragId,
+            antragStatus: antrag?.status,
+            antragBearbeiterId: antrag?.bearbeiterId,
+            hauptbearbeitungWartetAufUebernahme: antrag?.hauptbearbeitungWartetAufUebernahme,
+            zugewiesenAnGruppe: antrag?.zugewiesenAnGruppe,
+            gruppenAufgabenFuerAntrag: gruppenAufgaben.length,
+            alleGruppenAufgaben: alleGruppenAufgaben.length,
+            currentUserId: currentSession.userId
+          });
+          
+          alert(`Fehler: Antrag konnte nicht übernommen werden.\n\nDebug-Info:\n- Antrag-Status: ${antrag?.status}\n- Gruppenaufgaben für diesen Antrag: ${gruppenAufgaben.length}\n- Alle Gruppenaufgaben: ${alleGruppenAufgaben.length}\n\nBitte prüfen Sie die Browser-Konsole (F12) für Details.`);
+        }
+      });
     }
 
     // ============================================
@@ -7557,8 +7629,11 @@ ${t('action.archive')}
       return gruppe;
     }
 
-    function sendeTerminEinladung() {
+    async function sendeTerminEinladung() {
       const antragId = document.getElementById('tvAntragId').value;
+      if (!antragId) return;
+      return runUiAction(`terminEinladung:${antragId}`, async () => {
+      setButtonBusy('tvEinladungAbsendenBtn', true, 'Sende …');
       const insasseId = document.getElementById('tvInsasseId').value;
       const insasseName = document.getElementById('tvInsasseName').value;
       const teilnehmerArt = document.querySelector('input[name="tvTeilnehmerArt"]:checked')?.value;
@@ -7686,6 +7761,14 @@ ${t('action.archive')}
         return;
       }
 
+      if (window.DataSync && window.DataSync.syncAntragToServer) {
+        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
+        const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
+        }
+      }
+
       closeModal('terminVereinbarenModal');
 
       let erfolgsHinweis = 'Termin wurde vereinbart.';
@@ -7727,10 +7810,11 @@ ${t('action.archive')}
 
       showAlert(erfolgsHinweis);
 
-      renderKalender();
-      renderNotifications();
-      renderAntraege();
-      if (currentAntragId === antragId) openAntragDetail(antragId);
+      await refreshUiNachAktion({ antragId, detailAnsicht: 'auto' });
+      } finally {
+        setButtonBusy('tvEinladungAbsendenBtn', false);
+      }
+      });
     }
 
     // ============================================
