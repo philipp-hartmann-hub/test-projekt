@@ -6706,7 +6706,25 @@ ${t('action.archive')}
         }
         if (istHausleitung()) {
           const antragVal = antragSystem.getAntrag(antragId);
-          if (antragVal && antragVal.bearbeiterId !== currentSession.userId) {
+          const gruppenAufgabenVal = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, currentSession);
+          const hatGruppenaufgabenVal = gruppenAufgabenVal.length > 0;
+          const hatWartendeUebergabeVal = !!(
+            antragVal &&
+            antragVal.hauptbearbeitungWartetAufUebernahme &&
+            antragVal.zugewiesenAnGruppe &&
+            antragSystem._mitarbeiterGehoertZuGruppe(currentSession, antragVal.zugewiesenAnGruppe)
+          );
+          const hatTerminAufgabeVal = aufgabenSystem.aufgaben.some(
+            (a) =>
+              a.antragId === antragId &&
+              a.status === 'offen' &&
+              a.terminId &&
+              a.terminKalenderNachUebernahme === true &&
+              a.zugewiesenAnTyp === 'mitarbeiter' &&
+              String(a.zugewiesenAnId) === String(currentSession.userId)
+          );
+          const hatDirekteAufgabenUebernahme = hatGruppenaufgabenVal || hatWartendeUebergabeVal || hatTerminAufgabeVal;
+          if (antragVal && antragVal.bearbeiterId !== currentSession.userId && !hatDirekteAufgabenUebernahme) {
             openHausleitungUebernahmeModal(antragId);
             return;
           }
@@ -6773,7 +6791,25 @@ ${t('action.archive')}
         }
         if (istHausleitung()) {
           const antragVal = antragSystem.getAntrag(antragId);
-          if (antragVal && antragVal.bearbeiterId !== currentSession.userId) {
+          const gruppenAufgabenVal = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, currentSession);
+          const hatGruppenaufgabenVal = gruppenAufgabenVal.length > 0;
+          const hatWartendeUebergabeVal = !!(
+            antragVal &&
+            antragVal.hauptbearbeitungWartetAufUebernahme &&
+            antragVal.zugewiesenAnGruppe &&
+            antragSystem._mitarbeiterGehoertZuGruppe(currentSession, antragVal.zugewiesenAnGruppe)
+          );
+          const hatTerminAufgabeVal = aufgabenSystem.aufgaben.some(
+            (a) =>
+              a.antragId === antragId &&
+              a.status === 'offen' &&
+              a.terminId &&
+              a.terminKalenderNachUebernahme === true &&
+              a.zugewiesenAnTyp === 'mitarbeiter' &&
+              String(a.zugewiesenAnId) === String(currentSession.userId)
+          );
+          const hatDirekteAufgabenUebernahme = hatGruppenaufgabenVal || hatWartendeUebergabeVal || hatTerminAufgabeVal;
+          if (antragVal && antragVal.bearbeiterId !== currentSession.userId && !hatDirekteAufgabenUebernahme) {
             openHausleitungUebernahmeModal(antragId);
             return;
           }
