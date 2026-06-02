@@ -7634,6 +7634,7 @@ ${t('action.archive')}
       if (!antragId) return;
       return runUiAction(`terminEinladung:${antragId}`, async () => {
       setButtonBusy('tvEinladungAbsendenBtn', true, 'Sende …');
+      try {
       const insasseId = document.getElementById('tvInsasseId').value;
       const insasseName = document.getElementById('tvInsasseName').value;
       const teilnehmerArt = document.querySelector('input[name="tvTeilnehmerArt"]:checked')?.value;
