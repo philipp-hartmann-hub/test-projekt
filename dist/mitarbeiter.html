@@ -876,14 +876,19 @@
             </select>
           </div>
           <div class="form-group">
-            <label>3. Terminslot <span class="required">*</span></label>
+            <label for="tvExtSlotDate">3. Kalendertag <span class="required">*</span></label>
+            <input type="date" id="tvExtSlotDate" onchange="onTvExtSlotDateChange()" disabled>
+            <p class="section-hint slot-date-hint" id="tvExtSlotDateHint">Bitte zuerst Leistung und Person wählen.</p>
+          </div>
+          <div class="form-group">
+            <label>4. Freier Terminslot <span class="required">*</span></label>
             <div id="tvExtSlots" class="termin-slot-list">
               <p class="empty-hint">Bitte zuerst Leistung und Person wählen.</p>
             </div>
             <input type="hidden" id="tvExtSlotKey" value="">
           </div>
           <div class="form-group">
-            <label>4. Durchführung <span class="required">*</span></label>
+            <label>5. Durchführung <span class="required">*</span></label>
             <div class="radio-group">
               <label class="radio-option">
                 <input type="radio" name="tvExtDurchfuehrung" value="praesenz" checked onchange="toggleTvExtDurchfuehrung()">
@@ -906,9 +911,14 @@
           </div>
         </div>
         <div id="tvInternTerminFelder">
-        <p class="section-hint">Interne Terminbuchung: freien Slot wählen (Verfügbarkeiten pro Person bzw. aggregiert pro Gruppe, je 30 Min.).</p>
+        <p class="section-hint">Interne Terminbuchung: zuerst Kalendertag wählen, darunter die verfügbaren 30-Minuten-Slots.</p>
         <div class="form-group">
-          <label>Verfügbarer Terminslot <span class="required">*</span></label>
+          <label for="tvInternSlotDate">Kalendertag <span class="required">*</span></label>
+          <input type="date" id="tvInternSlotDate" onchange="onTvInternSlotDateChange()" disabled>
+          <p class="section-hint slot-date-hint" id="tvInternSlotDateHint">Bitte zuerst Zuweisung (Gruppe oder Person) wählen.</p>
+        </div>
+        <div class="form-group">
+          <label>Verfügbare Slots am gewählten Tag <span class="required">*</span></label>
           <div id="tvInternSlots" class="termin-slot-list">
             <p class="empty-hint">Bitte zuerst Zuweisung (Gruppe oder Person) wählen.</p>
           </div>
@@ -7162,8 +7172,81 @@ ${t('action.archive')}
 
     function resetTvExtSlots() {
       const box = document.getElementById('tvExtSlots');
+      const dateInput = document.getElementById('tvExtSlotDate');
+      const dateHint = document.getElementById('tvExtSlotDateHint');
       if (!box) return;
       box.innerHTML = '<p class="empty-hint">Bitte zuerst Leistung und Person wählen.</p>';
+      if (dateInput) {
+        dateInput.value = '';
+        dateInput.min = '';
+        dateInput.max = '';
+        dateInput.disabled = true;
+      }
+      if (dateHint) {
+        dateHint.textContent = 'Bitte zuerst Leistung und Person wählen.';
+      }
+    }
+
+    function buildTvSlotsByDate(slots) {
+      const grouped = {};
+      (slots || []).forEach((slot) => {
+        const dateKey = slot.datum || (slot.slotKey || '').split('|')[0];
+        if (!dateKey) return;
+        if (!grouped[dateKey]) grouped[dateKey] = [];
+        grouped[dateKey].push(slot);
+      });
+      return grouped;
+    }
+
+    function renderTvDateSelection({ slots, dateInputId, dateHintId, selectedSlotKey }) {
+      const dateInput = document.getElementById(dateInputId);
+      const dateHint = document.getElementById(dateHintId);
+      if (!dateInput) return [];
+
+      if (!Array.isArray(slots) || slots.length === 0) {
+        dateInput.value = '';
+        dateInput.min = '';
+        dateInput.max = '';
+        dateInput.disabled = true;
+        if (dateHint) dateHint.textContent = 'Keine freien Termine verfügbar.';
+        return [];
+      }
+
+      const grouped = buildTvSlotsByDate(slots);
+      const dates = Object.keys(grouped).sort();
+      if (dates.length === 0) {
+        dateInput.value = '';
+        dateInput.min = '';
+        dateInput.max = '';
+        dateInput.disabled = true;
+        if (dateHint) dateHint.textContent = 'Keine freien Termine verfügbar.';
+        return [];
+      }
+
+      const selectedDateFromSlot = selectedSlotKey ? selectedSlotKey.split('|')[0] : '';
+      let selectedDate = dateInput.value;
+      if (selectedDateFromSlot && dates.includes(selectedDateFromSlot)) {
+        selectedDate = selectedDateFromSlot;
+      } else if (!dates.includes(selectedDate)) {
+        selectedDate = dates[0];
+      }
+
+      dateInput.disabled = false;
+      dateInput.min = dates[0];
+      dateInput.max = dates[dates.length - 1];
+      dateInput.value = selectedDate;
+
+      if (dateHint) {
+        const datumLabel = new Date(selectedDate).toLocaleDateString('de-DE', {
+          weekday: 'long',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+        dateHint.textContent = `Ausgewählter Tag: ${datumLabel}`;
+      }
+
+      return grouped[selectedDate] || [];
     }
 
     function renderTvExtSlots() {
@@ -7184,17 +7267,37 @@ ${t('action.archive')}
       }
       if (slots.length === 0) {
         box.innerHTML = '<p class="empty-hint">Keine freien Terminslots in den nächsten Wochen.</p>';
+        const dateHint = document.getElementById('tvExtSlotDateHint');
+        if (dateHint) dateHint.textContent = 'Keine freien Termine verfügbar.';
         return;
       }
       const activeKey = document.getElementById('tvExtSlotKey').value;
-      box.innerHTML = slots.map((s) => `
+      const slotsAmTag = renderTvDateSelection({
+        slots,
+        dateInputId: 'tvExtSlotDate',
+        dateHintId: 'tvExtSlotDateHint',
+        selectedSlotKey: activeKey
+      });
+      const gueltigerKey = slotsAmTag.some((s) => s.slotKey === activeKey) ? activeKey : '';
+      if (activeKey && !gueltigerKey) {
+        document.getElementById('tvExtSlotKey').value = '';
+      }
+      box.innerHTML = slotsAmTag.map((s) => `
         <button type="button" class="termin-slot-btn ${s.slotKey === activeKey ? 'selected' : ''}"
                 onclick="selectTvExtSlot('${s.slotKey}')">${s.label}</button>
       `).join('');
     }
 
+    function onTvExtSlotDateChange() {
+      document.getElementById('tvExtSlotKey').value = '';
+      renderTvExtSlots();
+    }
+
     function selectTvExtSlot(slotKey) {
       document.getElementById('tvExtSlotKey').value = slotKey;
+      const [datum] = (slotKey || '').split('|');
+      const dateInput = document.getElementById('tvExtSlotDate');
+      if (dateInput && datum) dateInput.value = datum;
       renderTvExtSlots();
     }
 
@@ -7246,8 +7349,19 @@ ${t('action.archive')}
 
     function resetTvInternSlots() {
       const box = document.getElementById('tvInternSlots');
+      const dateInput = document.getElementById('tvInternSlotDate');
+      const dateHint = document.getElementById('tvInternSlotDateHint');
       if (!box) return;
       box.innerHTML = '<p class="empty-hint">Bitte zuerst Zuweisung (Gruppe oder Person) wählen.</p>';
+      if (dateInput) {
+        dateInput.value = '';
+        dateInput.min = '';
+        dateInput.max = '';
+        dateInput.disabled = true;
+      }
+      if (dateHint) {
+        dateHint.textContent = 'Bitte zuerst Zuweisung (Gruppe oder Person) wählen.';
+      }
     }
 
     function renderTvInternSlots() {
@@ -7273,13 +7387,34 @@ ${t('action.archive')}
       }
       if (slots.length === 0) {
         box.innerHTML = '<p class="empty-hint">Keine freien Terminslots in den nächsten Wochen.</p>';
+        const dateHint = document.getElementById('tvInternSlotDateHint');
+        if (dateHint) dateHint.textContent = 'Keine freien Termine verfügbar.';
         return;
       }
       const activeKey = document.getElementById('tvInternSlotKey').value;
-      box.innerHTML = slots.map((s) => `
-        <button type="button" class="termin-slot-btn ${s.slotKey === activeKey ? 'selected' : ''}"
+      const slotsAmTag = renderTvDateSelection({
+        slots,
+        dateInputId: 'tvInternSlotDate',
+        dateHintId: 'tvInternSlotDateHint',
+        selectedSlotKey: activeKey
+      });
+      const gueltigerKey = slotsAmTag.some((s) => s.slotKey === activeKey) ? activeKey : '';
+      if (activeKey && !gueltigerKey) {
+        document.getElementById('tvInternSlotKey').value = '';
+        document.getElementById('tvDatum').value = '';
+        document.getElementById('tvUhrzeit').value = '';
+      }
+      box.innerHTML = slotsAmTag.map((s) => `
+        <button type="button" class="termin-slot-btn ${s.slotKey === gueltigerKey ? 'selected' : ''}"
                 onclick="selectTvInternSlot('${s.slotKey}')">${s.label}</button>
       `).join('');
+    }
+
+    function onTvInternSlotDateChange() {
+      document.getElementById('tvInternSlotKey').value = '';
+      document.getElementById('tvDatum').value = '';
+      document.getElementById('tvUhrzeit').value = '';
+      renderTvInternSlots();
     }
 
     function selectTvInternSlot(slotKey) {
@@ -7287,6 +7422,8 @@ ${t('action.archive')}
       const [datum, uhrzeit] = slotKey.split('|');
       document.getElementById('tvDatum').value = datum || '';
       document.getElementById('tvUhrzeit').value = uhrzeit || '';
+      const dateInput = document.getElementById('tvInternSlotDate');
+      if (dateInput && datum) dateInput.value = datum;
       renderTvInternSlots();
     }
 

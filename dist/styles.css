@@ -2108,7 +2108,7 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
 
 .termin-slot-list {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.5rem;
   max-height: 220px;
   overflow-y: auto;
@@ -2135,6 +2135,11 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   border-color: var(--jhh-primary);
   background: var(--jhh-primary);
   color: #fff;
+}
+
+.slot-date-hint {
+  margin-top: 0.5rem;
+  margin-bottom: 0;
 }
 
 .empty-hint {
