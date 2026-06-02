@@ -2631,6 +2631,11 @@
           // Sonst nur öffnen (kein irreführender "Übernehmen"-Button, der später fehlschlägt).
           const kannAusKachelUebernehmen =
             antrag.status === 'offen' || hatGruppenaufgaben || hatWartendeUebergabe;
+          const sollHausleitungsModalInKachel =
+            istHausleitung() &&
+            antrag.status !== 'offen' &&
+            !hatGruppenaufgaben &&
+            !hatWartendeUebergabe;
           let buttonText = t('button.takeApplication');
           if (hatWartendeUebergabe) {
             buttonText = currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande';
@@ -2644,7 +2649,7 @@
                 ${t('button.open')}
               </button>
               ${kannAusKachelUebernehmen ? `
-              <button class="btn btn-primary btn-sm" onclick="${istHausleitung() ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntrag('${antrag.id}')`}">
+              <button class="btn btn-primary btn-sm" onclick="${sollHausleitungsModalInKachel ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntrag('${antrag.id}')`}">
 ${buttonText}
               </button>
               ` : ''}
@@ -3026,6 +3031,11 @@ Persönlich eröffnet
         (meineOffeneAufgabe && aufgabeErlaubtAntragsbearbeitung(meineOffeneAufgabe));
       const nurAufgabenbearbeitungErlaubt =
         hatOffeneAufgabe && !hatHauptverantwortung && !aufgabeErlaubtAntragsbearbeitung(meineOffeneAufgabe);
+      const sollHausleitungsModalInDetail =
+        istHausleitung() &&
+        antrag.status !== 'offen' &&
+        !hatAufgabeZurUebernahme &&
+        !hatWartendeUebergabe;
       
       // Prüfen ob der Benutzer den Antrag "abgegeben" hat (durch Aufgabenerledigung mit Antwort/Zurück)
       const hatAntragAbgegeben =
@@ -4051,7 +4061,7 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
               
               <div class="action-buttons">
                 ${kannUebernehmen && !hatHauptverantwortung ? `
-                  <button class="btn btn-primary btn-large" onclick="${istHausleitung() ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
+                  <button class="btn btn-primary btn-large" onclick="${sollHausleitungsModalInDetail ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
                     ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : 
                       hatAufgabeZurUebernahme ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche') : 
                       t('button.takeApplication')}
