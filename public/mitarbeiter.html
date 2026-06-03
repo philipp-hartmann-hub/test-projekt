@@ -1715,10 +1715,14 @@
       if (typeof terminSystem !== 'undefined' && typeof terminSystem.syncAufgabenFristenFromAufgaben === 'function') {
         terminSystem.syncAufgabenFristenFromAufgaben(aufgabenSystem.aufgaben);
       }
-      renderAntraege();
-      renderNotifications();
-      renderKalender();
       openJvpHub();
+      try {
+        renderAntraege();
+        renderNotifications();
+        renderKalender();
+      } catch (renderErr) {
+        console.error('[Portal] Listen konnten nicht aufgebaut werden:', renderErr);
+      }
       
       window.addEventListener('dataSyncLoaded', () => {
         if (currentSession) { renderAntraege(); renderNotifications(); renderKalender(); }
@@ -2588,11 +2592,13 @@
       let gruppenaufgabenInfo = '';
       let hatGruppenaufgaben = false;
       let hatWartendeUebergabe = false;
+      let hatTerminAufgabeKachel = false;
+      let aufgabenCtxKachel = null;
       if (mode === 'offen') {
-        const aufgabenCtxKachel = getAufgabenUebernahmeKontext(antrag.id, antrag);
+        aufgabenCtxKachel = getAufgabenUebernahmeKontext(antrag.id, antrag);
         hatGruppenaufgaben = aufgabenCtxKachel.hatGruppenaufgaben;
         hatWartendeUebergabe = aufgabenCtxKachel.hatWartendeUebergabe;
-        const hatTerminAufgabeKachel = aufgabenCtxKachel.hatTerminAufgabe;
+        hatTerminAufgabeKachel = aufgabenCtxKachel.hatTerminAufgabe;
         const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(
           antrag.id,
           currentSession
@@ -2652,7 +2658,7 @@
             hatTerminAufgabeKachel;
           const sollHausleitungsModalInKachel = sollValBegruendungsModalFuerUebernahme(
             antrag,
-            aufgabenCtxKachel
+            aufgabenCtxKachel || getAufgabenUebernahmeKontext(antrag.id, antrag)
           );
           let buttonText = t('button.takeApplication');
           if (hatWartendeUebergabe) {
@@ -5356,10 +5362,17 @@ ${t('action.archive')}
       // Option für Hauptbearbeitung bei Mitarbeiter- und Gruppenaufgaben ermitteln
       let bearbeitungNachErledigung = 'zurueck'; // Standard: zurück an Ersteller
       if (zielRadio.value === 'mitarbeiter') {
-        // Bei Mitarbeiter-Aufgaben (sowohl Gruppe als auch konkrete Person)
-        const bearbeitungRadio = document.querySelector('input[name="aufgabeBearbeitungUebergabe"]:checked');
-        if (bearbeitungRadio) {
-          bearbeitungNachErledigung = bearbeitungRadio.value;
+        const bearbeitungOptionenEl = document.getElementById('aufgabeBearbeitungOptionen');
+        const bearbeitungOptionenSichtbar =
+          bearbeitungOptionenEl &&
+          window.getComputedStyle(bearbeitungOptionenEl).display !== 'none';
+        if (bearbeitungOptionenSichtbar) {
+          const bearbeitungRadio = document.querySelector(
+            'input[name="aufgabeBearbeitungUebergabe"]:checked'
+          );
+          if (bearbeitungRadio) {
+            bearbeitungNachErledigung = bearbeitungRadio.value;
+          }
         }
       }
       
@@ -5657,6 +5670,9 @@ ${t('action.archive')}
         !istBegleitungsaufgabe &&
         aufgabeVorab.bearbeitungNachErledigung === 'uebertragen'
       );
+      if (sollUebertragen) {
+        erledigungsTyp = 'kenntnisnahme';
+      }
       // Bei Kenntnisnahme + geplanter Hauptbearbeitungsübergabe: nur die spez. „übernommen“-Meldung, nicht doppelt „erledigt“
       const omitCreatorNotify = erledigungsTyp === 'kenntnisnahme' && sollUebertragen;
       
@@ -5732,7 +5748,10 @@ ${t('action.archive')}
       }
       
       // Logik basierend auf Erledigungstyp und der Einstellung des Aufgabenstellers
-      if (erledigungsTyp === 'antwort' || (erledigungsTyp === 'kenntnisnahme' && !sollUebertragen)) {
+      if (
+        !sollUebertragen &&
+        (erledigungsTyp === 'antwort' || erledigungsTyp === 'kenntnisnahme')
+      ) {
         // Antrag geht zurück an den Aufgabensteller
         // Der Empfänger verliert den Zugriff (wird als "abgegeben" markiert)
         antragSystem.markiereAufgabeAbgegeben(aufgabe.antragId, currentSession.userId);
@@ -5759,10 +5778,15 @@ ${t('action.archive')}
                         : 'Aufgabe erledigt. Der Antrag wurde an den Aufgabensteller zurückgegeben.';
         showAlert(msgZurueck);
         
-      } else if (erledigungsTyp === 'kenntnisnahme' && sollUebertragen) {
+      } else if (sollUebertragen) {
         // Bearbeitung übernehmen - Empfänger wird neuer Hauptbearbeiter
-        // (Nur wenn der Aufgabensteller dies bei der Aufgabenerstellung so festgelegt hat)
-        antragSystem.uebernehmBearbeitung(aufgabe.antragId, currentSession.userId, currentSession.name, aufgabe.erstelltVonId);
+        // (Nur wenn der Aufgabensteller „Hauptbearbeitung übertragen“ gewählt hat)
+        antragSystem.uebernehmBearbeitung(
+          aufgabe.antragId,
+          currentSession.userId,
+          currentSession.name,
+          aufgabe.erstelltVonId || antrag?.bearbeiterId
+        );
         
         // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
         if (window.DataSync && window.DataSync.syncAntragToServer) {

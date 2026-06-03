@@ -168,7 +168,7 @@ async function loadInitialData() {
     const prevAufgabenInit = JSON.parse(localStorage.getItem('gefaengnis_aufgaben') || '[]');
     localStorage.setItem(
       'gefaengnis_aufgaben',
-      JSON.stringify(mergeAntragArraysByIdOrContent(prevAufgabenInit, aufgaben))
+      JSON.stringify(mergeAufgabenArraysAfterFetch(prevAufgabenInit, aufgaben))
     );
     const prevNotificationsInit = JSON.parse(localStorage.getItem('gefaengnis_notifications') || '[]');
     localStorage.setItem(
@@ -262,6 +262,48 @@ function mergeAntragArraysByIdOrContent(existingArr, incomingArr) {
   return order.map((k) => map.get(k));
 }
 
+const AUFGABE_STATUS_RANK = { offen: 1, erledigt: 2, geloescht: 3 };
+
+/** Aufgaben-Merge: Erledigt-Status und „Hauptbearbeitung übertragen“ nicht durch älteren Serverstand verlieren. */
+function mergeAufgabeSnapshot(prev, item) {
+  if (!prev) return item;
+  if (!item) return prev;
+  const merged = { ...prev, ...item };
+  if (prev.bearbeitungNachErledigung === 'uebertragen') {
+    merged.bearbeitungNachErledigung = 'uebertragen';
+  }
+  const rPrev = AUFGABE_STATUS_RANK[prev.status] || 0;
+  const rItem = AUFGABE_STATUS_RANK[item.status] || 0;
+  if (rPrev > rItem) {
+    merged.status = prev.status;
+    merged.erledigtAm = prev.erledigtAm || merged.erledigtAm;
+    merged.erledigungsTyp = prev.erledigungsTyp ?? merged.erledigungsTyp;
+    merged.antwort = prev.antwort ?? merged.antwort;
+    merged.antwortPdfs = prev.antwortPdfs ?? merged.antwortPdfs;
+  }
+  return merged;
+}
+
+function mergeAufgabenArraysAfterFetch(existingArr, incomingArr) {
+  const ex = Array.isArray(existingArr) ? existingArr : [];
+  const inc = Array.isArray(incomingArr) ? incomingArr : [];
+  const map = new Map();
+  const order = [];
+  function add(item) {
+    if (!item || typeof item !== 'object') return;
+    const key = item.id ? String(item.id) : _antragArrayItemKey(item);
+    if (map.has(key)) {
+      map.set(key, mergeAufgabeSnapshot(map.get(key), item));
+    } else {
+      map.set(key, item);
+      order.push(key);
+    }
+  }
+  ex.forEach(add);
+  inc.forEach(add);
+  return order.map((k) => map.get(k));
+}
+
 /** PDF-Binary (data URL) bei zusammengeführten Dokumenten nicht durch „leeren“ Server-Eintrag überschreiben. */
 function _isPdfDataUrl(s) {
   return typeof s === 'string' && s.startsWith('data:') && s.length > 200;
@@ -327,6 +369,27 @@ function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
   merged.dokumente = mergeDokumenteArrays(localAntrag.dokumente, serverAntrag.dokumente);
   merged.weiterleitungen = mergeAntragArraysByIdOrContent(localAntrag.weiterleitungen, serverAntrag.weiterleitungen);
   merged.abgegebenVon = unionAbgegebenVonMerge(localAntrag.abgegebenVon, serverAntrag.abgegebenVon);
+
+  const abgIds = merged.abgegebenVon || [];
+  const localBearbeiter = localAntrag.bearbeiterId;
+  const serverBearbeiter = serverAntrag.bearbeiterId;
+  if (
+    localBearbeiter != null &&
+    serverBearbeiter != null &&
+    String(localBearbeiter) !== String(serverBearbeiter)
+  ) {
+    const localAbgegeben = abgIds.some((id) => String(id) === String(localBearbeiter));
+    const serverAbgegeben = abgIds.some((id) => String(id) === String(serverBearbeiter));
+    const lUt = localAntrag.updatedAt ? Date.parse(localAntrag.updatedAt) : 0;
+    const sUt = serverAntrag.updatedAt ? Date.parse(serverAntrag.updatedAt) : 0;
+    if (!localAbgegeben && serverAbgegeben) {
+      merged.bearbeiterId = localAntrag.bearbeiterId;
+      merged.bearbeiterName = localAntrag.bearbeiterName;
+    } else if (!localAbgegeben && !serverAbgegeben && lUt >= sUt) {
+      merged.bearbeiterId = localAntrag.bearbeiterId;
+      merged.bearbeiterName = localAntrag.bearbeiterName;
+    }
+  }
 
   const lwl = Array.isArray(localAntrag.weiterleitungen) ? localAntrag.weiterleitungen.length : 0;
   const swl = Array.isArray(serverAntrag.weiterleitungen) ? serverAntrag.weiterleitungen.length : 0;
@@ -837,7 +900,7 @@ async function reloadDataFromServer() {
     const prevAufgabenReload = JSON.parse(localStorage.getItem('gefaengnis_aufgaben') || '[]');
     originalSetItem(
       'gefaengnis_aufgaben',
-      JSON.stringify(mergeAntragArraysByIdOrContent(prevAufgabenReload, aufgaben))
+      JSON.stringify(mergeAufgabenArraysAfterFetch(prevAufgabenReload, aufgaben))
     );
     const prevNotificationsReload = JSON.parse(localStorage.getItem('gefaengnis_notifications') || '[]');
     originalSetItem(

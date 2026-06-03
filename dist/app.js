@@ -4699,6 +4699,12 @@ class AntragSystem {
     return null;
   }
 
+  _touchAntragUpdatedAt(antrag) {
+    if (antrag && typeof antrag === 'object') {
+      antrag.updatedAt = new Date().toISOString();
+    }
+  }
+
   // Bearbeitung übernehmen - Benutzer wird neuer Hauptbearbeiter
   uebernehmBearbeitung(antragId, neuBearbeiterId, neuBearbeiterName, altBearbeiterId) {
     const antrag = this.antraege.find(a => a.id === antragId);
@@ -4724,7 +4730,8 @@ class AntragSystem {
       if (antrag.status === 'offen') {
         antrag.status = 'in-bearbeitung';
       }
-      
+
+      this._touchAntragUpdatedAt(antrag);
       this.saveAntraege();
       
       // Aktivität protokollieren
