@@ -2589,9 +2589,14 @@
       let hatGruppenaufgaben = false;
       let hatWartendeUebergabe = false;
       if (mode === 'offen') {
-        const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antrag.id, currentSession);
-        hatGruppenaufgaben = gruppenAufgaben.length > 0;
-        hatWartendeUebergabe = antrag.hauptbearbeitungWartetAufUebernahme && antrag.zugewiesenAnGruppe;
+        const aufgabenCtxKachel = getAufgabenUebernahmeKontext(antrag.id, antrag);
+        hatGruppenaufgaben = aufgabenCtxKachel.hatGruppenaufgaben;
+        hatWartendeUebergabe = aufgabenCtxKachel.hatWartendeUebergabe;
+        const hatTerminAufgabeKachel = aufgabenCtxKachel.hatTerminAufgabe;
+        const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(
+          antrag.id,
+          currentSession
+        );
         
         if (hatGruppenaufgaben) {
           // Aufgaben-Details anzeigen
@@ -2641,12 +2646,14 @@
           // Für andere Rollen oder offene Anträge: Übernahme nur wenn fachlich möglich.
           // Sonst nur öffnen (kein irreführender "Übernehmen"-Button, der später fehlschlägt).
           const kannAusKachelUebernehmen =
-            antrag.status === 'offen' || hatGruppenaufgaben || hatWartendeUebergabe;
-          const sollHausleitungsModalInKachel =
-            istHausleitung() &&
-            antrag.status !== 'offen' &&
-            !hatGruppenaufgaben &&
-            !hatWartendeUebergabe;
+            antrag.status === 'offen' ||
+            hatGruppenaufgaben ||
+            hatWartendeUebergabe ||
+            hatTerminAufgabeKachel;
+          const sollHausleitungsModalInKachel = sollValBegruendungsModalFuerUebernahme(
+            antrag,
+            aufgabenCtxKachel
+          );
           let buttonText = t('button.takeApplication');
           if (hatWartendeUebergabe) {
             buttonText = currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande';
@@ -2777,6 +2784,46 @@ Persönlich eröffnet
 
     function sessionUserId() {
       return String(currentSession?.userId ?? currentSession?.id ?? '');
+    }
+
+    /** Offene Gruppen-/Übergabe-/Termin-Aufgabe → normaler Übernahmefluss (nicht VAL-Begründungsmodal). */
+    function getAufgabenUebernahmeKontext(antragId, antrag) {
+      const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(
+        antragId,
+        currentSession
+      );
+      const hatGruppenaufgaben = gruppenAufgaben.length > 0;
+      const hatWartendeUebergabe = !!(
+        antrag &&
+        antrag.hauptbearbeitungWartetAufUebernahme &&
+        antrag.zugewiesenAnGruppe &&
+        antragSystem._mitarbeiterGehoertZuGruppe(currentSession, antrag.zugewiesenAnGruppe)
+      );
+      const hatTerminAufgabe = aufgabenSystem.aufgaben.some(
+        (a) =>
+          a.antragId === antragId &&
+          a.status === 'offen' &&
+          a.terminId &&
+          a.terminKalenderNachUebernahme === true &&
+          a.zugewiesenAnTyp === 'mitarbeiter' &&
+          String(a.zugewiesenAnId) === String(currentSession.userId)
+      );
+      return {
+        hatGruppenaufgaben,
+        hatWartendeUebergabe,
+        hatTerminAufgabe,
+        hatDirekteAufgabenUebernahme:
+          hatGruppenaufgaben || hatWartendeUebergabe || hatTerminAufgabe
+      };
+    }
+
+    function sollValBegruendungsModalFuerUebernahme(antrag, aufgabenCtx) {
+      return (
+        istHausleitung() &&
+        antrag &&
+        antrag.status !== 'offen' &&
+        !aufgabenCtx.hatDirekteAufgabenUebernahme
+      );
     }
 
     function istHauptverantwortungFuerAntrag(antrag) {
@@ -3043,11 +3090,11 @@ Persönlich eröffnet
       const kannPhasenBearbeiten = hatHauptverantwortung;
       const nurAufgabenbearbeitungErlaubt =
         hatOffeneAufgabe && !hatHauptverantwortung && !aufgabeErlaubtAntragsbearbeitung(meineOffeneAufgabe);
-      const sollHausleitungsModalInDetail =
-        istHausleitung() &&
-        antrag.status !== 'offen' &&
-        !hatAufgabeZurUebernahme &&
-        !hatWartendeUebergabe;
+      const aufgabenCtxDetail = getAufgabenUebernahmeKontext(antragId, antrag);
+      const sollHausleitungsModalInDetail = sollValBegruendungsModalFuerUebernahme(
+        antrag,
+        aufgabenCtxDetail
+      );
       
       // Prüfen ob der Benutzer den Antrag "abgegeben" hat (durch Aufgabenerledigung mit Antwort/Zurück)
       const hatAntragAbgegeben =
@@ -6729,25 +6776,12 @@ ${t('action.archive')}
         }
         if (istHausleitung()) {
           const antragVal = antragSystem.getAntrag(antragId);
-          const gruppenAufgabenVal = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, currentSession);
-          const hatGruppenaufgabenVal = gruppenAufgabenVal.length > 0;
-          const hatWartendeUebergabeVal = !!(
+          const aufgabenCtxVal = getAufgabenUebernahmeKontext(antragId, antragVal);
+          if (
             antragVal &&
-            antragVal.hauptbearbeitungWartetAufUebernahme &&
-            antragVal.zugewiesenAnGruppe &&
-            antragSystem._mitarbeiterGehoertZuGruppe(currentSession, antragVal.zugewiesenAnGruppe)
-          );
-          const hatTerminAufgabeVal = aufgabenSystem.aufgaben.some(
-            (a) =>
-              a.antragId === antragId &&
-              a.status === 'offen' &&
-              a.terminId &&
-              a.terminKalenderNachUebernahme === true &&
-              a.zugewiesenAnTyp === 'mitarbeiter' &&
-              String(a.zugewiesenAnId) === String(currentSession.userId)
-          );
-          const hatDirekteAufgabenUebernahme = hatGruppenaufgabenVal || hatWartendeUebergabeVal || hatTerminAufgabeVal;
-          if (antragVal && antragVal.bearbeiterId !== currentSession.userId && !hatDirekteAufgabenUebernahme) {
+            String(antragVal.bearbeiterId) !== sessionUserId() &&
+            !aufgabenCtxVal.hatDirekteAufgabenUebernahme
+          ) {
             openHausleitungUebernahmeModal(antragId);
             return;
           }
@@ -6814,25 +6848,12 @@ ${t('action.archive')}
         }
         if (istHausleitung()) {
           const antragVal = antragSystem.getAntrag(antragId);
-          const gruppenAufgabenVal = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, currentSession);
-          const hatGruppenaufgabenVal = gruppenAufgabenVal.length > 0;
-          const hatWartendeUebergabeVal = !!(
+          const aufgabenCtxVal = getAufgabenUebernahmeKontext(antragId, antragVal);
+          if (
             antragVal &&
-            antragVal.hauptbearbeitungWartetAufUebernahme &&
-            antragVal.zugewiesenAnGruppe &&
-            antragSystem._mitarbeiterGehoertZuGruppe(currentSession, antragVal.zugewiesenAnGruppe)
-          );
-          const hatTerminAufgabeVal = aufgabenSystem.aufgaben.some(
-            (a) =>
-              a.antragId === antragId &&
-              a.status === 'offen' &&
-              a.terminId &&
-              a.terminKalenderNachUebernahme === true &&
-              a.zugewiesenAnTyp === 'mitarbeiter' &&
-              String(a.zugewiesenAnId) === String(currentSession.userId)
-          );
-          const hatDirekteAufgabenUebernahme = hatGruppenaufgabenVal || hatWartendeUebergabeVal || hatTerminAufgabeVal;
-          if (antragVal && antragVal.bearbeiterId !== currentSession.userId && !hatDirekteAufgabenUebernahme) {
+            String(antragVal.bearbeiterId) !== sessionUserId() &&
+            !aufgabenCtxVal.hatDirekteAufgabenUebernahme
+          ) {
             openHausleitungUebernahmeModal(antragId);
             return;
           }
