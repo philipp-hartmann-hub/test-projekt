@@ -676,8 +676,25 @@ function scheduleSyncToServer(key) {
   return enqueueSyncJob(key, () => syncToServerImpl(key));
 }
 
-// Flag um zu verhindern, dass reloadDataFromServer während der Synchronisation läuft
+// Flag: expliziter Antrag-Sync läuft (reload wartet statt blind zu überspringen)
 let isSyncing = false;
+
+/** Wartet auf laufende Upload-Warteschlangen, damit Reload nicht veralteten Serverstand zieht. */
+async function waitForPendingSync(timeoutMs = 12000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!isSyncing) {
+      const chains = Object.values(syncKeyChains).filter(Boolean);
+      if (chains.length > 0) {
+        await Promise.allSettled(chains);
+      }
+      if (!isSyncing) return true;
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  console.warn('[Sync] waitForPendingSync: Timeout');
+  return false;
+}
 
 // Explizite Synchronisation eines einzelnen Antrags UND aller Aufgaben
 // Läuft in derselben Warteschlange wie Hintergrund-Syncs für gefaengnis_antraege (kein Überschreiben durch veraltete Jobs).
@@ -764,7 +781,7 @@ async function syncAntragToServer(antragId) {
         }
       }
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await waitForPendingSync(8000);
       return true;
     } catch (error) {
       console.warn('Explizite Antrag-Synchronisation fehlgeschlagen:', error);
@@ -848,13 +865,9 @@ async function reloadDataFromServer() {
     console.warn('Server nicht verbunden, kann Daten nicht neu laden');
     return false;
   }
-  
-  // Warte bis Synchronisation abgeschlossen ist
-  if (isSyncing) {
-    console.log('[Reload] Synchronisation läuft, überspringe reloadDataFromServer');
-    return false;
-  }
-  
+
+  await waitForPendingSync(12000);
+
   try {
     console.log('Lade aktuelle Daten vom Server...');
     const endpoints = {
@@ -1093,6 +1106,7 @@ window.DataSync = {
   loadInitialData,
   serverLogin,
   syncUsersNow,
+  waitForPendingSync,
   reloadDataFromServer,
   syncAntragToServer,
   fetchAktivitaetenForAntrag,

@@ -1040,20 +1040,36 @@
       }
     }
 
-    async function refreshUiNachAktion({ antragId = null, detailAnsicht = 'auto' } = {}) {
-      try {
-        if (window.DataSync && typeof window.DataSync.reloadDataFromServer === 'function') {
-          await window.DataSync.reloadDataFromServer();
-        } else if (typeof window.reloadDataFromStorage === 'function') {
-          window.reloadDataFromStorage();
-        }
-      } catch (e) {
-        console.warn('[UI Refresh] reload fehlgeschlagen:', e);
+    function renderPortalListenUndHub() {
+      if (!currentSession) return;
+      if (typeof window.reloadDataFromStorage === 'function') {
+        window.reloadDataFromStorage();
       }
-
       renderAntraege();
       renderNotifications();
       renderKalender();
+      const hubEl = document.getElementById('jvpHubView');
+      if (hubEl && window.getComputedStyle(hubEl).display !== 'none') {
+        renderJvpHub();
+      }
+    }
+
+    async function refreshUiNachAktion({ antragId = null, detailAnsicht = 'auto' } = {}) {
+      // Sofort aus localStorage/in-memory (Nutzer sieht eigenen Fortschritt ohne Hard-Reload)
+      renderPortalListenUndHub();
+
+      try {
+        if (window.DataSync && typeof window.DataSync.waitForPendingSync === 'function') {
+          await window.DataSync.waitForPendingSync();
+        }
+        if (window.DataSync && typeof window.DataSync.reloadDataFromServer === 'function') {
+          await window.DataSync.reloadDataFromServer();
+        }
+      } catch (e) {
+        console.warn('[UI Refresh] Server-Reload fehlgeschlagen:', e);
+      }
+
+      renderPortalListenUndHub();
 
       if (detailAnsicht === 'close') {
         closeAntragDetail();
@@ -1733,9 +1749,7 @@
         console.log('dataReloaded Event empfangen:', event.detail);
         if (currentSession) {
           console.log('Aktualisiere UI nach dataReloaded...');
-          renderAntraege();
-          renderNotifications();
-          renderKalender();
+          renderPortalListenUndHub();
         }
       });
 
