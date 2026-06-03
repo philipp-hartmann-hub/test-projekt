@@ -77,7 +77,7 @@ const TRANSLATIONS = {
     'application.status': 'Status',
     'application.concern': 'Anliegen',
     'application.justification': 'Begründung',
-    'application.take': 'Antrag nehmen',
+    'application.take': 'Antrag übernehmen',
     'application.details': 'Antragsdetails',
     
     // Antragstypen
@@ -164,7 +164,7 @@ const TRANSLATIONS = {
     'button.open': 'Öffnen',
     'button.back': 'Zurück',
     'button.submit': 'Absenden',
-    'button.takeApplication': 'Antrag nehmen',
+    'button.takeApplication': 'Antrag übernehmen',
     'button.openApplication': 'Antrag öffnen',
     'button.saveDraft': 'Als Entwurf speichern',
     'button.withdraw': 'Zurücknehmen',
@@ -225,7 +225,7 @@ const TRANSLATIONS = {
     // Verlauf
     'history.title': 'Bearbeitungsverlauf',
     'history.created': 'Antrag erstellt',
-    'history.taken': 'Antrag genommen',
+    'history.taken': 'Antrag übernommen',
     'history.takenOver': 'Antrag übernommen von',
     'history.reviewed': 'Sachlich/fachlich geprüft',
     'history.decided': 'Entscheidung getroffen',
@@ -243,7 +243,7 @@ const TRANSLATIONS = {
     'history.noActivities': 'Noch keine Aktivitäten.',
     
     // Hinweise
-    'hint.applicationNotTaken': 'Dieser Antrag wurde noch nicht zur Bearbeitung genommen.',
+    'hint.applicationNotTaken': 'Dieser Antrag wurde noch nicht zur Bearbeitung übernommen.',
     'hint.reviewRequired': 'Der Antrag muss zunächst sachlich/fachlich geprüft werden, bevor eine Entscheidung getroffen werden kann.',
     'hint.openTask': 'Sie haben eine offene Aufgabe zu diesem Antrag.',
     'hint.decisionMade': 'Entscheidung',
@@ -388,7 +388,7 @@ const TRANSLATIONS = {
     'application.status': 'Status',
     'application.concern': 'Concern',
     'application.justification': 'Justification',
-    'application.take': 'Take Application',
+    'application.take': 'Take over application',
     'application.details': 'Application Details',
     
     // Application types
@@ -470,7 +470,7 @@ const TRANSLATIONS = {
     'button.open': 'Open',
     'button.back': 'Back',
     'button.submit': 'Submit',
-    'button.takeApplication': 'Take application',
+    'button.takeApplication': 'Take over application',
     'button.openApplication': 'Open application',
     'button.saveDraft': 'Save as draft',
     'button.withdraw': 'Withdraw',
@@ -548,7 +548,7 @@ const TRANSLATIONS = {
     // History
     'history.title': 'Processing History',
     'history.created': 'Application created',
-    'history.taken': 'Application taken',
+    'history.taken': 'Application taken over',
     'history.takenOver': 'Application taken over from',
     'history.reviewed': 'Technical review completed',
     'history.decided': 'Decision made',
@@ -566,7 +566,7 @@ const TRANSLATIONS = {
     'history.noActivities': 'No activities yet.',
     
     // Hints
-    'hint.applicationNotTaken': 'This application has not yet been taken for processing.',
+    'hint.applicationNotTaken': 'This application has not yet been taken over for processing.',
     'hint.reviewRequired': 'The application must first be technically reviewed before a decision can be made.',
     'hint.openTask': 'You have an open task for this application.',
     'hint.decisionMade': 'Decision',
@@ -686,7 +686,7 @@ const TRANSLATIONS = {
     'application.status': 'Statut',
     'application.concern': 'Objet',
     'application.justification': 'Justification',
-    'application.take': 'Prendre la demande',
+    'application.take': 'Reprendre la demande',
     'application.details': 'Détails de la demande',
     
     // Types de demande
@@ -768,7 +768,7 @@ const TRANSLATIONS = {
     'button.open': 'Ouvrir',
     'button.back': 'Retour',
     'button.submit': 'Soumettre',
-    'button.takeApplication': 'Prendre la demande',
+    'button.takeApplication': 'Reprendre la demande',
     'button.openApplication': 'Ouvrir la demande',
     'button.saveDraft': 'Enregistrer comme brouillon',
     'button.withdraw': 'Retirer',
@@ -846,7 +846,7 @@ const TRANSLATIONS = {
     // Historique
     'history.title': 'Historique de traitement',
     'history.created': 'Demande créée',
-    'history.taken': 'Demande prise',
+    'history.taken': 'Demande reprise',
     'history.takenOver': 'Demande reprise de',
     'history.reviewed': 'Examen technique terminé',
     'history.decided': 'Décision prise',
@@ -864,7 +864,7 @@ const TRANSLATIONS = {
     'history.noActivities': 'Pas encore d\'activités.',
     
     // Indices
-    'hint.applicationNotTaken': 'Cette demande n\'a pas encore été prise en charge.',
+    'hint.applicationNotTaken': 'Cette demande n\'a pas encore été reprise pour traitement.',
     'hint.reviewRequired': 'La demande doit d\'abord être examinée techniquement avant qu\'une décision puisse être prise.',
     'hint.openTask': 'Vous avez une tâche ouverte pour cette demande.',
     'hint.decisionMade': 'Décision',

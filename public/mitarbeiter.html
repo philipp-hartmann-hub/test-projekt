@@ -277,6 +277,17 @@
         <p class="modal-info">Bitte dokumentieren Sie das Ergebnis Ihrer sachlichen und fachlichen Prüfung.</p>
         <div class="form-group">
           <label for="pruefungKommentar">Prüfungsergebnis / Anmerkungen <span class="required">*</span></label>
+          <p class="field-hint" style="margin-bottom: 0.5rem;">Textbausteine – Klick fügt den Text ins Feld ein (mehrfach kombinierbar).</p>
+          <div class="schnellantwort-buttons" role="group" aria-label="Prüfungstextbausteine">
+            <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Sachlich und fachlich ohne Bedenken.')">Ohne Bedenken</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Antrag ist vollständig und entscheidungsreif.')">Vollständig / entscheidungsreif</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Unterlagen vollständig, keine weiteren Angaben erforderlich.')">Unterlagen vollständig</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Kann zur Entscheidung vorgelegt werden.')">Zur Entscheidung</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Rückfrage beim Antragsteller erforderlich.')">Rückfrage Antragsteller</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Weiterleitung an Fachstelle erforderlich.')">Weiterleitung Fachstelle</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Finanzielle Mittel sind ausreichend.')">Mittel ausreichend</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Antrag entspricht den Vollzugsvorschriften.')">Vollzugsvorschriften</button>
+          </div>
           <textarea id="pruefungKommentar" rows="4" placeholder="Ergebnis der sachlichen und fachlichen Prüfung..." required></textarea>
         </div>
         <input type="hidden" id="pruefungAntragId">
@@ -2764,12 +2775,16 @@ Persönlich eröffnet
       return aufgabe.bearbeitungNachErledigung === 'uebertragen';
     }
 
+    function sessionUserId() {
+      return String(currentSession?.userId ?? currentSession?.id ?? '');
+    }
+
     function istHauptverantwortungFuerAntrag(antrag) {
       return !!(
         antrag &&
         antrag.bearbeiterId != null &&
         antrag.bearbeiterId !== '' &&
-        String(antrag.bearbeiterId) === String(currentSession.userId) &&
+        String(antrag.bearbeiterId) === sessionUserId() &&
         !antrag.veraktet
       );
     }
@@ -3016,19 +3031,16 @@ Persönlich eröffnet
         meineOffeneAufgabe.zugewiesenAnTyp === 'mitarbeiter' &&
         String(meineOffeneAufgabe.zugewiesenAnId) === String(currentSession.userId) &&
         !meineOffeneAufgabe.terminKalenderNachUebernahme;
-      // Hauptverantwortung = aktueller bearbeiterId (nach Übernahme/„Antrag nehmen“)
+      // Hauptverantwortung = aktueller bearbeiterId (nach „Antrag übernehmen“)
       const hatHauptverantwortung =
         antrag.bearbeiterId != null &&
         antrag.bearbeiterId !== '' &&
-        String(antrag.bearbeiterId) === String(currentSession.userId) &&
+        String(antrag.bearbeiterId) === sessionUserId() &&
         !antrag.veraktet;
       const istBearbeiter = hatHauptverantwortung;
       // Offene Aufgabe blockiert nur Mitwirkende ohne Hauptverantwortung
       const aufgabeMussErstErledigtWerden = hatOffeneAufgabe && !hatHauptverantwortung;
       const kannPhasenBearbeiten = hatHauptverantwortung;
-      const darfAntragInhaltBearbeiten =
-        hatHauptverantwortung ||
-        (meineOffeneAufgabe && aufgabeErlaubtAntragsbearbeitung(meineOffeneAufgabe));
       const nurAufgabenbearbeitungErlaubt =
         hatOffeneAufgabe && !hatHauptverantwortung && !aufgabeErlaubtAntragsbearbeitung(meineOffeneAufgabe);
       const sollHausleitungsModalInDetail =
@@ -3054,6 +3066,12 @@ Persönlich eröffnet
         // Hat den Antrag abgegeben und ist nicht der aktuelle Bearbeiter - kein Zugriff mehr
         hatAktuellenZugriff = false;
       }
+
+      // Dokumente/Notizen: wie früher bei aktivem Zugriff, aber nicht für reine Aufgaben ohne Antragsrecht
+      // und nicht beim bloßen Ansehen offener Anträge vor der Übernahme
+      const darfAntragInhaltBearbeiten =
+        hatHauptverantwortung ||
+        (hatAktuellenZugriff && !nurAufgabenbearbeitungErlaubt && !istOffen);
       
       // Berechtigungen:
       // - hatHauptverantwortung: alle Phasen-Aktionen der aktuellen Bearbeitungsphase
@@ -5524,24 +5542,29 @@ ${t('action.archive')}
       document.body.removeChild(link);
     }
     
-    // Schnellantwort in das Antwortfeld einfügen
-    function insertSchnellantwort(text) {
-      const textarea = document.getElementById('aufgabeAntwortText');
+    /** Textbaustein in ein Textfeld einfügen (Anklicken, mehrfach kombinierbar). */
+    function insertTextbausteinInTextarea(textareaId, text, separator = ' ') {
+      const textarea = document.getElementById(textareaId);
+      if (!textarea || text == null) return;
       const currentValue = textarea.value;
-      
-      // Wenn bereits Text vorhanden ist, mit Leerzeichen oder Zeilenumbruch trennen
       if (currentValue.trim()) {
-        // Prüfen ob der Text schon mit dem Schnelltext endet
-        if (!currentValue.trim().endsWith(text)) {
-          textarea.value = currentValue + ' ' + text;
+        const trimmed = currentValue.trim();
+        if (!trimmed.includes(text)) {
+          textarea.value = trimmed + separator + text;
         }
       } else {
         textarea.value = text;
       }
-      
-      // Cursor ans Ende setzen und Fokus geben
       textarea.focus();
       textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }
+
+    function insertSchnellantwort(text) {
+      insertTextbausteinInTextarea('aufgabeAntwortText', text, ' ');
+    }
+
+    function insertPruefungTextbaustein(text) {
+      insertTextbausteinInTextarea('pruefungKommentar', text, '\n');
     }
     
     function toggleAntwortFeld() {
@@ -5792,9 +5815,9 @@ ${t('action.archive')}
       
       // Phase-Info setzen
       const phaseTexte = {
-        'genommen': currentLanguage === 'en' ? 'You have taken the application. It is now in the "Review" phase.'
-                  : currentLanguage === 'fr' ? 'Vous avez pris la demande. Elle est maintenant en phase "Examen".'
-                  : 'Sie haben den Antrag genommen. Er befindet sich jetzt in der Phase "Prüfung".',
+        'genommen': currentLanguage === 'en' ? 'You have taken over the application. It is now in the "Review" phase.'
+                  : currentLanguage === 'fr' ? 'Vous avez repris la demande. Elle est maintenant en phase "Examen".'
+                  : 'Sie haben den Antrag übernommen. Er befindet sich jetzt in der Phase "Prüfung".',
         'geprueft': currentLanguage === 'en' ? 'The application has been reviewed. It is now in the "Decision" phase.'
                   : currentLanguage === 'fr' ? 'La demande a été examinée. Elle est maintenant en phase "Décision".'
                   : 'Der Antrag wurde geprüft. Er befindet sich jetzt in der Phase "Entscheidung".',
