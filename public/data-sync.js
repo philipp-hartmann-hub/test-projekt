@@ -397,6 +397,13 @@ const ENTSCHEIDUNG_PHASE_KEYS = [
   'bearbeitetAm'
 ];
 
+const VOLLZUG_PHASE_KEYS = [
+  'vollzogen',
+  'vollzogenAm',
+  'vollzogenVon',
+  'vollzogenVonId'
+];
+
 function _pickRicherField(localVal, serverVal) {
   if (localVal == null || localVal === '') {
     return serverVal != null && serverVal !== '' ? serverVal : localVal;
@@ -448,6 +455,19 @@ function mergePhaseProgressFields(merged, localAntrag, serverAntrag) {
       ['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(serverAntrag.status)
     ) {
       merged.status = serverAntrag.status;
+    }
+  }
+
+  if (merged.vollzogen === true) {
+    const src =
+      localAntrag.vollzogen === true && serverAntrag.vollzogen !== true
+        ? localAntrag
+        : serverAntrag.vollzogen === true && localAntrag.vollzogen !== true
+          ? serverAntrag
+          : progressed;
+    for (const k of VOLLZUG_PHASE_KEYS) {
+      merged[k] = _pickRicherField(localAntrag[k], serverAntrag[k]);
+      if ((merged[k] == null || merged[k] === '') && src[k] != null) merged[k] = src[k];
     }
   }
 }

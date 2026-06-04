@@ -3203,8 +3203,6 @@ Persönlich eröffnet
         !istErledigt &&
         !antrag.entscheidungGetroffen &&
         antrag.sachlichGeprueft;
-      const veraktenPhaseAktiv =
-        kannPhasenBearbeiten && !antrag.veraktet && prozessStatus.abschluss === 'aktiv';
       const highlightUebernehmen =
         kannUebernehmen && (prozessStatus.eingang === 'aktiv' || hatWartendeUebergabe);
       const highlightPruefung = pruefungPhaseAktiv && prozessStatus.pruefung === 'aktiv';
@@ -3213,14 +3211,21 @@ Persönlich eröffnet
         antrag.wartetAufEroeffnung && kannPhasenBearbeiten && prozessStatus.bekanntgabe === 'aktiv';
       const highlightVollzugBestaetigen =
         antrag.wartetAufVollzug && kannPhasenBearbeiten && prozessStatus.bekanntgabe === 'aktiv';
-      const vollzugPhaseAktiv =
-        kannVollziehenVerakten &&
-        !antrag.veraktet &&
+      const vollzugAusstehend =
         istErledigt &&
         !antrag.vollzogen &&
         (antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') &&
-        prozessStatus.vollzug === 'aktiv';
-      const highlightVollzug = vollzugPhaseAktiv;
+        istBekanntgabeAbgeschlossen(antrag) &&
+        antrag.wartetAufVollzug !== true;
+      const vollzugPhaseAktiv =
+        kannVollziehenVerakten && !antrag.veraktet && vollzugAusstehend;
+      const highlightVollzug = vollzugPhaseAktiv && prozessStatus.vollzug === 'aktiv';
+      const veraktenAusstehend =
+        !antrag.veraktet &&
+        (antrag.vollzogen === true ||
+          (antrag.status === 'abgelehnt' && istErledigt && istBekanntgabeAbgeschlossen(antrag)));
+      const veraktenPhaseAktiv =
+        kannPhasenBearbeiten && veraktenAusstehend;
       const labelVollzugBestaetigen =
         currentLanguage === 'en'
           ? 'Confirm application execution'
@@ -4285,7 +4290,7 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                     </button>
                   ` : ''}
                   ${veraktenPhaseAktiv ? `
-                    <button class="btn btn-secondary btn-large${prozessStatus.abschluss === 'aktiv' ? ' btn-phasenaktion' : ''}" onclick="veraktenAntrag('${antrag.id}')">
+                    <button class="btn btn-secondary btn-large${prozessStatus.abschluss === 'aktiv' || antrag.vollzogen ? ' btn-phasenaktion' : ''}" onclick="veraktenAntrag('${antrag.id}')">
 ${t('action.archive')}
                     </button>
                   ` : ''}
@@ -5944,13 +5949,19 @@ ${t('task.create')}
           );
           return;
         }
-        if (!antrag.erledigt || !(antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt')) {
+        const darfVollziehen =
+          (antrag.erledigt === true ||
+            antrag.status === 'genehmigt' ||
+            antrag.status === 'teilweise-genehmigt') &&
+          istBekanntgabeAbgeschlossen(antrag) &&
+          antrag.wartetAufVollzug !== true;
+        if (!darfVollziehen) {
           await showAlert(
             currentLanguage === 'en'
-              ? 'Execution can only be confirmed for approved applications.'
+              ? 'Execution can only be confirmed for approved applications after notification.'
               : currentLanguage === 'fr'
-              ? "L'exécution ne peut être confirmée que pour les demandes approuvées."
-              : 'Der Vollzug kann nur bei genehmigten Anträgen bestätigt werden.'
+              ? "L'exécution ne peut être confirmée qu'après notification pour les demandes approuvées."
+              : 'Der Vollzug kann nur bei genehmigten Anträgen nach abgeschlossener Bekanntgabe bestätigt werden.'
           );
           return;
         }
@@ -5984,8 +5995,6 @@ ${t('task.create')}
               : 'Lokal gespeichert, Synchronisation fehlgeschlagen. Bitte später erneut synchronisieren.'
           );
         }
-
-        openWeiterleitenModal(antragId, 'vollzug');
       });
     }
 
@@ -6858,6 +6867,19 @@ ${t('task.create')}
     // SONSTIGE FUNKTIONEN
     // ============================================
 
+    /** Final entschieden (auch ältere Anträge ohne erledigt-Flag). */
+    function istAntragEntschiedenErledigt(antrag) {
+      return (
+        antrag.erledigt === true ||
+        ['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(antrag.status)
+      );
+    }
+
+    function istBekanntgabeAbgeschlossen(antrag) {
+      if (antrag.persoenlichEroeffnet === true) return true;
+      return istAntragEntschiedenErledigt(antrag);
+    }
+
     // Berechnet den aktuellen Prozess-Status für die grafische Darstellung
     function berechneProzessStatus(antrag) {
       const status = {
@@ -6894,38 +6916,46 @@ ${t('task.create')}
       // Bekanntgabe:
       // - aktiv bei gewählter persönlicher Eröffnung ODER Vollzugsplanung (vor erfolgter persönlicher Eröffnung)
       // - erledigt sobald persönlich eröffnet ODER regulär erledigt
+      // Warteflags gelten nur in in-bearbeitung (Legacy: genehmigt + altes Flag blockiert nicht mehr)
       const wartetAufBekanntgabe =
-        !!antrag.wartetAufEroeffnung ||
-        (!!antrag.wartetAufVollzug && antrag.persoenlichEroeffnet !== true);
-      const bekanntgabeErfolgt =
-        antrag.persoenlichEroeffnet === true ||
-        (antrag.erledigt === true && !antrag.wartetAufEroeffnung);
-      if (antrag.entscheidungGetroffen && wartetAufBekanntgabe) {
+        antrag.status === 'in-bearbeitung' &&
+        (antrag.wartetAufEroeffnung === true ||
+          (antrag.wartetAufVollzug === true && antrag.persoenlichEroeffnet !== true));
+      const bekanntgabeErfolgt = istBekanntgabeAbgeschlossen(antrag);
+      if (
+        (antrag.entscheidungGetroffen || antrag.geplantesErgebnis) &&
+        wartetAufBekanntgabe
+      ) {
         status.bekanntgabe = 'aktiv';
       } else if (bekanntgabeErfolgt) {
         status.bekanntgabe = 'erledigt';
       }
       
-      // Vollzug:
-      // - aktiv wenn Vollzug explizit aussteht (wartetAufVollzug)
-      // - alternativ wie bisher nach erledigter Bekanntgabe bis vollzogen
-      // Nur relevant für genehmigt/teilweise-genehmigt
+      // Vollzug: nur bei genehmigt/teilweise-genehmigt nach abgeschlossener Bekanntgabe
       const istGenehmigt = antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt';
-      if (istGenehmigt && antrag.wartetAufVollzug && !antrag.wartetAufEroeffnung && !antrag.vollzogen) {
+      if (
+        istGenehmigt &&
+        antrag.wartetAufVollzug === true &&
+        antrag.wartetAufEroeffnung !== true &&
+        !antrag.vollzogen &&
+        antrag.status === 'in-bearbeitung'
+      ) {
         status.vollzug = 'aktiv';
-      } else if (istGenehmigt && bekanntgabeErfolgt && !antrag.vollzogen) {
+      } else if (istGenehmigt && bekanntgabeErfolgt && !antrag.vollzogen && antrag.wartetAufVollzug !== true) {
         status.vollzug = 'aktiv';
-      } else if (antrag.vollzogen) {
+      } else if (antrag.vollzogen === true) {
         status.vollzug = 'erledigt';
       } else if (antrag.status === 'abgelehnt' && bekanntgabeErfolgt) {
-        // Bei Ablehnung ist Vollzug nicht erforderlich, aber wir markieren es als erledigt/übersprungen
         status.vollzug = 'uebersprungen';
       }
       
-      // Abschluss - wenn vollzogen aber noch nicht veraktet
-      if ((antrag.vollzogen || antrag.status === 'abgelehnt') && !antrag.veraktet && bekanntgabeErfolgt) {
+      // Abschluss
+      if (
+        !antrag.veraktet &&
+        (antrag.vollzogen === true || (antrag.status === 'abgelehnt' && bekanntgabeErfolgt))
+      ) {
         status.abschluss = 'aktiv';
-      } else if (antrag.veraktet) {
+      } else if (antrag.veraktet === true) {
         status.abschluss = 'erledigt';
       }
       

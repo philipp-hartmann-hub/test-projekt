@@ -4694,7 +4694,15 @@ class AntragSystem {
   // Antrag als vollzogen markieren
   markiereAlsVollzogen(antragId, mitarbeiterId, mitarbeiterName) {
     const antrag = this.antraege.find(a => a.id === antragId);
-    if (antrag && antrag.erledigt) {
+    const darfVollziehen =
+      antrag &&
+      (antrag.erledigt === true ||
+        antrag.status === 'genehmigt' ||
+        antrag.status === 'teilweise-genehmigt');
+    if (darfVollziehen) {
+      if (!antrag.erledigt) {
+        antrag.erledigt = true;
+      }
       antrag.vollzogen = true;
       antrag.vollzogenAm = new Date().toISOString();
       antrag.vollzogenVon = mitarbeiterName;
