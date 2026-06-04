@@ -150,14 +150,19 @@ async function loadInitialData() {
 
   try {
     // Alle Daten parallel laden
-    const [users, antraege, aufgaben, notifications, aktivitaeten, termine] = await Promise.all([
+    const [users, antraege, aufgaben, notifications, aktivitaeten, termine, antragTypenKatalog] = await Promise.all([
       apiCall('/users'),
       apiCall('/antraege'),
       apiCall('/aufgaben'),
       apiCall('/notifications'),
       apiCall('/aktivitaeten'),
-      apiCall('/termine')
+      apiCall('/termine'),
+      apiCall('/antrag-typen-katalog').catch(() => null)
     ]);
+
+    if (antragTypenKatalog && Array.isArray(antragTypenKatalog.typen) && antragTypenKatalog.typen.length) {
+      localStorage.setItem('gefaengnis_antrag_typen_katalog', JSON.stringify(antragTypenKatalog));
+    }
 
     const userMergeResult = storeMergedUsersFromServer(users);
     const prevAntraegeInit = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
@@ -1223,8 +1228,26 @@ const BACKUP_STORAGE_KEYS = [
   'gefaengnis_notifications',
   'gefaengnis_aktivitaeten',
   'gefaengnis_termine',
-  'gefaengnis_externe_partner'
+  'gefaengnis_externe_partner',
+  'gefaengnis_antrag_typen_katalog'
 ];
+
+async function syncAntragTypenKatalogToServer() {
+  if (!serverConnected) return false;
+  try {
+    const raw = localStorage.getItem('gefaengnis_antrag_typen_katalog');
+    if (!raw) return false;
+    const katalog = JSON.parse(raw);
+    await apiCall('/antrag-typen-katalog', {
+      method: 'PUT',
+      body: JSON.stringify(katalog)
+    });
+    return true;
+  } catch (error) {
+    console.warn('syncAntragTypenKatalogToServer:', error?.message || error);
+    return false;
+  }
+}
 
 function _mergeBackupArray(key, existing, incoming) {
   const ex = Array.isArray(existing) ? existing : [];
@@ -1335,6 +1358,7 @@ window.DataSync = {
   downloadAppDataBackup,
   importAppDataBundle,
   fetchServerDataCounts,
+  syncAntragTypenKatalogToServer,
   isConnected: () => serverConnected,
   isLoaded: () => initialDataLoaded
 };

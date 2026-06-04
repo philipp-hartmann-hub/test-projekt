@@ -2940,7 +2940,11 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   color: var(--accent-primary);
 }
 
-/* Teilhabegeld: Verfügungsvorschlag (nur Mitarbeiterportal Antragsdetail) */
+/* Verfügungsvorschlag in Antragsdetail und Aktions-Modals */
+.modal-verfuegungsvorschlag-host {
+  margin-bottom: 1rem;
+}
+
 .verfuegungsvorschlag-box {
   margin-top: 1rem;
   border-left: 4px solid var(--jhh-secondary);

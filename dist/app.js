@@ -165,6 +165,7 @@ const TRANSLATIONS = {
     'button.back': 'Zurück',
     'button.submit': 'Absenden',
     'button.takeApplication': 'Antrag übernehmen',
+    'button.takeProcessing': 'Bearbeitung übernehmen',
     'button.openApplication': 'Antrag öffnen',
     'button.saveDraft': 'Als Entwurf speichern',
     'button.withdraw': 'Zurücknehmen',
@@ -471,6 +472,7 @@ const TRANSLATIONS = {
     'button.back': 'Back',
     'button.submit': 'Submit',
     'button.takeApplication': 'Take over application',
+    'button.takeProcessing': 'Take over processing',
     'button.openApplication': 'Open application',
     'button.saveDraft': 'Save as draft',
     'button.withdraw': 'Withdraw',
@@ -769,6 +771,7 @@ const TRANSLATIONS = {
     'button.back': 'Retour',
     'button.submit': 'Soumettre',
     'button.takeApplication': 'Reprendre la demande',
+    'button.takeProcessing': 'Reprendre le traitement',
     'button.openApplication': 'Ouvrir la demande',
     'button.saveDraft': 'Enregistrer comme brouillon',
     'button.withdraw': 'Retirer',
@@ -3437,6 +3440,10 @@ class AntragSystem {
   }
 
   getAntragTypLabel(type) {
+    if (typeof antragTypenKatalogSystem !== 'undefined') {
+      const fromKatalog = antragTypenKatalogSystem.getTypLabel(type);
+      if (fromKatalog) return fromKatalog;
+    }
     const labels = {
       teilhabegeld: 'Teilhabegeld',
       eigentum: 'Eigentum in der Kammer',
@@ -5152,8 +5159,8 @@ if (typeof terminSystem !== 'undefined' && typeof terminSystem.migrateInsasseTer
   terminSystem.migrateInsasseTermine();
 }
 
-/** Themengruppen für Antragsauswahl und Listenfilter (Insassen- und Mitarbeiterportal) */
-const ANTRAG_TYPE_GRUPPEN = [
+/** Themengruppen für Antragsauswahl und Listenfilter (aus Admin-Katalog, Fallback statisch) */
+const ANTRAG_TYPE_GRUPPEN_FALLBACK = [
   {
     id: 'finanzen-unterbringung',
     titel: 'Finanzen & Unterbringung',
@@ -5181,26 +5188,34 @@ const ANTRAG_TYPE_GRUPPEN = [
   }
 ];
 
+function _getAntragTypeGruppenLive() {
+  if (typeof getAntragTypeGruppen === 'function') {
+    const live = getAntragTypeGruppen();
+    if (live && live.length) return live;
+  }
+  return ANTRAG_TYPE_GRUPPEN_FALLBACK;
+}
+
 function getAntragTypeGruppeId(type) {
-  const gruppe = ANTRAG_TYPE_GRUPPEN.find((g) => g.typen.includes(type));
+  const gruppe = _getAntragTypeGruppenLive().find((g) => g.typen.includes(type));
   return gruppe ? gruppe.id : 'sonstiges';
 }
 
 function getAntragThemaLabel(type) {
-  const gruppe = ANTRAG_TYPE_GRUPPEN.find((g) => g.typen.includes(type));
+  const gruppe = _getAntragTypeGruppenLive().find((g) => g.typen.includes(type));
   return gruppe ? gruppe.titel : 'Sonstiges';
 }
 
 function antragTypPasstZuFilter(type, filterId) {
   if (!filterId || filterId === 'alle') return true;
-  const gruppe = ANTRAG_TYPE_GRUPPEN.find((g) => g.id === filterId);
+  const gruppe = _getAntragTypeGruppenLive().find((g) => g.id === filterId);
   return gruppe ? gruppe.typen.includes(type) : true;
 }
 
 function getAntragTypeFilterChips() {
   return [
     { id: 'alle', titel: 'Alle' },
-    ...ANTRAG_TYPE_GRUPPEN.map((g) => ({ id: g.id, titel: g.titel }))
+    ..._getAntragTypeGruppenLive().map((g) => ({ id: g.id, titel: g.titel }))
   ];
 }
 
@@ -5241,7 +5256,7 @@ function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
   const handlerAttr = onChangeHandler
     ? ` onchange="typeof window['${onChangeHandler}']==='function'&&window['${onChangeHandler}']()"`
     : '';
-  return `<div class="antrag-type-accordion">${ANTRAG_TYPE_GRUPPEN.map((gruppe) => {
+  return `<div class="antrag-type-accordion">${_getAntragTypeGruppenLive().map((gruppe) => {
     const hasSelected = Boolean(selected && gruppe.typen.includes(selected));
     const options = gruppe.typen
       .map((type) => {
@@ -6136,6 +6151,14 @@ function reloadDataFromStorage() {
     if (rawExterne && typeof externePartnerSystem !== 'undefined') {
       externePartnerSystem.partner = JSON.parse(rawExterne);
       if (externePartnerSystem.partner.length === 0) externePartnerSystem.seedDefaultsIfEmpty();
+    }
+    const rawKatalog = localStorage.getItem('gefaengnis_antrag_typen_katalog');
+    if (rawKatalog && typeof antragTypenKatalogSystem !== 'undefined') {
+      try {
+        antragTypenKatalogSystem.applyKatalog(JSON.parse(rawKatalog));
+      } catch (_) {
+        /* ignore */
+      }
     }
     const rawAufgaben = localStorage.getItem('gefaengnis_aufgaben');
     if (rawAufgaben) {

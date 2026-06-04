@@ -795,6 +795,18 @@
             </div>
           </div>
         </div>
+
+        <!-- Admin-definierte Antragstypen (Freitext) -->
+        <div id="katalogFreitextFields" style="display: none;">
+          <div class="form-group">
+            <label for="katalogFreitextAnliegen">Ihr Anliegen <span class="required">*</span></label>
+            <textarea id="katalogFreitextAnliegen" rows="4" placeholder="Bitte beschreiben Sie Ihr Anliegen…"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="katalogFreitextBegruendung">Begründung (optional)</label>
+            <textarea id="katalogFreitextBegruendung" rows="3" placeholder="Weitere Angaben…"></textarea>
+          </div>
+        </div>
         </div>
       </div>
       <div id="newAntragFormError" class="insassen-form-error" role="alert" hidden></div>
@@ -1389,6 +1401,17 @@
           </div>
         </div>
 
+        <div id="entwurfKatalogFreitextFields" style="display: none;">
+          <div class="form-group">
+            <label for="entwurfKatalogFreitextAnliegen">Ihr Anliegen <span class="required">*</span></label>
+            <textarea id="entwurfKatalogFreitextAnliegen" rows="4"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="entwurfKatalogFreitextBegruendung">Begründung (optional)</label>
+            <textarea id="entwurfKatalogFreitextBegruendung" rows="3"></textarea>
+          </div>
+        </div>
+
         <input type="hidden" id="entwurfId">
         </div>
       </div>
@@ -1594,6 +1617,7 @@
   </div>
 
   <script src="data-sync.js?v=20260519-tdzfix"></script>
+  <script src="antrag-typen-katalog.js"></script>
   <script src="app.js?v=20260527-wizard3"></script>
   <script>
     let currentSession = null;
@@ -3362,6 +3386,14 @@
         const el = document.getElementById(id);
         if (el) el.style.display = visibleType && type === visibleType ? 'block' : 'none';
       });
+      const isFreitext =
+        visibleType &&
+        typeof antragTypenKatalogSystem !== 'undefined' &&
+        antragTypenKatalogSystem.isFreitextTyp(visibleType);
+      const ftNew = document.getElementById('katalogFreitextFields');
+      const ftEntwurf = document.getElementById('entwurfKatalogFreitextFields');
+      if (ftNew) ftNew.style.display = isFreitext ? 'block' : 'none';
+      if (ftEntwurf) ftEntwurf.style.display = isFreitext ? 'block' : 'none';
     }
 
     function hideAllNewAntragFieldPanels() {
@@ -3923,6 +3955,24 @@
         const data = readTelefonkontoForm('');
         const check = validateTelefonkontoData(data);
         return { type, data, valid: check.valid, error: check.error };
+      } else if (
+        typeof antragTypenKatalogSystem !== 'undefined' &&
+        antragTypenKatalogSystem.isFreitextTyp(type)
+      ) {
+        const anliegen = document.getElementById('katalogFreitextAnliegen')?.value.trim() || '';
+        const begr = document.getElementById('katalogFreitextBegruendung')?.value.trim() || '';
+        if (!anliegen) {
+          return { type, data: {}, valid: false, error: 'Bitte beschreiben Sie Ihr Anliegen.' };
+        }
+        return {
+          type,
+          data: {
+            katalogAnliegen: anliegen,
+            antragBegruendung: begr || anliegen
+          },
+          valid: true,
+          error: null
+        };
       }
       return { type, data: {}, valid: false, error: 'Unbekannter Antragstyp.' };
     }
@@ -4215,6 +4265,18 @@
         setVollzugslockerungForm('entwurf', entwurf);
       } else if (entwurf.type === 'telefonkonto-einrichtung') {
         setTelefonkontoForm('entwurf', entwurf);
+      } else if (
+        typeof antragTypenKatalogSystem !== 'undefined' &&
+        antragTypenKatalogSystem.isFreitextTyp(entwurf.type)
+      ) {
+        const anliegenEl = document.getElementById('entwurfKatalogFreitextAnliegen');
+        const begrEl = document.getElementById('entwurfKatalogFreitextBegruendung');
+        const begrText =
+          typeof entwurf.antragBegruendung === 'object'
+            ? entwurf.antragBegruendung?.text
+            : entwurf.antragBegruendung;
+        if (anliegenEl) anliegenEl.value = entwurf.katalogAnliegen || begrText || '';
+        if (begrEl) begrEl.value = begrText || '';
       }
       
       setEntwurfWizardStep('form', { type: entwurf.type });
@@ -4325,6 +4387,22 @@
         const data = readTelefonkontoForm('entwurf');
         const check = validateTelefonkontoData(data);
         return { type, ...data, valid: check.valid, error: check.error };
+      } else if (
+        typeof antragTypenKatalogSystem !== 'undefined' &&
+        antragTypenKatalogSystem.isFreitextTyp(type)
+      ) {
+        const anliegen = document.getElementById('entwurfKatalogFreitextAnliegen')?.value.trim() || '';
+        const begr = document.getElementById('entwurfKatalogFreitextBegruendung')?.value.trim() || '';
+        if (!anliegen) {
+          return { type, valid: false, error: 'Bitte beschreiben Sie Ihr Anliegen.' };
+        }
+        return {
+          type,
+          katalogAnliegen: anliegen,
+          antragBegruendung: begr || anliegen,
+          valid: true,
+          error: null
+        };
       }
       return { type, valid: false, error: 'Unbekannter Antragstyp.' };
     }

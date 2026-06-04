@@ -1003,6 +1003,7 @@
   </div>
 
   <script src="data-sync.js"></script>
+  <script src="antrag-typen-katalog.js"></script>
   <script src="app.js"></script>
   <script>
     let currentSession = null;
@@ -2269,7 +2270,7 @@
       document.querySelectorAll('input[name="notizTyp"]').forEach(r => r.checked = false);
       
       // Modal öffnen
-      openModal('notizTypModal');
+      openAntragAktionsModal('notizTypModal', antragId);
     }
     
     // Notiz-Typ auswählen (Radio-Button aktivieren)
@@ -2714,7 +2715,8 @@
             antrag,
             aufgabenCtxKachel || getAufgabenUebernahmeKontext(antrag.id, antrag)
           );
-          let buttonText = t('button.takeApplication');
+          let buttonText =
+            antrag.status === 'offen' ? t('button.takeProcessing') : t('button.takeApplication');
           if (hatWartendeUebergabe) {
             buttonText = currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande';
           } else if (hatGruppenaufgaben && antrag.status === 'in-bearbeitung') {
@@ -3886,6 +3888,34 @@ Persönlich eröffnet
           </div>
         `;
       }
+
+      if (
+        !anliegenHtml &&
+        typeof antragTypenKatalogSystem !== 'undefined' &&
+        antragTypenKatalogSystem.isFreitextTyp(antrag.type)
+      ) {
+        const typLabel = antragSystem.getAntragTypLabel(antrag.type);
+        const anliegenText =
+          antrag.katalogAnliegen ||
+          (typeof antrag.antragBegruendung === 'object'
+            ? antrag.antragBegruendung?.text
+            : antrag.antragBegruendung) ||
+          '–';
+        const vvBox =
+          typeof getVerfuegungsvorschlagBoxHtmlForAntrag === 'function'
+            ? getVerfuegungsvorschlagBoxHtmlForAntrag(antrag, currentLanguage)
+            : '';
+        anliegenHtml = `
+          <div class="detail-box">
+            <h4>${typLabel}</h4>
+            <div class="detail-row">
+              <span class="detail-label">${currentLanguage === 'en' ? 'Request' : currentLanguage === 'fr' ? 'Demande' : 'Anliegen'}:</span>
+              <span class="detail-value">${getTranslatedUserText(anliegenText)}</span>
+            </div>
+          </div>
+          ${vvBox}
+        `;
+      }
       
       // Nur die aktuell neueste offene Aufgabe (erledigte stehen im Bearbeitungsverlauf)
       const aufgabenAlle = aufgabenSystem.getAufgabenZuAntrag(antragId);
@@ -4270,14 +4300,14 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                 <div class="action-buttons-phase">
                   ${highlightUebernehmen ? `
                     <button class="btn btn-primary btn-large btn-phasenaktion" onclick="${sollHausleitungsModalInDetail ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
-                      ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : t('button.takeApplication')}
+                      ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : istOffen ? t('button.takeProcessing') : t('button.takeApplication')}
                     </button>
                   ` : ''}
                   ${kannUebernehmen && !highlightUebernehmen ? `
                     <button class="btn btn-primary btn-large" onclick="${sollHausleitungsModalInDetail ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
                       ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : 
                         hatAufgabeZurUebernahme ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche') : 
-                        t('button.takeApplication')}
+                        istOffen ? t('button.takeProcessing') : t('button.takeApplication')}
                     </button>
                   ` : ''}
                   ${pruefungPhaseAktiv ? `
@@ -4407,6 +4437,52 @@ ${t('task.create')}
     }
 
     // ============================================
+    // VERFÜGUNGSVORSCHLAG IN AKTIONS-MODALS
+    // ============================================
+
+    function getVerfuegungsvorschlagMeta(antrag) {
+      if (typeof getVerfuegungsvorschlagMetaForAntrag === 'function') {
+        return getVerfuegungsvorschlagMetaForAntrag(antrag, currentLanguage);
+      }
+      return null;
+    }
+
+    function getVerfuegungsvorschlagBoxHtml(antrag) {
+      if (typeof getVerfuegungsvorschlagBoxHtmlForAntrag === 'function') {
+        return getVerfuegungsvorschlagBoxHtmlForAntrag(antrag, currentLanguage);
+      }
+      return '';
+    }
+
+    function renderVerfuegungsvorschlagInModal(modalId, antragOrId) {
+      const antrag =
+        typeof antragOrId === 'string' ? antragSystem.getAntrag(antragOrId) : antragOrId;
+      const modal = document.getElementById(modalId);
+      if (!modal) return;
+      const body = modal.querySelector('.modal-body');
+      if (!body) return;
+      let host = body.querySelector('.modal-verfuegungsvorschlag-host');
+      if (!host) {
+        host = document.createElement('div');
+        host.className = 'modal-verfuegungsvorschlag-host';
+        body.insertBefore(host, body.firstChild);
+      }
+      const html = getVerfuegungsvorschlagBoxHtml(antrag);
+      if (!html) {
+        host.innerHTML = '';
+        host.style.display = 'none';
+        return;
+      }
+      host.innerHTML = html;
+      host.style.display = '';
+    }
+
+    function openAntragAktionsModal(modalId, antragOrId) {
+      renderVerfuegungsvorschlagInModal(modalId, antragOrId);
+      openModal(modalId);
+    }
+
+    // ============================================
     // SACHLICHE/FACHLICHE PRÜFUNG
     // ============================================
     
@@ -4414,7 +4490,7 @@ ${t('task.create')}
       // Modal für Prüfungskommentar öffnen
       document.getElementById('pruefungAntragId').value = antragId;
       document.getElementById('pruefungKommentar').value = '';
-      openModal('pruefungModal');
+      openAntragAktionsModal('pruefungModal', antragId);
     }
     
     async function confirmPruefung() {
@@ -4475,7 +4551,7 @@ ${t('task.create')}
       document.getElementById('entscheidungBegruendung').value = '';
       document.getElementById('entscheidungPersoenlichEroeffnen').checked = false;
       document.getElementById('entscheidungVollzugVorBekanntgabe').checked = false;
-      openModal('entscheidenModal');
+      openAntragAktionsModal('entscheidenModal', antragId);
     }
     
     async function handleEntscheidung(status) {
@@ -4537,7 +4613,7 @@ ${t('task.create')}
       document.getElementById('vollzugGeplantEntscheidung').textContent = statusText;
       document.getElementById('vollzugKommentar').value = '';
       document.getElementById('vollzugBestaetigenAntragId').value = antragId;
-      openModal('vollzugBestaetigenModal');
+      openAntragAktionsModal('vollzugBestaetigenModal', antragId);
     }
     
     // Vollzug bestätigen
@@ -4791,7 +4867,7 @@ ${t('task.create')}
         toggleAufgabeZiel('mitarbeiter');
       }
       
-      openModal('aufgabeModal');
+      openAntragAktionsModal('aufgabeModal', antragId);
     }
     
     function toggleAufgabeZiel(ziel) {
@@ -5150,7 +5226,7 @@ ${t('task.create')}
       document.getElementById('nachtraeglichDokumentAntragId').value = antragId;
       document.getElementById('nachtraeglichDokumentIndex').value = dokumentIndex;
       document.getElementById('nachtraeglichDokumentName').textContent = dokumentName;
-      openModal('dokumentNachtraeglichFreigebenModal');
+      openAntragAktionsModal('dokumentNachtraeglichFreigebenModal', antragId);
     }
     
     // Nachträgliche Freigabe bestätigen
@@ -5192,7 +5268,7 @@ ${t('task.create')}
       
       document.getElementById('dokumenteFreigebenAntragId').value = antragId;
       document.getElementById('dokumenteFreigebenCallback').value = callback || '';
-      openModal('dokumenteFreigebenModal');
+      openAntragAktionsModal('dokumenteFreigebenModal', antragId);
     }
     
     // Dokumentenfreigabe bestätigen
@@ -5672,7 +5748,7 @@ ${t('task.create')}
         </div>
       `;
       
-      openModal('aufgabeLoesungModal');
+      openAntragAktionsModal('aufgabeLoesungModal', aufgabe.antragId);
     }
     
     // PDF aus Aufgabe herunterladen
@@ -6063,7 +6139,7 @@ ${t('task.create')}
       // Mitarbeiterliste laden
       loadWeiterleitenMitarbeiter();
       
-      openModal('weiterleitenModal');
+      openAntragAktionsModal('weiterleitenModal', antragId);
     }
     
     function toggleWeiterleitenFelder() {
@@ -7167,7 +7243,9 @@ ${t('task.create')}
           </div>
         `;
         
-        if (typeof openModal === 'function') {
+        if (typeof openAntragAktionsModal === 'function') {
+          openAntragAktionsModal('hausleitungUebernahmeModal', antrag);
+        } else if (typeof openModal === 'function') {
           openModal('hausleitungUebernahmeModal');
         } else {
           console.error('openModal Funktion nicht verfügbar');
@@ -7470,7 +7548,7 @@ ${t('task.create')}
       if (typeof window.reloadDataFromStorage === 'function') {
         window.reloadDataFromStorage();
       }
-      openModal('terminVereinbarenModal');
+      openAntragAktionsModal('terminVereinbarenModal', antragId);
     }
 
     function loadTvExtServices() {

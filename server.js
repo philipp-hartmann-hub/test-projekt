@@ -826,6 +826,41 @@ app.delete('/api/termine/:id', async (req, res) => {
 });
 
 // ============================================
+// ANTRAGSTYPEN-KATALOG (systemweit, Admin-pflegbar)
+// ============================================
+
+app.get('/api/antrag-typen-katalog', async (req, res) => {
+  try {
+    const row = await dbLayer.getById('antrag_typen_katalog', 'global');
+    res.json(row || null);
+  } catch (error) {
+    console.error('Fehler beim Laden des Antragstypen-Katalogs:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Laden des Katalogs' });
+  }
+});
+
+app.put('/api/antrag-typen-katalog', async (req, res) => {
+  try {
+    const katalog = req.body;
+    if (!katalog || !Array.isArray(katalog.typen)) {
+      return res.status(400).json({ success: false, error: 'Ungültiger Katalog' });
+    }
+    katalog.id = 'global';
+    katalog.updatedAt = new Date().toISOString();
+    const existing = await dbLayer.getById('antrag_typen_katalog', 'global');
+    if (existing) {
+      await dbLayer.update('antrag_typen_katalog', 'global', katalog);
+    } else {
+      await dbLayer.create('antrag_typen_katalog', 'global', katalog);
+    }
+    res.json({ success: true, updatedAt: katalog.updatedAt });
+  } catch (error) {
+    console.error('Fehler beim Speichern des Antragstypen-Katalogs:', error);
+    res.status(500).json({ success: false, error: 'Fehler beim Speichern des Katalogs' });
+  }
+});
+
+// ============================================
 // FALLBACK ROUTE - SPA SUPPORT (nur lokal; auf Vercel serviert Vercel die statischen Dateien)
 // ============================================
 

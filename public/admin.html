@@ -64,6 +64,7 @@
           <button class="tab" onclick="switchTab('mitarbeiter')">Mitarbeiter</button>
           <button class="tab" onclick="switchTab('termine')">Termine</button>
           <button class="tab" onclick="switchTab('externe')">Externe Partner</button>
+          <button class="tab" onclick="switchTab('antragstypen')">Antragstypen</button>
           <button class="tab" onclick="switchTab('daten')">Daten & Backup</button>
         </div>
 
@@ -97,6 +98,25 @@
           </div>
           <p class="section-hint">Profile für externe Anbieter mit Leistungen (Termindauer) und wöchentlichen Verfügbarkeiten. Mitarbeitende buchen Termine wie beim Zahnarzt.</p>
           <div class="user-list" id="externePartnerList"></div>
+        </section>
+
+        <!-- Antragstypen & Verfügungsvorschläge -->
+        <section class="section" id="antragstypenSection" style="display: none;">
+          <div class="section-header">
+            <h2>Antragstypen &amp; Verfügungsvorschläge</h2>
+            <button class="btn btn-primary" onclick="openNeuerAntragstypModal()">+ Neuer Antragstyp</button>
+          </div>
+          <p class="section-hint">
+            Pflegen Sie Bezeichnungen und Verfügungsvorschläge für alle Anträge. Neue Typen erscheinen nach Speichern und Synchronisation
+            in der Antragsauswahl aller Insassen-Geräte (Freitext-Formular). Standard-Anträge behalten ihre spezifischen Formulare.
+          </p>
+          <div id="antragstypenKatalogStatus" class="info-box" style="margin-bottom: 1rem;">
+            <p>Katalog wird geladen …</p>
+          </div>
+          <div id="antragstypenAdminList" class="user-list"></div>
+          <div class="form-group" style="margin-top: 1rem;">
+            <button type="button" class="btn btn-primary" onclick="speichereAntragstypenKatalog()">Katalog speichern &amp; synchronisieren</button>
+          </div>
         </section>
 
         <!-- Termin-Verwaltung -->
@@ -499,6 +519,87 @@
     </div>
   </div>
 
+  <!-- Modal: Antragstyp bearbeiten -->
+  <div class="modal-overlay" id="antragstypEditModal">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 id="antragstypEditModalTitle">Antragstyp bearbeiten</h3>
+        <button class="modal-close" onclick="closeModal('antragstypEditModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="atEditTypeId">
+        <div class="form-group">
+          <label for="atEditLabel">Bezeichnung (Anzeige) <span class="required">*</span></label>
+          <input type="text" id="atEditLabel" required>
+        </div>
+        <div class="form-group">
+          <label for="atEditGruppe">Themengruppe <span class="required">*</span></label>
+          <select id="atEditGruppe"></select>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="atEditAktiv" checked> Antragstyp ist aktiv (in Auswahl sichtbar)
+          </label>
+        </div>
+        <div class="form-group">
+          <label for="atEditKette">Verfügungsvorschlag (Ablauf) <span class="required">*</span></label>
+          <textarea id="atEditKette" rows="3" placeholder="z. B. AVD → Station → GPA"></textarea>
+        </div>
+        <div class="form-group" id="atEditKetteFreiesEigengeldGroup" style="display: none;">
+          <label for="atEditKetteFreiesEigengeld">Alternative Kette (z. B. bei freiem Eigengeld)</label>
+          <textarea id="atEditKetteFreiesEigengeld" rows="2"></textarea>
+        </div>
+        <div class="form-group" id="atEditKetteMitVlGroup" style="display: none;">
+          <label for="atEditKetteMitVl">Alternative Kette (bei VL-Zustimmung)</label>
+          <textarea id="atEditKetteMitVl" rows="2"></textarea>
+        </div>
+        <div class="form-group" id="atEditVlHinweisGroup" style="display: none;">
+          <label for="atEditVlHinweis">Zusatz-Hinweis VL</label>
+          <textarea id="atEditVlHinweis" rows="2"></textarea>
+        </div>
+        <p class="field-hint" id="atEditBuiltinHint"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('antragstypEditModal')">Abbrechen</button>
+        <button type="button" class="btn btn-primary" onclick="speichereAntragstypAusModal()">Übernehmen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Neuer Antragstyp -->
+  <div class="modal-overlay" id="neuerAntragstypModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Neuer Antragstyp</h3>
+        <button class="modal-close" onclick="closeModal('neuerAntragstypModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="atNewLabel">Bezeichnung <span class="required">*</span></label>
+          <input type="text" id="atNewLabel" placeholder="z. B. Antrag auf …" oninput="updateAtNewSlugPreview()">
+        </div>
+        <div class="form-group">
+          <label for="atNewId">Technische ID (URL-Slug)</label>
+          <input type="text" id="atNewId" placeholder="wird aus der Bezeichnung erzeugt">
+          <p class="field-hint">Nur Kleinbuchstaben, Zahlen und Bindestriche. Kann nach Anlage nicht geändert werden.</p>
+        </div>
+        <div class="form-group">
+          <label for="atNewGruppe">Themengruppe</label>
+          <select id="atNewGruppe"></select>
+        </div>
+        <div class="form-group">
+          <label for="atNewKette">Verfügungsvorschlag <span class="required">*</span></label>
+          <textarea id="atNewKette" rows="3" placeholder="AVD → … → GPA"></textarea>
+        </div>
+        <p class="field-hint">Insassen füllen für diesen Typ ein Freitext-Anliegen aus; Mitarbeitende sehen den Verfügungsvorschlag in allen Aktions-Dialogen.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('neuerAntragstypModal')">Abbrechen</button>
+        <button type="button" class="btn btn-primary" onclick="anlegenNeuerAntragstyp()">Anlegen</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Neuer Admin-Termin -->
   <div class="modal-overlay" id="adminTerminModal">
     <div class="modal">
@@ -538,6 +639,7 @@
   </div>
 
   <script src="data-sync.js"></script>
+  <script src="antrag-typen-katalog.js"></script>
   <script src="app.js"></script>
   <script>
     // ============================================
@@ -703,6 +805,7 @@
       document.getElementById('mitarbeiterSection').style.display = 'none';
       document.getElementById('termineSection').style.display = 'none';
       document.getElementById('externePartnerSection').style.display = 'none';
+      document.getElementById('antragstypenSection').style.display = 'none';
       document.getElementById('datenSection').style.display = 'none';
 
       if (tab === 'insassen') {
@@ -719,8 +822,12 @@
         tabs[3].classList.add('active');
         document.getElementById('externePartnerSection').style.display = 'block';
         renderExternePartner();
-      } else if (tab === 'daten') {
+      } else if (tab === 'antragstypen') {
         tabs[4].classList.add('active');
+        document.getElementById('antragstypenSection').style.display = 'block';
+        renderAntragstypenAdmin();
+      } else if (tab === 'daten') {
+        tabs[5].classList.add('active');
         document.getElementById('datenSection').style.display = 'block';
         renderDatenBackupStatus();
       }
@@ -2121,6 +2228,221 @@
       terminSystem.deleteTermin(terminId);
       renderAdminTermine();
     }
+
+    // ============================================
+    // ANTRAGSTYPEN-KATALOG (ADMIN)
+    // ============================================
+
+    function renderAntragstypenAdmin() {
+      const list = document.getElementById('antragstypenAdminList');
+      const status = document.getElementById('antragstypenKatalogStatus');
+      if (!list || typeof antragTypenKatalogSystem === 'undefined') return;
+
+      const katalog = antragTypenKatalogSystem.katalog;
+      const updated = katalog.updatedAt
+        ? new Date(katalog.updatedAt).toLocaleString('de-DE')
+        : '–';
+      const syncHint =
+        window.DataSync && DataSync.isConnected()
+          ? 'Server verbunden – „Speichern & synchronisieren“ verteilt Änderungen auf alle Geräte.'
+          : 'Nur lokal – ohne Server bleiben Änderungen auf diesem Browser.';
+
+      if (status) {
+        status.innerHTML = `<p><strong>Stand:</strong> ${updated} · ${katalog.typen.length} Antragstypen · ${syncHint}</p>`;
+      }
+
+      const gruppen = [...(katalog.gruppen || [])].sort((a, b) => a.sortOrder - b.sortOrder);
+      list.innerHTML = gruppen
+        .map((g) => {
+          const typen = (katalog.typen || [])
+            .filter((t) => t.gruppeId === g.id)
+            .sort((a, b) => a.sortOrder - b.sortOrder);
+          if (!typen.length) return '';
+          const rows = typen
+            .map((t) => {
+              const kette = (t.verfuegungsvorschlag?.kette || '').slice(0, 120);
+              const badge = t.builtin
+                ? '<span class="badge badge-secondary">Standard</span>'
+                : '<span class="badge badge-info">Neu</span>';
+              const aktiv = t.aktiv !== false ? '' : ' <span class="badge badge-warning">Inaktiv</span>';
+              const delBtn = t.builtin
+                ? ''
+                : `<button type="button" class="btn btn-danger btn-sm" onclick="loescheAntragstyp('${t.id}')">Löschen</button>`;
+              return `
+                <div class="user-card" style="margin-bottom: 0.5rem;">
+                  <div class="user-info">
+                    <div class="user-name">${escapeHtml(t.label)} ${badge}${aktiv}</div>
+                    <div class="user-meta"><code>${escapeHtml(t.id)}</code></div>
+                    <div class="user-meta verfuegungsreihenfolge" style="font-size: 0.85rem;">${escapeHtml(kette)}${kette.length >= 120 ? '…' : ''}</div>
+                  </div>
+                  <div class="user-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openAntragstypEditModal('${t.id}')">Bearbeiten</button>
+                    ${delBtn}
+                  </div>
+                </div>`;
+            })
+            .join('');
+          return `<div class="detail-box" style="margin-bottom: 1rem;"><h4>${escapeHtml(g.titel)}</h4>${rows}</div>`;
+        })
+        .join('');
+    }
+
+    function fillAtGruppeSelects() {
+      const katalog = antragTypenKatalogSystem.katalog;
+      const html = (katalog.gruppen || [])
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((g) => `<option value="${g.id}">${escapeHtml(g.titel)}</option>`)
+        .join('');
+      const editSel = document.getElementById('atEditGruppe');
+      const newSel = document.getElementById('atNewGruppe');
+      if (editSel) editSel.innerHTML = html;
+      if (newSel) {
+        newSel.innerHTML = html;
+        const sonst = newSel.querySelector('option[value="sonstiges"]');
+        if (sonst) sonst.selected = true;
+      }
+    }
+
+    function openAntragstypEditModal(typeId) {
+      const t = antragTypenKatalogSystem.getTyp(typeId);
+      if (!t) return;
+      fillAtGruppeSelects();
+      document.getElementById('atEditTypeId').value = t.id;
+      document.getElementById('atEditLabel').value = t.label;
+      document.getElementById('atEditGruppe').value = t.gruppeId;
+      document.getElementById('atEditAktiv').checked = t.aktiv !== false;
+      const vv = t.verfuegungsvorschlag || {};
+      document.getElementById('atEditKette').value = vv.kette || '';
+      document.getElementById('atEditKetteFreiesEigengeld').value = vv.ketteFreiesEigengeld || '';
+      document.getElementById('atEditKetteMitVl').value = vv.ketteMitVl || '';
+      document.getElementById('atEditVlHinweis').value = vv.vlHinweis || '';
+      document.getElementById('atEditKetteFreiesEigengeldGroup').style.display =
+        t.id === 'elektro-geraete' ? 'block' : 'none';
+      document.getElementById('atEditKetteMitVlGroup').style.display =
+        t.id === 'telio-ueberweisung' ? 'block' : 'none';
+      document.getElementById('atEditVlHinweisGroup').style.display =
+        t.id === 'telio-ueberweisung' ? 'block' : 'none';
+      document.getElementById('atEditBuiltinHint').textContent = t.builtin
+        ? 'Standard-Antrag: Formular im Insassen-Portal bleibt unverändert; Sie können Bezeichnung, Gruppe und Verfügungsvorschlag anpassen.'
+        : 'Freitext-Antrag: Insassen geben Anliegen und Begründung in einem einfachen Formular ein.';
+      document.getElementById('antragstypEditModalTitle').textContent = `Antragstyp: ${t.label}`;
+      openModal('antragstypEditModal');
+    }
+
+    function speichereAntragstypAusModal() {
+      const typeId = document.getElementById('atEditTypeId').value;
+      const label = document.getElementById('atEditLabel').value.trim();
+      const kette = document.getElementById('atEditKette').value.trim();
+      if (!label || !kette) {
+        showAlert('Bezeichnung und Verfügungsvorschlag sind Pflicht.');
+        return;
+      }
+      antragTypenKatalogSystem.updateTyp(typeId, {
+        label,
+        gruppeId: document.getElementById('atEditGruppe').value,
+        aktiv: document.getElementById('atEditAktiv').checked,
+        verfuegungsvorschlag: {
+          kette,
+          ketteFreiesEigengeld: document.getElementById('atEditKetteFreiesEigengeld').value.trim() || null,
+          ketteMitVl: document.getElementById('atEditKetteMitVl').value.trim() || null,
+          vlHinweis: document.getElementById('atEditVlHinweis').value.trim() || null
+        }
+      });
+      closeModal('antragstypEditModal');
+      renderAntragstypenAdmin();
+    }
+
+    function openNeuerAntragstypModal() {
+      fillAtGruppeSelects();
+      document.getElementById('atNewLabel').value = '';
+      document.getElementById('atNewId').value = '';
+      document.getElementById('atNewKette').value = '';
+      openModal('neuerAntragstypModal');
+    }
+
+    function updateAtNewSlugPreview() {
+      const label = document.getElementById('atNewLabel').value;
+      const idEl = document.getElementById('atNewId');
+      if (!idEl || idEl.dataset.userEdited === '1') return;
+      if (typeof slugifyAntragTypId === 'function') {
+        idEl.value = slugifyAntragTypId(label);
+      }
+    }
+
+    document.getElementById('atNewId')?.addEventListener('input', function () {
+      this.dataset.userEdited = this.value.trim() ? '1' : '';
+    });
+
+    function anlegenNeuerAntragstyp() {
+      const label = document.getElementById('atNewLabel').value.trim();
+      const id =
+        document.getElementById('atNewId').value.trim() ||
+        (typeof slugifyAntragTypId === 'function' ? slugifyAntragTypId(label) : '');
+      const kette = document.getElementById('atNewKette').value.trim();
+      if (!label || !kette) {
+        showAlert('Bezeichnung und Verfügungsvorschlag sind Pflicht.');
+        return;
+      }
+      const result = antragTypenKatalogSystem.addTyp({
+        id,
+        label,
+        gruppeId: document.getElementById('atNewGruppe').value,
+        kette
+      });
+      if (result.error) {
+        showAlert(result.error);
+        return;
+      }
+      closeModal('neuerAntragstypModal');
+      renderAntragstypenAdmin();
+      showAlert('Antragstyp angelegt. Bitte „Katalog speichern & synchronisieren“ ausführen.');
+    }
+
+    async function loescheAntragstyp(typeId) {
+      const t = antragTypenKatalogSystem.getTyp(typeId);
+      if (!t || t.builtin) return;
+      const ok = await showConfirm(`Antragstyp „${t.label}“ wirklich löschen?`);
+      if (!ok) return;
+      antragTypenKatalogSystem.deleteTyp(typeId);
+      renderAntragstypenAdmin();
+    }
+
+    async function speichereAntragstypenKatalog() {
+      antragTypenKatalogSystem.save();
+      let synced = false;
+      if (window.DataSync && typeof DataSync.syncAntragTypenKatalogToServer === 'function') {
+        synced = await DataSync.syncAntragTypenKatalogToServer();
+      }
+      window.dispatchEvent(new CustomEvent('antragTypenKatalogUpdated'));
+      renderAntragstypenAdmin();
+      showAlert(
+        synced
+          ? 'Katalog gespeichert und an den Server übermittelt. Alle Portale laden den Stand beim nächsten Datenabgleich.'
+          : 'Katalog lokal gespeichert. Ohne Server-Verbindung sind die Änderungen nur in diesem Browser aktiv.'
+      );
+    }
+
+    window.addEventListener('antragTypenKatalogUpdated', () => {
+      if (document.getElementById('antragstypenSection')?.style.display !== 'none') {
+        renderAntragstypenAdmin();
+      }
+    });
+
+    window.addEventListener('dataSyncLoaded', () => {
+      if (typeof antragTypenKatalogSystem !== 'undefined') {
+        const raw = localStorage.getItem('gefaengnis_antrag_typen_katalog');
+        if (raw) {
+          try {
+            antragTypenKatalogSystem.applyKatalog(JSON.parse(raw));
+          } catch (_) {
+            /* ignore */
+          }
+        }
+      }
+      if (document.getElementById('antragstypenSection')?.style.display !== 'none') {
+        renderAntragstypenAdmin();
+      }
+    });
 
     // Initial rendern falls eingeloggt (nach app.js laden)
     waitForAppJS().then(() => {

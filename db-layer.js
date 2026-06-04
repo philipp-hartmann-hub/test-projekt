@@ -61,7 +61,8 @@ function loadJSONDatabase() {
     aufgaben: [],
     notifications: [],
     aktivitaeten: [],
-    termine: []
+    termine: [],
+    antrag_typen_katalog: []
   };
 }
 
@@ -217,12 +218,16 @@ async function runSchema() {
     `CREATE TABLE IF NOT EXISTS aktivitaeten ( id TEXT PRIMARY KEY, data JSONB NOT NULL )`,
     `CREATE INDEX IF NOT EXISTS idx_aktivitaeten_antragid ON aktivitaeten ((data->>'antragId'))`,
     `CREATE TABLE IF NOT EXISTS termine ( id TEXT PRIMARY KEY, data JSONB NOT NULL )`,
-    `CREATE INDEX IF NOT EXISTS idx_termine_datum ON termine ((data->>'datum'))`
+    `CREATE INDEX IF NOT EXISTS idx_termine_datum ON termine ((data->>'datum'))`,
+    `CREATE TABLE IF NOT EXISTS antrag_typen_katalog ( id TEXT PRIMARY KEY, data JSONB NOT NULL )`
   ];
   for (const sql of statements) {
     await pgClient.query(sql);
   }
-  return { ok: true, tables: ['users', 'antraege', 'aufgaben', 'notifications', 'aktivitaeten', 'termine'] };
+  return {
+    ok: true,
+    tables: ['users', 'antraege', 'aufgaben', 'notifications', 'aktivitaeten', 'termine', 'antrag_typen_katalog']
+  };
 }
 
 module.exports = {

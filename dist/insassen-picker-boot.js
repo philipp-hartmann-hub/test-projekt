@@ -49,6 +49,9 @@
     refreshInsassenAntragPickers();
   }
 
+  window.addEventListener('antragTypenKatalogUpdated', refreshInsassenAntragPickers);
+  window.addEventListener('dataSyncLoaded', refreshInsassenAntragPickers);
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else {

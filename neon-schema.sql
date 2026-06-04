@@ -43,6 +43,11 @@ CREATE TABLE IF NOT EXISTS aktivitaeten (
 CREATE INDEX IF NOT EXISTS idx_aktivitaeten_antragid ON aktivitaeten ((data->>'antragId'));
 
 -- Termine: id + vollständiges Objekt (erstelltAm, datum, uhrzeit, antragId, aufgabeId, …)
+CREATE TABLE IF NOT EXISTS antrag_typen_katalog (
+  id TEXT PRIMARY KEY,
+  data JSONB NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS termine (
   id TEXT PRIMARY KEY,
   data JSONB NOT NULL
