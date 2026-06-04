@@ -3060,6 +3060,14 @@ Persönlich eröffnet
       }
       const antrag = antragSystem.getAntrag(antragId);
       if (!antrag) return;
+
+      if (typeof dismissStaleModals === 'function') {
+        dismissStaleModals();
+      }
+      const jvpHubEl = document.getElementById('jvpHubView');
+      if (jvpHubEl) jvpHubEl.style.display = 'none';
+
+      try {
       
       currentAntragId = antragId;
       const istOffen = antrag.status === 'offen';
@@ -3743,13 +3751,10 @@ Persönlich eröffnet
           </div>
         `;
       } else if (antrag.type === 'gesundheit-medizin') {
-        const verfuegungHinweis =
-          currentLanguage === 'en'
-            ? 'This is a suggestion only; it does not replace a professional decision.'
-            : currentLanguage === 'fr'
-              ? "Il s'agit d'une suggestion ; elle ne remplace pas une décision professionnelle."
-              : 'Es handelt sich um einen Vorschlag; er ersetzt keine fachliche Entscheidung.';
-        const verfuegungKetteGesundheit = 'AVD → medizinischer Dienst';
+        const vvBoxGesundheit =
+          typeof getVerfuegungsvorschlagBoxHtmlForAntrag === 'function'
+            ? getVerfuegungsvorschlagBoxHtmlForAntrag(antrag, currentLanguage)
+            : '';
         anliegenHtml = `
           <div class="detail-box">
             <h4>${t('application.type.gesundheit_medizin')}</h4>
@@ -3760,11 +3765,7 @@ Persönlich eröffnet
                 : '–'}</span>
             </div>
           </div>
-          <div class="detail-box verfuegungsvorschlag-box">
-            <h4>${verfuegungTitel}</h4>
-            <p class="verfuegungsreihenfolge">${verfuegungKetteGesundheit}</p>
-            <p class="verfuegungs-hinweis">${verfuegungHinweis}</p>
-          </div>
+          ${vvBoxGesundheit}
         `;
       } else if (antrag.type === 'gespraechstermin') {
         const verfuegungTitel =
@@ -4397,6 +4398,18 @@ ${t('task.create')}
       document.getElementById('dashboardView').style.display = 'none';
       document.getElementById('antragDetailView').style.display = 'block';
       syncWelcomeBannerBackButton();
+      } catch (err) {
+        console.error('openAntragDetail:', err);
+        const msg =
+          currentLanguage === 'en'
+            ? 'The application details could not be displayed. Please reload the page and try again.'
+            : currentLanguage === 'fr'
+              ? "Les détails de la demande n'ont pas pu être affichés. Veuillez recharger la page et réessayer."
+              : 'Die Antragsdetails konnten nicht angezeigt werden. Bitte Seite neu laden und erneut versuchen.';
+        if (typeof showAlert === 'function') {
+          showAlert(msg);
+        }
+      }
     }
     
     // Sortierung des Bearbeitungsverlaufs ändern

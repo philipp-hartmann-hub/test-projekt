@@ -34,7 +34,17 @@
     }
   }
 
+  function isAntragFormModalOpen() {
+    return ['newAntragModal', 'entwurfModal'].some((id) => {
+      const el = document.getElementById(id);
+      return el && el.classList.contains('active');
+    });
+  }
+
   function refreshInsassenAntragPickers() {
+    if (isAntragFormModalOpen()) {
+      return true;
+    }
     const okNew = mountPicker('newAntragTypePicker', 'antragType', '', 'toggleAntragFields');
     const okEntwurf = mountPicker('entwurfAntragTypePicker', 'entwurfType', '', 'toggleEntwurfFields');
     if (typeof window.setNewAntragWizardStep === 'function') {

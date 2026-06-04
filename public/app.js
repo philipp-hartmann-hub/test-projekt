@@ -6396,6 +6396,14 @@ function closeModal(modalId) {
   if (el) el.classList.remove('active');
 }
 
+/** Schließt offene Formular-Modals (z. B. vor Antragsdetail), Dialog-Hinweise bleiben. */
+function dismissStaleModals() {
+  document.querySelectorAll('.modal-overlay.active').forEach((modal) => {
+    if (modal.id === 'customDialogOverlay') return;
+    modal.classList.remove('active');
+  });
+}
+
 // ============================================
 // CUSTOM DIALOG SYSTEM (ersetzt Browser-Popups)
 // ============================================
@@ -6475,6 +6483,7 @@ function closeDialog(result) {
 if (typeof window !== 'undefined') {
   window.openModal = openModal;
   window.closeModal = closeModal;
+  window.dismissStaleModals = dismissStaleModals;
   window.showAlert = showAlert;
   window.showConfirm = showConfirm;
   window.closeDialog = closeDialog;
