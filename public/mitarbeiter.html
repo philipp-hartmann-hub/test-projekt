@@ -470,7 +470,7 @@
   </div>
 
   <!-- Modal: Aufgabe erstellen -->
-  <div class="modal-overlay" id="aufgabeModal">
+  <div class="modal-overlay" id="aufgabeModal" data-close-on-overlay="false">
     <div class="modal modal-large">
       <div class="modal-header">
         <h3>Aufgabe erstellen</h3>
@@ -589,7 +589,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeModal('aufgabeModal')">Abbrechen</button>
-        <button type="button" class="btn btn-primary" onclick="sendeAufgabe()">Aufgabe senden</button>
+        <button type="button" class="btn btn-primary" id="aufgabeSendenBtn" onclick="sendeAufgabe()">Aufgabe senden</button>
       </div>
     </div>
   </div>
@@ -5495,8 +5495,31 @@ ${t('task.create')}
     }
     
     async function sendeAufgabe() {
-      const antragId = document.getElementById('aufgabeAntragId').value;
+      const antragId = document.getElementById('aufgabeAntragId')?.value;
+      if (!antragId) {
+        await showAlert(
+          currentLanguage === 'en'
+            ? 'Application reference missing. Please close the dialog and open it again.'
+            : currentLanguage === 'fr'
+              ? 'Référence de la demande manquante. Fermez la fenêtre et rouvrez-la.'
+              : 'Antragsbezug fehlt. Bitte Dialog schließen und „Aufgabe erstellen“ erneut öffnen.'
+        );
+        return;
+      }
+      return runUiAction(`sendeAufgabe:${antragId}`, async () => {
+      setButtonBusy('aufgabeSendenBtn', true, 'Sende …');
+      try {
       const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag) {
+        await showAlert(
+          currentLanguage === 'en'
+            ? 'Application not found.'
+            : currentLanguage === 'fr'
+              ? 'Demande introuvable.'
+              : 'Antrag nicht gefunden.'
+        );
+        return;
+      }
       const kurzbeschreibungText = document.getElementById('aufgabeKurzbeschreibung').value.trim();
       const beschreibungText = document.getElementById('aufgabeBeschreibung').value.trim();
       const fristDatum = document.getElementById('aufgabeFrist').value;
@@ -5507,12 +5530,12 @@ ${t('task.create')}
       
       const zielRadio = document.querySelector('input[name="aufgabeZiel"]:checked');
       if (!zielRadio) {
-        showAlert(t('error.selectOption'));
+        await showAlert(t('error.selectOption'));
         return;
       }
       
       if (!kurzbeschreibungText) {
-        showAlert(t('error.required'));
+        await showAlert(t('error.required'));
         return;
       }
       
@@ -5544,17 +5567,21 @@ ${t('task.create')}
         if (zuweisungTyp === 'person') {
           // Konkrete Person ausgewählt
           if (!personId) {
-            showAlert('Bitte wählen Sie eine Person aus.');
+            await showAlert('Bitte wählen Sie eine Person aus.');
             return;
           }
           const person = userSystem.getUser(personId);
+          if (!person) {
+            await showAlert('Ausgewählte Person nicht gefunden. Bitte erneut wählen.');
+            return;
+          }
           zugewiesenAnId = personId;
           zugewiesenAnName = `${person.vorname} ${person.nachname}`;
           zugewiesenAnTyp = 'mitarbeiter';
         } else {
           // Gruppe ausgewählt
           if (!gruppeTyp) {
-            showAlert('Bitte wählen Sie eine Gruppe aus.');
+            await showAlert('Bitte wählen Sie eine Gruppe aus.');
             return;
           }
           // Aufgabe geht an die Gruppe
@@ -5647,15 +5674,34 @@ ${t('task.create')}
       }
       
       closeModal('aufgabeModal');
-      showAlert(t('success.taskCreated'));
 
-      const syncOk = await syncAntragUndAktualisiereUi(antragId, { detailAnsicht: 'open' });
-      if (!syncOk) {
-        showAlert(
+      const syncOk = await syncAntragUndAktualisiereUi(antragId, {
+        detailAnsicht: 'open',
+        showSyncFeedback: false
+      });
+      if (syncOk) {
+        await showAlert(t('success.taskCreated'));
+      } else {
+        await showAlert(
           'Aufgabe lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen.'
         );
       }
+      } catch (err) {
+        console.error('sendeAufgabe:', err);
+        await showAlert(
+          currentLanguage === 'en'
+            ? 'The task could not be created. Please try again.'
+            : currentLanguage === 'fr'
+              ? 'La tâche n\'a pas pu être créée. Veuillez réessayer.'
+              : 'Die Aufgabe konnte nicht erstellt werden. Bitte erneut versuchen.'
+        );
+      } finally {
+        setButtonBusy('aufgabeSendenBtn', false);
+      }
+      });
     }
+
+    window.sendeAufgabe = sendeAufgabe;
 
     // ============================================
     // AUFGABE BEARBEITEN (für Mitarbeiter)
