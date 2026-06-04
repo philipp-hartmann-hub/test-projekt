@@ -5,6 +5,38 @@
 
 const API_BASE = window.location.origin + '/api';
 
+function safeLsSetItem(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    const isQuota =
+      (e && e.name === 'QuotaExceededError') ||
+      (e && e.code === 22) ||
+      String(e && e.message ? e.message : e).toLowerCase().includes('quota');
+    if (!isQuota) {
+      console.warn('[Sync] localStorage.setItem:', key, e);
+      return false;
+    }
+    try {
+      ['gefaengnis_aktivitaeten', 'gefaengnis_termine', 'gefaengnis_notifications'].forEach((k) => {
+        if (k === key) return;
+        const raw = localStorage.getItem(k);
+        if (!raw) return;
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length > 200) {
+          localStorage.setItem(k, JSON.stringify(arr.slice(-150)));
+        }
+      });
+      localStorage.setItem(key, value);
+      return true;
+    } catch (e2) {
+      console.warn('[Sync] Quota nach Bereinigung:', key, e2);
+      return false;
+    }
+  }
+}
+
 // Flag ob wir mit dem Server verbunden sind
 let serverConnected = false;
 let initialDataLoaded = false;
@@ -161,32 +193,32 @@ async function loadInitialData() {
     ]);
 
     if (antragTypenKatalog && Array.isArray(antragTypenKatalog.typen) && antragTypenKatalog.typen.length) {
-      localStorage.setItem('gefaengnis_antrag_typen_katalog', JSON.stringify(antragTypenKatalog));
+      safeLsSetItem('gefaengnis_antrag_typen_katalog', JSON.stringify(antragTypenKatalog));
     }
 
     const userMergeResult = storeMergedUsersFromServer(users);
     const prevAntraegeInit = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
-    localStorage.setItem(
+    safeLsSetItem(
       'gefaengnis_antraege',
       JSON.stringify(mergeAntraegeArraysAfterFetch(prevAntraegeInit, antraege))
     );
     const prevAufgabenInit = JSON.parse(localStorage.getItem('gefaengnis_aufgaben') || '[]');
-    localStorage.setItem(
+    safeLsSetItem(
       'gefaengnis_aufgaben',
       JSON.stringify(mergeAufgabenArraysAfterFetch(prevAufgabenInit, aufgaben))
     );
     const prevNotificationsInit = JSON.parse(localStorage.getItem('gefaengnis_notifications') || '[]');
-    localStorage.setItem(
+    safeLsSetItem(
       'gefaengnis_notifications',
       JSON.stringify(mergeAntragArraysByIdOrContent(prevNotificationsInit, notifications))
     );
     const prevAktivitaeten = JSON.parse(localStorage.getItem('gefaengnis_aktivitaeten') || '[]');
-    localStorage.setItem(
+    safeLsSetItem(
       'gefaengnis_aktivitaeten',
       JSON.stringify(mergeAktivitaetenArrays(prevAktivitaeten, aktivitaeten))
     );
     const prevTermineInit = JSON.parse(localStorage.getItem('gefaengnis_termine') || '[]');
-    localStorage.setItem(
+    safeLsSetItem(
       'gefaengnis_termine',
       JSON.stringify(mergeTermineArraysAfterFetch(prevTermineInit, termine))
     );
@@ -1150,8 +1182,9 @@ async function syncAntragToServer(antragId) {
 const originalSetItem = localStorage.setItem.bind(localStorage);
 
 localStorage.setItem = function(key, value) {
-  // Immer zuerst lokal speichern
-  originalSetItem(key, value);
+  if (!safeLsSetItem(key, value)) {
+    return;
+  }
 
   // Dann an Server senden (asynchron, nicht blockierend)
   if (SYNC_KEYS[key] && serverConnected && initialDataLoaded) {

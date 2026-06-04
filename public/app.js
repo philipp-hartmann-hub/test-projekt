@@ -2,6 +2,61 @@
    GEFÄNGNIS ANTRAGSWESEN - APP LOGIC
    ============================================ */
 
+/** localStorage.setItem mit Quota-Fallback – wirft nicht. */
+function safeStorageSetItem(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    const isQuota =
+      (e && e.name === 'QuotaExceededError') ||
+      (e && e.code === 22) ||
+      String(e && e.message ? e.message : e).includes('quota');
+    if (!isQuota) {
+      console.warn('[Storage] setItem fehlgeschlagen:', key, e);
+      return false;
+    }
+    tryFreeLocalStorageQuota(key);
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (e2) {
+      console.warn('[Storage] Quota weiterhin überschritten:', key, e2);
+      return false;
+    }
+  }
+}
+
+/** Versucht Speicher freizugeben (älteste große Listen kürzen). */
+function tryFreeLocalStorageQuota(priorityKey) {
+  try {
+    const trimJsonArray = (storageKey, maxItems) => {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return;
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr) || arr.length <= maxItems) return;
+      localStorage.setItem(storageKey, JSON.stringify(arr.slice(-maxItems)));
+    };
+    if (priorityKey !== 'gefaengnis_aktivitaeten') {
+      const raw = localStorage.getItem('gefaengnis_aktivitaeten');
+      if (raw && raw.length > 150000) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) {
+          localStorage.setItem('gefaengnis_aktivitaeten', JSON.stringify(arr.slice(-80)));
+        }
+      }
+    }
+    if (priorityKey !== 'gefaengnis_termine') {
+      trimJsonArray('gefaengnis_termine', 250);
+    }
+    if (priorityKey !== 'gefaengnis_notifications') {
+      trimJsonArray('gefaengnis_notifications', 200);
+    }
+  } catch (err) {
+    console.warn('[Storage] Bereinigung fehlgeschlagen:', err);
+  }
+}
+
 // ============================================
 // KONFIGURATION - Haus und Stationen
 // ============================================
@@ -2382,14 +2437,30 @@ function getAntragSystemRef() {
 class TerminSystem {
   constructor() {
     this.storageKey = 'gefaengnis_termine';
-    this.termine = this.loadTermine();
+    this.termine = [];
+    try {
+      this.termine = this.loadTermine();
+    } catch (e) {
+      console.warn('[TerminSystem] Init fehlgeschlagen, starte mit leerer Liste:', e);
+      try {
+        const data = localStorage.getItem(this.storageKey);
+        this.termine = data ? JSON.parse(data) : [];
+        if (!Array.isArray(this.termine)) this.termine = [];
+      } catch (_) {
+        this.termine = [];
+      }
+    }
   }
 
   loadTermine() {
     const data = localStorage.getItem(this.storageKey);
     const termine = data ? JSON.parse(data) : [];
-    this.termine = termine;
-    this.migrateInsasseTermine();
+    this.termine = Array.isArray(termine) ? termine : [];
+    try {
+      this.migrateInsasseTermine();
+    } catch (e) {
+      console.warn('[TerminSystem] migrateInsasseTermine:', e);
+    }
     return this.termine;
   }
 
@@ -2512,7 +2583,7 @@ class TerminSystem {
   }
 
   saveTermine() {
-    localStorage.setItem(this.storageKey, JSON.stringify(this.termine));
+    safeStorageSetItem(this.storageKey, JSON.stringify(this.termine));
   }
 
   generateId() {
@@ -2872,6 +2943,9 @@ class TerminSystem {
 }
 
 const terminSystem = new TerminSystem();
+if (typeof window !== 'undefined') {
+  window.terminSystem = terminSystem;
+}
 
 // ============================================
 // AUFGABENSYSTEM
@@ -3315,6 +3389,9 @@ class AufgabenSystem {
 }
 
 const aufgabenSystem = new AufgabenSystem();
+if (typeof window !== 'undefined') {
+  window.aufgabenSystem = aufgabenSystem;
+}
 
 // ============================================
 // ANTRAGSSYSTEM
@@ -3341,7 +3418,7 @@ class AntragSystem {
   }
 
   saveAntraege() {
-    localStorage.setItem(this.storageKey, JSON.stringify(this.antraege));
+    safeStorageSetItem(this.storageKey, JSON.stringify(this.antraege));
   }
 
   // Migration: Bestehende Anträge mit neuen Feldern versehen
@@ -5193,9 +5270,14 @@ const antragSystem = new AntragSystem();
 if (typeof window !== 'undefined') {
   window.antragSystem = antragSystem;
   window.getAntragSystemRef = getAntragSystemRef;
+  window.safeStorageSetItem = safeStorageSetItem;
 }
-if (typeof terminSystem !== 'undefined' && typeof terminSystem.migrateInsasseTermine === 'function') {
-  terminSystem.migrateInsasseTermine();
+if (typeof window !== 'undefined' && window.terminSystem && typeof window.terminSystem.migrateInsasseTermine === 'function') {
+  try {
+    window.terminSystem.migrateInsasseTermine();
+  } catch (e) {
+    console.warn('[App] migrateInsasseTermine nach Init:', e);
+  }
 }
 
 /** Themengruppen für Antragsauswahl und Listenfilter (aus Admin-Katalog, Fallback statisch) */
@@ -5259,8 +5341,14 @@ function getAntragTypeFilterChips() {
 }
 
 function _getAntragTypLabelForPicker(type) {
-  if (typeof antragSystem !== 'undefined' && typeof antragSystem.getAntragTypLabel === 'function') {
-    return antragSystem.getAntragTypLabel(type);
+  const sys =
+    typeof getAntragSystemRef === 'function'
+      ? getAntragSystemRef()
+      : typeof window !== 'undefined'
+        ? window.antragSystem
+        : null;
+  if (sys && typeof sys.getAntragTypLabel === 'function') {
+    return sys.getAntragTypLabel(type);
   }
   const fallback = {
     teilhabegeld: 'Teilhabegeld',
@@ -6175,6 +6263,9 @@ function vereinbareExternenTerminAusAntrag(params) {
 // Nachladen aus localStorage (wird von data-sync.js nach Server-Sync aufgerufen)
 function reloadDataFromStorage() {
   try {
+    const ts = typeof window !== 'undefined' ? window.terminSystem : null;
+    const as = typeof window !== 'undefined' ? window.antragSystem : null;
+    const aufSys = typeof window !== 'undefined' ? window.aufgabenSystem : null;
     const rawUsers = localStorage.getItem('gefaengnis_users');
     if (rawUsers && typeof userSystem !== 'undefined') {
       userSystem.users = JSON.parse(rawUsers);
@@ -6185,9 +6276,13 @@ function reloadDataFromStorage() {
     const rawAktivitaeten = localStorage.getItem('gefaengnis_aktivitaeten');
     if (rawAktivitaeten) aktivitaetenSystem.aktivitaeten = JSON.parse(rawAktivitaeten);
     const rawTermine = localStorage.getItem('gefaengnis_termine');
-    if (rawTermine) {
-      terminSystem.termine = JSON.parse(rawTermine);
-      terminSystem.migrateInsasseTermine();
+    if (rawTermine && ts) {
+      ts.termine = JSON.parse(rawTermine);
+      try {
+        ts.migrateInsasseTermine();
+      } catch (e) {
+        console.warn('reloadDataFromStorage: Termin-Migration', e);
+      }
     }
     const rawExterne = localStorage.getItem('gefaengnis_externe_partner');
     if (rawExterne && typeof externePartnerSystem !== 'undefined') {
@@ -6203,33 +6298,33 @@ function reloadDataFromStorage() {
       }
     }
     const rawAufgaben = localStorage.getItem('gefaengnis_aufgaben');
-    if (rawAufgaben) {
+    if (rawAufgaben && aufSys) {
       try {
         const parsedAufgaben = JSON.parse(rawAufgaben);
-        aufgabenSystem.aufgaben = Array.isArray(parsedAufgaben) ? parsedAufgaben : [];
-        aufgabenSystem.migrateZahlstelleArbeitskoordinationGruppen();
+        aufSys.aufgaben = Array.isArray(parsedAufgaben) ? parsedAufgaben : [];
+        aufSys.migrateZahlstelleArbeitskoordinationGruppen();
       } catch (e) {
         console.warn('reloadDataFromStorage: Aufgaben ungültig', e);
-        if (!Array.isArray(aufgabenSystem.aufgaben)) aufgabenSystem.aufgaben = [];
+        if (!Array.isArray(aufSys.aufgaben)) aufSys.aufgaben = [];
       }
-    } else if (!Array.isArray(aufgabenSystem.aufgaben)) {
-      aufgabenSystem.aufgaben = [];
+    } else if (aufSys && !Array.isArray(aufSys.aufgaben)) {
+      aufSys.aufgaben = [];
     }
     const rawAntraege = localStorage.getItem('gefaengnis_antraege');
-    if (rawAntraege) {
+    if (rawAntraege && as) {
       try {
         const parsedAntraege = JSON.parse(rawAntraege);
-        antragSystem.antraege = Array.isArray(parsedAntraege) ? parsedAntraege : [];
-        antragSystem.migrateAntraege();
+        as.antraege = Array.isArray(parsedAntraege) ? parsedAntraege : [];
+        as.migrateAntraege();
       } catch (e) {
         console.warn('reloadDataFromStorage: Anträge ungültig', e);
-        if (!Array.isArray(antragSystem.antraege)) antragSystem.antraege = [];
+        if (!Array.isArray(as.antraege)) as.antraege = [];
       }
-    } else if (!Array.isArray(antragSystem.antraege)) {
-      antragSystem.antraege = [];
+    } else if (as && !Array.isArray(as.antraege)) {
+      as.antraege = [];
     }
-    if (typeof terminSystem !== 'undefined' && typeof aufgabenSystem !== 'undefined') {
-      terminSystem.syncAufgabenFristenFromAufgaben(aufgabenSystem.aufgaben);
+    if (ts && aufSys) {
+      ts.syncAufgabenFristenFromAufgaben(aufSys.aufgaben);
     }
     if (typeof seedDemoDatenIfEmpty === 'function') {
       seedDemoDatenIfEmpty();
@@ -6244,16 +6339,19 @@ if (typeof window !== 'undefined') window.reloadDataFromStorage = reloadDataFrom
 // Aufgaben für NICHT veraktete Anträge sollen offen bleiben
 // Dies repariert Aufgaben die durch alte Migration/Phasenwechsel-Logik geschlossen wurden
 (function repariereGruppenAufgaben() {
+  const aufSys = typeof window !== 'undefined' ? window.aufgabenSystem : null;
+  const as = typeof window !== 'undefined' ? window.antragSystem : null;
+  if (!aufSys || !as) return;
   let geoeffnet = 0;
   
-  aufgabenSystem.aufgaben.forEach(aufgabe => {
+  aufSys.aufgaben.forEach(aufgabe => {
     // Nur Gruppenaufgaben die durch automatische Prozesse geschlossen wurden
     if (aufgabe.zugewiesenAnTyp === 'gruppe' && 
         aufgabe.status === 'erledigt' && 
         (aufgabe.erledigtDurchMigration === true || aufgabe.erledigtDurchPhasenwechsel === true)) {
       
       // Prüfen ob der Antrag wirklich veraktet ist
-      const antrag = antragSystem.getAntrag(aufgabe.antragId);
+      const antrag = as.getAntrag(aufgabe.antragId);
       if (antrag && !antrag.veraktet) {
         // Antrag ist nicht veraktet - Aufgabe wieder öffnen
         aufgabe.status = 'offen';
@@ -6266,7 +6364,7 @@ if (typeof window !== 'undefined') window.reloadDataFromStorage = reloadDataFrom
   });
   
   if (geoeffnet > 0) {
-    aufgabenSystem.saveAufgaben();
+    aufSys.saveAufgaben();
     console.log(`[Reparatur] ${geoeffnet} Gruppenaufgaben für nicht-veraktete Anträge wieder geöffnet`);
   }
 })();
@@ -6275,13 +6373,16 @@ if (typeof window !== 'undefined') window.reloadDataFromStorage = reloadDataFrom
 // Schließt Gruppenaufgaben NUR für Anträge die bereits VERAKTET wurden
 // Aufgaben können jederzeit bis zur Veraktung zugewiesen werden
 (function bereingeInkonsistenteAufgaben() {
+  const aufSys = typeof window !== 'undefined' ? window.aufgabenSystem : null;
+  const as = typeof window !== 'undefined' ? window.antragSystem : null;
+  if (!aufSys || !as) return;
   let geschlossen = 0;
-  const offeneGruppenaufgaben = aufgabenSystem.aufgaben.filter(a => 
+  const offeneGruppenaufgaben = aufSys.aufgaben.filter(a => 
     a.zugewiesenAnTyp === 'gruppe' && a.status === 'offen'
   );
   
   offeneGruppenaufgaben.forEach(aufgabe => {
-    const antrag = antragSystem.getAntrag(aufgabe.antragId);
+    const antrag = as.getAntrag(aufgabe.antragId);
     if (antrag) {
       // NUR veraktete Anträge: Aufgaben werden automatisch geschlossen
       // Bis zur Veraktung können jederzeit Aufgaben an alle Gruppen zugewiesen werden
@@ -6295,7 +6396,7 @@ if (typeof window !== 'undefined') window.reloadDataFromStorage = reloadDataFrom
   });
   
   if (geschlossen > 0) {
-    aufgabenSystem.saveAufgaben();
+    aufSys.saveAufgaben();
     console.log(`[Migration] ${geschlossen} Gruppenaufgaben für veraktete Anträge bereinigt`);
   }
 })();

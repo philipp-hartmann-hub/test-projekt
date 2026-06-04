@@ -1622,7 +1622,7 @@
 
   <script src="data-sync.js?v=20260519-tdzfix"></script>
   <script src="antrag-typen-katalog.js"></script>
-  <script src="app.js?v=20260605-antrag-sys"></script>
+  <script src="app.js?v=20260605-quota-tdz"></script>
   <script>
     let currentSession = null;
     const INSASSEN_PICKER_EXCLUDE_TYPES = ['einkauf-bestellung'];
@@ -1639,14 +1639,14 @@
             return sys;
           }
         }
-        if (typeof antragSystem !== 'undefined' && antragSystem) {
-          if (typeof window !== 'undefined') window.antragSystem = antragSystem;
-          return antragSystem;
-        }
       } catch (e) {
         console.error('[Insassen] getAntragSystem:', e);
       }
       return null;
+    }
+
+    function getTerminSystem() {
+      return typeof window !== 'undefined' ? window.terminSystem || null : null;
     }
 
     function getInsasseSession() {
@@ -2127,10 +2127,10 @@
 
     function getInsasseTermineMonat(uid, jahr, monat, insasseName) {
       const name = insasseName != null ? insasseName : getInsasseKalenderKontext().name;
-      if (typeof terminSystem.getTermineFuerInsasseMonat === 'function') {
-        return terminSystem.getTermineFuerInsasseMonat(uid, jahr, monat, name);
+      if (typeof getTerminSystem().getTermineFuerInsasseMonat === 'function') {
+        return getTerminSystem().getTermineFuerInsasseMonat(uid, jahr, monat, name);
       }
-      return terminSystem.getTermineFuerInsasse(uid, name).filter((t) => {
+      return getTerminSystem().getTermineFuerInsasse(uid, name).filter((t) => {
         const iso = typeof normalizeDatumIso === 'function' ? normalizeDatumIso(t.datum) : String(t.datum).slice(0, 10);
         const [y, m] = iso.split('-').map((x) => parseInt(x, 10));
         return y === jahr && m - 1 === monat;
@@ -2139,14 +2139,14 @@
 
     function getInsasseTermineTag(uid, datum, insasseName) {
       const name = insasseName != null ? insasseName : getInsasseKalenderKontext().name;
-      if (typeof terminSystem.getTermineFuerInsasseTag === 'function') {
-        return terminSystem.getTermineFuerInsasseTag(uid, datum, name);
+      if (typeof getTerminSystem().getTermineFuerInsasseTag === 'function') {
+        return getTerminSystem().getTermineFuerInsasseTag(uid, datum, name);
       }
       const tagIso =
         typeof datumIsoLocal === 'function'
           ? datumIsoLocal(datum instanceof Date ? datum : new Date(datum))
           : new Date(datum).toISOString().slice(0, 10);
-      return terminSystem.getTermineFuerInsasse(uid, name).filter((t) => {
+      return getTerminSystem().getTermineFuerInsasse(uid, name).filter((t) => {
         const iso = typeof normalizeDatumIso === 'function' ? normalizeDatumIso(t.datum) : String(t.datum).slice(0, 10);
         return iso === tagIso;
       });
@@ -2266,7 +2266,7 @@
     }
 
     function renderInsasseKalender() {
-      if (!currentSession || typeof terminSystem === 'undefined') return;
+      if (!currentSession || !getTerminSystem()) return;
       const section = document.getElementById('insasseKalenderSection');
       const countEl = document.getElementById('insasseTermineCount');
       const anzeige = document.getElementById('insasseKalenderAnzeige');
@@ -2276,7 +2276,7 @@
       const { uid, name } = getInsasseKalenderKontext();
       const jetzt = new Date();
       jetzt.setHours(0, 0, 0, 0);
-      const alleMeine = terminSystem.getTermineFuerInsasse(uid, name);
+      const alleMeine = getTerminSystem().getTermineFuerInsasse(uid, name);
       const kommende = alleMeine.filter((t) => {
         const d = new Date(normalizeDatumIso(t.datum) + 'T12:00:00');
         return d >= jetzt;
@@ -2376,7 +2376,7 @@
       
       // Wenn ein Antrag verknüpft ist, zur entsprechenden Ansicht wechseln
       if (antragId) {
-        const antrag = antragSystem.getAntrag(antragId);
+        const antrag = getAntragSystem().getAntrag(antragId);
         if (antrag && antrag.erledigt) {
           switchTab('historie');
         }
@@ -3521,9 +3521,12 @@
         const label =
           typeof _getAntragTypLabelForPicker === 'function'
             ? _getAntragTypLabelForPicker(type)
-            : typeof antragSystem !== 'undefined' && typeof antragSystem.getAntragTypLabel === 'function'
-              ? antragSystem.getAntragTypLabel(type)
-              : type;
+            : (() => {
+                const sys = getAntragSystem();
+                return sys && typeof sys.getAntragTypLabel === 'function'
+                  ? sys.getAntragTypLabel(type)
+                  : type;
+              })();
         if (title) title.textContent = label;
         if (context) {
           context.innerHTML = `Sie füllen jetzt aus: <strong>${label}</strong>`;
@@ -3582,9 +3585,12 @@
           type
             ? (typeof _getAntragTypLabelForPicker === 'function'
                 ? _getAntragTypLabelForPicker(type)
-                : (typeof antragSystem !== 'undefined' && typeof antragSystem.getAntragTypLabel === 'function'
-                    ? antragSystem.getAntragTypLabel(type)
-                    : type))
+                : (() => {
+                    const sys = getAntragSystem();
+                    return sys && typeof sys.getAntragTypLabel === 'function'
+                      ? sys.getAntragTypLabel(type)
+                      : type;
+                  })())
             : 'Entwurf bearbeiten';
         if (title) title.textContent = label;
         if (context) {
@@ -4278,7 +4284,7 @@
     // ============================================
 
     function openEntwurfModal(entwurfId) {
-      const entwurf = antragSystem.getAntrag(entwurfId);
+      const entwurf = getAntragSystem().getAntrag(entwurfId);
       if (!entwurf || entwurf.status !== 'entwurf') return;
       
       document.getElementById('entwurfId').value = entwurfId;
@@ -4372,7 +4378,7 @@
         }
         // Prüfen ob bereits ein Antrag für diesen Monat existiert (aber dieser Entwurf ausschließen)
         const entwurfId = document.getElementById('entwurfId').value;
-        const existierenderAntrag = antragSystem.antraege.find(a => 
+        const existierenderAntrag = getAntragSystem().antraege.find(a => 
           a.type === 'teilhabegeld' && 
           a.insasseId === currentSession.userId && 
           a.monat === monat &&
@@ -4487,7 +4493,7 @@
       const entwurfId = document.getElementById('entwurfId').value;
       const data = getEntwurfData();
       
-      antragSystem.updateEntwurf(entwurfId, data);
+      getAntragSystem().updateEntwurf(entwurfId, data);
       
       closeModal('entwurfModal');
       renderAntraege();
@@ -4513,8 +4519,8 @@
       }
       
       // Erst Daten aktualisieren, dann einreichen
-      antragSystem.updateEntwurf(entwurfId, data);
-      antragSystem.submitEntwurf(entwurfId);
+      getAntragSystem().updateEntwurf(entwurfId, data);
+      getAntragSystem().submitEntwurf(entwurfId);
       
       closeModal('entwurfModal');
       renderAntraege();
@@ -4527,7 +4533,7 @@
       const entwurfId = document.getElementById('entwurfId').value;
       const confirmed = await showConfirm('Möchten Sie diesen Entwurf wirklich löschen?');
       if (confirmed) {
-        antragSystem.deleteAntrag(entwurfId);
+        getAntragSystem().deleteAntrag(entwurfId);
         closeModal('entwurfModal');
         renderAntraege();
       }
@@ -4775,7 +4781,7 @@
         }
         
         // Freigegebene Dokumente anzeigen
-        const freigegebeneDokumente = antragSystem.getFreigegebeneDokumente(antrag.id);
+        const freigegebeneDokumente = getAntragSystem().getFreigegebeneDokumente(antrag.id);
         if (freigegebeneDokumente && freigegebeneDokumente.length > 0) {
           actionsHtml += `
             <div class="freigegebene-dokumente">
@@ -4825,7 +4831,7 @@
     
     // Bescheid-PDF herunterladen
     function downloadBescheidPdf(antragId) {
-      const antrag = antragSystem.getAntrag(antragId);
+      const antrag = getAntragSystem().getAntrag(antragId);
       const bekanntgabeAbgeschlossen =
         antrag &&
         antrag.erledigt === true &&
@@ -4845,7 +4851,7 @@
     }
 
     function openEditModal(antragId) {
-      const antrag = antragSystem.getAntrag(antragId);
+      const antrag = getAntragSystem().getAntrag(antragId);
       if (!antrag) return;
       
       document.getElementById('editAntragId').value = antragId;
@@ -4876,7 +4882,7 @@
 
     function resubmitAntrag() {
       const antragId = document.getElementById('editAntragId').value;
-      const antrag = antragSystem.getAntrag(antragId);
+      const antrag = getAntragSystem().getAntrag(antragId);
       
       if (antrag.type === 'teilhabegeld') {
         const monat = document.getElementById('editMonatSelect').value;
@@ -4888,7 +4894,7 @@
           showAlert(getErlaubteMonateHinweis());
           return;
         }
-        const andererAntragImMonat = antragSystem.antraege.find((a) =>
+        const andererAntragImMonat = getAntragSystem().antraege.find((a) =>
           a.type === 'teilhabegeld' &&
           String(a.insasseId) === String(currentSession.userId) &&
           a.monat === monat &&
@@ -4900,7 +4906,7 @@
           showAlert(`Sie haben bereits einen Teilhabegeld-Antrag für ${monatFormatiert} gestellt. Pro Monat ist nur ein Antrag möglich.`);
           return;
         }
-        antragSystem.updateAntragMonat(antragId, monat);
+        getAntragSystem().updateAntragMonat(antragId, monat);
       } else {
         const aktion = document.querySelector('input[name="editEigentumAktion"]:checked').value;
         const kleidungCheckboxes = document.querySelectorAll('input[name="editKleidung"]:checked');
@@ -4911,7 +4917,7 @@
           return;
         }
         
-        antragSystem.updateAntragEigentum(antragId, aktion, kleidung);
+        getAntragSystem().updateAntragEigentum(antragId, aktion, kleidung);
       }
       
       closeModal('editAntragModal');
@@ -4922,7 +4928,7 @@
       const antragId = document.getElementById('editAntragId').value;
       const confirmed = await showConfirm('Möchten Sie diesen Antrag wirklich endgültig löschen?');
       if (confirmed) {
-        antragSystem.deleteAntrag(antragId);
+        getAntragSystem().deleteAntrag(antragId);
         closeModal('editAntragModal');
         renderAntraege();
       }
@@ -5035,7 +5041,7 @@
     // ============================================
     
     function renderAufgabeCard(aufgabe) {
-      const antrag = antragSystem.getAntrag(aufgabe.antragId);
+      const antrag = getAntragSystem().getAntrag(aufgabe.antragId);
       const antragsNummer = antrag ? antrag.antragsNummer : aufgabe.antragsNummer;
       return `
         <div class="antrag-card aufgabe-card">
@@ -5420,6 +5426,6 @@
     }
     window.submitEinkaufBestellung = submitEinkaufBestellung;
   </script>
-  <script src="insassen-picker-boot.js?v=20260605-antrag-sys"></script>
+  <script src="insassen-picker-boot.js?v=20260605-quota-tdz"></script>
 </body>
 </html>
