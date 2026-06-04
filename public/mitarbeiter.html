@@ -1066,7 +1066,12 @@
       }
     }
 
-    async function refreshUiNachAktion({ antragId = null, detailAnsicht = 'auto', skipServerReload = false } = {}) {
+    async function refreshUiNachAktion({
+      antragId = null,
+      detailAnsicht = 'auto',
+      skipServerReload = false,
+      pendingWeiterleitung = null
+    } = {}) {
       // Sofort aus localStorage/in-memory (Nutzer sieht eigenen Fortschritt ohne Hard-Reload)
       renderPortalListenUndHub();
 
@@ -1087,20 +1092,29 @@
 
       if (detailAnsicht === 'close') {
         closeAntragDetail();
+        if (pendingWeiterleitung) {
+          openWeiterleitenModal(pendingWeiterleitung.antragId, pendingWeiterleitung.phase);
+        }
         return;
       }
       if (detailAnsicht === 'open' && antragId) {
-        openAntragDetail(antragId);
+        await openAntragDetail(antragId);
+        if (pendingWeiterleitung) {
+          openWeiterleitenModal(pendingWeiterleitung.antragId, pendingWeiterleitung.phase);
+        }
         return;
       }
       if (detailAnsicht === 'auto' && antragId && currentAntragId === antragId) {
-        openAntragDetail(antragId);
+        await openAntragDetail(antragId);
+        if (pendingWeiterleitung) {
+          openWeiterleitenModal(pendingWeiterleitung.antragId, pendingWeiterleitung.phase);
+        }
       }
     }
 
     /** Nach lokaler Änderung: Upload abwarten, Server mergen, UI neu zeichnen. */
     async function syncAntragUndAktualisiereUi(antragId, options = {}) {
-      const { detailAnsicht = 'auto', showSyncFeedback = true } = options;
+      const { detailAnsicht = 'auto', showSyncFeedback = true, pendingWeiterleitung = null } = options;
       if (showSyncFeedback && typeof showSyncStatus === 'function') {
         showSyncStatus('Synchronisiere mit Server...', 'info');
       }
@@ -1123,7 +1137,8 @@
       await refreshUiNachAktion({
         antragId,
         detailAnsicht,
-        skipServerReload: !syncOk
+        skipServerReload: !syncOk,
+        pendingWeiterleitung
       });
       return syncOk;
     }
@@ -4576,10 +4591,9 @@ ${t('task.create')}
 
       await syncAntragUndAktualisiereUi(antragId, {
         detailAnsicht: 'open',
-        showSyncFeedback: true
+        showSyncFeedback: true,
+        pendingWeiterleitung: { antragId, phase: 'geprueft' }
       });
-      // Nach Prüfung: Weiterleitung anbieten (selbst weiter / weiterleiten)
-      openWeiterleitenModal(antragId, 'geprueft');
     }
 
     // ============================================
@@ -4621,26 +4635,29 @@ ${t('task.create')}
       antragSystem.abschliessenAntrag(antragId, status, begruendung, persoenlichEroeffnen, bescheidPdf, vollzugVorBekanntgabe);
       
       closeModal('entscheidenModal');
-      const entscheidSyncOk = await syncAntragUndAktualisiereUi(antragId, { detailAnsicht: 'open' });
+
+      const antragNachEntscheid = antragSystem.getAntrag(antragId);
+      const brauchtDokumentenfreigabe =
+        !persoenlichEroeffnen &&
+        !vollzugVorBekanntgabe &&
+        antragNachEntscheid?.dokumente &&
+        antragNachEntscheid.dokumente.length > 0;
+      const pendingWeiterleitung = brauchtDokumentenfreigabe
+        ? null
+        : { antragId, phase: 'entschieden' };
+
+      const entscheidSyncOk = await syncAntragUndAktualisiereUi(antragId, {
+        detailAnsicht: 'open',
+        pendingWeiterleitung
+      });
       if (!entscheidSyncOk) {
         await showAlert(
           'Entscheidung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später erneut synchronisieren.'
         );
       }
 
-      // Prüfen ob persönliche Eröffnung oder Vollzug vor Bekanntgabe gewählt wurde
-      if (persoenlichEroeffnen || vollzugVorBekanntgabe) {
-        // Bei pers. Eröffnung/Vollzug: Keine sofortige Bekanntgabe an Insassen
-        // Dokumentenfreigabe erfolgt später bei Bestätigung
-        openWeiterleitenModal(antragId, 'entschieden');
-      } else {
-        // Direkte Bekanntgabe: Dokumentenfreigabe-Modal anzeigen
-        const antrag = antragSystem.getAntrag(antragId);
-        if (antrag?.dokumente && antrag.dokumente.length > 0) {
-          openDokumenteFreigebenModal(antragId, 'weiterleiten-entschieden');
-        } else {
-          openWeiterleitenModal(antragId, 'entschieden');
-        }
+      if (brauchtDokumentenfreigabe) {
+        openDokumenteFreigebenModal(antragId, 'weiterleiten-entschieden');
       }
     }
     

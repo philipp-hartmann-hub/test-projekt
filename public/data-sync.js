@@ -307,6 +307,10 @@ function mergeAufgabeSnapshot(prev, item) {
 function mergeAufgabenArraysAfterFetch(existingArr, incomingArr) {
   const ex = Array.isArray(existingArr) ? existingArr : [];
   const inc = Array.isArray(incomingArr) ? incomingArr : [];
+  if (inc.length === 0 && ex.length > 0) {
+    console.warn('[Sync] Server ohne Aufgaben — lokale Aufgabenliste bleibt erhalten.');
+    return ex;
+  }
   const map = new Map();
   const order = [];
   function add(item) {
@@ -506,6 +510,14 @@ function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
   const serverBearbeiter = serverAntrag.bearbeiterId;
   if (
     localBearbeiter != null &&
+    localBearbeiter !== '' &&
+    (serverBearbeiter == null || serverBearbeiter === '')
+  ) {
+    merged.bearbeiterId = localBearbeiter;
+    merged.bearbeiterName = localAntrag.bearbeiterName;
+  }
+  if (
+    localBearbeiter != null &&
     serverBearbeiter != null &&
     String(localBearbeiter) !== String(serverBearbeiter)
   ) {
@@ -664,6 +676,10 @@ function mergeTermineArraysAfterFetch(localArr, serverArr) {
 function mergeAntraegeArraysAfterFetch(localArr, serverArr) {
   const local = Array.isArray(localArr) ? localArr : [];
   const server = Array.isArray(serverArr) ? serverArr : [];
+  if (server.length === 0 && local.length > 0) {
+    console.warn('[Sync] Server ohne Anträge — lokale Antragsliste bleibt erhalten.');
+    return local;
+  }
   const map = new Map();
   local.forEach((a) => {
     if (a && a.id != null && String(a.id) !== '') map.set(String(a.id), a);
@@ -825,7 +841,10 @@ async function syncToServerImpl(key) {
       }
     }
 
-    if (key !== 'gefaengnis_aktivitaeten' && !skipDeletes) {
+    // Anträge/Aufgaben: keine Server-Löschungen (verhindert „alle Anträge weg“ bei veraltetem lokalen Snapshot)
+    const allowServerDeletes =
+      key !== 'gefaengnis_antraege' && key !== 'gefaengnis_aufgaben';
+    if (key !== 'gefaengnis_aktivitaeten' && allowServerDeletes && !skipDeletes) {
       for (const serverItem of currentServerData) {
         const stillExists = localData.find(l => l.id === serverItem.id);
         if (!stillExists) {
