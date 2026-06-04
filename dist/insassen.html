@@ -274,7 +274,7 @@
               </div>
             </div>
           </div>
-        </div>
+          </div>
         </div>
 
         <div id="newAntragStepForm" class="antrag-wizard-step wizard-panel-hidden" hidden>
@@ -356,11 +356,11 @@
           <div class="pruefung-hinweis" role="note" style="margin-bottom: 1rem;">
             <span class="hinweis-icon" aria-hidden="true">ℹ</span>
             <p>Hinweis: Dieser Antrag gilt <strong>nicht</strong> für Bekleidung. Pro Antrag kann nur <strong>1 Elektro-Gerät bzw. 1 sonstiger Gegenstand</strong> beantragt werden.</p>
-          </div>
+      </div>
           <div class="form-group">
             <label for="elektroGeraeteGegenstand">Bitte um Annahme und Aushändigung von <span class="required">*</span></label>
             <textarea id="elektroGeraeteGegenstand" rows="3" placeholder="Beschreiben Sie den Gegenstand (z. B. Radiowecker, Tischventilator ...)"></textarea>
-          </div>
+      </div>
           <div class="form-group">
             <label for="elektroGeraeteFirma">Anlieferung durch Firma</label>
             <input type="text" id="elektroGeraeteFirma" placeholder="Name der Firma, die den Gegenstand anliefert">
@@ -796,6 +796,10 @@
           </div>
         </div>
 
+        <div id="newAntragFormFallback" class="antrag-form-fallback" style="display: none;" role="status">
+          <p class="empty-hint">Für diese Antragsart ist hier kein Formular hinterlegt. Bitte wählen Sie „Zurück“ und eine andere Antragsart — Einkäufe starten Sie über „Zum Einkauf“ auf der Startseite.</p>
+        </div>
+
         <!-- Admin-definierte Antragstypen (Freitext) -->
         <div id="katalogFreitextFields" style="display: none;">
           <div class="form-group">
@@ -879,7 +883,7 @@
               </div>
             </div>
           </div>
-        </div>
+          </div>
         </div>
 
         <div id="entwurfStepForm" class="antrag-wizard-step wizard-panel-hidden">
@@ -1413,7 +1417,7 @@
         </div>
 
         <input type="hidden" id="entwurfId">
-        </div>
+      </div>
       </div>
       <div id="entwurfFooterStepType" class="modal-footer" hidden>
         <button type="button" class="btn btn-secondary" onclick="closeModal('entwurfModal')">Abbrechen</button>
@@ -1618,7 +1622,7 @@
 
   <script src="data-sync.js?v=20260519-tdzfix"></script>
   <script src="antrag-typen-katalog.js"></script>
-  <script src="app.js?v=20260527-wizard3"></script>
+  <script src="app.js?v=20260604-insassen-form"></script>
   <script>
     let currentSession = null;
 
@@ -1716,7 +1720,8 @@
         return;
       }
       try {
-        el.innerHTML = renderFn(inputName, selectedValue, onChangeHandler);
+        const excludeTypes = inputName === 'antragType' ? INSASSEN_PICKER_EXCLUDE_TYPES : [];
+        el.innerHTML = renderFn(inputName, selectedValue, onChangeHandler, excludeTypes);
         const initFn =
           typeof initAntragTypePickerAccordion === 'function'
             ? initAntragTypePickerAccordion
@@ -1728,12 +1733,9 @@
           const checked = el.querySelector(`input[name="${inputName}"]:checked`);
           if (checked) rememberNewAntragType(checked.value);
         }
-        if (inputName === 'antragType' && typeof toggleAntragFields === 'function') {
-          const stepForm = document.getElementById('newAntragStepForm');
-          if (stepForm && stepForm.style.display !== 'none') {
-            const checked = el.querySelector(`input[name="${inputName}"]:checked`);
-            toggleAntragFields(checked ? checked.value : undefined);
-          }
+        if (inputName === 'antragType' && typeof toggleAntragFields === 'function' && isNewAntragFormStepActive()) {
+          const checked = el.querySelector(`input[name="${inputName}"]:checked`);
+          toggleAntragFields(checked ? checked.value : undefined);
         }
         if (inputName === 'entwurfType' && typeof toggleEntwurfFields === 'function') {
           const stepForm = document.getElementById('entwurfStepForm');
@@ -1919,8 +1921,8 @@
 
       if (!selectedUserId) {
         errEl.style.display = 'block';
-        return;
-      }
+          return;
+        }
 
       const result = sessionManager.loginAsUser(selectedUserId, 'insasse');
       if (result.success) {
@@ -2274,7 +2276,7 @@
     function renderInsasseTermine() {
       renderInsasseKalender();
     }
-
+    
     function renderNotifications() {
       if (!currentSession) return;
       
@@ -2389,7 +2391,7 @@
 
       aktivSection.style.display = 'none';
       historieSection.style.display = 'none';
-
+      
       if (tab === 'aktiv') {
         if (tabs[0]) tabs[0].classList.add('active');
         aktivSection.style.display = 'block';
@@ -2404,7 +2406,7 @@
     // ============================================
     // ANTRÄGE
     // ============================================
-
+    
     // --- Besuche (Langzeit, Termin, Video) ---
     function langzeitIds(prefix) {
       const p = prefix ? 'entwurf' : '';
@@ -3381,6 +3383,27 @@
       'besuch-video': 'entwurfBesuchVideoFields'
     };
 
+    const INSASSEN_PICKER_EXCLUDE_TYPES = ['einkauf-bestellung'];
+
+    function insassenHasFormFieldsForType(type) {
+      if (!type) return false;
+      if (ANTRAG_FORM_PANEL_BY_TYPE[type]) return true;
+      return (
+        typeof antragTypenKatalogSystem !== 'undefined' &&
+        antragTypenKatalogSystem.isFreitextTyp(type)
+      );
+    }
+
+    function isNewAntragFormStepActive() {
+      const stepForm = document.getElementById('newAntragStepForm');
+      if (!stepForm) return false;
+      return (
+        !stepForm.classList.contains('wizard-panel-hidden') &&
+        !stepForm.hidden &&
+        stepForm.getAttribute('aria-hidden') !== 'true'
+      );
+    }
+
     function setAllFormPanelsDisplay(panelMap, visibleType) {
       Object.entries(panelMap).forEach(([type, id]) => {
         const el = document.getElementById(id);
@@ -3390,14 +3413,22 @@
         visibleType &&
         typeof antragTypenKatalogSystem !== 'undefined' &&
         antragTypenKatalogSystem.isFreitextTyp(visibleType);
+      const hasStructured = Boolean(visibleType && panelMap[visibleType]);
       const ftNew = document.getElementById('katalogFreitextFields');
       const ftEntwurf = document.getElementById('entwurfKatalogFreitextFields');
       if (ftNew) ftNew.style.display = isFreitext ? 'block' : 'none';
       if (ftEntwurf) ftEntwurf.style.display = isFreitext ? 'block' : 'none';
+      const fallback = document.getElementById('newAntragFormFallback');
+      if (fallback) {
+        fallback.style.display =
+          visibleType && !hasStructured && !isFreitext ? 'block' : 'none';
+      }
     }
 
     function hideAllNewAntragFieldPanels() {
       setAllFormPanelsDisplay(ANTRAG_FORM_PANEL_BY_TYPE, null);
+      const fallback = document.getElementById('newAntragFormFallback');
+      if (fallback) fallback.style.display = 'none';
     }
 
     function hideAllEntwurfFieldPanels() {
@@ -3427,7 +3458,7 @@
         el.removeAttribute('hidden');
         el.setAttribute('aria-hidden', 'false');
         el.style.display = mode;
-      } else {
+              } else {
         el.classList.add('wizard-panel-hidden');
         el.setAttribute('hidden', '');
         el.setAttribute('aria-hidden', 'true');
@@ -3451,34 +3482,49 @@
       const title = document.getElementById('newAntragModalTitle');
       const context = document.getElementById('newAntragStepContext');
       const modal = document.getElementById('newAntragModal');
-      setWizardPanelVisible(stepType, !isForm, 'block');
-      setWizardPanelVisible(stepForm, isForm, 'block');
-      setWizardPanelVisible(footerType, !isForm, 'flex');
-      setWizardPanelVisible(footerForm, isForm, 'flex');
-      showNewAntragFormError('');
+
       if (isForm) {
         const type = options.type || getSelectedNewAntragType();
-        if (type) rememberNewAntragType(type);
+        if (!type) {
+          showNewAntragFormError('Bitte wählen Sie zuerst eine Antragsart aus.');
+          step = 'type';
+        } else if (!insassenHasFormFieldsForType(type)) {
+          showNewAntragFormError(
+            'Für diese Antragsart gibt es hier kein Formular. Bitte wählen Sie eine andere Antragsart.'
+          );
+          step = 'type';
+        }
+      }
+
+      const showForm = step === 'form';
+      setWizardPanelVisible(stepType, !showForm, 'block');
+      setWizardPanelVisible(stepForm, showForm, 'block');
+      setWizardPanelVisible(footerType, !showForm, 'flex');
+      setWizardPanelVisible(footerForm, showForm, 'flex');
+      if (!showForm) showNewAntragFormError('');
+
+      if (showForm) {
+        const type = options.type || getSelectedNewAntragType();
+        rememberNewAntragType(type);
         const label =
-          type
-            ? (typeof _getAntragTypLabelForPicker === 'function'
-                ? _getAntragTypLabelForPicker(type)
-                : (typeof antragSystem !== 'undefined' && typeof antragSystem.getAntragTypLabel === 'function'
-                    ? antragSystem.getAntragTypLabel(type)
-                    : type))
-            : 'Antrag ausfüllen';
+          typeof _getAntragTypLabelForPicker === 'function'
+            ? _getAntragTypLabelForPicker(type)
+            : typeof antragSystem !== 'undefined' && typeof antragSystem.getAntragTypLabel === 'function'
+              ? antragSystem.getAntragTypLabel(type)
+              : type;
         if (title) title.textContent = label;
         if (context) {
-          // Hinweis direkt im Formular (nicht nur im Modal-Titel)
-          context.innerHTML = type ? `Sie füllen jetzt aus: <strong>${label}</strong>` : '';
-          context.hidden = !type;
+          context.innerHTML = `Sie füllen jetzt aus: <strong>${label}</strong>`;
+          context.hidden = false;
         }
-        // Felder erst anzeigen, wenn Schritt-2-Container sichtbar ist
-        toggleAntragFields(type);
+        requestAnimationFrame(() => toggleAntragFields(type));
       } else {
         if (modal) delete modal.dataset.wizardType;
         if (title) title.textContent = 'Neuer Antrag';
-        if (context) context.hidden = true;
+        if (context) {
+          context.innerHTML = '';
+          context.hidden = true;
+        }
         hideAllNewAntragFieldPanels();
       }
     }
@@ -3487,6 +3533,15 @@
       const type = getSelectedNewAntragType();
       if (!type) {
         showNewAntragFormError('Bitte wählen Sie eine Antragsart aus.');
+        return;
+      }
+      if (type === 'einkauf-bestellung') {
+        if (typeof closeModal === 'function') closeModal('newAntragModal');
+        if (typeof openEinkaufModal === 'function') openEinkaufModal();
+        return;
+      }
+      if (!insassenHasFormFieldsForType(type)) {
+        showNewAntragFormError('Für diese Antragsart steht hier kein Formular bereit.');
         return;
       }
       rememberNewAntragType(type);
@@ -3525,7 +3580,7 @@
           context.hidden = !type;
         }
         toggleEntwurfFields(type);
-      } else {
+            } else {
         if (title) title.textContent = 'Entwurf — Antragsart wählen';
         if (context) context.hidden = true;
         hideAllEntwurfFieldPanels();
@@ -3835,13 +3890,10 @@
     }
 
     function getNewAntragData() {
-      const selectedType =
-        document.querySelector('#newAntragTypePicker input[name="antragType"]:checked') ||
-        document.querySelector('input[name="antragType"]:checked');
-      if (!selectedType) {
+      const type = getSelectedNewAntragType();
+      if (!type) {
         return { type: null, data: {}, valid: false, error: 'Bitte wählen Sie eine Antragsart aus.' };
       }
-      const type = selectedType.value;
       
       if (type === 'teilhabegeld') {
         const monat = document.getElementById('monatSelect').value;
@@ -4017,10 +4069,10 @@
       try {
         const antrag = sys.createAntrag(type, data, session, false);
         console.log('[Insassen] Antrag erstellt:', antrag.id, antrag.antragsNummer);
-
-        closeModal('newAntragModal');
-        renderAntraege();
-        resetNewAntragForm();
+      
+      closeModal('newAntragModal');
+      renderAntraege();
+      resetNewAntragForm();
         insasseHinweis('Antrag wurde eingereicht.');
 
         if (window.DataSync && typeof window.DataSync.syncAntragToServer === 'function') {
@@ -4058,9 +4110,9 @@
         }
 
         const antrag = sys.createAntrag(type, data || {}, session, true);
-        closeModal('newAntragModal');
-        renderAntraege();
-        resetNewAntragForm();
+      closeModal('newAntragModal');
+      renderAntraege();
+      resetNewAntragForm();
         insasseHinweis('Entwurf wurde gespeichert! Sie finden ihn in der rechten Spalte.');
 
         if (window.DataSync && typeof window.DataSync.syncAntragToServer === 'function') {
@@ -4106,15 +4158,18 @@
       bindTelioUeberweisungQuelleListeners();
       bindTelefonkontoListeners();
       showNewAntragFormError('');
-      openModal('newAntragModal');
       try {
         resetNewAntragForm();
       } catch (e) {
         console.error('resetNewAntragForm:', e);
         showAlert('Antragsformular konnte nicht vollständig zurückgesetzt werden. Sie können trotzdem einen Antrag stellen.');
-        mountAntragTypePicker('newAntragTypePicker', 'antragType', '', 'toggleAntragFields');
+      } finally {
+        if (!document.querySelector('#newAntragTypePicker input[name="antragType"]')) {
+          mountAntragTypePicker('newAntragTypePicker', 'antragType', '', 'toggleAntragFields');
+        }
         setNewAntragWizardStep('type');
       }
+      openModal('newAntragModal');
     }
 
     function setAntragTypePickerSelection(containerId, inputName, typeValue) {
@@ -4188,6 +4243,8 @@
     window.mountAntragTypePicker = mountAntragTypePicker;
     window.setAntragTypePickerSelection = setAntragTypePickerSelection;
     window.getNewAntragData = getNewAntragData;
+    window.isNewAntragFormStepActive = isNewAntragFormStepActive;
+    window.insassenHasFormFieldsForType = insassenHasFormFieldsForType;
 
     if (typeof window.refreshInsassenAntragPickers === 'function') {
       window.refreshInsassenAntragPickers();
@@ -5339,6 +5396,6 @@
     }
     window.submitEinkaufBestellung = submitEinkaufBestellung;
   </script>
-  <script src="insassen-picker-boot.js?v=20260527-wizard3"></script>
+  <script src="insassen-picker-boot.js?v=20260604-insassen-form"></script>
 </body>
 </html>

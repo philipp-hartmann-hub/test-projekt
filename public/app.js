@@ -5287,7 +5287,8 @@ function _antragTypePickerGruppeHint(gruppe, selected, inputName) {
   return n === 1 ? '1 Antrag' : `${n} Anträge`;
 }
 
-function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
+function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler, excludeTypes) {
+  const exclude = Array.isArray(excludeTypes) ? excludeTypes : [];
   const selected =
     selectedValue === '' || selectedValue === null || selectedValue === undefined
       ? null
@@ -5296,8 +5297,10 @@ function renderAntragTypePickerHtml(inputName, selectedValue, onChangeHandler) {
     ? ` onchange="typeof window['${onChangeHandler}']==='function'&&window['${onChangeHandler}']()"`
     : '';
   return `<div class="antrag-type-accordion">${_getAntragTypeGruppenLive().map((gruppe) => {
-    const hasSelected = Boolean(selected && gruppe.typen.includes(selected));
-    const options = gruppe.typen
+    const typen = gruppe.typen.filter((type) => !exclude.includes(type));
+    if (!typen.length) return '';
+    const hasSelected = Boolean(selected && typen.includes(selected));
+    const options = typen
       .map((type) => {
         const label = _getAntragTypLabelForPicker(type);
         const checked = selected && type === selected ? ' checked' : '';
