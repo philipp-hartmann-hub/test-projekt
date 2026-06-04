@@ -274,7 +274,7 @@
               </div>
             </div>
           </div>
-          </div>
+        </div>
         </div>
 
         <div id="newAntragStepForm" class="antrag-wizard-step wizard-panel-hidden" hidden>
@@ -1622,17 +1622,31 @@
 
   <script src="data-sync.js?v=20260519-tdzfix"></script>
   <script src="antrag-typen-katalog.js"></script>
-  <script src="app.js?v=20260604-insassen-form"></script>
+  <script src="app.js?v=20260605-antrag-sys"></script>
   <script>
     let currentSession = null;
+    const INSASSEN_PICKER_EXCLUDE_TYPES = ['einkauf-bestellung'];
 
     function getAntragSystem() {
-      if (typeof window === 'undefined') return null;
-      if (typeof window.getAntragSystemRef === 'function') {
-        const sys = window.getAntragSystemRef();
-        if (sys) return sys;
+      try {
+        if (typeof window !== 'undefined' && window.antragSystem) {
+          return window.antragSystem;
+        }
+        if (typeof window !== 'undefined' && typeof window.getAntragSystemRef === 'function') {
+          const sys = window.getAntragSystemRef();
+          if (sys) {
+            window.antragSystem = sys;
+            return sys;
+          }
+        }
+        if (typeof antragSystem !== 'undefined' && antragSystem) {
+          if (typeof window !== 'undefined') window.antragSystem = antragSystem;
+          return antragSystem;
+        }
+      } catch (e) {
+        console.error('[Insassen] getAntragSystem:', e);
       }
-      return window.antragSystem || null;
+      return null;
     }
 
     function getInsasseSession() {
@@ -3383,8 +3397,6 @@
       'besuch-video': 'entwurfBesuchVideoFields'
     };
 
-    const INSASSEN_PICKER_EXCLUDE_TYPES = ['einkauf-bestellung'];
-
     function insassenHasFormFieldsForType(type) {
       if (!type) return false;
       if (ANTRAG_FORM_PANEL_BY_TYPE[type]) return true;
@@ -4246,13 +4258,20 @@
     window.isNewAntragFormStepActive = isNewAntragFormStepActive;
     window.insassenHasFormFieldsForType = insassenHasFormFieldsForType;
 
-    if (typeof window.refreshInsassenAntragPickers === 'function') {
-      window.refreshInsassenAntragPickers();
-    } else {
-      mountAntragTypePicker('newAntragTypePicker', 'antragType', '', 'toggleAntragFields');
-      mountAntragTypePicker('entwurfAntragTypePicker', 'entwurfType', '', 'toggleEntwurfFields');
-      setNewAntragWizardStep('type');
+    function bootstrapInsassenPortalUi() {
+      try {
+        if (typeof window.refreshInsassenAntragPickers === 'function') {
+          window.refreshInsassenAntragPickers();
+        } else {
+          mountAntragTypePicker('newAntragTypePicker', 'antragType', '', 'toggleAntragFields');
+          mountAntragTypePicker('entwurfAntragTypePicker', 'entwurfType', '', 'toggleEntwurfFields');
+          setNewAntragWizardStep('type');
+        }
+      } catch (e) {
+        console.error('[Insassen] bootstrapInsassenPortalUi:', e);
+      }
     }
+    bootstrapInsassenPortalUi();
 
     // ============================================
     // ENTWÜRFE
@@ -4911,6 +4930,11 @@
 
     function renderAntraege() {
       if (!currentSession) return;
+      const sys = getAntragSystem();
+      if (!sys) {
+        console.warn('[Insassen] renderAntraege: Antragssystem fehlt');
+        return;
+      }
       
       const entwuerfeList = document.getElementById('entwuerfeList');
       const aktivList = document.getElementById('aktivList');
@@ -4920,7 +4944,7 @@
       
       // WICHTIG: Automatische ID-Reparatur für Anträge, die per Name diesem Insassen gehören
       let needsSave = false;
-      antragSystem.antraege.forEach(antrag => {
+      sys.antraege.forEach(antrag => {
         if (antrag.insasseName === currentSession.name && antrag.insasseId !== currentSession.userId) {
           console.log('Repariere Antrag-ID:', antrag.id, 'von', antrag.insasseId, 'zu', currentSession.userId);
           antrag.insasseId = currentSession.userId;
@@ -4928,14 +4952,14 @@
         }
       });
       if (needsSave) {
-        antragSystem.saveAntraege();
+        sys.saveAntraege();
       }
       
-      antragSystem.migrateAntraege();
+      sys.migrateAntraege();
 
-      const entwuerfe = antragSystem.getEntwuerfeInsasse(currentSession.userId, currentSession.name);
-      const aktiveAntraege = antragSystem.getAktiveAntraegeInsasse(currentSession.userId, currentSession.name);
-      const historieAntraege = antragSystem.getHistorieInsasse(currentSession.userId, currentSession.name);
+      const entwuerfe = sys.getEntwuerfeInsasse(currentSession.userId, currentSession.name);
+      const aktiveAntraege = sys.getAktiveAntraegeInsasse(currentSession.userId, currentSession.name);
+      const historieAntraege = sys.getHistorieInsasse(currentSession.userId, currentSession.name);
 
       renderAntragFilterBar('entwuerfeTypeFilterBar', 'entwuerfe');
       renderAntragFilterBar('aktivTypeFilterBar', 'aktiv');
@@ -5396,6 +5420,6 @@
     }
     window.submitEinkaufBestellung = submitEinkaufBestellung;
   </script>
-  <script src="insassen-picker-boot.js?v=20260604-insassen-form"></script>
+  <script src="insassen-picker-boot.js?v=20260605-antrag-sys"></script>
 </body>
 </html>
