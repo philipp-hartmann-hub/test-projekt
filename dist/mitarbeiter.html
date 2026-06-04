@@ -1013,9 +1013,9 @@
     </div>
   </div>
 
-  <script src="data-sync.js"></script>
-  <script src="antrag-typen-katalog.js"></script>
-  <script src="app.js"></script>
+  <script src="data-sync.js?v=hub-recovery-20260604"></script>
+  <script src="antrag-typen-katalog.js?v=hub-recovery-20260604"></script>
+  <script src="app.js?v=hub-recovery-20260604"></script>
   <script>
     let currentSession = null;
     let currentAntragId = null;
@@ -1052,17 +1052,47 @@
       }
     }
 
+    function ensurePortalBasisdaten() {
+      if (typeof window.reloadDataFromStorage === 'function') {
+        try {
+          window.reloadDataFromStorage();
+        } catch (e) {
+          console.warn('[Portal] reloadDataFromStorage:', e);
+        }
+      }
+      if (!antragSystem || !Array.isArray(antragSystem.antraege)) {
+        if (antragSystem) antragSystem.antraege = [];
+      }
+      if (antragSystem.antraege.length === 0 && typeof seedDemoDatenIfEmpty === 'function') {
+        const seeded = seedDemoDatenIfEmpty();
+        if (seeded) {
+          console.info('[Portal] Demo-Anträge wiederhergestellt (lokal leer).');
+          antragSystem.saveAntraege();
+          if (window.DataSync && typeof window.DataSync.scheduleSyncToServer === 'function') {
+            window.DataSync.scheduleSyncToServer('gefaengnis_antraege');
+          }
+        }
+      }
+    }
+
     function renderPortalListenUndHub() {
       if (!currentSession) return;
-      if (typeof window.reloadDataFromStorage === 'function') {
-        window.reloadDataFromStorage();
-      }
-      renderAntraege();
-      renderNotifications();
-      renderKalender();
+      ensurePortalBasisdaten();
       const hubEl = document.getElementById('jvpHubView');
       if (hubEl && window.getComputedStyle(hubEl).display !== 'none') {
-        renderJvpHub();
+        try {
+          renderJvpHub();
+        } catch (hubErr) {
+          console.error('[Portal] renderJvpHub:', hubErr);
+          renderJvpHubFachverfahrenGrid(0);
+        }
+      }
+      try {
+        renderAntraege();
+        renderNotifications();
+        renderKalender();
+      } catch (renderErr) {
+        console.error('[Portal] Listen:', renderErr);
       }
     }
 
@@ -1822,6 +1852,7 @@
       if (typeof terminSystem !== 'undefined' && typeof terminSystem.syncAufgabenFristenFromAufgaben === 'function') {
         terminSystem.syncAufgabenFristenFromAufgaben(aufgabenSystem.aufgaben);
       }
+      ensurePortalBasisdaten();
       openJvpHub();
       try {
         renderAntraege();
@@ -1832,7 +1863,7 @@
       }
       
       window.addEventListener('dataSyncLoaded', () => {
-        if (currentSession) { renderAntraege(); renderNotifications(); renderKalender(); }
+        if (currentSession) renderPortalListenUndHub();
       });
       
       // Event-Listener für Daten-Reload vom Server
@@ -1883,7 +1914,12 @@
       document.getElementById('jvpHubView').style.display = 'grid';
       document.getElementById('dashboardView').style.display = 'none';
       document.getElementById('antragDetailView').style.display = 'none';
-      renderJvpHub();
+      try {
+        renderJvpHub();
+      } catch (e) {
+        console.error('openJvpHub renderJvpHub:', e);
+        renderJvpHubFachverfahrenGrid(0);
+      }
       renderNotifications();
       syncWelcomeBannerBackButton();
     }
@@ -1980,33 +2016,24 @@
     }
 
     function getMeineHauptbearbeitungsAntraegeCount() {
-      if (!currentSession) return 0;
-      const effektiverMitarbeiter = getEffektiverMitarbeiter();
-      const inBearbeitung = antragSystem.getInBearbeitungAntraege(effektiverMitarbeiter) || [];
-      return inBearbeitung.filter((antrag) => String(antrag.bearbeiterId) === String(currentSession.userId)).length;
+      if (!currentSession || !antragSystem || !Array.isArray(antragSystem.antraege)) return 0;
+      try {
+        const effektiverMitarbeiter = getEffektiverMitarbeiter();
+        const inBearbeitung = antragSystem.getInBearbeitungAntraege(effektiverMitarbeiter) || [];
+        const selfId = String(currentSession.userId ?? currentSession.id ?? '');
+        return inBearbeitung.filter((antrag) => String(antrag.bearbeiterId) === selfId).length;
+      } catch (e) {
+        console.warn('getMeineHauptbearbeitungsAntraegeCount:', e);
+        return 0;
+      }
     }
 
-    function renderJvpHub() {
-      if (!currentSession) return;
-      const displayName = document.getElementById('userName')?.textContent || currentSession.name || 'Mitarbeiter';
-      const roleText = getRolleText(currentSession.rolle || 'mitarbeiter');
-      const hausText = getHausAnzeigeText(currentSession.jvas || currentSession.jva) || '-';
-      const roleKey = getJvpRoleKey();
-      const stats = JVP_STATS[roleKey] || JVP_STATS.mitarbeiter;
-      const meineHauptbearbeitungCount = getMeineHauptbearbeitungsAntraegeCount();
-
-      document.getElementById('welcomeGreeting').textContent = `${getJvpGreeting()}, ${displayName}!`;
-      document.getElementById('welcomeMessage').innerHTML = `Willkommen auf der Justizvollzugsplattform. Angemeldet als <strong>${roleText}</strong> · ${hausText}`;
-      document.getElementById('jvpStatAntraege').textContent = String(meineHauptbearbeitungCount);
-      document.getElementById('jvpStatMeldungen').textContent = String(stats.meldungen || 0);
-      document.getElementById('jvpStatUrgent').textContent = String(stats.urgent || 0);
-
+    function renderJvpHubFachverfahrenGrid(meineHauptbearbeitungCount) {
       const grid = document.getElementById('jvpFachverfahrenGrid');
-      if (!grid) return;
+      if (!grid || !Array.isArray(JVP_FACHVERFAHREN)) return;
       grid.innerHTML = JVP_FACHVERFAHREN.map((fv) => {
         const badgeCount = fv.id === 'antraege' ? meineHauptbearbeitungCount : fv.offenCount;
         const badge = badgeCount !== null ? `<span class="jvp-kachel-badge">${badgeCount}</span>` : '';
-        // Nur Statistik & Urlaubs-Kachel ausgrauen (nicht lieferbar / Demnächst)
         const isAusgegraut = fv.id === 'statistik' || fv.id === 'urlaub';
         const disabledClass = isAusgegraut ? ' jvp-kachel-disabled' : '';
         const statusText = isAusgegraut ? 'Demnächst' : 'Öffnen';
@@ -2023,6 +2050,39 @@
           </button>
         `;
       }).join('');
+    }
+
+    function renderJvpHub() {
+      if (!currentSession) return;
+      const displayName = document.getElementById('userName')?.textContent || currentSession.name || 'Mitarbeiter';
+      let meineHauptbearbeitungCount = 0;
+      let roleText = 'Mitarbeiter';
+      let hausText = '-';
+      let stats = JVP_STATS.mitarbeiter;
+
+      try {
+        roleText = getRolleText(currentSession.rolle || 'mitarbeiter');
+        hausText = getHausAnzeigeText(currentSession.jvas || currentSession.jva) || '-';
+        stats = JVP_STATS[getJvpRoleKey()] || JVP_STATS.mitarbeiter;
+        meineHauptbearbeitungCount = getMeineHauptbearbeitungsAntraegeCount();
+      } catch (e) {
+        console.warn('renderJvpHub (Kennzahlen):', e);
+      }
+
+      const greetEl = document.getElementById('welcomeGreeting');
+      const msgEl = document.getElementById('welcomeMessage');
+      if (greetEl) greetEl.textContent = `${getJvpGreeting()}, ${displayName}!`;
+      if (msgEl) {
+        msgEl.innerHTML = `Willkommen auf der Justizvollzugsplattform. Angemeldet als <strong>${roleText}</strong> · ${hausText}`;
+      }
+      const statAnt = document.getElementById('jvpStatAntraege');
+      const statMel = document.getElementById('jvpStatMeldungen');
+      const statUrg = document.getElementById('jvpStatUrgent');
+      if (statAnt) statAnt.textContent = String(meineHauptbearbeitungCount);
+      if (statMel) statMel.textContent = String(stats.meldungen ?? 0);
+      if (statUrg) statUrg.textContent = String(stats.urgent ?? 0);
+
+      renderJvpHubFachverfahrenGrid(meineHauptbearbeitungCount);
     }
 
     function openFachverfahren(key) {

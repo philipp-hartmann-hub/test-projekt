@@ -3330,7 +3330,14 @@ class AntragSystem {
 
   loadAntraege() {
     const data = localStorage.getItem(this.storageKey);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    try {
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.warn('[AntragSystem] Ungültige Antragsdaten in localStorage:', e);
+      return [];
+    }
   }
 
   saveAntraege() {
@@ -6194,13 +6201,29 @@ function reloadDataFromStorage() {
     }
     const rawAufgaben = localStorage.getItem('gefaengnis_aufgaben');
     if (rawAufgaben) {
-      aufgabenSystem.aufgaben = JSON.parse(rawAufgaben);
-      aufgabenSystem.migrateZahlstelleArbeitskoordinationGruppen();
+      try {
+        const parsedAufgaben = JSON.parse(rawAufgaben);
+        aufgabenSystem.aufgaben = Array.isArray(parsedAufgaben) ? parsedAufgaben : [];
+        aufgabenSystem.migrateZahlstelleArbeitskoordinationGruppen();
+      } catch (e) {
+        console.warn('reloadDataFromStorage: Aufgaben ungültig', e);
+        if (!Array.isArray(aufgabenSystem.aufgaben)) aufgabenSystem.aufgaben = [];
+      }
+    } else if (!Array.isArray(aufgabenSystem.aufgaben)) {
+      aufgabenSystem.aufgaben = [];
     }
     const rawAntraege = localStorage.getItem('gefaengnis_antraege');
     if (rawAntraege) {
-      antragSystem.antraege = JSON.parse(rawAntraege);
-      antragSystem.migrateAntraege();
+      try {
+        const parsedAntraege = JSON.parse(rawAntraege);
+        antragSystem.antraege = Array.isArray(parsedAntraege) ? parsedAntraege : [];
+        antragSystem.migrateAntraege();
+      } catch (e) {
+        console.warn('reloadDataFromStorage: Anträge ungültig', e);
+        if (!Array.isArray(antragSystem.antraege)) antragSystem.antraege = [];
+      }
+    } else if (!Array.isArray(antragSystem.antraege)) {
+      antragSystem.antraege = [];
     }
     if (typeof terminSystem !== 'undefined' && typeof aufgabenSystem !== 'undefined') {
       terminSystem.syncAufgabenFristenFromAufgaben(aufgabenSystem.aufgaben);
