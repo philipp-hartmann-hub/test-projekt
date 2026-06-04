@@ -3716,8 +3716,9 @@ class AntragSystem {
           alleZuUebernehmen.every((aufgabe) => aufgabe.terminBegleitung === true);
         alleZuUebernehmen.forEach((aufgabe) => {
           console.log('[Debug] Konvertiere Aufgabe:', aufgabe.id);
+          const bearbeiterId = String(mitarbeiter.userId ?? mitarbeiter.id ?? '');
           aufgabe.zugewiesenAnTyp = 'mitarbeiter';
-          aufgabe.zugewiesenAnId = mitarbeiter.userId;
+          aufgabe.zugewiesenAnId = bearbeiterId;
           aufgabe.zugewiesenAnName = mitarbeiter.name;
           aufgabe.zugewiesenAnGruppe = null;
           aufgabenSystem.syncKalenderNachGruppenuebernahme(aufgabe);

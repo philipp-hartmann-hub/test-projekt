@@ -269,6 +269,21 @@ function mergeAufgabeSnapshot(prev, item) {
   if (!prev) return item;
   if (!item) return prev;
   const merged = { ...prev, ...item };
+  // Gruppen-→Persönlich-Übernahme lokal darf nicht durch veralteten Server (noch „gruppe“) zurückgedreht werden
+  const prevPersonal =
+    prev.zugewiesenAnTyp === 'mitarbeiter' &&
+    prev.zugewiesenAnId != null &&
+    String(prev.zugewiesenAnId) !== '';
+  const itemStillGruppe = item.zugewiesenAnTyp === 'gruppe';
+  if (prevPersonal && itemStillGruppe && prev.status === 'offen') {
+    merged.zugewiesenAnTyp = prev.zugewiesenAnTyp;
+    merged.zugewiesenAnId = prev.zugewiesenAnId;
+    merged.zugewiesenAnName = prev.zugewiesenAnName;
+    merged.zugewiesenAnGruppe = prev.zugewiesenAnGruppe ?? null;
+    if (prev.terminKalenderNachUebernahme === false) {
+      merged.terminKalenderNachUebernahme = false;
+    }
+  }
   if (prev.bearbeitungNachErledigung === 'uebertragen') {
     merged.bearbeitungNachErledigung = 'uebertragen';
   }
@@ -770,6 +785,8 @@ async function syncToServerImpl(key) {
             if (index !== -1) {
               if (key === 'gefaengnis_antraege') {
                 localData[index] = mergeAntragSnapshotAfterPut(localData[index], response);
+              } else if (key === 'gefaengnis_aufgaben') {
+                localData[index] = mergeAufgabeSnapshot(localData[index], response);
               } else {
                 localData[index] = response;
               }
@@ -823,6 +840,65 @@ async function waitForPendingSync(timeoutMs = 12000) {
   return false;
 }
 
+/** Aufgaben eines Antrags zuerst hochladen (wichtig nach „Aufgabe übernehmen“). */
+async function syncAufgabenForAntrag(antragId) {
+  if (!serverConnected || !initialDataLoaded) {
+    const okConn = await ensureConnected();
+    if (!okConn) return false;
+  }
+  const endpoint = SYNC_KEYS.gefaengnis_aufgaben;
+  if (!endpoint) return false;
+  let localData;
+  try {
+    localData = JSON.parse(localStorage.getItem('gefaengnis_aufgaben') || '[]');
+  } catch (_) {
+    return false;
+  }
+  if (!Array.isArray(localData)) return false;
+
+  const sid = String(antragId);
+  const targets = localData.filter((a) => a && a.antragId != null && String(a.antragId) === sid);
+  if (targets.length === 0) return true;
+
+  let allOk = true;
+  try {
+    const currentServerData = await apiCall(endpoint);
+    for (const localItem of targets) {
+      try {
+        const serverItem = Array.isArray(currentServerData)
+          ? currentServerData.find((s) => s.id === localItem.id)
+          : null;
+        if (!serverItem) {
+          await apiCall(endpoint, { method: 'POST', body: JSON.stringify(localItem) });
+          continue;
+        }
+        if (JSON.stringify(localItem) === JSON.stringify(serverItem)) continue;
+        const response = await apiCall(`${endpoint}/${localItem.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(localItem)
+        });
+        if (response && response.id) {
+          const index = localData.findIndex((l) => l.id === response.id);
+          if (index !== -1) {
+            localData[index] = mergeAufgabeSnapshot(localData[index], response);
+          }
+        }
+      } catch (e) {
+        console.warn('[Sync] Aufgabe-Upload fehlgeschlagen:', localItem.id, e);
+        allOk = false;
+      }
+    }
+    originalSetItem('gefaengnis_aufgaben', JSON.stringify(localData));
+    if (typeof window.reloadDataFromStorage === 'function') {
+      window.reloadDataFromStorage();
+    }
+  } catch (e) {
+    console.warn('[Sync] syncAufgabenForAntrag:', e);
+    return false;
+  }
+  return allOk;
+}
+
 // Explizite Synchronisation eines einzelnen Antrags UND aller Aufgaben
 // Läuft in derselben Warteschlange wie Hintergrund-Syncs für gefaengnis_antraege (kein Überschreiben durch veraltete Jobs).
 async function syncAntragToServer(antragId) {
@@ -841,6 +917,8 @@ async function syncAntragToServer(antragId) {
       const localAntraege = JSON.parse(antragData);
       const antrag = localAntraege.find(a => a.id === antragId);
       if (!antrag) return false;
+
+      await syncAufgabenForAntrag(antragId);
 
       console.log('[Sync] Synchronisiere Antrag:', antragId, 'Bearbeiter:', antrag.bearbeiterId);
       const putPayload = { ...antrag, _baseUpdatedAt: antrag.updatedAt || null };

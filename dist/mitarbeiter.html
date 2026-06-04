@@ -3094,13 +3094,19 @@ Persönlich eröffnet
         String(antrag.bearbeiterId || '') !== sessionUserId() &&
         !antrag.veraktet;
       
+      // Prüfen ob der aktuelle Benutzer berechtigt ist
+      const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(antragId);
+      const hatPersoenlicheOffeneAufgabeHier = (aufgabenZuAntrag || []).some(
+        (a) =>
+          a.status === 'offen' &&
+          a.zugewiesenAnTyp === 'mitarbeiter' &&
+          String(a.zugewiesenAnId) === sessionUserId()
+      );
       // Kann der Mitarbeiter diesen Antrag/Aufgabe übernehmen?
       const kannUebernehmen =
         !bereitsHauptbearbeiter &&
+        !hatPersoenlicheOffeneAufgabeHier &&
         (istOffen || hatAufgabeZurUebernahme || hatWartendeUebergabe || kannValUebernehmen);
-      
-      // Prüfen ob der aktuelle Benutzer berechtigt ist
-      const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(antragId);
       // Nach „Kenntnisnahme“ mit Hauptbearbeitungsübergabe darf keine zweite „offen“-Zeile derselben Aufgabe bleiben (Phantom/Duplikat)
       const aufgabeAbgleichKey = (x) =>
         `${x.erstelltVonId || ''}|${String(x.zugewiesenAnId || '')}|${JSON.stringify(x.kurzbeschreibung || x.beschreibung || '')}|${x.erstelltAm || ''}`;
@@ -6987,31 +6993,20 @@ ${t('task.create')}
         console.log('[Debug Frontend] nehmeAntrag Ergebnis:', result);
         
         if (result) {
-          // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
-          let syncStatus = '';
-          if (window.DataSync && window.DataSync.syncAntragToServer) {
-            console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
-            showSyncStatus('Synchronisiere mit Server...');
-            const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-            if (syncSuccess) {
-              console.log('[Debug] Antrag-Übernahme erfolgreich synchronisiert:', antragId);
-              syncStatus = '✓ Synchronisiert';
-              showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
-            } else {
-              console.warn('[Debug] Antrag-Übernahme Synchronisation fehlgeschlagen');
-              syncStatus = '✗ Synchronisation fehlgeschlagen';
-              showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
-            }
-          }
-          
-          await refreshUiNachAktion({ antragId, detailAnsicht: 'auto' });
-          // Automatisch zum "Meine Anträge und Aufgaben" Tab wechseln
+          const syncOk = await syncAntragUndAktualisiereUi(antragId, {
+            detailAnsicht: 'auto',
+            showSyncFeedback: true
+          });
           switchTab('bearbeitung');
-          
-          // Erfolgsmeldung mit Sync-Status
-          const msg = currentLanguage === 'de' ? `Erfolgreich übernommen! ${syncStatus}` : 
-                      currentLanguage === 'en' ? `Successfully taken! ${syncStatus}` : `Repris avec succès! ${syncStatus}`;
-          alert(msg);
+          if (!syncOk) {
+            await showAlert(
+              currentLanguage === 'de'
+                ? 'Übernahme lokal gespeichert, Synchronisation fehlgeschlagen. Bitte erneut öffnen oder Seite neu laden.'
+                : currentLanguage === 'en'
+                ? 'Saved locally; synchronization failed. Please reopen or reload.'
+                : 'Enregistré localement ; synchronisation échouée. Rouvrez ou rechargez la page.'
+            );
+          }
         } else {
           // Fehlermeldung mit Debug-Info
           const antrag = antragSystem.getAntrag(antragId);
@@ -7059,22 +7054,19 @@ ${t('task.create')}
         console.log('[Debug Frontend] nehmeAntragUndBleibeInDetail Ergebnis:', result);
         
         if (result) {
-          // Explizite Synchronisation mit dem Server, damit die Hauptbearbeitungsübergabe gespeichert wird
-          if (window.DataSync && window.DataSync.syncAntragToServer) {
-            console.log('[Debug] Synchronisiere Antrag-Übernahme mit Server...');
-            showSyncStatus('Synchronisiere mit Server...');
-            const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-            if (syncSuccess) {
-              console.log('[Debug] Antrag-Übernahme erfolgreich synchronisiert:', antragId);
-              showSyncStatus('✓ Erfolgreich synchronisiert', 'success');
-            } else {
-              console.warn('[Debug] Antrag-Übernahme Synchronisation fehlgeschlagen');
-              showSyncStatus('✗ Synchronisation fehlgeschlagen', 'error');
-            }
+          const syncOk = await syncAntragUndAktualisiereUi(antragId, {
+            detailAnsicht: 'open',
+            showSyncFeedback: true
+          });
+          if (!syncOk) {
+            await showAlert(
+              currentLanguage === 'de'
+                ? 'Übernahme lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Seite neu laden oder erneut versuchen.'
+                : currentLanguage === 'en'
+                ? 'Takeover saved locally; sync failed. Please reload or try again.'
+                : 'Reprise enregistrée localement ; échec de la synchronisation. Rechargez la page ou réessayez.'
+            );
           }
-          
-          // Direkt in der Detailansicht weiterarbeiten (keine Weiterleitungs-Abfrage)
-          await refreshUiNachAktion({ antragId, detailAnsicht: 'open' });
         } else {
           // Fehlermeldung mit Debug-Info
           const antrag = antragSystem.getAntrag(antragId);
