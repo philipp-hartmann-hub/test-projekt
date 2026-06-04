@@ -1055,19 +1055,21 @@
       }
     }
 
-    async function refreshUiNachAktion({ antragId = null, detailAnsicht = 'auto' } = {}) {
+    async function refreshUiNachAktion({ antragId = null, detailAnsicht = 'auto', skipServerReload = false } = {}) {
       // Sofort aus localStorage/in-memory (Nutzer sieht eigenen Fortschritt ohne Hard-Reload)
       renderPortalListenUndHub();
 
-      try {
-        if (window.DataSync && typeof window.DataSync.waitForPendingSync === 'function') {
-          await window.DataSync.waitForPendingSync();
+      if (!skipServerReload) {
+        try {
+          if (window.DataSync && typeof window.DataSync.waitForPendingSync === 'function') {
+            await window.DataSync.waitForPendingSync();
+          }
+          if (window.DataSync && typeof window.DataSync.reloadDataFromServer === 'function') {
+            await window.DataSync.reloadDataFromServer();
+          }
+        } catch (e) {
+          console.warn('[UI Refresh] Server-Reload fehlgeschlagen:', e);
         }
-        if (window.DataSync && typeof window.DataSync.reloadDataFromServer === 'function') {
-          await window.DataSync.reloadDataFromServer();
-        }
-      } catch (e) {
-        console.warn('[UI Refresh] Server-Reload fehlgeschlagen:', e);
       }
 
       renderPortalListenUndHub();
@@ -1094,14 +1096,24 @@
       let syncOk = true;
       if (window.DataSync && typeof window.DataSync.syncAntragToServer === 'function') {
         syncOk = await window.DataSync.syncAntragToServer(antragId);
+        if (!syncOk) {
+          await new Promise((r) => setTimeout(r, 500));
+          syncOk = await window.DataSync.syncAntragToServer(antragId);
+        }
       }
       if (showSyncFeedback && typeof showSyncStatus === 'function') {
         showSyncStatus(
-          syncOk ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen',
-          syncOk ? 'success' : 'error'
+          syncOk
+            ? '✓ Erfolgreich synchronisiert'
+            : 'Lokal gespeichert – Synchronisation wird nachgeholt',
+          syncOk ? 'success' : 'info'
         );
       }
-      await refreshUiNachAktion({ antragId, detailAnsicht });
+      await refreshUiNachAktion({
+        antragId,
+        detailAnsicht,
+        skipServerReload: !syncOk
+      });
       return syncOk;
     }
 
@@ -4312,7 +4324,7 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                     </button>
                   ` : ''}
                   ${pruefungPhaseAktiv ? `
-                    <button class="btn btn-warning btn-large${highlightPruefung ? ' btn-phasenaktion' : ''}" onclick="markiereAlsGeprueft('${antrag.id}')">
+                    <button class="btn btn-primary btn-large${highlightPruefung ? ' btn-phasenaktion' : ''}" onclick="markiereAlsGeprueft('${antrag.id}')">
                       ${t('action.technicalReview')}
                     </button>
                   ` : ''}
@@ -4532,20 +4544,10 @@ ${t('task.create')}
       
       closeModal('pruefungModal');
 
-      const pruefSyncOk = await syncAntragUndAktualisiereUi(antragId, {
+      await syncAntragUndAktualisiereUi(antragId, {
         detailAnsicht: 'open',
         showSyncFeedback: true
       });
-      if (!pruefSyncOk) {
-        const syncHinweis =
-          currentLanguage === 'en'
-            ? 'Review saved locally; synchronization failed. You can continue, but please sync later.'
-            : currentLanguage === 'fr'
-            ? 'Examen enregistré localement ; échec de la synchronisation. Vous pouvez continuer, puis synchroniser plus tard.'
-            : 'Prüfung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später erneut synchronisieren.';
-        await showAlert(syncHinweis);
-      }
-
       // Nach Prüfung: Weiterleitung anbieten (selbst weiter / weiterleiten)
       openWeiterleitenModal(antragId, 'geprueft');
     }
@@ -7087,15 +7089,6 @@ ${t('task.create')}
             showSyncFeedback: true
           });
           switchTab('bearbeitung');
-          if (!syncOk) {
-            await showAlert(
-              currentLanguage === 'de'
-                ? 'Übernahme lokal gespeichert, Synchronisation fehlgeschlagen. Bitte erneut öffnen oder Seite neu laden.'
-                : currentLanguage === 'en'
-                ? 'Saved locally; synchronization failed. Please reopen or reload.'
-                : 'Enregistré localement ; synchronisation échouée. Rouvrez ou rechargez la page.'
-            );
-          }
         } else {
           // Fehlermeldung mit Debug-Info
           const antrag = antragSystem.getAntrag(antragId);
@@ -7147,15 +7140,6 @@ ${t('task.create')}
             detailAnsicht: 'open',
             showSyncFeedback: true
           });
-          if (!syncOk) {
-            await showAlert(
-              currentLanguage === 'de'
-                ? 'Übernahme lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Seite neu laden oder erneut versuchen.'
-                : currentLanguage === 'en'
-                ? 'Takeover saved locally; sync failed. Please reload or try again.'
-                : 'Reprise enregistrée localement ; échec de la synchronisation. Rechargez la page ou réessayez.'
-            );
-          }
         } else {
           // Fehlermeldung mit Debug-Info
           const antrag = antragSystem.getAntrag(antragId);

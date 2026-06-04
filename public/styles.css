@@ -3208,17 +3208,19 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   font-weight: bold;
 }
 
-/* Prüfungshinweise */
-.pruefung-hinweis {
+/* Hinweise in der Antragsdetail-Ansicht (einheitlich, ohne Warn-Rot) */
+.pruefung-hinweis,
+.offen-hinweis {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
   padding: 1rem;
-  background: rgba(241, 196, 15, 0.1);
-  border: 1px solid var(--accent-warning);
+  background: rgba(0, 75, 147, 0.06);
+  border: 1px dashed rgba(0, 75, 147, 0.35);
   border-radius: var(--radius-sm);
   margin-bottom: 1rem;
   color: var(--text-primary);
+  font-weight: 500;
 }
 
 .pruefung-hinweis .hinweis-icon {
@@ -4506,20 +4508,6 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
 
 .prozess-pfeil.aktiv {
   color: var(--accent-success);
-}
-
-/* Hinweis-Box für Anträge und Aufgaben der Gruppe */
-.offen-hinweis {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  background: rgba(230, 81, 0, 0.1);
-  border: 1px solid rgba(230, 81, 0, 0.35);
-  border-radius: var(--radius-sm);
-  margin-bottom: 1rem;
-  color: var(--jhh-warning);
-  font-weight: 500;
 }
 
 .offen-hinweis .hinweis-icon {

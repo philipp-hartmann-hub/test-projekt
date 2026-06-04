@@ -811,6 +811,13 @@ async function syncToServerImpl(key) {
         }
       }
     }
+
+    if (key === 'gefaengnis_antraege' || key === 'gefaengnis_aufgaben') {
+      originalSetItem(key, JSON.stringify(localData));
+      if (typeof window.reloadDataFromStorage === 'function') {
+        window.reloadDataFromStorage();
+      }
+    }
   } catch (error) {
     console.warn(`Sync-Fehler fuer ${key}:`, error.message);
   }
@@ -904,6 +911,65 @@ async function syncAufgabenForAntrag(antragId) {
   return allOk;
 }
 
+/** Aktivitäten eines Antrags hochladen (Bearbeitungsverlauf nach Phasenwechsel). */
+async function syncAktivitaetenForAntrag(antragId) {
+  if (!serverConnected || !initialDataLoaded) {
+    const okConn = await ensureConnected();
+    if (!okConn) return false;
+  }
+  const endpoint = SYNC_KEYS.gefaengnis_aktivitaeten;
+  if (!endpoint) return true;
+  let localData;
+  try {
+    localData = JSON.parse(localStorage.getItem('gefaengnis_aktivitaeten') || '[]');
+  } catch (_) {
+    return false;
+  }
+  if (!Array.isArray(localData)) return false;
+
+  const sid = String(antragId);
+  const targets = localData.filter((a) => a && a.antragId != null && String(a.antragId) === sid);
+  if (targets.length === 0) return true;
+
+  let allOk = true;
+  try {
+    const currentServerData = await apiCall(endpoint);
+    for (const localItem of targets) {
+      try {
+        const serverItem = Array.isArray(currentServerData)
+          ? currentServerData.find((s) => s.id === localItem.id)
+          : null;
+        if (!serverItem) {
+          await apiCall(endpoint, { method: 'POST', body: JSON.stringify(localItem) });
+          continue;
+        }
+        if (JSON.stringify(localItem) === JSON.stringify(serverItem)) continue;
+        const response = await apiCall(`${endpoint}/${localItem.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(localItem)
+        });
+        if (response && response.id) {
+          const index = localData.findIndex((l) => l.id === response.id);
+          if (index !== -1) {
+            localData[index] = { ...localData[index], ...response };
+          }
+        }
+      } catch (e) {
+        console.warn('[Sync] Aktivität-Upload fehlgeschlagen:', localItem.id, e);
+        allOk = false;
+      }
+    }
+    originalSetItem('gefaengnis_aktivitaeten', JSON.stringify(localData));
+    if (typeof window.reloadDataFromStorage === 'function') {
+      window.reloadDataFromStorage();
+    }
+  } catch (e) {
+    console.warn('[Sync] syncAktivitaetenForAntrag:', e);
+    return false;
+  }
+  return allOk;
+}
+
 // Explizite Synchronisation eines einzelnen Antrags UND aller Aufgaben
 // Läuft in derselben Warteschlange wie Hintergrund-Syncs für gefaengnis_antraege (kein Überschreiben durch veraltete Jobs).
 async function syncAntragToServer(antragId) {
@@ -916,67 +982,75 @@ async function syncAntragToServer(antragId) {
     try {
       const base = window.location.origin + '/api';
 
-      const antragData = localStorage.getItem('gefaengnis_antraege');
-      if (!antragData) return false;
-
-      const localAntraege = JSON.parse(antragData);
-      const antrag = localAntraege.find(a => a.id === antragId);
-      if (!antrag) return false;
-
+      await syncAktivitaetenForAntrag(antragId);
       await syncAufgabenForAntrag(antragId);
 
+      const readLocalAntrag = () => {
+        const raw = localStorage.getItem('gefaengnis_antraege');
+        if (!raw) return null;
+        const list = JSON.parse(raw);
+        return list.find((a) => a.id === antragId) || null;
+      };
+
+      let antrag = readLocalAntrag();
+      if (!antrag) return false;
+
+      async function putAntragSnapshot(snapshot, baseUpdatedAt) {
+        const putPayload = { ...snapshot, _baseUpdatedAt: baseUpdatedAt || null };
+        return fetch(base + '/antraege/' + antragId, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(putPayload)
+        });
+      }
+
       console.log('[Sync] Synchronisiere Antrag:', antragId, 'Bearbeiter:', antrag.bearbeiterId);
-      const putPayload = { ...antrag, _baseUpdatedAt: antrag.updatedAt || null };
-      const antragResponse = await fetch(base + '/antraege/' + antragId, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(putPayload)
-      });
+      let antragResponse = await putAntragSnapshot(antrag, antrag.updatedAt || null);
 
       if (!antragResponse.ok) {
         if (antragResponse.status === 409) {
           const conflict = await antragResponse.json().catch(() => null);
           const latest = conflict && conflict.latestAntrag ? conflict.latestAntrag : null;
-          if (latest) {
-            const freshConflict = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
-            const idx = freshConflict.findIndex((a) => a.id === latest.id);
-            let mergedLocal = latest;
-            if (idx !== -1) {
-              mergedLocal = mergeAntragSnapshotAfterPut(freshConflict[idx], latest);
-              freshConflict[idx] = mergedLocal;
-              originalSetItem('gefaengnis_antraege', JSON.stringify(freshConflict));
-            } else {
-              freshConflict.push(latest);
-              originalSetItem('gefaengnis_antraege', JSON.stringify(freshConflict));
-            }
-            if (typeof window.reloadDataFromStorage === 'function') {
-              window.reloadDataFromStorage();
-            }
+          if (!latest) return false;
 
-            const phaseFortschrittLokal =
-              _antragPhaseRank(mergedLocal) > _antragPhaseRank(latest) ||
-              (mergedLocal.sachlichGeprueft === true && latest.sachlichGeprueft !== true) ||
-              (mergedLocal.entscheidungGetroffen === true && latest.entscheidungGetroffen !== true);
-            if (phaseFortschrittLokal && latest.updatedAt) {
-              const retryPayload = {
-                ...mergedLocal,
-                _baseUpdatedAt: latest.updatedAt
-              };
-              const retryResponse = await fetch(base + '/antraege/' + antragId, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(retryPayload)
-              });
-              if (retryResponse.ok) {
-                const serverAfterRetry = await retryResponse.json();
-                storeMergedAntragInLocalStorage(serverAfterRetry);
-                console.log('[Sync] Phasen-Fortschritt nach 409-Konflikt nachgezogen:', antragId);
-              } else {
-                console.warn('[Sync] Retry nach 409 fehlgeschlagen:', retryResponse.status);
-              }
-            }
+          antrag = readLocalAntrag() || antrag;
+          const mergedLocal = mergeAntragSnapshotAfterPut(antrag, latest);
+          const freshConflict = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
+          const idx = freshConflict.findIndex((a) => a.id === latest.id);
+          if (idx !== -1) {
+            freshConflict[idx] = mergedLocal;
+          } else {
+            freshConflict.push(mergedLocal);
           }
-          return true;
+          originalSetItem('gefaengnis_antraege', JSON.stringify(freshConflict));
+          if (typeof window.reloadDataFromStorage === 'function') {
+            window.reloadDataFromStorage();
+          }
+
+          const phaseFortschrittLokal =
+            _antragPhaseRank(mergedLocal) > _antragPhaseRank(latest) ||
+            (mergedLocal.sachlichGeprueft === true && latest.sachlichGeprueft !== true) ||
+            (mergedLocal.entscheidungGetroffen === true && latest.entscheidungGetroffen !== true) ||
+            (mergedLocal.status === 'in-bearbeitung' && latest.status === 'offen');
+
+          if (!phaseFortschrittLokal) {
+            storeMergedAntragInLocalStorage(mergedLocal);
+            return true;
+          }
+
+          if (latest.updatedAt) {
+            antragResponse = await putAntragSnapshot(mergedLocal, latest.updatedAt);
+            if (antragResponse.ok) {
+              const serverAfterRetry = await antragResponse.json();
+              storeMergedAntragInLocalStorage(serverAfterRetry);
+              console.log('[Sync] Phasen-Fortschritt nach 409-Konflikt nachgezogen:', antragId);
+              await waitForPendingSync(8000);
+              return true;
+            }
+            console.warn('[Sync] Retry nach 409 fehlgeschlagen:', antragResponse.status);
+            return false;
+          }
+          return false;
         }
         throw new Error(`HTTP ${antragResponse.status}: ${antragResponse.statusText}`);
       }
