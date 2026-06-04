@@ -1473,6 +1473,7 @@ window.DataSync = {
   syncUsersNow,
   waitForPendingSync,
   reloadDataFromServer,
+  scheduleSyncToServer,
   syncAntragToServer,
   fetchAktivitaetenForAntrag,
   exportAppDataBundle,
