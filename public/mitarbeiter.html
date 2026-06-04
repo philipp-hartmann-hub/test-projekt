@@ -3177,18 +3177,27 @@ Persönlich eröffnet
         }
       }
       const hatOffeneAufgabe = !!meineOffeneAufgabe;
-      // „Aufgabe bearbeiten“ erst nach Übernahme (persönliche Zuweisung, nicht Gruppenpostfach / Termin vor Kalender-Sync)
+      // „Aufgabe bearbeiten“ nach Übernahme oder bei offener Gruppenaufgabe für meine Gruppe
+      const aufgabePersoenlichMir =
+        meineOffeneAufgabe &&
+        meineOffeneAufgabe.zugewiesenAnTyp === 'mitarbeiter' &&
+        String(meineOffeneAufgabe.zugewiesenAnId) === sessionUserId();
+      const aufgabeAlsGruppeMir =
+        meineOffeneAufgabe &&
+        meineOffeneAufgabe.zugewiesenAnTyp === 'gruppe' &&
+        meineOffeneAufgabe.zugewiesenAnGruppe &&
+        antragSystem._mitarbeiterGehoertZuGruppe(currentSession, meineOffeneAufgabe.zugewiesenAnGruppe);
       const kannAufgabeBearbeiten =
         hatOffeneAufgabe &&
         meineOffeneAufgabe &&
-        meineOffeneAufgabe.zugewiesenAnTyp === 'mitarbeiter' &&
-        String(meineOffeneAufgabe.zugewiesenAnId) === String(currentSession.userId) &&
+        (aufgabePersoenlichMir || aufgabeAlsGruppeMir) &&
         !meineOffeneAufgabe.terminKalenderNachUebernahme;
       // Hauptverantwortung = aktueller bearbeiterId (nach „Antrag übernehmen“)
       const hatHauptverantwortung = bereitsHauptbearbeiter;
       const istBearbeiter = hatHauptverantwortung;
-      // Offene Aufgabe blockiert nur Mitwirkende ohne Hauptverantwortung
-      const aufgabeMussErstErledigtWerden = hatOffeneAufgabe && !hatHauptverantwortung;
+      // Offene Aufgabe blockiert Phasenaktionen nur für den Hauptbearbeiter (nicht für reine Aufgabenempfänger)
+      const aufgabeMussErstErledigtWerden =
+        hatOffeneAufgabe && hatHauptverantwortung && !kannAufgabeBearbeiten;
       const kannPhasenBearbeiten = hatHauptverantwortung;
       const nurAufgabenbearbeitungErlaubt =
         hatOffeneAufgabe && !hatHauptverantwortung && !aufgabeErlaubtAntragsbearbeitung(meineOffeneAufgabe);
@@ -3272,16 +3281,16 @@ Persönlich eröffnet
           ? "Confirmation de l'exécution de la demande"
           : 'Bestätigung Antragsvollzug';
       const zeigeDaueraktionen =
-        kannPhasenBearbeiten &&
         !istOffen &&
         !antrag.veraktet &&
-        (hatAufgabeZurUebernahme ||
-          kannAufgabeBearbeiten ||
-          prozessStatus.pruefung === 'aktiv' ||
-          prozessStatus.entscheiden === 'aktiv' ||
-          prozessStatus.bekanntgabe === 'aktiv' ||
-          prozessStatus.vollzug === 'aktiv' ||
-          antrag.sachlichGeprueft);
+        (kannAufgabeBearbeiten ||
+          hatAufgabeZurUebernahme ||
+          (kannPhasenBearbeiten &&
+            (prozessStatus.pruefung === 'aktiv' ||
+              prozessStatus.entscheiden === 'aktiv' ||
+              prozessStatus.bekanntgabe === 'aktiv' ||
+              prozessStatus.vollzug === 'aktiv' ||
+              antrag.sachlichGeprueft)));
       
       // Geburtsdatum formatieren
       let geburtsdatumFormatiert = '-';
@@ -4322,6 +4331,11 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                 </div>
               ` : ''}
                 <div class="action-buttons-phase">
+                  ${kannAufgabeBearbeiten && !kannPhasenBearbeiten ? `
+                    <button class="btn btn-primary btn-large btn-phasenaktion" onclick="openAufgabeLoesungModal('${meineOffeneAufgabe.id}')">
+                      ${t('task.edit')}
+                    </button>
+                  ` : ''}
                   ${highlightUebernehmen ? `
                     <button class="btn btn-primary btn-large btn-phasenaktion" onclick="${sollHausleitungsModalInDetail ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
                       ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : istOffen ? t('button.takeProcessing') : t('button.takeApplication')}
@@ -5645,6 +5659,22 @@ ${t('task.create')}
     function openAufgabeLoesungModal(aufgabeId) {
       const aufgabe = aufgabenSystem.getAufgabe(aufgabeId);
       if (!aufgabe) return;
+
+      if (
+        aufgabe.status === 'offen' &&
+        aufgabe.zugewiesenAnTyp === 'gruppe' &&
+        aufgabe.zugewiesenAnGruppe &&
+        currentSession &&
+        antragSystem._mitarbeiterGehoertZuGruppe(currentSession, aufgabe.zugewiesenAnGruppe)
+      ) {
+        aufgabe.zugewiesenAnTyp = 'mitarbeiter';
+        aufgabe.zugewiesenAnId = sessionUserId();
+        aufgabe.zugewiesenAnName = currentSession.name;
+        aufgabe.zugewiesenAnGruppe = null;
+        aufgabe.terminKalenderNachUebernahme = false;
+        aufgabenSystem.syncKalenderNachGruppenuebernahme(aufgabe);
+        aufgabenSystem.saveAufgaben();
+      }
       
       document.getElementById('aufgabeLoesungId').value = aufgabeId;
       document.getElementById('aufgabeAntwortText').value = '';
