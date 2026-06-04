@@ -6467,6 +6467,43 @@ ${t('task.create')}
       }
     }
     
+    async function syncWeiterleitungUndAktualisiereUi(antragId) {
+      if (typeof window.reloadDataFromStorage === 'function') {
+        window.reloadDataFromStorage();
+      }
+      let syncOk = true;
+      if (window.DataSync && typeof window.DataSync.syncAntragToServer === 'function') {
+        if (typeof showSyncStatus === 'function') {
+          showSyncStatus('Synchronisiere Weiterleitung...', 'info');
+        }
+        syncOk = await window.DataSync.syncAntragToServer(antragId);
+        if (!syncOk) {
+          await new Promise((r) => setTimeout(r, 500));
+          syncOk = await window.DataSync.syncAntragToServer(antragId);
+        }
+      }
+      if (typeof showSyncStatus === 'function') {
+        showSyncStatus(
+          syncOk ? '✓ Weiterleitung synchronisiert' : 'Weiterleitung lokal gespeichert – Sync wird nachgeholt',
+          syncOk ? 'success' : 'info'
+        );
+      }
+      if (syncOk) {
+        try {
+          if (window.DataSync && typeof window.DataSync.waitForPendingSync === 'function') {
+            await window.DataSync.waitForPendingSync();
+          }
+          if (window.DataSync && typeof window.DataSync.reloadDataFromServer === 'function') {
+            await window.DataSync.reloadDataFromServer();
+          }
+        } catch (e) {
+          console.warn('[Weiterleitung] Server-Reload:', e);
+        }
+      }
+      renderPortalListenUndHub();
+      return syncOk;
+    }
+
     async function confirmWeiterleiten() {
       const antragId = document.getElementById('weiterleitenAntragId').value;
       const phase = document.getElementById('weiterleitenPhase').value;
@@ -6510,23 +6547,10 @@ ${t('task.create')}
             antragId
           );
           
-          // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
-          if (window.DataSync && window.DataSync.syncAntragToServer) {
-            if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-            const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-            if (typeof showSyncStatus === 'function') {
-              showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
-            }
-            if (!syncSuccess) {
-              showAlert('Weiterleitung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.');
-            } else if (window.DataSync.reloadDataFromServer) {
-              await window.DataSync.reloadDataFromServer();
-            }
-          }
+          await syncWeiterleitungUndAktualisiereUi(antragId);
           
           closeModal('weiterleitenModal');
           closeAntragDetail();
-          renderAntraege();
           
           showAlert(`Antrag an ${person.vorname} ${person.nachname} weitergeleitet.`);
         } else {
@@ -6572,23 +6596,10 @@ ${t('task.create')}
             notiz
           );
           
-          // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
-          if (window.DataSync && window.DataSync.syncAntragToServer) {
-            if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-            const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-            if (typeof showSyncStatus === 'function') {
-              showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
-            }
-            if (!syncSuccess) {
-              showAlert('Weiterleitung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.');
-            } else if (window.DataSync.reloadDataFromServer) {
-              await window.DataSync.reloadDataFromServer();
-            }
-          }
+          await syncWeiterleitungUndAktualisiereUi(antragId);
           
           closeModal('weiterleitenModal');
           closeAntragDetail();
-          renderAntraege();
           
           showAlert(`Antrag an ${gruppeName} weitergeleitet.`);
         }

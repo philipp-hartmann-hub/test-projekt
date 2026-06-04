@@ -5044,7 +5044,12 @@ class AntragSystem {
         notiz: notiz,
         datum: new Date().toISOString()
       });
+
+      antrag.zugewiesenAnGruppe = null;
+      antrag.zugewiesenAnGruppeName = null;
+      antrag.hauptbearbeitungWartetAufUebernahme = false;
       
+      this._touchAntragUpdatedAt(antrag);
       this.saveAntraege();
       
       // Aktivität protokollieren
@@ -5123,8 +5128,34 @@ class AntragSystem {
         hauptbearbeitungUebertragen: hauptbearbeitungUebertragen,
         datum: new Date().toISOString()
       });
-      
+
+      this._touchAntragUpdatedAt(antrag);
       this.saveAntraege();
+
+      const kurz =
+        (notiz && String(notiz).trim().slice(0, 40)) ||
+        `Weiterleitung: ${gruppeName}`.slice(0, 40);
+      const gruppeKey = JSON.stringify(normierteGruppe);
+      const hatBereitsGruppenaufgabe = aufgabenSystem.aufgaben.some(
+        (a) =>
+          a.antragId === antragId &&
+          a.status === 'offen' &&
+          a.zugewiesenAnTyp === 'gruppe' &&
+          JSON.stringify(a.zugewiesenAnGruppe || {}) === gruppeKey
+      );
+      if (!hatBereitsGruppenaufgabe) {
+        aufgabenSystem.createAufgabe({
+          antragId,
+          antragsNummer: antrag.antragsNummer,
+          erstelltVonId: altBearbeiterId,
+          erstelltVonName: altBearbeiterName,
+          zugewiesenAnTyp: 'gruppe',
+          zugewiesenAnGruppe: normierteGruppe,
+          zugewiesenAnName: gruppeName,
+          kurzbeschreibung: kurz,
+          beschreibung: notiz || `Antrag wurde an ${gruppeName} weitergeleitet.`
+        });
+      }
       
       // Aktivität protokollieren
       aktivitaetenSystem.logAktivitaet({

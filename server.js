@@ -251,6 +251,23 @@ function mergeAntragPutPayload(existing, incoming) {
     base.wartetAufVollzug = false;
   }
   mergePhaseProgressFields(base, existing, incoming);
+
+  const localHatGruppe = !!(incoming.zugewiesenAnGruppe && incoming.zugewiesenAnGruppe.typ);
+  const serverHatGruppe = !!(existing.zugewiesenAnGruppe && existing.zugewiesenAnGruppe.typ);
+  if (localHatGruppe && (!serverHatGruppe || incWlLen >= exWlLen)) {
+    base.zugewiesenAnGruppe = incoming.zugewiesenAnGruppe;
+    base.zugewiesenAnGruppeName = incoming.zugewiesenAnGruppeName;
+    base.hauptbearbeitungWartetAufUebernahme = incoming.hauptbearbeitungWartetAufUebernahme;
+    base.urspruenglicherBearbeiterId = incoming.urspruenglicherBearbeiterId;
+    base.urspruenglicherBearbeiterName = incoming.urspruenglicherBearbeiterName;
+  } else if (serverHatGruppe && exWlLen > incWlLen) {
+    base.zugewiesenAnGruppe = existing.zugewiesenAnGruppe;
+    base.zugewiesenAnGruppeName = existing.zugewiesenAnGruppeName;
+    base.hauptbearbeitungWartetAufUebernahme = existing.hauptbearbeitungWartetAufUebernahme;
+    base.urspruenglicherBearbeiterId = existing.urspruenglicherBearbeiterId;
+    base.urspruenglicherBearbeiterName = existing.urspruenglicherBearbeiterName;
+  }
+
   return base;
 }
 

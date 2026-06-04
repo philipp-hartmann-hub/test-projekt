@@ -569,7 +569,31 @@ function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
     merged.wartetAufVollzug = false;
   }
   mergePhaseProgressFields(merged, localAntrag, serverAntrag);
+  mergeWeiterleitungUndGruppenZuweisung(merged, localAntrag, serverAntrag);
   return merged;
+}
+
+/** Gruppen-Weiterleitung beim Merge nicht verlieren (wichtig bei Sync-Konflikt / veraltetem Server). */
+function mergeWeiterleitungUndGruppenZuweisung(merged, localAntrag, serverAntrag) {
+  const localWl = Array.isArray(localAntrag.weiterleitungen) ? localAntrag.weiterleitungen.length : 0;
+  const serverWl = Array.isArray(serverAntrag.weiterleitungen) ? serverAntrag.weiterleitungen.length : 0;
+  const localHatGruppe = !!(localAntrag.zugewiesenAnGruppe && localAntrag.zugewiesenAnGruppe.typ);
+  const serverHatGruppe = !!(serverAntrag.zugewiesenAnGruppe && serverAntrag.zugewiesenAnGruppe.typ);
+  if (!localHatGruppe && !serverHatGruppe) return;
+
+  const lUt = localAntrag.updatedAt ? Date.parse(localAntrag.updatedAt) : 0;
+  const sUt = serverAntrag.updatedAt ? Date.parse(serverAntrag.updatedAt) : 0;
+
+  const pickLocal =
+    localHatGruppe &&
+    (!serverHatGruppe || localWl > serverWl || (localWl >= serverWl && lUt >= sUt));
+
+  const quelle = pickLocal ? localAntrag : serverAntrag;
+  merged.zugewiesenAnGruppe = quelle.zugewiesenAnGruppe;
+  merged.zugewiesenAnGruppeName = quelle.zugewiesenAnGruppeName;
+  merged.hauptbearbeitungWartetAufUebernahme = quelle.hauptbearbeitungWartetAufUebernahme;
+  merged.urspruenglicherBearbeiterId = quelle.urspruenglicherBearbeiterId;
+  merged.urspruenglicherBearbeiterName = quelle.urspruenglicherBearbeiterName;
 }
 
 function storeMergedAntragInLocalStorage(serverAntrag) {
@@ -1031,7 +1055,11 @@ async function syncAntragToServer(antragId) {
             _antragPhaseRank(mergedLocal) > _antragPhaseRank(latest) ||
             (mergedLocal.sachlichGeprueft === true && latest.sachlichGeprueft !== true) ||
             (mergedLocal.entscheidungGetroffen === true && latest.entscheidungGetroffen !== true) ||
-            (mergedLocal.status === 'in-bearbeitung' && latest.status === 'offen');
+            (mergedLocal.status === 'in-bearbeitung' && latest.status === 'offen') ||
+            (!!mergedLocal.zugewiesenAnGruppe?.typ && !latest.zugewiesenAnGruppe?.typ) ||
+            (Array.isArray(mergedLocal.weiterleitungen) &&
+              Array.isArray(latest.weiterleitungen) &&
+              mergedLocal.weiterleitungen.length > latest.weiterleitungen.length);
 
           if (!phaseFortschrittLokal) {
             storeMergedAntragInLocalStorage(mergedLocal);
