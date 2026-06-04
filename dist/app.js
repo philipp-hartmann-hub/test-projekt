@@ -115,7 +115,7 @@ const TRANSLATIONS = {
     'action.approve': 'Genehmigen',
     'action.reject': 'Ablehnen',
     'action.partiallyApprove': 'Teilweise genehmigen',
-    'action.technicalReview': 'Antrag sachlich/fachlich geprüft',
+    'action.technicalReview': 'Antrag ist formal vollständig und entscheidungsreif',
     'action.executed': 'Antrag vollzogen',
     'action.personalOpening': 'Persönliche Eröffnung',
     
@@ -228,7 +228,7 @@ const TRANSLATIONS = {
     'history.created': 'Antrag erstellt',
     'history.taken': 'Antrag übernommen',
     'history.takenOver': 'Antrag übernommen von',
-    'history.reviewed': 'Sachlich/fachlich geprüft',
+    'history.reviewed': 'Formal vollständig und entscheidungsreif',
     'history.decided': 'Entscheidung getroffen',
     'history.decisionPlanned': 'Entscheidung vorbereitet (persönliche Eröffnung)',
     'history.personalOpening': 'Persönliche Eröffnung',
@@ -245,7 +245,7 @@ const TRANSLATIONS = {
     
     // Hinweise
     'hint.applicationNotTaken': 'Dieser Antrag wurde noch nicht zur Bearbeitung übernommen.',
-    'hint.reviewRequired': 'Der Antrag muss zunächst sachlich/fachlich geprüft werden, bevor eine Entscheidung getroffen werden kann.',
+    'hint.reviewRequired': 'Der Antrag muss zunächst als formal vollständig und entscheidungsreif gekennzeichnet werden, bevor eine Entscheidung getroffen werden kann.',
     'hint.openTask': 'Sie haben eine offene Aufgabe zu diesem Antrag.',
     'hint.decisionMade': 'Entscheidung',
     'hint.on': 'am',
@@ -268,7 +268,7 @@ const TRANSLATIONS = {
     'process.notification': 'Bekanntgabe',
     'process.execution': 'Vollzug',
     'process.completion': 'Abschluss',
-    'process.reviewDone': 'Sachliche/fachliche Prüfung erfolgt am',
+    'process.reviewDone': 'Als formal vollständig und entscheidungsreif gekennzeichnet am',
     'process.by': 'durch',
     
     // Bescheid
@@ -328,7 +328,7 @@ const TRANSLATIONS = {
     'error.required': 'Dieses Feld ist erforderlich',
     'error.selectOption': 'Bitte wählen Sie eine Option',
     'error.duplicateTeilhabegeld': 'Für diesen Monat wurde bereits ein Teilhabegeld-Antrag eingereicht.',
-    'error.reviewRequired': 'Antrag muss erst geprüft werden',
+    'error.reviewRequired': 'Antrag muss zuerst als formal vollständig und entscheidungsreif gekennzeichnet werden',
     'error.executionRequired': 'Antrag muss erst als vollzogen markiert werden',
     
     // Bestätigungen
@@ -422,7 +422,7 @@ const TRANSLATIONS = {
     'action.approve': 'Approve',
     'action.reject': 'Reject',
     'action.partiallyApprove': 'Partially Approve',
-    'action.technicalReview': 'Technical Review Completed',
+    'action.technicalReview': 'Application is formally complete and ready for decision',
     'action.executed': 'Executed',
     'action.personalOpening': 'Personal Opening',
     
@@ -515,7 +515,7 @@ const TRANSLATIONS = {
     'process.notification': 'Notification',
     'process.execution': 'Execution',
     'process.completion': 'Completion',
-    'process.reviewDone': 'Technical review completed on',
+    'process.reviewDone': 'Marked as formally complete and ready for decision on',
     'process.by': 'by',
     
     // Notice
@@ -552,7 +552,7 @@ const TRANSLATIONS = {
     'history.created': 'Application created',
     'history.taken': 'Application taken over',
     'history.takenOver': 'Application taken over from',
-    'history.reviewed': 'Technical review completed',
+    'history.reviewed': 'Formally complete and ready for decision',
     'history.decided': 'Decision made',
     'history.decisionPlanned': 'Decision prepared (personal opening)',
     'history.personalOpening': 'Personal opening',
@@ -569,7 +569,7 @@ const TRANSLATIONS = {
     
     // Hints
     'hint.applicationNotTaken': 'This application has not yet been taken over for processing.',
-    'hint.reviewRequired': 'The application must first be technically reviewed before a decision can be made.',
+    'hint.reviewRequired': 'The application must first be marked as formally complete and ready for decision before a decision can be made.',
     'hint.openTask': 'You have an open task for this application.',
     'hint.decisionMade': 'Decision',
     'hint.on': 'on',
@@ -627,7 +627,7 @@ const TRANSLATIONS = {
     'error.required': 'This field is required',
     'error.selectOption': 'Please select an option',
     'error.duplicateTeilhabegeld': 'A participation allowance application has already been submitted for this month.',
-    'error.reviewRequired': 'Application must be reviewed first',
+    'error.reviewRequired': 'Application must be marked as formally complete and ready for decision first',
     'error.executionRequired': 'Application must be marked as executed first',
     
     // Confirmations
@@ -721,7 +721,7 @@ const TRANSLATIONS = {
     'action.approve': 'Approuver',
     'action.reject': 'Rejeter',
     'action.partiallyApprove': 'Approuver partiellement',
-    'action.technicalReview': 'Examen technique terminé',
+    'action.technicalReview': 'Demande formellement complète et prête pour décision',
     'action.executed': 'Exécuté',
     'action.personalOpening': 'Ouverture personnelle',
     
@@ -814,7 +814,7 @@ const TRANSLATIONS = {
     'process.notification': 'Notification',
     'process.execution': 'Exécution',
     'process.completion': 'Clôture',
-    'process.reviewDone': 'Examen technique effectué le',
+    'process.reviewDone': 'Marquée comme formellement complète et prête pour décision le',
     'process.by': 'par',
     
     // Notification
@@ -851,7 +851,7 @@ const TRANSLATIONS = {
     'history.created': 'Demande créée',
     'history.taken': 'Demande reprise',
     'history.takenOver': 'Demande reprise de',
-    'history.reviewed': 'Examen technique terminé',
+    'history.reviewed': 'Formellement complète et prête pour décision',
     'history.decided': 'Décision prise',
     'history.decisionPlanned': 'Décision préparée (ouverture personnelle)',
     'history.personalOpening': 'Ouverture personnelle',
@@ -868,7 +868,7 @@ const TRANSLATIONS = {
     
     // Indices
     'hint.applicationNotTaken': 'Cette demande n\'a pas encore été reprise pour traitement.',
-    'hint.reviewRequired': 'La demande doit d\'abord être examinée techniquement avant qu\'une décision puisse être prise.',
+    'hint.reviewRequired': 'La demande doit d\'abord être marquée comme formellement complète et prête pour décision avant qu\'une décision puisse être prise.',
     'hint.openTask': 'Vous avez une tâche ouverte pour cette demande.',
     'hint.decisionMade': 'Décision',
     'hint.on': 'le',
@@ -926,7 +926,7 @@ const TRANSLATIONS = {
     'error.required': 'Ce champ est obligatoire',
     'error.selectOption': 'Veuillez sélectionner une option',
     'error.duplicateTeilhabegeld': 'Une demande d\'allocation a déjà été soumise pour ce mois.',
-    'error.reviewRequired': 'La demande doit d\'abord être examinée',
+    'error.reviewRequired': 'La demande doit d\'abord être marquée comme formellement complète et prête pour décision',
     'error.executionRequired': 'La demande doit d\'abord être marquée comme exécutée',
     
     // Confirmations
@@ -3949,7 +3949,7 @@ class AntragSystem {
       aktivitaetenSystem.logAktivitaet({
         antragId: antragId,
         typ: 'sachlich-geprueft',
-        beschreibung: 'Antrag sachlich/fachlich geprüft',
+        beschreibung: 'Antrag ist formal vollständig und entscheidungsreif',
         details: { kommentar: pruefungsKommentar },
         benutzerTyp: 'mitarbeiter',
         benutzerId: mitarbeiterId,

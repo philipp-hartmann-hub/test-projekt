@@ -266,21 +266,21 @@
     </main>
   </div>
 
-  <!-- Modal: Sachliche/Fachliche Prüfung -->
+  <!-- Modal: Formale Vollständigkeit und Entscheidungsreife -->
   <div class="modal-overlay" id="pruefungModal">
     <div class="modal">
       <div class="modal-header">
-        <h3>Sachliche/Fachliche Prüfung</h3>
+        <h3>Formale Vollständigkeit und Entscheidungsreife</h3>
         <button class="modal-close" onclick="closeModal('pruefungModal')">&times;</button>
       </div>
       <div class="modal-body">
-        <p class="modal-info">Bitte dokumentieren Sie das Ergebnis Ihrer sachlichen und fachlichen Prüfung.</p>
+        <p class="modal-info">Bitte dokumentieren Sie, warum der Antrag formal vollständig und entscheidungsreif ist.</p>
         <div class="form-group">
-          <label for="pruefungKommentar">Prüfungsergebnis / Anmerkungen <span class="required">*</span></label>
+          <label for="pruefungKommentar">Nachweis / Anmerkungen <span class="required">*</span></label>
           <p class="field-hint" style="margin-bottom: 0.5rem;">Textbausteine – Klick fügt den Text ins Feld ein (mehrfach kombinierbar).</p>
-          <div class="schnellantwort-buttons" role="group" aria-label="Prüfungstextbausteine">
-            <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Sachlich und fachlich ohne Bedenken.')">Ohne Bedenken</button>
-            <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Antrag ist vollständig und entscheidungsreif.')">Vollständig / entscheidungsreif</button>
+          <div class="schnellantwort-buttons" role="group" aria-label="Textbausteine">
+            <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Formal vollständig und entscheidungsreif, ohne Bedenken.')">Ohne Bedenken</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Antrag ist formal vollständig und entscheidungsreif.')">Formal vollständig / entscheidungsreif</button>
             <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Unterlagen vollständig, keine weiteren Angaben erforderlich.')">Unterlagen vollständig</button>
             <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Kann zur Entscheidung vorgelegt werden.')">Zur Entscheidung</button>
             <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Rückfrage beim Antragsteller erforderlich.')">Rückfrage Antragsteller</button>
@@ -288,13 +288,13 @@
             <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Finanzielle Mittel sind ausreichend.')">Mittel ausreichend</button>
             <button type="button" class="btn-schnellantwort" onclick="insertPruefungTextbaustein('Antrag entspricht den Vollzugsvorschriften.')">Vollzugsvorschriften</button>
           </div>
-          <textarea id="pruefungKommentar" rows="4" placeholder="Ergebnis der sachlichen und fachlichen Prüfung..." required></textarea>
+          <textarea id="pruefungKommentar" rows="4" placeholder="Begründung zur formalen Vollständigkeit und Entscheidungsreife..." required></textarea>
         </div>
         <input type="hidden" id="pruefungAntragId">
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('pruefungModal')">Abbrechen</button>
-        <button class="btn btn-primary" onclick="confirmPruefung()">Prüfung abschließen</button>
+        <button class="btn btn-primary" onclick="confirmPruefung()">Kennzeichnung speichern</button>
       </div>
     </div>
   </div>
@@ -4448,9 +4448,9 @@ ${t('task.create')}
     // ============================================
     
     function showReviewRequiredAlert() {
-      const msg = currentLanguage === 'en' ? 'Please complete the technical review first.' 
-                : currentLanguage === 'fr' ? 'Veuillez d\'abord effectuer l\'examen technique.' 
-                : 'Bitte prüfen Sie den Antrag zunächst sachlich/fachlich.';
+      const msg = currentLanguage === 'en' ? 'Please mark the application as formally complete and ready for decision first.' 
+                : currentLanguage === 'fr' ? 'Veuillez d\'abord marquer la demande comme formellement complète et prête pour décision.' 
+                : 'Bitte kennzeichnen Sie den Antrag zunächst als formal vollständig und entscheidungsreif.';
       showAlert(msg);
     }
     
@@ -4525,7 +4525,7 @@ ${t('task.create')}
       if (!kommentar) {
         const msg = currentLanguage === 'en' ? 'Please enter a review comment.'
                   : currentLanguage === 'fr' ? 'Veuillez entrer un commentaire d\'examen.'
-                  : 'Bitte geben Sie einen Prüfungskommentar ein.';
+                  : 'Bitte geben Sie einen Nachweis bzw. eine Begründung ein.';
         showAlert(msg);
         return;
       }
@@ -6137,7 +6137,7 @@ ${t('task.create')}
                   : 'Sie haben den Antrag übernommen. Er befindet sich jetzt in der Phase "Prüfung".',
         'geprueft': currentLanguage === 'en' ? 'The application has been reviewed. It is now in the "Decision" phase.'
                   : currentLanguage === 'fr' ? 'La demande a été examinée. Elle est maintenant en phase "Décision".'
-                  : 'Der Antrag wurde geprüft. Er befindet sich jetzt in der Phase "Entscheidung".',
+                  : 'Der Antrag wurde als formal vollständig und entscheidungsreif gekennzeichnet. Er befindet sich jetzt in der Phase "Entscheidung".',
         'entschieden': currentLanguage === 'en' ? 'A decision has been made. The application is now in the "Notification" phase.'
                      : currentLanguage === 'fr' ? 'Une décision a été prise. La demande est maintenant en phase "Notification".'
                      : 'Die Entscheidung wurde getroffen. Der Antrag befindet sich jetzt in der Phase "Bekanntgabe".',
@@ -6854,7 +6854,7 @@ ${t('task.create')}
         doc.text('Sachliche/Fachliche Prüfung', 20, yPos);
         yPos += 10;
         doc.setFontSize(11);
-        doc.text(`Geprüft von: ${antrag.sachlichGeprueftVon || '-'}`, 25, yPos);
+        doc.text(`Gekennzeichnet von: ${antrag.sachlichGeprueftVon || '-'}`, 25, yPos);
         doc.text(`Am: ${antrag.sachlichGeprueftAm ? formatDate(antrag.sachlichGeprueftAm) : '-'}`, 25, yPos + 7);
         yPos += 14;
         
@@ -6866,7 +6866,7 @@ ${t('task.create')}
           doc.text(pruefText, 25, yPos);
           yPos += pruefText.length * 5 + 8;
         } else {
-          doc.text('Ergebnis: Antrag sachlich und fachlich geprüft', 25, yPos);
+          doc.text('Ergebnis: Antrag ist formal vollständig und entscheidungsreif', 25, yPos);
           yPos += 13;
         }
       }
