@@ -374,6 +374,84 @@ function _antragPhaseRank(a) {
   return 0;
 }
 
+const PRUEFUNG_PHASE_KEYS = [
+  'sachlichGeprueft',
+  'sachlichGeprueftAm',
+  'sachlichGeprueftVon',
+  'sachlichGeprueftVonId',
+  'pruefungsKommentar'
+];
+
+const ENTSCHEIDUNG_PHASE_KEYS = [
+  'entscheidungGetroffen',
+  'entscheidungVon',
+  'entscheidungVonId',
+  'entscheidungAm',
+  'geplantesErgebnis',
+  'geplanteBegruendung',
+  'wartetAufEroeffnung',
+  'wartetAufVollzug',
+  'bescheidPdf',
+  'begruendung',
+  'erledigt',
+  'bearbeitetAm'
+];
+
+function _pickRicherField(localVal, serverVal) {
+  if (localVal == null || localVal === '') {
+    return serverVal != null && serverVal !== '' ? serverVal : localVal;
+  }
+  if (serverVal == null || serverVal === '') return localVal;
+  if (typeof localVal === 'string' && typeof serverVal === 'string') {
+    return localVal.length >= serverVal.length ? localVal : serverVal;
+  }
+  return localVal;
+}
+
+/** Prüfung/Entscheidung: Metadaten nicht durch veralteten Server-Snapshot überschreiben. */
+function mergePhaseProgressFields(merged, localAntrag, serverAntrag) {
+  const rankLocal = _antragPhaseRank(localAntrag);
+  const rankServer = _antragPhaseRank(serverAntrag);
+  const progressed = rankLocal >= rankServer ? localAntrag : serverAntrag;
+
+  if (merged.sachlichGeprueft === true) {
+    const src =
+      localAntrag.sachlichGeprueft === true && serverAntrag.sachlichGeprueft !== true
+        ? localAntrag
+        : serverAntrag.sachlichGeprueft === true && localAntrag.sachlichGeprueft !== true
+          ? serverAntrag
+          : progressed;
+    for (const k of PRUEFUNG_PHASE_KEYS) {
+      merged[k] = _pickRicherField(localAntrag[k], serverAntrag[k]);
+      if ((merged[k] == null || merged[k] === '') && src[k] != null) merged[k] = src[k];
+    }
+  }
+
+  if (merged.entscheidungGetroffen === true) {
+    const src =
+      localAntrag.entscheidungGetroffen === true && serverAntrag.entscheidungGetroffen !== true
+        ? localAntrag
+        : serverAntrag.entscheidungGetroffen === true && localAntrag.entscheidungGetroffen !== true
+          ? serverAntrag
+          : progressed;
+    for (const k of ENTSCHEIDUNG_PHASE_KEYS) {
+      merged[k] = _pickRicherField(localAntrag[k], serverAntrag[k]);
+      if ((merged[k] == null || merged[k] === '') && src[k] != null) merged[k] = src[k];
+    }
+    if (
+      rankLocal >= rankServer &&
+      localAntrag.status &&
+      ['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(localAntrag.status)
+    ) {
+      merged.status = localAntrag.status;
+    } else if (
+      ['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(serverAntrag.status)
+    ) {
+      merged.status = serverAntrag.status;
+    }
+  }
+}
+
 function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
   if (!serverAntrag || typeof serverAntrag !== 'object') return localAntrag;
   if (!localAntrag || typeof localAntrag !== 'object') return serverAntrag;
@@ -450,15 +528,23 @@ function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
   if (vollzugErledigt && (localAntrag.wartetAufVollzug === false || serverAntrag.wartetAufVollzug === false)) {
     merged.wartetAufVollzug = false;
   }
-  const len = (v) => (v == null ? 0 : String(v).length);
-  const pkL = localAntrag.pruefungsKommentar;
-  const pkS = serverAntrag.pruefungsKommentar;
-  if (len(pkS) > len(pkL)) {
-    merged.pruefungsKommentar = pkS;
-  } else if (pkL != null && pkS == null) {
-    merged.pruefungsKommentar = pkL;
-  }
+  mergePhaseProgressFields(merged, localAntrag, serverAntrag);
   return merged;
+}
+
+function storeMergedAntragInLocalStorage(serverAntrag) {
+  if (!serverAntrag || !serverAntrag.id) return;
+  const fresh = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
+  const index = fresh.findIndex((a) => a.id === serverAntrag.id);
+  if (index !== -1) {
+    fresh[index] = mergeAntragSnapshotAfterPut(fresh[index], serverAntrag);
+  } else {
+    fresh.push(serverAntrag);
+  }
+  originalSetItem('gefaengnis_antraege', JSON.stringify(fresh));
+  if (typeof window.reloadDataFromStorage === 'function') {
+    window.reloadDataFromStorage();
+  }
 }
 
 /**
@@ -751,8 +837,10 @@ async function syncAntragToServer(antragId) {
           if (latest) {
             const freshConflict = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
             const idx = freshConflict.findIndex((a) => a.id === latest.id);
+            let mergedLocal = latest;
             if (idx !== -1) {
-              freshConflict[idx] = mergeAntragSnapshotAfterPut(freshConflict[idx], latest);
+              mergedLocal = mergeAntragSnapshotAfterPut(freshConflict[idx], latest);
+              freshConflict[idx] = mergedLocal;
               originalSetItem('gefaengnis_antraege', JSON.stringify(freshConflict));
             } else {
               freshConflict.push(latest);
@@ -761,8 +849,30 @@ async function syncAntragToServer(antragId) {
             if (typeof window.reloadDataFromStorage === 'function') {
               window.reloadDataFromStorage();
             }
+
+            const phaseFortschrittLokal =
+              _antragPhaseRank(mergedLocal) > _antragPhaseRank(latest) ||
+              (mergedLocal.sachlichGeprueft === true && latest.sachlichGeprueft !== true) ||
+              (mergedLocal.entscheidungGetroffen === true && latest.entscheidungGetroffen !== true);
+            if (phaseFortschrittLokal && latest.updatedAt) {
+              const retryPayload = {
+                ...mergedLocal,
+                _baseUpdatedAt: latest.updatedAt
+              };
+              const retryResponse = await fetch(base + '/antraege/' + antragId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(retryPayload)
+              });
+              if (retryResponse.ok) {
+                const serverAfterRetry = await retryResponse.json();
+                storeMergedAntragInLocalStorage(serverAfterRetry);
+                console.log('[Sync] Phasen-Fortschritt nach 409-Konflikt nachgezogen:', antragId);
+              } else {
+                console.warn('[Sync] Retry nach 409 fehlgeschlagen:', retryResponse.status);
+              }
+            }
           }
-          // Konflikt ist kein harter Fehler mehr; wir haben den neuesten Serverstand lokal.
           return true;
         }
         throw new Error(`HTTP ${antragResponse.status}: ${antragResponse.statusText}`);
@@ -791,15 +901,7 @@ async function syncAntragToServer(antragId) {
       }
 
       if (serverAntrag.id) {
-        const fresh = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
-        const index = fresh.findIndex(a => a.id === serverAntrag.id);
-        if (index !== -1) {
-          fresh[index] = mergeAntragSnapshotAfterPut(fresh[index], serverAntrag);
-          originalSetItem('gefaengnis_antraege', JSON.stringify(fresh));
-          if (typeof window.reloadDataFromStorage === 'function') {
-            window.reloadDataFromStorage();
-          }
-        }
+        storeMergedAntragInLocalStorage(serverAntrag);
       }
 
       await waitForPendingSync(8000);

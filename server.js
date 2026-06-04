@@ -122,6 +122,83 @@ function antragPhaseRank(a) {
   return 0;
 }
 
+const PRUEFUNG_PHASE_KEYS = [
+  'sachlichGeprueft',
+  'sachlichGeprueftAm',
+  'sachlichGeprueftVon',
+  'sachlichGeprueftVonId',
+  'pruefungsKommentar'
+];
+
+const ENTSCHEIDUNG_PHASE_KEYS = [
+  'entscheidungGetroffen',
+  'entscheidungVon',
+  'entscheidungVonId',
+  'entscheidungAm',
+  'geplantesErgebnis',
+  'geplanteBegruendung',
+  'wartetAufEroeffnung',
+  'wartetAufVollzug',
+  'bescheidPdf',
+  'begruendung',
+  'erledigt',
+  'bearbeitetAm'
+];
+
+function pickRicherField(localVal, serverVal) {
+  if (localVal == null || localVal === '') {
+    return serverVal != null && serverVal !== '' ? serverVal : localVal;
+  }
+  if (serverVal == null || serverVal === '') return localVal;
+  if (typeof localVal === 'string' && typeof serverVal === 'string') {
+    return localVal.length >= serverVal.length ? localVal : serverVal;
+  }
+  return localVal;
+}
+
+function mergePhaseProgressFields(merged, existing, incoming) {
+  const rankExisting = antragPhaseRank(existing);
+  const rankIncoming = antragPhaseRank(incoming);
+  const progressed = rankExisting >= rankIncoming ? existing : incoming;
+
+  if (merged.sachlichGeprueft === true) {
+    const src =
+      existing.sachlichGeprueft === true && incoming.sachlichGeprueft !== true
+        ? existing
+        : incoming.sachlichGeprueft === true && existing.sachlichGeprueft !== true
+          ? incoming
+          : progressed;
+    for (const k of PRUEFUNG_PHASE_KEYS) {
+      merged[k] = pickRicherField(existing[k], incoming[k]);
+      if ((merged[k] == null || merged[k] === '') && src[k] != null) merged[k] = src[k];
+    }
+  }
+
+  if (merged.entscheidungGetroffen === true) {
+    const src =
+      existing.entscheidungGetroffen === true && incoming.entscheidungGetroffen !== true
+        ? existing
+        : incoming.entscheidungGetroffen === true && existing.entscheidungGetroffen !== true
+          ? incoming
+          : progressed;
+    for (const k of ENTSCHEIDUNG_PHASE_KEYS) {
+      merged[k] = pickRicherField(existing[k], incoming[k]);
+      if ((merged[k] == null || merged[k] === '') && src[k] != null) merged[k] = src[k];
+    }
+    if (
+      rankIncoming >= rankExisting &&
+      incoming.status &&
+      ['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(incoming.status)
+    ) {
+      merged.status = incoming.status;
+    } else if (
+      ['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(existing.status)
+    ) {
+      merged.status = existing.status;
+    }
+  }
+}
+
 function mergeAntragPutPayload(existing, incoming) {
   if (!incoming || typeof incoming !== 'object') return incoming;
   if (!existing || typeof existing !== 'object') return incoming;
@@ -173,14 +250,7 @@ function mergeAntragPutPayload(existing, incoming) {
   if (vollzugErledigt && (existing.wartetAufVollzug === false || incoming.wartetAufVollzug === false)) {
     base.wartetAufVollzug = false;
   }
-  const pkEx = existing.pruefungsKommentar;
-  const pkIn = incoming.pruefungsKommentar;
-  const len = (v) => (v == null ? 0 : String(v).length);
-  if (len(pkIn) > len(pkEx)) {
-    base.pruefungsKommentar = pkIn;
-  } else if (pkEx != null && pkIn == null) {
-    base.pruefungsKommentar = pkEx;
-  }
+  mergePhaseProgressFields(base, existing, incoming);
   return base;
 }
 

@@ -4341,45 +4341,21 @@ ${t('action.archive')}
         return;
       }
       
-      let syncHinweis = null;
-      // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
-      if (window.DataSync && window.DataSync.syncAntragToServer) {
-        const canSync =
-          typeof window.DataSync.isConnected === 'function' &&
-          typeof window.DataSync.isLoaded === 'function' &&
-          window.DataSync.isConnected() &&
-          window.DataSync.isLoaded();
-        if (!canSync) {
-          if (typeof showSyncStatus === 'function') {
-            showSyncStatus('Offline: Änderung lokal gespeichert (Synchronisation später möglich).', 'info');
-          }
-          syncHinweis = currentLanguage === 'en'
-            ? 'Offline: the change is saved locally; you can continue and sync later.'
-            : currentLanguage === 'fr'
-            ? 'Hors ligne : la modification est enregistrée localement ; vous pouvez continuer et synchroniser plus tard.'
-            : 'Offline: Änderung lokal gespeichert; Sie können fortfahren und später synchronisieren.';
-        } else {
-          if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-          const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-          if (typeof showSyncStatus === 'function') {
-            showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
-          }
-          if (!syncSuccess) {
-            syncHinweis = currentLanguage === 'en'
-              ? 'Synchronization failed. The phase transition is saved locally; you can continue, but please sync later.'
-              : currentLanguage === 'fr'
-              ? 'Échec de la synchronisation. La transition de phase est enregistrée localement; vous pouvez continuer, mais veuillez synchroniser plus tard.'
-              : 'Synchronisation fehlgeschlagen. Der Phasenübergang ist lokal gespeichert; Sie können fortfahren, bitte später synchronisieren.';
-          }
-        }
-      }
-      
       closeModal('pruefungModal');
-      if (syncHinweis) {
+
+      const pruefSyncOk = await syncAntragUndAktualisiereUi(antragId, {
+        detailAnsicht: 'open',
+        showSyncFeedback: true
+      });
+      if (!pruefSyncOk) {
+        const syncHinweis =
+          currentLanguage === 'en'
+            ? 'Review saved locally; synchronization failed. You can continue, but please sync later.'
+            : currentLanguage === 'fr'
+            ? 'Examen enregistré localement ; échec de la synchronisation. Vous pouvez continuer, puis synchroniser plus tard.'
+            : 'Prüfung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später erneut synchronisieren.';
         await showAlert(syncHinweis);
       }
-
-      await syncAntragUndAktualisiereUi(antragId, { detailAnsicht: 'open', showSyncFeedback: false });
 
       // Nach Prüfung: Weiterleitung anbieten (selbst weiter / weiterleiten)
       openWeiterleitenModal(antragId, 'geprueft');

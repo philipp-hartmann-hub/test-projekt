@@ -3945,6 +3945,7 @@ class AntragSystem {
       antrag.sachlichGeprueftVon = mitarbeiterName;
       antrag.sachlichGeprueftVonId = mitarbeiterId;
       antrag.pruefungsKommentar = pruefungsKommentar; // Pflichtkommentar zur Prüfung
+      this._touchAntragUpdatedAt(antrag);
       this.saveAntraege();
       
       // Aktivität protokollieren
@@ -4021,6 +4022,7 @@ class AntragSystem {
         }
         
         // Status bleibt "in-bearbeitung" für den Insassen
+        this._touchAntragUpdatedAt(antrag);
         this.saveAntraege();
         
         // Aktivität protokollieren
@@ -4056,6 +4058,7 @@ class AntragSystem {
       if (begruendung) {
         antrag.begruendung = begruendung;
       }
+      this._touchAntragUpdatedAt(antrag);
       this.saveAntraege();
 
       // Aktivität protokollieren
