@@ -2991,8 +2991,68 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
 
 .action-buttons {
   display: flex;
+  flex-direction: column;
   gap: 1rem;
+}
+
+.action-buttons-phase {
+  display: flex;
   flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+  background: rgba(0, 75, 147, 0.06);
+  border: 1px dashed rgba(0, 75, 147, 0.4);
+}
+
+.action-buttons-phase:empty {
+  display: none;
+}
+
+.action-buttons-dauerhaft {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* Nächster Prozessschritt – visuell von Aufgabe/Termin abgesetzt */
+.btn-phasenaktion {
+  font-weight: 600;
+  box-shadow:
+    0 0 0 3px rgba(0, 75, 147, 0.45),
+    0 4px 14px rgba(0, 75, 147, 0.22);
+}
+
+.btn-phasenaktion.btn-warning {
+  box-shadow:
+    0 0 0 3px rgba(212, 172, 13, 0.55),
+    0 4px 14px rgba(212, 172, 13, 0.28);
+}
+
+.btn-phasenaktion.btn-success {
+  box-shadow:
+    0 0 0 3px rgba(46, 184, 114, 0.5),
+    0 4px 14px rgba(46, 184, 114, 0.22);
+}
+
+.btn-phasenaktion.btn-secondary {
+  box-shadow:
+    0 0 0 3px rgba(100, 116, 139, 0.45),
+    0 4px 14px rgba(100, 116, 139, 0.18);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.btn-outline:hover {
+  border-color: var(--hamburg-blau);
+  color: var(--hamburg-blau);
+  background: rgba(0, 75, 147, 0.06);
 }
 
 .btn-large {

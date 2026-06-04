@@ -1468,6 +1468,23 @@
         case 'uebernommen':
           const von = aktivitaet.beschreibung.replace('Antrag übernommen von ', '');
           return `${t('history.takenOver')} ${von}`;
+
+        case 'hausleitung-uebernahme': {
+          const vonBearbeiter = details.alterBearbeiter;
+          if (currentLanguage === 'en') {
+            return vonBearbeiter
+              ? `Application taken over by management (from ${vonBearbeiter})`
+              : 'Application taken over by management';
+          }
+          if (currentLanguage === 'fr') {
+            return vonBearbeiter
+              ? `Demande reprise par la direction (de ${vonBearbeiter})`
+              : 'Demande reprise par la direction';
+          }
+          return vonBearbeiter
+            ? `Antrag durch VAL/AL übernommen (von ${vonBearbeiter})`
+            : 'Antrag durch VAL/AL übernommen';
+        }
           
         case 'sachlich-geprueft':
           const pruefText = t('history.reviewed');
@@ -2178,6 +2195,14 @@
       
       // Filtern: Private Notizen nur für den Ersteller anzeigen
       const sichtbar = kommentare.filter(k => {
+        // VAL/AL-Übernahme gehört in den Bearbeitungsverlauf, nicht in die Notizliste
+        if (
+          k.systemEintrag === true &&
+          typeof k.text === 'string' &&
+          /^VAL-Übernahme begründet:/i.test(k.text.trim())
+        ) {
+          return false;
+        }
         // Wenn keine Typ-Info vorhanden (Altdaten), als "alle" behandeln
         if (!k.typ || k.typ === 'alle' || k.typ === 'akte') {
           return true;
@@ -3166,6 +3191,53 @@ Persönlich eröffnet
       
       // Prozess-Status berechnen
       const prozessStatus = berechneProzessStatus(antrag);
+      const pruefungPhaseAktiv =
+        kannPhasenBearbeiten &&
+        !istOffen &&
+        !istErledigt &&
+        !antrag.entscheidungGetroffen &&
+        !antrag.sachlichGeprueft;
+      const entscheidungPhaseAktiv =
+        kannPhasenBearbeiten &&
+        !istOffen &&
+        !istErledigt &&
+        !antrag.entscheidungGetroffen &&
+        antrag.sachlichGeprueft;
+      const veraktenPhaseAktiv =
+        kannPhasenBearbeiten && !antrag.veraktet && prozessStatus.abschluss === 'aktiv';
+      const highlightUebernehmen =
+        kannUebernehmen && (prozessStatus.eingang === 'aktiv' || hatWartendeUebergabe);
+      const highlightPruefung = pruefungPhaseAktiv && prozessStatus.pruefung === 'aktiv';
+      const highlightEntscheidung = entscheidungPhaseAktiv && prozessStatus.entscheiden === 'aktiv';
+      const highlightEroeffnung =
+        antrag.wartetAufEroeffnung && kannPhasenBearbeiten && prozessStatus.bekanntgabe === 'aktiv';
+      const highlightVollzugBestaetigen =
+        antrag.wartetAufVollzug && kannPhasenBearbeiten && prozessStatus.bekanntgabe === 'aktiv';
+      const vollzugPhaseAktiv =
+        kannVollziehenVerakten &&
+        !antrag.veraktet &&
+        istErledigt &&
+        !antrag.vollzogen &&
+        (antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') &&
+        prozessStatus.vollzug === 'aktiv';
+      const highlightVollzug = vollzugPhaseAktiv;
+      const labelVollzugBestaetigen =
+        currentLanguage === 'en'
+          ? 'Confirm application execution'
+          : currentLanguage === 'fr'
+          ? "Confirmation de l'exécution de la demande"
+          : 'Bestätigung Antragsvollzug';
+      const zeigeDaueraktionen =
+        kannPhasenBearbeiten &&
+        !istOffen &&
+        !antrag.veraktet &&
+        (hatAufgabeZurUebernahme ||
+          kannAufgabeBearbeiten ||
+          prozessStatus.pruefung === 'aktiv' ||
+          prozessStatus.entscheiden === 'aktiv' ||
+          prozessStatus.bekanntgabe === 'aktiv' ||
+          prozessStatus.vollzug === 'aktiv' ||
+          antrag.sachlichGeprueft);
       
       // Geburtsdatum formatieren
       let geburtsdatumFormatiert = '-';
@@ -3905,9 +3977,17 @@ ${withdrawText}
                         ${a.benutzerName}
                       </span>
                     </div>
-                    ${a.details && a.details.begruendung ? `
+                    ${a.details && (a.details.begruendung || a.details.uebernahmeBegruendung) ? `
                       <div class="verlauf-details">
-                        <em>${t('decision.reason')}: "${getTranslatedUserText(a.details.begruendung)}"</em>
+                        <em>${
+                          a.typ === 'hausleitung-uebernahme'
+                            ? (currentLanguage === 'en'
+                              ? 'Reason for takeover'
+                              : currentLanguage === 'fr'
+                              ? 'Motif de la reprise'
+                              : 'Begründung der Übernahme')
+                            : t('decision.reason')
+                        }: "${getTranslatedUserText(a.details.begruendung || a.details.uebernahmeBegruendung)}"</em>
                       </div>
                     ` : ''}
                     ${a.details && a.details.kommentar && a.typ === 'sachlich-geprueft' ? `
@@ -4088,7 +4168,7 @@ ${currentLanguage === 'en' ? 'Download notice' : currentLanguage === 'fr' ? 'Té
                   <span>${currentLanguage === 'en' ? 'Waiting for personal opening' : currentLanguage === 'fr' ? 'En attente d\'ouverture personnelle' : 'Wartet auf persönliche Eröffnung'} - ${currentLanguage === 'en' ? 'Planned decision' : currentLanguage === 'fr' ? 'Décision prévue' : 'Geplante Entscheidung'}: ${getStatusText(antrag.geplantesErgebnis)}</span>
                 </div>
                 <div class="bestaetigung-checkbox">
-                  <button class="btn btn-success btn-large" onclick="bestaetigeEroeffnung('${antrag.id}')">
+                  <button class="btn btn-success btn-large${highlightEroeffnung ? ' btn-phasenaktion' : ''}" onclick="bestaetigeEroeffnung('${antrag.id}')">
 ${currentLanguage === 'en' ? 'Confirm personal opening' : currentLanguage === 'fr' ? 'Confirmer l\'ouverture personnelle' : 'Persönliche Eröffnung bestätigen'}
                   </button>
                 </div>
@@ -4100,7 +4180,7 @@ ${currentLanguage === 'en' ? 'Confirm personal opening' : currentLanguage === 'f
                   <span>${currentLanguage === 'en' ? 'Execution before notification planned' : currentLanguage === 'fr' ? 'Exécution avant notification prévue' : 'Vollzug vor Bekanntgabe geplant'} - ${currentLanguage === 'en' ? 'Planned decision' : currentLanguage === 'fr' ? 'Décision prévue' : 'Geplante Entscheidung'}: ${getStatusText(antrag.geplantesErgebnis)}</span>
                 </div>
                 <div class="bestaetigung-checkbox">
-                  <button class="btn btn-success btn-large" onclick="openVollzugBestaetigenModal('${antrag.id}')">
+                  <button class="btn btn-success btn-large${highlightVollzugBestaetigen ? ' btn-phasenaktion' : ''}" onclick="openVollzugBestaetigenModal('${antrag.id}')">
 ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 'fr' ? 'Confirmer l\'exécution et notifier' : 'Vollzug bestätigen & Bekanntgabe'}
                   </button>
                 </div>
@@ -4120,15 +4200,10 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                 </div>
               ` : ''}
               
-              ${istErledigt && !antrag.veraktet && kannVollziehenVerakten && (antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') ? `
-                <div class="vollzug-checkbox">
-                  <label class="checkbox-option vollzug-option">
-                    <input type="checkbox" id="vollzogenCheckbox" ${antrag.vollzogen ? 'checked disabled' : ''} onchange="toggleVollzogen('${antrag.id}', this.checked)">
-                    <span class="checkbox-label">${t('action.executed')}</span>
-                  </label>
-                  ${antrag.vollzogen ? `
-                    <span class="vollzug-info">${t('hint.on')} ${new Date(antrag.vollzogenAm).toLocaleDateString(currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE')} ${t('process.by')} ${antrag.vollzogenVon}</span>
-                  ` : ''}
+              ${antrag.vollzogen && !antrag.veraktet ? `
+                <div class="pruefung-erfolgt">
+                  <span class="erfolgt-icon"></span>
+                  <span>${currentLanguage === 'en' ? 'Execution confirmed' : currentLanguage === 'fr' ? 'Exécution confirmée' : 'Antragsvollzug bestätigt'} ${t('hint.on')} ${antrag.vollzogenAm ? new Date(antrag.vollzogenAm).toLocaleDateString(currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE') : '–'} ${t('process.by')} ${antrag.vollzogenVon || '–'}</span>
                 </div>
               ` : ''}
               
@@ -4175,50 +4250,64 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
               ` : ''}
               
               <div class="action-buttons">
-                ${kannUebernehmen ? `
-                  <button class="btn btn-primary btn-large" onclick="${sollHausleitungsModalInDetail ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
-                    ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : 
-                      hatAufgabeZurUebernahme ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche') : 
-                      t('button.takeApplication')}
-                  </button>
-                ` : ''}
                 ${aufgabeMussErstErledigtWerden ? `
                 <div class="offen-hinweis">
                   <span class="hinweis-icon"></span>
                   <span>${currentLanguage === 'en' ? 'Please complete the open task first.' : currentLanguage === 'fr' ? 'Veuillez d’abord terminer la tâche ouverte.' : 'Bitte zuerst die offene Aufgabe erledigen.'}</span>
                 </div>
               ` : ''}
-              ${kannAufgabeBearbeiten ? `
-                  <button class="btn btn-primary btn-large" onclick="openAufgabeLoesungModal('${meineOffeneAufgabe.id}')">
-                    ${t('task.edit')}
-                  </button>
-                ` : ''}
-                ${kannPhasenBearbeiten && !istOffen && !istErledigt && !antrag.entscheidungGetroffen ? `
-                  ${!antrag.sachlichGeprueft ? `
-                    <button class="btn btn-warning btn-large" onclick="markiereAlsGeprueft('${antrag.id}')">
+                <div class="action-buttons-phase">
+                  ${highlightUebernehmen ? `
+                    <button class="btn btn-primary btn-large btn-phasenaktion" onclick="${sollHausleitungsModalInDetail ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
+                      ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : t('button.takeApplication')}
+                    </button>
+                  ` : ''}
+                  ${kannUebernehmen && !highlightUebernehmen ? `
+                    <button class="btn btn-primary btn-large" onclick="${sollHausleitungsModalInDetail ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
+                      ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : 
+                        hatAufgabeZurUebernahme ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche') : 
+                        t('button.takeApplication')}
+                    </button>
+                  ` : ''}
+                  ${pruefungPhaseAktiv ? `
+                    <button class="btn btn-warning btn-large${highlightPruefung ? ' btn-phasenaktion' : ''}" onclick="markiereAlsGeprueft('${antrag.id}')">
                       ${t('action.technicalReview')}
                     </button>
                   ` : ''}
-                  <button class="btn btn-primary btn-large ${!antrag.sachlichGeprueft ? 'disabled' : ''}" 
-                          onclick="${antrag.sachlichGeprueft ? `openEntscheidenModal('${antrag.id}')` : `showReviewRequiredAlert()`}"
-                          ${!antrag.sachlichGeprueft ? `title="${t('error.reviewRequired')}"` : ''}>
-                    ${t('decision.title')}
-                  </button>
-                ` : ''}
-                ${kannPhasenBearbeiten && (prozessStatus.bekanntgabe === 'aktiv' || prozessStatus.vollzug === 'aktiv' || prozessStatus.pruefung === 'aktiv' || prozessStatus.entscheiden === 'aktiv') ? `
-                  <button class="btn btn-primary btn-large" onclick="openTerminVereinbarenModal('${antrag.id}')">
-                    Termin vereinbaren
-                  </button>
-                ` : ''}
-                ${kannPhasenBearbeiten && !istOffen && !antrag.veraktet ? `
-                  <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
-${t('task.create')}
-                  </button>
-                ` : ''}
-                ${kannPhasenBearbeiten && !antrag.veraktet && prozessStatus.abschluss === 'aktiv' ? `
-                  <button class="btn btn-secondary btn-large" onclick="veraktenAntrag('${antrag.id}')">
+                  ${entscheidungPhaseAktiv ? `
+                    <button class="btn btn-primary btn-large${highlightEntscheidung ? ' btn-phasenaktion' : ''}" onclick="openEntscheidenModal('${antrag.id}')">
+                      ${t('decision.title')}
+                    </button>
+                  ` : ''}
+                  ${vollzugPhaseAktiv ? `
+                    <button class="btn btn-success btn-large${highlightVollzug ? ' btn-phasenaktion' : ''}" onclick="bestaetigeAntragsvollzug('${antrag.id}')">
+                      ${labelVollzugBestaetigen}
+                    </button>
+                  ` : ''}
+                  ${veraktenPhaseAktiv ? `
+                    <button class="btn btn-secondary btn-large${prozessStatus.abschluss === 'aktiv' ? ' btn-phasenaktion' : ''}" onclick="veraktenAntrag('${antrag.id}')">
 ${t('action.archive')}
-                  </button>
+                    </button>
+                  ` : ''}
+                </div>
+                ${zeigeDaueraktionen ? `
+                <div class="action-buttons-dauerhaft">
+                  ${kannAufgabeBearbeiten ? `
+                    <button class="btn btn-primary btn-large" onclick="openAufgabeLoesungModal('${meineOffeneAufgabe.id}')">
+                      ${t('task.edit')}
+                    </button>
+                  ` : ''}
+                  ${kannPhasenBearbeiten && (prozessStatus.bekanntgabe === 'aktiv' || prozessStatus.vollzug === 'aktiv' || prozessStatus.pruefung === 'aktiv' || prozessStatus.entscheiden === 'aktiv') ? `
+                    <button class="btn btn-outline btn-large" onclick="openTerminVereinbarenModal('${antrag.id}')">
+                      Termin vereinbaren
+                    </button>
+                  ` : ''}
+                  ${kannPhasenBearbeiten && !istOffen ? `
+                    <button class="btn btn-secondary btn-large" onclick="openAufgabeModal('${antrag.id}')">
+${t('task.create')}
+                    </button>
+                  ` : ''}
+                </div>
                 ` : ''}
               </div>
             </div>
@@ -5838,15 +5927,66 @@ ${t('action.archive')}
     }
 
     // ============================================
-    // ANTRAG VOLLZOGEN (Kontrollkästchen)
+    // ANTRAG VOLLZOGEN (Phasen-Schaltfläche)
     // ============================================
     
-    function toggleVollzogen(antragId, checked) {
-      if (checked) {
-        antragSystem.markiereAlsVollzogen(antragId, currentSession.userId, currentSession.name);
-        // Nach Vollzug: Weiterleitung anbieten
+    async function bestaetigeAntragsvollzug(antragId) {
+      return runUiAction(`vollzug:${antragId}`, async () => {
+        const antrag = antragSystem.getAntrag(antragId);
+        if (!antrag) return;
+        if (antrag.vollzogen) {
+          await showAlert(
+            currentLanguage === 'en'
+              ? 'Application execution has already been confirmed.'
+              : currentLanguage === 'fr'
+              ? "L'exécution de la demande a déjà été confirmée."
+              : 'Der Antragsvollzug wurde bereits bestätigt.'
+          );
+          return;
+        }
+        if (!antrag.erledigt || !(antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt')) {
+          await showAlert(
+            currentLanguage === 'en'
+              ? 'Execution can only be confirmed for approved applications.'
+              : currentLanguage === 'fr'
+              ? "L'exécution ne peut être confirmée que pour les demandes approuvées."
+              : 'Der Vollzug kann nur bei genehmigten Anträgen bestätigt werden.'
+          );
+          return;
+        }
+
+        const result = antragSystem.markiereAlsVollzogen(
+          antragId,
+          currentSession.userId,
+          currentSession.name
+        );
+        if (!result) {
+          await showAlert(
+            currentLanguage === 'en'
+              ? 'Could not confirm execution.'
+              : currentLanguage === 'fr'
+              ? "Impossible de confirmer l'exécution."
+              : 'Vollzug konnte nicht bestätigt werden.'
+          );
+          return;
+        }
+
+        const syncOk = await syncAntragUndAktualisiereUi(antragId, {
+          detailAnsicht: 'open',
+          showSyncFeedback: true
+        });
+        if (!syncOk) {
+          await showAlert(
+            currentLanguage === 'en'
+              ? 'Saved locally; synchronization failed. Please sync again later.'
+              : currentLanguage === 'fr'
+              ? 'Enregistré localement ; échec de la synchronisation. Veuillez réessayer plus tard.'
+              : 'Lokal gespeichert, Synchronisation fehlgeschlagen. Bitte später erneut synchronisieren.'
+          );
+        }
+
         openWeiterleitenModal(antragId, 'vollzug');
-      }
+      });
     }
 
     // ============================================

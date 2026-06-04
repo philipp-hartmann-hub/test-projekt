@@ -3882,18 +3882,6 @@ class AntragSystem {
     antrag.uebernahmeVonId = hausleitung.userId;
     antrag.alterBearbeiterBeiUebernahme = alterBearbeiterName;
     antrag.alterBearbeiterIdBeiUebernahme = alterBearbeiterId;
-    if (!Array.isArray(antrag.kommentare)) {
-      antrag.kommentare = [];
-    }
-    antrag.kommentare.push({
-      id: 'KOM-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
-      text: `VAL-Übernahme begründet: ${cleanBegruendung}`,
-      benutzerId: hausleitung.userId,
-      benutzerName: hausleitung.name,
-      typ: 'akte',
-      systemEintrag: true,
-      erstelltAm: new Date().toISOString()
-    });
     
     this._touchAntragUpdatedAt(antrag);
     this.saveAntraege();
@@ -3902,9 +3890,10 @@ class AntragSystem {
     aktivitaetenSystem.logAktivitaet({
       antragId: antragId,
       typ: 'hausleitung-uebernahme',
-      beschreibung: `Antrag durch Hausleitung übernommen${alterBearbeiterName ? ' von ' + alterBearbeiterName : ''}`,
-      details: { 
+      beschreibung: `Antrag durch VAL/AL übernommen${alterBearbeiterName ? ' von ' + alterBearbeiterName : ''}`,
+      details: {
         begruendung: cleanBegruendung,
+        uebernahmeBegruendung: cleanBegruendung,
         alterBearbeiter: alterBearbeiterName || null
       },
       benutzerTyp: 'mitarbeiter',
@@ -4710,13 +4699,14 @@ class AntragSystem {
       antrag.vollzogenAm = new Date().toISOString();
       antrag.vollzogenVon = mitarbeiterName;
       antrag.vollzogenVonId = mitarbeiterId;
+      this._touchAntragUpdatedAt(antrag);
       this.saveAntraege();
       
       // Aktivität protokollieren
       aktivitaetenSystem.logAktivitaet({
         antragId: antragId,
         typ: 'vollzogen',
-        beschreibung: 'Antrag vollzogen',
+        beschreibung: 'Antragsvollzug bestätigt',
         benutzerTyp: 'mitarbeiter',
         benutzerId: mitarbeiterId,
         benutzerName: mitarbeiterName
