@@ -4681,6 +4681,7 @@ class AntragSystem {
       antrag.veraktetAm = new Date().toISOString();
       antrag.veraktetVon = mitarbeiterName;
       antrag.veraktetVonId = mitarbeiterId;
+      antrag.hauptbearbeitungWartetAufUebernahme = false;
       this._touchAntragUpdatedAt(antrag);
       this.saveAntraege();
       

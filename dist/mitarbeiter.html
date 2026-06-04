@@ -3112,14 +3112,23 @@ Persönlich eröffnet
       const hatTerminAufgabe = offeneTerminAufgaben.length > 0;
       const hatAufgabeZurUebernahme = hatGruppenaufgaben || hatTerminAufgabe;
       
-      // Prüfen ob eine Hauptbearbeitungsübergabe wartet
-      const hatWartendeUebergabe = antrag.hauptbearbeitungWartetAufUebernahme && 
-                                    antrag.zugewiesenAnGruppe && 
-                                    antragSystem._mitarbeiterGehoertZuGruppe(currentSession, antrag.zugewiesenAnGruppe);
+      // Prüfen ob eine Hauptbearbeitungsübergabe wartet (nicht bei verakteter Akte)
+      const hatWartendeUebergabe =
+        !antrag.veraktet &&
+        antrag.hauptbearbeitungWartetAufUebernahme &&
+        antrag.zugewiesenAnGruppe &&
+        antragSystem._mitarbeiterGehoertZuGruppe(currentSession, antrag.zugewiesenAnGruppe);
       
       const istValWeit = typeof istValWeitPortalRolle === 'function' && istValWeitPortalRolle(currentSession.rolle);
       const valSichtAufAntrag = antragSystem._valAntragSichtbar(currentSession, antrag);
-      const bereitsHauptbearbeiter = istHauptverantwortungFuerAntrag(antrag);
+      // Veraktete Akte: Bearbeiter bleibt für Ansicht/Historie erkennbar (istHauptverantwortung schließt veraktet aus)
+      const bereitsHauptbearbeiter = antrag.veraktet
+        ? !!(
+            antrag.bearbeiterId != null &&
+            antrag.bearbeiterId !== '' &&
+            String(antrag.bearbeiterId) === sessionUserId()
+          )
+        : istHauptverantwortungFuerAntrag(antrag);
       const kannValUebernehmen =
         istValWeit &&
         valSichtAufAntrag &&
@@ -3137,6 +3146,7 @@ Persönlich eröffnet
       );
       // Kann der Mitarbeiter diesen Antrag/Aufgabe übernehmen?
       const kannUebernehmen =
+        !antrag.veraktet &&
         !bereitsHauptbearbeiter &&
         !hatPersoenlicheOffeneAufgabeHier &&
         (istOffen || hatAufgabeZurUebernahme || hatWartendeUebergabe || kannValUebernehmen);
