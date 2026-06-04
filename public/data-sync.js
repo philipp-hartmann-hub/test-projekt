@@ -309,13 +309,26 @@ function _isPdfDataUrl(s) {
   return typeof s === 'string' && s.startsWith('data:') && s.length > 200;
 }
 
+function _dokumentItemKey(item) {
+  if (item && item.id != null && String(item.id) !== '') return 'id:' + String(item.id);
+  if (item && item.name) {
+    return 'name:' + String(item.name) + '|' + String(item.hochgeladenAm || '');
+  }
+  return _antragArrayItemKey(item);
+}
+
+function _countPdfDokumente(arr) {
+  if (!Array.isArray(arr)) return 0;
+  return arr.filter((d) => _isPdfDataUrl(d && d.data)).length;
+}
+
 function mergeDokumenteArrays(existingArr, incomingArr) {
   const ex = Array.isArray(existingArr) ? existingArr : [];
   const inc = Array.isArray(incomingArr) ? incomingArr : [];
   const map = new Map();
   const order = [];
   function add(item) {
-    const key = _antragArrayItemKey(item);
+    const key = _dokumentItemKey(item);
     if (map.has(key)) {
       const prev = map.get(key);
       if (typeof prev === 'object' && prev && typeof item === 'object' && item) {
@@ -403,6 +416,14 @@ function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
     if (localAntrag[k] === true || serverAntrag[k] === true) {
       merged[k] = true;
     }
+  }
+  if (merged.veraktet === true) {
+    for (const k of ['veraktetAm', 'veraktetVon', 'veraktetVonId']) {
+      merged[k] = localAntrag[k] || serverAntrag[k] || merged[k];
+    }
+  }
+  if (_countPdfDokumente(localAntrag.dokumente) > _countPdfDokumente(serverAntrag.dokumente)) {
+    merged.dokumente = mergeDokumenteArrays(serverAntrag.dokumente, localAntrag.dokumente);
   }
   const rankLocal = _antragPhaseRank(localAntrag);
   const rankServer = _antragPhaseRank(serverAntrag);

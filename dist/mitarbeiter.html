@@ -1084,6 +1084,41 @@
       }
     }
 
+    /** Nach lokaler Änderung: Upload abwarten, Server mergen, UI neu zeichnen. */
+    async function syncAntragUndAktualisiereUi(antragId, options = {}) {
+      const { detailAnsicht = 'auto', showSyncFeedback = true } = options;
+      if (showSyncFeedback && typeof showSyncStatus === 'function') {
+        showSyncStatus('Synchronisiere mit Server...', 'info');
+      }
+      let syncOk = true;
+      if (window.DataSync && typeof window.DataSync.syncAntragToServer === 'function') {
+        syncOk = await window.DataSync.syncAntragToServer(antragId);
+      }
+      if (showSyncFeedback && typeof showSyncStatus === 'function') {
+        showSyncStatus(
+          syncOk ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen',
+          syncOk ? 'success' : 'error'
+        );
+      }
+      await refreshUiNachAktion({ antragId, detailAnsicht });
+      return syncOk;
+    }
+
+    function downloadVeraktungsPdf(antragId) {
+      const antrag = antragSystem.getAntrag(antragId);
+      if (!antrag) return;
+      if (!antrag.veraktet) {
+        showAlert('Der Antrag ist noch nicht veraktet.');
+        return;
+      }
+      try {
+        generateAntragPdf(antrag);
+      } catch (e) {
+        console.error('Veraktungs-PDF:', e);
+        showAlert('Akte-PDF konnte nicht erzeugt werden.');
+      }
+    }
+
     // ============================================
     // SPRACHSTEUERUNG
     // ============================================
@@ -2236,29 +2271,9 @@
       // Kommentar mit Typ speichern
       antragSystem.addKommentar(antragId, text, currentSession.userId, currentSession.name, typ);
       
-      if (window.DataSync && window.DataSync.syncAntragToServer) {
-        const canSync =
-          typeof window.DataSync.isConnected === 'function' &&
-          typeof window.DataSync.isLoaded === 'function' &&
-          window.DataSync.isConnected() &&
-          window.DataSync.isLoaded();
-        if (!canSync) {
-          if (typeof showSyncStatus === 'function') {
-            showSyncStatus('Offline: Änderung lokal gespeichert (Synchronisation später möglich).', 'info');
-          }
-        } else {
-          if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-          const ok = await window.DataSync.syncAntragToServer(antragId);
-          if (typeof showSyncStatus === 'function') {
-            showSyncStatus(ok ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', ok ? 'success' : 'error');
-          }
-        }
-      }
-      
-      // Modal schließen, Eingabefeld leeren und Ansicht aktualisieren
       closeModal('notizTypModal');
       document.getElementById('neuerKommentar').value = '';
-      openAntragDetail(antragId);
+      await syncAntragUndAktualisiereUi(antragId, { detailAnsicht: 'open', showSyncFeedback: false });
     }
     
     function handleNotificationClick(notificationId, antragId) {
@@ -3046,11 +3061,18 @@ Persönlich eröffnet
       
       const istValWeit = typeof istValWeitPortalRolle === 'function' && istValWeitPortalRolle(currentSession.rolle);
       const valSichtAufAntrag = antragSystem._valAntragSichtbar(currentSession, antrag);
-      const kannValUebernehmen = istValWeit && valSichtAufAntrag && String(antrag.bearbeiterId) !== String(currentSession.userId) && !antrag.veraktet;
+      const bereitsHauptbearbeiter = istHauptverantwortungFuerAntrag(antrag);
+      const kannValUebernehmen =
+        istValWeit &&
+        valSichtAufAntrag &&
+        !bereitsHauptbearbeiter &&
+        String(antrag.bearbeiterId || '') !== sessionUserId() &&
+        !antrag.veraktet;
       
       // Kann der Mitarbeiter diesen Antrag/Aufgabe übernehmen?
       const kannUebernehmen =
-        istOffen || hatAufgabeZurUebernahme || hatWartendeUebergabe || kannValUebernehmen;
+        !bereitsHauptbearbeiter &&
+        (istOffen || hatAufgabeZurUebernahme || hatWartendeUebergabe || kannValUebernehmen);
       
       // Prüfen ob der aktuelle Benutzer berechtigt ist
       const aufgabenZuAntrag = aufgabenSystem.getAufgabenZuAntrag(antragId);
@@ -3099,11 +3121,7 @@ Persönlich eröffnet
         String(meineOffeneAufgabe.zugewiesenAnId) === String(currentSession.userId) &&
         !meineOffeneAufgabe.terminKalenderNachUebernahme;
       // Hauptverantwortung = aktueller bearbeiterId (nach „Antrag übernehmen“)
-      const hatHauptverantwortung =
-        antrag.bearbeiterId != null &&
-        antrag.bearbeiterId !== '' &&
-        String(antrag.bearbeiterId) === sessionUserId() &&
-        !antrag.veraktet;
+      const hatHauptverantwortung = bereitsHauptbearbeiter;
       const istBearbeiter = hatHauptverantwortung;
       // Offene Aufgabe blockiert nur Mitwirkende ohne Hauptverantwortung
       const aufgabeMussErstErledigtWerden = hatOffeneAufgabe && !hatHauptverantwortung;
@@ -4090,6 +4108,18 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
               
               
               
+              ${antrag.veraktet ? `
+                <div class="pruefung-erfolgt veraktet-info">
+                  <span class="erfolgt-icon"></span>
+                  <span>Veraktet am ${antrag.veraktetAm ? new Date(antrag.veraktetAm).toLocaleDateString('de-DE') : '–'}${antrag.veraktetVon ? ' von ' + antrag.veraktetVon : ''}</span>
+                </div>
+                <div class="antrag-actions" style="margin-top: 0.75rem;">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="downloadVeraktungsPdf('${antrag.id}')">
+                    Veraktungs-PDF (Akte) herunterladen
+                  </button>
+                </div>
+              ` : ''}
+              
               ${istErledigt && !antrag.veraktet && kannVollziehenVerakten && (antrag.status === 'genehmigt' || antrag.status === 'teilweise-genehmigt') ? `
                 <div class="vollzug-checkbox">
                   <label class="checkbox-option vollzug-option">
@@ -4145,16 +4175,11 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
               ` : ''}
               
               <div class="action-buttons">
-                ${kannUebernehmen && !hatHauptverantwortung ? `
+                ${kannUebernehmen ? `
                   <button class="btn btn-primary btn-large" onclick="${sollHausleitungsModalInDetail ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
                     ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : 
                       hatAufgabeZurUebernahme ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche') : 
                       t('button.takeApplication')}
-                  </button>
-                ` : ''}
-                ${!kannUebernehmen && !hatHauptverantwortung && istHausleitung() && antrag.status === 'in-bearbeitung' ? `
-                  <button class="btn btn-warning btn-large" onclick="openHausleitungUebernahmeModal('${antrag.id}')">
-                    Antrag übernehmen
                   </button>
                 ` : ''}
                 ${aufgabeMussErstErledigtWerden ? `
@@ -4353,7 +4378,9 @@ ${t('action.archive')}
       if (syncHinweis) {
         await showAlert(syncHinweis);
       }
-      
+
+      await syncAntragUndAktualisiereUi(antragId, { detailAnsicht: 'open', showSyncFeedback: false });
+
       // Nach Prüfung: Weiterleitung anbieten (selbst weiter / weiterleiten)
       openWeiterleitenModal(antragId, 'geprueft');
     }
@@ -4396,41 +4423,14 @@ ${t('action.archive')}
       // Antrag abschließen - die beiden Optionen werden jetzt separat behandelt
       antragSystem.abschliessenAntrag(antragId, status, begruendung, persoenlichEroeffnen, bescheidPdf, vollzugVorBekanntgabe);
       
-      let entscheidSyncHinweis = null;
-      // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
-      if (window.DataSync && window.DataSync.syncAntragToServer) {
-        const canSync =
-          typeof window.DataSync.isConnected === 'function' &&
-          typeof window.DataSync.isLoaded === 'function' &&
-          window.DataSync.isConnected() &&
-          window.DataSync.isLoaded();
-        if (!canSync) {
-          if (typeof showSyncStatus === 'function') {
-            showSyncStatus('Offline: Änderung lokal gespeichert (Synchronisation später möglich).', 'info');
-          }
-          entscheidSyncHinweis =
-            currentLanguage === 'en'
-              ? 'Offline: decision saved locally; you can continue and sync later.'
-              : currentLanguage === 'fr'
-                ? 'Hors ligne : décision enregistrée localement ; vous pouvez continuer et synchroniser plus tard.'
-                : 'Offline: Entscheidung lokal gespeichert; Sie können fortfahren und später synchronisieren.';
-        } else {
-          if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-          const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-          if (typeof showSyncStatus === 'function') {
-            showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
-          }
-          if (!syncSuccess) {
-            entscheidSyncHinweis = 'Entscheidung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später synchronisieren.';
-          }
-        }
-      }
-      
       closeModal('entscheidenModal');
-      if (entscheidSyncHinweis) {
-        await showAlert(entscheidSyncHinweis);
+      const entscheidSyncOk = await syncAntragUndAktualisiereUi(antragId, { detailAnsicht: 'open' });
+      if (!entscheidSyncOk) {
+        await showAlert(
+          'Entscheidung lokal gespeichert, Synchronisation fehlgeschlagen. Sie können fortfahren, bitte später erneut synchronisieren.'
+        );
       }
-      
+
       // Prüfen ob persönliche Eröffnung oder Vollzug vor Bekanntgabe gewählt wurde
       if (persoenlichEroeffnen || vollzugVorBekanntgabe) {
         // Bei pers. Eröffnung/Vollzug: Keine sofortige Bekanntgabe an Insassen
@@ -5019,40 +5019,54 @@ ${t('action.archive')}
     // ANTRAGS-DOKUMENTE UPLOAD
     // ============================================
     
-    function handleAntragDokumentUpload(input, antragId) {
+    async function handleAntragDokumentUpload(input, antragId) {
       const antrag = antragSystem.getAntrag(antragId);
       const files = input.files;
-      
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (file && file.type === 'application/pdf') {
+      if (!files || !files.length) return;
+
+      const pdfFiles = Array.from(files).filter((f) => f && f.type === 'application/pdf');
+      let pendingFreigabe = null;
+
+      for (const file of pdfFiles) {
+        const dataUrl = await new Promise((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = function(e) {
-            const dokument = {
-              name: file.name,
-              data: e.target.result,
-              hochgeladenVon: currentSession.name,
-              hochgeladenVonId: currentSession.userId,
-              hochgeladenAm: new Date().toISOString(),
-              fuerInsasseFreigegeben: false // Standardmäßig nicht freigegeben
-            };
-            const neuesDokument = antragSystem.addDokument(antragId, dokument, currentSession.userId, currentSession.name);
-            
-            // Prüfen ob Bekanntgabe bereits erfolgt ist (Insasse wurde informiert)
-            const bekanntgabeErfolgt = antrag.erledigt && !antrag.wartetAufEroeffnung && !antrag.wartetAufVollzug;
-            
-            if (bekanntgabeErfolgt && neuesDokument) {
-              // Modal für nachträgliche Freigabe öffnen
-              const dokIndex = (antrag.dokumente || []).length - 1;
-              openNachtraeglichFreigebenModal(antragId, dokIndex, file.name);
-            } else {
-              openAntragDetail(antragId); // Ansicht aktualisieren
-            }
-          };
+          reader.onload = (e) => resolve(e.target.result);
+          reader.onerror = reject;
           reader.readAsDataURL(file);
+        });
+        const dokument = {
+          name: file.name,
+          data: dataUrl,
+          hochgeladenVon: currentSession.name,
+          hochgeladenVonId: currentSession.userId,
+          hochgeladenAm: new Date().toISOString(),
+          fuerInsasseFreigegeben: false
+        };
+        const neuesDokument = antragSystem.addDokument(
+          antragId,
+          dokument,
+          currentSession.userId,
+          currentSession.name
+        );
+        const antragAktuell = antragSystem.getAntrag(antragId) || antrag;
+        const bekanntgabeErfolgt =
+          antragAktuell.erledigt &&
+          !antragAktuell.wartetAufEroeffnung &&
+          !antragAktuell.wartetAufVollzug;
+        if (bekanntgabeErfolgt && neuesDokument) {
+          pendingFreigabe = {
+            index: (antragAktuell.dokumente || []).length - 1,
+            name: file.name
+          };
         }
       }
-      input.value = ''; // Reset für weitere Uploads
+
+      input.value = '';
+      await syncAntragUndAktualisiereUi(antragId, { detailAnsicht: 'open', showSyncFeedback: true });
+
+      if (pendingFreigabe) {
+        openNachtraeglichFreigebenModal(antragId, pendingFreigabe.index, pendingFreigabe.name);
+      }
     }
     
     // Modal für nachträgliche Dokumentenfreigabe öffnen
@@ -5156,28 +5170,37 @@ ${t('action.archive')}
         return `<p class="empty-hint">${emptyText}</p>`;
       }
       
-      return dokumente.map((dok, index) => `
+      return dokumente.map((dok, index) => {
+        const hatPdfDaten =
+          typeof dok.data === 'string' && dok.data.startsWith('data:') && dok.data.length > 200;
+        const downloadBtn = hatPdfDaten
+          ? `<a href="${dok.data}" download="${dok.name}" class="dokument-link" title="${currentLanguage === 'en' ? 'Download' : currentLanguage === 'fr' ? 'Télécharger' : 'Herunterladen'}">`
+          : `<button type="button" class="dokument-link dokument-link-missing" onclick="showAlert('PDF-Inhalt nicht im Speicher. Bitte Dokument erneut hochladen oder bei verakteten Anträgen die Veraktungs-PDF nutzen.');" title="Nicht verfügbar">`;
+        const downloadEnd = hatPdfDaten ? '</a>' : '</button>';
+        return `
         <div class="dokument-item ${dok.fuerInsasseFreigegeben ? 'freigegeben' : ''}">
           <div class="dokument-info">
-            <a href="${dok.data}" download="${dok.name}" class="dokument-link" title="${currentLanguage === 'en' ? 'Download' : currentLanguage === 'fr' ? 'Télécharger' : 'Herunterladen'}">
+            ${downloadBtn}
               <span class="dokument-icon">PDF</span>
               <span class="dokument-name">${dok.name}</span>
               ${dok.fuerInsasseFreigegeben ? `<span class="freigabe-badge">${currentLanguage === 'en' ? 'Shared' : currentLanguage === 'fr' ? 'Partagé' : 'Freigegeben'}</span>` : ''}
-            </a>
+            ${downloadEnd}
             <div class="dokument-meta">
               ${dok.hochgeladenVon} - ${formatDate(dok.hochgeladenAm)}
+              ${!hatPdfDaten ? ' <em>(PDF-Daten fehlen)</em>' : ''}
             </div>
           </div>
           ${kannLoeschen ? `
             <button type="button" class="btn-remove-dok" onclick="removeAntragDokument('${antragId}', ${index})" title="${currentLanguage === 'en' ? 'Delete' : currentLanguage === 'fr' ? 'Supprimer' : 'Loeschen'}">&times;</button>
           ` : ''}
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
     
-    function removeAntragDokument(antragId, index) {
+    async function removeAntragDokument(antragId, index) {
       antragSystem.removeDokument(antragId, index, currentSession.userId, currentSession.name);
-      openAntragDetail(antragId); // Ansicht aktualisieren
+      await syncAntragUndAktualisiereUi(antragId, { detailAnsicht: 'open', showSyncFeedback: false });
     }
     
     // PDF-Upload-Funktionen für Aufgaben (multiple PDFs)
@@ -5426,28 +5449,15 @@ ${t('action.archive')}
         );
       }
       
-      // Synchronisation mit Server abwarten (wichtig für Tablet/mehrere Geräte)
-      if (window.DataSync && window.DataSync.syncAntragToServer) {
-        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-        const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-        if (typeof showSyncStatus === 'function') {
-          showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
-        }
-        if (!syncSuccess) {
-          const msg = currentLanguage === 'en' ? 'Task saved locally but sync failed. Check your connection and refresh to retry.'
-                    : currentLanguage === 'fr' ? 'Tâche enregistrée localement mais la synchronisation a échoué. Vérifiez la connexion.'
-                    : 'Aufgabe lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen und Seite ggf. aktualisieren.';
-          showAlert(msg);
-        } else if (window.DataSync.reloadDataFromServer) {
-          await window.DataSync.reloadDataFromServer();
-        }
-      }
-      
       closeModal('aufgabeModal');
       showAlert(t('success.taskCreated'));
-      
-      // Detailansicht aktualisieren
-      openAntragDetail(antragId);
+
+      const syncOk = await syncAntragUndAktualisiereUi(antragId, { detailAnsicht: 'open' });
+      if (!syncOk) {
+        showAlert(
+          'Aufgabe lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen.'
+        );
+      }
     }
 
     // ============================================
@@ -6357,30 +6367,30 @@ ${t('action.archive')}
     // ============================================
     
     async function veraktenAntrag(antragId) {
-      const antrag = antragSystem.getAntrag(antragId);
-      if (!antrag) return;
-      
-      // Antrag als veraktet markieren
+      if (!antragSystem.getAntrag(antragId)) return;
+
       antragSystem.verakteAntrag(antragId, currentSession.userId, currentSession.name);
-      
-      // Synchronisation mit Server abwarten (wichtig für Tablet – sonst bleibt Antrag nach Aktualisierung in "Meine Anträge")
-      if (window.DataSync && window.DataSync.syncAntragToServer) {
-        if (typeof showSyncStatus === 'function') showSyncStatus('Synchronisiere mit Server...', 'info');
-        const syncSuccess = await window.DataSync.syncAntragToServer(antragId);
-        if (typeof showSyncStatus === 'function') {
-          showSyncStatus(syncSuccess ? '✓ Erfolgreich synchronisiert' : '✗ Synchronisation fehlgeschlagen', syncSuccess ? 'success' : 'error');
-        }
-        if (!syncSuccess) {
-          showAlert('Antrag wurde veraktet, aber die Synchronisation ist fehlgeschlagen. Bitte Verbindung prüfen und erneut versuchen – sonst erscheint der Antrag nach Aktualisierung wieder in "Meine Anträge".');
+
+      const syncOk = await syncAntragUndAktualisiereUi(antragId, { detailAnsicht: 'close' });
+
+      const antragFresh = antragSystem.getAntrag(antragId);
+      if (antragFresh) {
+        try {
+          generateAntragPdf(antragFresh);
+        } catch (e) {
+          console.error('Veraktungs-PDF:', e);
         }
       }
-      
-      // PDF generieren und herunterladen
-      generateAntragPdf(antrag);
-      
-      // Zurück zur Übersicht oder Detailansicht aktualisieren
-      closeAntragDetail();
-      renderAntraege();
+
+      if (!syncOk) {
+        showAlert(
+          'Antrag wurde lokal veraktet, die Synchronisation ist fehlgeschlagen. Unter „Erledigt“ können Sie die Veraktungs-PDF erneut herunterladen. Bitte Verbindung prüfen.'
+        );
+      } else {
+        showAlert(
+          'Antrag veraktet. Die Akte-PDF wurde heruntergeladen (ggf. Pop-up-Blocker im Browser erlauben). Unter „Erledigt“ ist die PDF jederzeit erneut abrufbar.'
+        );
+      }
     }
     
     function generateAntragPdf(antrag) {
@@ -7031,7 +7041,7 @@ ${t('action.archive')}
       }
     }
     
-    function bestaeigeHausleitungUebernahme() {
+    async function bestaeigeHausleitungUebernahme() {
       const antragId = document.getElementById('hausleitungUebernahmeAntragId').value;
       const begruendung = document.getElementById('hausleitungUebernahmeBegruendung').value.trim();
       
@@ -7044,11 +7054,8 @@ ${t('action.archive')}
       
       if (result.success) {
         closeModal('hausleitungUebernahmeModal');
+        await syncAntragUndAktualisiereUi(antragId, { detailAnsicht: 'open', showSyncFeedback: true });
         showAlert('Der Antrag wurde erfolgreich übernommen.');
-        renderAntraege();
-        
-        // Tab wechseln zu "Meine Anträge und Aufgaben"
-        switchTab('bearbeitung');
       } else {
         showAlert(result.error || 'Fehler beim Übernehmen des Antrags.');
       }

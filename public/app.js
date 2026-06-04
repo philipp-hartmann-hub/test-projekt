@@ -3601,6 +3601,7 @@ class AntragSystem {
         aufgabenSystem.saveAufgaben();
       }
       
+      this._touchAntragUpdatedAt(antrag);
       this.saveAntraege();
       
       // Aktivität protokollieren
@@ -3671,6 +3672,7 @@ class AntragSystem {
         aufgabenSystem.saveAufgaben();
       }
       
+      this._touchAntragUpdatedAt(antrag);
       this.saveAntraege();
       
       // Aktivität protokollieren
@@ -3722,8 +3724,39 @@ class AntragSystem {
         });
         if (nurBegleitungsaufgaben) {
           console.log('[nehmeAntrag] Nur Begleitungsaufgabe(n) – Hauptbearbeitung bleibt unverändert');
+        } else if (
+          this._istValWeitMitarbeiter(mitarbeiter) &&
+          this._valAntragSichtbar(mitarbeiter, antrag) &&
+          (antrag.bearbeiterId == null ||
+            antrag.bearbeiterId === '' ||
+            String(antrag.bearbeiterId) !== selfId)
+        ) {
+          const alterBearbeiterId = antrag.bearbeiterId;
+          const alterBearbeiterName = antrag.bearbeiterName;
+          if (!antrag.abgegebenVon) {
+            antrag.abgegebenVon = [];
+          }
+          if (alterBearbeiterId && !antrag.abgegebenVon.includes(alterBearbeiterId)) {
+            antrag.abgegebenVon.push(alterBearbeiterId);
+          }
+          antrag.bearbeiterId = mitarbeiter.userId;
+          antrag.bearbeiterName = mitarbeiter.name;
+          if (antrag.abgegebenVon.includes(mitarbeiter.userId)) {
+            antrag.abgegebenVon = antrag.abgegebenVon.filter((id) => id !== mitarbeiter.userId);
+          }
+          if (antrag.zugewiesenAnGruppe) {
+            antrag.zugewiesenAnGruppe = null;
+            antrag.zugewiesenAnGruppeName = null;
+          }
+          antrag.hauptbearbeitungWartetAufUebernahme = false;
+          if (antrag.status === 'offen') {
+            antrag.status = 'in-bearbeitung';
+          }
+          maybeNotifyVorherigerBearbeiter(alterBearbeiterId, alterBearbeiterName);
         }
         aufgabenSystem.saveAufgaben();
+        this._touchAntragUpdatedAt(antrag);
+        this.saveAntraege();
         
         // Aktivität protokollieren
         aktivitaetenSystem.logAktivitaet({
@@ -3750,7 +3783,11 @@ class AntragSystem {
         // Dies gilt für alle Status außer offen und veraktet
         const istValWeit = this._istValWeitMitarbeiter(mitarbeiter);
         const erlaubteStatus = ['in-bearbeitung', 'genehmigt', 'abgelehnt', 'teilweise-genehmigt'];
-        if (istValWeit && erlaubteStatus.includes(antrag.status) && antrag.bearbeiterId !== mitarbeiter.userId) {
+        if (
+          istValWeit &&
+          erlaubteStatus.includes(antrag.status) &&
+          String(antrag.bearbeiterId ?? '') !== selfId
+        ) {
           if (!this._valAntragSichtbar(mitarbeiter, antrag)) {
             console.log('[Debug] nehmeAntrag Fall 3b: nicht im Sichtfeld');
           } else {
@@ -3760,6 +3797,10 @@ class AntragSystem {
             const alterBearbeiterId = antrag.bearbeiterId;
             antrag.bearbeiterId = mitarbeiter.userId;
             antrag.bearbeiterName = mitarbeiter.name;
+            if (antrag.abgegebenVon && antrag.abgegebenVon.includes(mitarbeiter.userId)) {
+              antrag.abgegebenVon = antrag.abgegebenVon.filter((id) => id !== mitarbeiter.userId);
+            }
+            this._touchAntragUpdatedAt(antrag);
             this.saveAntraege();
           
             aktivitaetenSystem.logAktivitaet({
@@ -3854,6 +3895,7 @@ class AntragSystem {
       erstelltAm: new Date().toISOString()
     });
     
+    this._touchAntragUpdatedAt(antrag);
     this.saveAntraege();
     
     // Aktivität protokollieren
@@ -4639,6 +4681,7 @@ class AntragSystem {
       antrag.veraktetAm = new Date().toISOString();
       antrag.veraktetVon = mitarbeiterName;
       antrag.veraktetVonId = mitarbeiterId;
+      this._touchAntragUpdatedAt(antrag);
       this.saveAntraege();
       
       // Aktivität protokollieren
