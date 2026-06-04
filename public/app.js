@@ -3002,6 +3002,22 @@ class AufgabenSystem {
       zugewiesenAnName: data.zugewiesenAnName
     });
     
+    let zugewiesenAnGruppeNorm = data.zugewiesenAnGruppe || null;
+    if (zugewiesenAnGruppeNorm && zugewiesenAnGruppeNorm.typ) {
+      const typNorm = String(zugewiesenAnGruppeNorm.typ).toLowerCase();
+      let hausId = zugewiesenAnGruppeNorm.hausId;
+      if (hausId != null && String(hausId).trim() !== '') {
+        hausId = String(hausId).replace(/^jva/i, 'haus');
+      } else if (typeof istAnstaltsweiteJvaGruppeTyp === 'function' && istAnstaltsweiteJvaGruppeTyp(typNorm)) {
+        hausId = null;
+      }
+      zugewiesenAnGruppeNorm = {
+        typ: typNorm,
+        hausId: hausId ?? null,
+        station: zugewiesenAnGruppeNorm.station ?? null
+      };
+    }
+
     const aufgabe = {
       id: this.generateId(),
       antragId: data.antragId,
@@ -3011,7 +3027,7 @@ class AufgabenSystem {
       zugewiesenAnId: data.zugewiesenAnId,
       zugewiesenAnName: data.zugewiesenAnName,
       zugewiesenAnTyp: data.zugewiesenAnTyp, // 'insasse', 'mitarbeiter' oder 'gruppe'
-      zugewiesenAnGruppe: data.zugewiesenAnGruppe || null, // { typ: 'hausleitung'|'station', hausId, station }
+      zugewiesenAnGruppe: zugewiesenAnGruppeNorm, // { typ, hausId, station } – normalisiert für Gruppenabgleich
       kurzbeschreibung: data.kurzbeschreibung || data.beschreibung, // max 40 Zeichen
       beschreibung: data.beschreibung || '', // ausführliche Beschreibung (optional)
       anhangPdfs: data.anhangPdfs || null, // Array von PDFs [{name, data}, ...]
@@ -3709,9 +3725,85 @@ class AntragSystem {
       return antrag;
     }
     
-    // Fall 2: In Bearbeitung mit Gruppenzuweisung (Weiterleitung an Gruppe)
-    // Gleiche Voraussetzung wie Gruppenliste: zugewiesenAnGruppe reicht; Flag darf nicht mehr Pflicht sein (Sync).
-    if (antrag.status === 'in-bearbeitung' && antrag.zugewiesenAnGruppe) {
+    // Fall 2: Gruppenaufgaben übernehmen (vor Weiterleitungs-Hauptbearbeitung, damit z. B. Stationsleitung-Aufgaben sichtbar bleiben)
+    if (!antrag.veraktet) {
+      const gruppenAufgabenFrueh = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(
+        antragId,
+        mitarbeiter
+      );
+      const selfIdFrueh = String(mitarbeiter.userId ?? mitarbeiter.id ?? '');
+      const persoenlicheTerminAufgabenFrueh = aufgabenSystem.aufgaben.filter(
+        (a) =>
+          a.antragId === antragId &&
+          a.status === 'offen' &&
+          a.zugewiesenAnTyp === 'mitarbeiter' &&
+          String(a.zugewiesenAnId) === selfIdFrueh &&
+          a.terminId
+      );
+      const alleZuUebernehmenFrueh = [...gruppenAufgabenFrueh];
+      persoenlicheTerminAufgabenFrueh.forEach((a) => {
+        if (!alleZuUebernehmenFrueh.some((x) => x.id === a.id)) alleZuUebernehmenFrueh.push(a);
+      });
+      if (alleZuUebernehmenFrueh.length > 0) {
+        const nurBegleitungsaufgabenFrueh =
+          alleZuUebernehmenFrueh.length > 0 &&
+          alleZuUebernehmenFrueh.every((aufgabe) => aufgabe.terminBegleitung === true);
+        alleZuUebernehmenFrueh.forEach((aufgabe) => {
+          const bearbeiterId = String(mitarbeiter.userId ?? mitarbeiter.id ?? '');
+          aufgabe.zugewiesenAnTyp = 'mitarbeiter';
+          aufgabe.zugewiesenAnId = bearbeiterId;
+          aufgabe.zugewiesenAnName = mitarbeiter.name;
+          aufgabe.zugewiesenAnGruppe = null;
+          aufgabenSystem.syncKalenderNachGruppenuebernahme(aufgabe);
+        });
+        if (
+          !nurBegleitungsaufgabenFrueh &&
+          this._istValWeitMitarbeiter(mitarbeiter) &&
+          this._valAntragSichtbar(mitarbeiter, antrag) &&
+          (antrag.bearbeiterId == null ||
+            antrag.bearbeiterId === '' ||
+            String(antrag.bearbeiterId) !== selfIdFrueh)
+        ) {
+          const alterBearbeiterId = antrag.bearbeiterId;
+          const alterBearbeiterName = antrag.bearbeiterName;
+          if (!antrag.abgegebenVon) antrag.abgegebenVon = [];
+          if (alterBearbeiterId && !antrag.abgegebenVon.includes(alterBearbeiterId)) {
+            antrag.abgegebenVon.push(alterBearbeiterId);
+          }
+          antrag.bearbeiterId = mitarbeiter.userId;
+          antrag.bearbeiterName = mitarbeiter.name;
+          if (antrag.abgegebenVon.includes(mitarbeiter.userId)) {
+            antrag.abgegebenVon = antrag.abgegebenVon.filter((id) => id !== mitarbeiter.userId);
+          }
+          if (antrag.zugewiesenAnGruppe) {
+            antrag.zugewiesenAnGruppe = null;
+            antrag.zugewiesenAnGruppeName = null;
+          }
+          antrag.hauptbearbeitungWartetAufUebernahme = false;
+          if (antrag.status === 'offen') antrag.status = 'in-bearbeitung';
+          maybeNotifyVorherigerBearbeiter(alterBearbeiterId, alterBearbeiterName);
+        }
+        aufgabenSystem.saveAufgaben();
+        this._touchAntragUpdatedAt(antrag);
+        this.saveAntraege();
+        aktivitaetenSystem.logAktivitaet({
+          antragId: antragId,
+          typ: 'aufgaben-genommen',
+          beschreibung: `${alleZuUebernehmenFrueh.length} Aufgabe(n) übernommen (inkl. Termine)`,
+          benutzerTyp: 'mitarbeiter',
+          benutzerId: mitarbeiter.userId,
+          benutzerName: mitarbeiter.name
+        });
+        return antrag;
+      }
+    }
+
+    // Fall 3: In Bearbeitung mit Gruppen-Weiterleitung (Hauptbearbeitung übernehmen)
+    if (
+      antrag.status === 'in-bearbeitung' &&
+      antrag.zugewiesenAnGruppe &&
+      antrag.hauptbearbeitungWartetAufUebernahme
+    ) {
       const selfId = String(mitarbeiter.userId ?? mitarbeiter.id ?? '');
       if (antrag.bearbeiterId != null && antrag.bearbeiterId !== '' && String(antrag.bearbeiterId) === selfId) {
         return antrag;
@@ -3780,133 +3872,42 @@ class AntragSystem {
       return antrag;
     }
     
-    // Fall 3: Gruppenaufgaben übernehmen (unabhängig vom Antragsstatus, solange nicht veraktet)
-    // Dies gilt für Anträge in Bearbeitung, genehmigt, teilweise-genehmigt, abgelehnt etc.
+    // Fall 4: VAL-Übernahme ohne Gruppenaufgabe
     if (!antrag.veraktet) {
-      console.log('[Debug] nehmeAntrag Fall 3: Antrag nicht veraktet (Status: ' + antrag.status + '), suche Gruppenaufgaben...');
-      
-      const gruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, mitarbeiter);
       const selfId = String(mitarbeiter.userId ?? mitarbeiter.id ?? '');
-      const persoenlicheTerminAufgaben = aufgabenSystem.aufgaben.filter(
-        (a) =>
-          a.antragId === antragId &&
-          a.status === 'offen' &&
-          a.zugewiesenAnTyp === 'mitarbeiter' &&
-          String(a.zugewiesenAnId) === selfId &&
-          a.terminId
-      );
-      const alleZuUebernehmen = [...gruppenAufgaben];
-      persoenlicheTerminAufgaben.forEach((a) => {
-        if (!alleZuUebernehmen.some((x) => x.id === a.id)) alleZuUebernehmen.push(a);
-      });
-      console.log('[Debug] nehmeAntrag: Gruppen-/Termin-Aufgaben:', alleZuUebernehmen.length);
+      const istValWeit = this._istValWeitMitarbeiter(mitarbeiter);
+      const erlaubteStatus = ['in-bearbeitung', 'genehmigt', 'abgelehnt', 'teilweise-genehmigt'];
+      if (
+        istValWeit &&
+        erlaubteStatus.includes(antrag.status) &&
+        String(antrag.bearbeiterId ?? '') !== selfId
+      ) {
+        if (!this._valAntragSichtbar(mitarbeiter, antrag)) {
+          console.log('[Debug] nehmeAntrag Fall 4: nicht im Sichtfeld');
+        } else {
+          console.log('[Debug] nehmeAntrag Fall 4: VAL-ähnliche Rolle übernimmt Antrag (Status: ' + antrag.status + ')');
 
-      if (alleZuUebernehmen.length > 0) {
-        const nurBegleitungsaufgaben =
-          alleZuUebernehmen.length > 0 &&
-          alleZuUebernehmen.every((aufgabe) => aufgabe.terminBegleitung === true);
-        alleZuUebernehmen.forEach((aufgabe) => {
-          console.log('[Debug] Konvertiere Aufgabe:', aufgabe.id);
-          const bearbeiterId = String(mitarbeiter.userId ?? mitarbeiter.id ?? '');
-          aufgabe.zugewiesenAnTyp = 'mitarbeiter';
-          aufgabe.zugewiesenAnId = bearbeiterId;
-          aufgabe.zugewiesenAnName = mitarbeiter.name;
-          aufgabe.zugewiesenAnGruppe = null;
-          aufgabenSystem.syncKalenderNachGruppenuebernahme(aufgabe);
-        });
-        if (nurBegleitungsaufgaben) {
-          console.log('[nehmeAntrag] Nur Begleitungsaufgabe(n) – Hauptbearbeitung bleibt unverändert');
-        } else if (
-          this._istValWeitMitarbeiter(mitarbeiter) &&
-          this._valAntragSichtbar(mitarbeiter, antrag) &&
-          (antrag.bearbeiterId == null ||
-            antrag.bearbeiterId === '' ||
-            String(antrag.bearbeiterId) !== selfId)
-        ) {
+          const alterBearbeiter = antrag.bearbeiterName;
           const alterBearbeiterId = antrag.bearbeiterId;
-          const alterBearbeiterName = antrag.bearbeiterName;
-          if (!antrag.abgegebenVon) {
-            antrag.abgegebenVon = [];
-          }
-          if (alterBearbeiterId && !antrag.abgegebenVon.includes(alterBearbeiterId)) {
-            antrag.abgegebenVon.push(alterBearbeiterId);
-          }
           antrag.bearbeiterId = mitarbeiter.userId;
           antrag.bearbeiterName = mitarbeiter.name;
-          if (antrag.abgegebenVon.includes(mitarbeiter.userId)) {
+          if (antrag.abgegebenVon && antrag.abgegebenVon.includes(mitarbeiter.userId)) {
             antrag.abgegebenVon = antrag.abgegebenVon.filter((id) => id !== mitarbeiter.userId);
           }
-          if (antrag.zugewiesenAnGruppe) {
-            antrag.zugewiesenAnGruppe = null;
-            antrag.zugewiesenAnGruppeName = null;
-          }
-          antrag.hauptbearbeitungWartetAufUebernahme = false;
-          if (antrag.status === 'offen') {
-            antrag.status = 'in-bearbeitung';
-          }
-          maybeNotifyVorherigerBearbeiter(alterBearbeiterId, alterBearbeiterName);
-        }
-        aufgabenSystem.saveAufgaben();
-        this._touchAntragUpdatedAt(antrag);
-        this.saveAntraege();
-        
-        // Aktivität protokollieren
-        aktivitaetenSystem.logAktivitaet({
-          antragId: antragId,
-          typ: 'aufgaben-genommen',
-          beschreibung: `${alleZuUebernehmen.length} Aufgabe(n) übernommen (inkl. Termine)`,
-          benutzerTyp: 'mitarbeiter',
-          benutzerId: mitarbeiter.userId,
-          benutzerName: mitarbeiter.name
-        });
-        
-        console.log('[Debug] nehmeAntrag: Aufgaben erfolgreich übernommen');
-        return antrag;
-      } else {
-        console.log('[Debug] nehmeAntrag: Keine Gruppenaufgaben gefunden - prüfe alle Aufgaben für diesen Antrag');
-        const alleAufgaben = aufgabenSystem.aufgaben.filter(a => a.antragId === antragId && a.status === 'offen');
-        console.log('[Debug] Alle offenen Aufgaben zu diesem Antrag:', alleAufgaben.map(a => ({
-          id: a.id,
-          zugewiesenAnTyp: a.zugewiesenAnTyp,
-          zugewiesenAnGruppe: a.zugewiesenAnGruppe
-        })));
-        
-        // Fall 3b: Hausleitung kann Antrag übernehmen, auch wenn keine Gruppenaufgaben vorhanden
-        // Dies gilt für alle Status außer offen und veraktet
-        const istValWeit = this._istValWeitMitarbeiter(mitarbeiter);
-        const erlaubteStatus = ['in-bearbeitung', 'genehmigt', 'abgelehnt', 'teilweise-genehmigt'];
-        if (
-          istValWeit &&
-          erlaubteStatus.includes(antrag.status) &&
-          String(antrag.bearbeiterId ?? '') !== selfId
-        ) {
-          if (!this._valAntragSichtbar(mitarbeiter, antrag)) {
-            console.log('[Debug] nehmeAntrag Fall 3b: nicht im Sichtfeld');
-          } else {
-            console.log('[Debug] nehmeAntrag Fall 3b: VAL-ähnliche Rolle übernimmt Antrag (Status: ' + antrag.status + ')');
-          
-            const alterBearbeiter = antrag.bearbeiterName;
-            const alterBearbeiterId = antrag.bearbeiterId;
-            antrag.bearbeiterId = mitarbeiter.userId;
-            antrag.bearbeiterName = mitarbeiter.name;
-            if (antrag.abgegebenVon && antrag.abgegebenVon.includes(mitarbeiter.userId)) {
-              antrag.abgegebenVon = antrag.abgegebenVon.filter((id) => id !== mitarbeiter.userId);
-            }
-            this._touchAntragUpdatedAt(antrag);
-            this.saveAntraege();
-          
-            aktivitaetenSystem.logAktivitaet({
-              antragId: antragId,
-              typ: 'uebernommen',
-              beschreibung: `Antrag übernommen von ${alterBearbeiter || 'unbekannt'} (VAL)`,
-              benutzerTyp: 'mitarbeiter',
-              benutzerId: mitarbeiter.userId,
-              benutzerName: mitarbeiter.name
-            });
-            maybeNotifyVorherigerBearbeiter(alterBearbeiterId, alterBearbeiter);
-          
-            return antrag;
-          }
+          this._touchAntragUpdatedAt(antrag);
+          this.saveAntraege();
+
+          aktivitaetenSystem.logAktivitaet({
+            antragId: antragId,
+            typ: 'uebernommen',
+            beschreibung: `Antrag übernommen von ${alterBearbeiter || 'unbekannt'} (VAL)`,
+            benutzerTyp: 'mitarbeiter',
+            benutzerId: mitarbeiter.userId,
+            benutzerName: mitarbeiter.name
+          });
+          maybeNotifyVorherigerBearbeiter(alterBearbeiterId, alterBearbeiter);
+
+          return antrag;
         }
       }
     }

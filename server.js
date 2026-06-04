@@ -257,7 +257,8 @@ function mergeAntragPutPayload(existing, incoming) {
   if (localHatGruppe && (!serverHatGruppe || incWlLen >= exWlLen)) {
     base.zugewiesenAnGruppe = incoming.zugewiesenAnGruppe;
     base.zugewiesenAnGruppeName = incoming.zugewiesenAnGruppeName;
-    base.hauptbearbeitungWartetAufUebernahme = incoming.hauptbearbeitungWartetAufUebernahme;
+    // Weiterleitung an Gruppe: Hauptbearbeitung standardmäßig bei Übernahme übertragen (false nur explizit)
+    base.hauptbearbeitungWartetAufUebernahme = incoming.hauptbearbeitungWartetAufUebernahme !== false;
     base.urspruenglicherBearbeiterId = incoming.urspruenglicherBearbeiterId;
     base.urspruenglicherBearbeiterName = incoming.urspruenglicherBearbeiterName;
   } else if (serverHatGruppe && exWlLen > incWlLen) {

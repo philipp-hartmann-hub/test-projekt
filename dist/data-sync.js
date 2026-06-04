@@ -638,6 +638,28 @@ function mergeWeiterleitungUndGruppenZuweisung(merged, localAntrag, serverAntrag
   merged.hauptbearbeitungWartetAufUebernahme = quelle.hauptbearbeitungWartetAufUebernahme;
   merged.urspruenglicherBearbeiterId = quelle.urspruenglicherBearbeiterId;
   merged.urspruenglicherBearbeiterName = quelle.urspruenglicherBearbeiterName;
+
+  // Gruppen-Weiterleitung: Hauptbearbeitungs-Flag nicht durch veralteten Server auf false zurücksetzen
+  const wl = Array.isArray(merged.weiterleitungen) ? merged.weiterleitungen : [];
+  const letzteWl = wl.length > 0 ? wl[wl.length - 1] : null;
+  const letzteGruppenWlUebertragen =
+    letzteWl && (letzteWl.anGruppe || letzteWl.anGruppeName)
+      ? letzteWl.hauptbearbeitungUebertragen !== false
+      : null;
+  if (localAntrag.hauptbearbeitungWartetAufUebernahme === true) {
+    merged.hauptbearbeitungWartetAufUebernahme = true;
+  } else if (serverAntrag.hauptbearbeitungWartetAufUebernahme === true) {
+    merged.hauptbearbeitungWartetAufUebernahme = true;
+  } else if (letzteGruppenWlUebertragen === true) {
+    merged.hauptbearbeitungWartetAufUebernahme = true;
+  } else if (
+    merged.zugewiesenAnGruppe &&
+    merged.zugewiesenAnGruppe.typ &&
+    merged.hauptbearbeitungWartetAufUebernahme !== false &&
+    letzteGruppenWlUebertragen !== false
+  ) {
+    merged.hauptbearbeitungWartetAufUebernahme = true;
+  }
 }
 
 function storeMergedAntragInLocalStorage(serverAntrag) {
