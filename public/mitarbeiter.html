@@ -4331,11 +4331,6 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                 </div>
               ` : ''}
                 <div class="action-buttons-phase">
-                  ${kannAufgabeBearbeiten && !kannPhasenBearbeiten ? `
-                    <button class="btn btn-primary btn-large btn-phasenaktion" onclick="openAufgabeLoesungModal('${meineOffeneAufgabe.id}')">
-                      ${t('task.edit')}
-                    </button>
-                  ` : ''}
                   ${highlightUebernehmen ? `
                     <button class="btn btn-primary btn-large btn-phasenaktion" onclick="${sollHausleitungsModalInDetail ? `openHausleitungUebernahmeModal('${antrag.id}')` : `nehmeAntragUndBleibeInDetail('${antrag.id}')`}">
                       ${hatWartendeUebergabe ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande') : istOffen ? t('button.takeProcessing') : t('button.takeApplication')}
