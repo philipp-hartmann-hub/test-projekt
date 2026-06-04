@@ -309,7 +309,18 @@
       <div class="modal-body">
         <div class="form-group">
           <label for="entscheidungBegruendung">Begründung <span class="required">*</span></label>
-          <textarea id="entscheidungBegruendung" placeholder="Begründung eingeben (Pflichtfeld)..." rows="4" required></textarea>
+          <p class="field-hint" style="margin-bottom: 0.5rem;">Textbausteine – Klick fügt den Text ins Feld ein (mehrfach kombinierbar).</p>
+          <div class="schnellantwort-buttons" role="group" aria-label="Entscheidungstextbausteine">
+            <button type="button" class="btn-schnellantwort" onclick="insertEntscheidungTextbaustein('Antrag wird genehmigt; die Voraussetzungen sind erfüllt.')">Genehmigung – Voraussetzungen erfüllt</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertEntscheidungTextbaustein('Antrag wird genehmigt; im Ermessensspielraum zulässig.')">Genehmigung – Ermessen</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertEntscheidungTextbaustein('Antrag wird teilweise genehmigt; der genehmigte Umfang ergibt sich aus dem Bescheid.')">Teilweise genehmigt</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertEntscheidungTextbaustein('Antrag wird abgelehnt; die beantragte Leistung ist nicht zulässig.')">Ablehnung – nicht zulässig</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertEntscheidungTextbaustein('Antrag wird abgelehnt; die erforderlichen Voraussetzungen liegen nicht vor.')">Ablehnung – Voraussetzungen fehlen</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertEntscheidungTextbaustein('Die finanziellen Mittel sind vorhanden.')">Mittel vorhanden</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertEntscheidungTextbaustein('Die finanziellen Mittel sind nicht ausreichend.')">Mittel nicht ausreichend</button>
+            <button type="button" class="btn-schnellantwort" onclick="insertEntscheidungTextbaustein('Entscheidung entspricht den Vollzugsvorschriften.')">Vollzugsvorschriften</button>
+          </div>
+          <textarea id="entscheidungBegruendung" placeholder="Begründung der Entscheidung (Pflichtfeld)..." rows="4" required></textarea>
         </div>
         
         <div class="form-group">
@@ -5816,6 +5827,10 @@ ${t('task.create')}
 
     function insertPruefungTextbaustein(text) {
       insertTextbausteinInTextarea('pruefungKommentar', text, '\n');
+    }
+
+    function insertEntscheidungTextbaustein(text) {
+      insertTextbausteinInTextarea('entscheidungBegruendung', text, '\n');
     }
     
     function toggleAntwortFeld() {
