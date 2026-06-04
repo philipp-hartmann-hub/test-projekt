@@ -1711,6 +1711,15 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   visibility: visible;
 }
 
+/* Formular-Modals: kein Schließen durch Klick neben das Fenster (verhindert Datenverlust) */
+.modal-overlay[data-close-on-overlay="false"] {
+  pointer-events: none;
+}
+
+.modal-overlay[data-close-on-overlay="false"] .modal {
+  pointer-events: auto;
+}
+
 #customDialogOverlay {
   z-index: 1100;
 }

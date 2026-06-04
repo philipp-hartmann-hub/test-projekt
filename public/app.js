@@ -6480,23 +6480,33 @@ if (typeof window !== 'undefined') {
   window.closeDialog = closeDialog;
 }
 
-// Klick außerhalb Modal schließt es
+function modalAllowsOverlayDismiss(overlay) {
+  if (!overlay || !overlay.classList.contains('modal-overlay')) return false;
+  if (overlay.id === 'customDialogOverlay') return false;
+  return overlay.dataset.closeOnOverlay !== 'false';
+}
+
+function modalAllowsEscapeDismiss(overlay) {
+  if (!overlay || !overlay.classList.contains('modal-overlay')) return false;
+  if (overlay.id === 'customDialogOverlay') return false;
+  return overlay.dataset.closeOnEscape !== 'false';
+}
+
+// Klick auf den Backdrop schließt das Modal (außer data-close-on-overlay="false")
 document.addEventListener('click', (e) => {
-  if (e.target.classList.contains('modal-overlay')) {
-    // Nicht schließen bei Custom-Dialog (muss explizit bestätigt werden)
-    if (e.target.id !== 'customDialogOverlay') {
-      e.target.classList.remove('active');
-    }
-  }
+  if (!e.target.classList.contains('modal-overlay')) return;
+  if (!modalAllowsOverlayDismiss(e.target)) return;
+  e.target.classList.remove('active');
 });
 
-// Escape-Taste schließt Modal
+// Escape schließt aktive Modals (außer data-close-on-escape="false")
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.modal-overlay.active').forEach(modal => {
+  if (e.key !== 'Escape') return;
+  document.querySelectorAll('.modal-overlay.active').forEach((modal) => {
+    if (modalAllowsEscapeDismiss(modal)) {
       modal.classList.remove('active');
-    });
-  }
+    }
+  });
 });
 
 // HTML escapen
