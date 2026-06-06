@@ -5760,6 +5760,12 @@ ${t('task.create')}
       const aufgabe = aufgabenSystem.getAufgabe(aufgabeId);
       if (!aufgabe) return;
 
+      const antragFuerAufgabe = antragSystem.getAntrag(aufgabe.antragId);
+      const istWeiterleitungsAufgabe = antragSystem.istWeiterleitungsGruppenaufgabe(
+        aufgabe,
+        antragFuerAufgabe
+      );
+
       if (
         aufgabe.status === 'offen' &&
         aufgabe.zugewiesenAnTyp === 'gruppe' &&
@@ -5783,11 +5789,11 @@ ${t('task.create')}
       clearAntwortPdfs();
       
       const istBegleitungsaufgabe = aufgabe.terminBegleitung === true;
-      const antragFuerAufgabe = antragSystem.getAntrag(aufgabe.antragId);
-      const istWeiterleitungsAufgabe = antragSystem.istWeiterleitungsGruppenaufgabe(
-        aufgabe,
-        antragFuerAufgabe
-      );
+      const hbWeiterleitungWartet =
+        istWeiterleitungsAufgabe &&
+        antragFuerAufgabe &&
+        antragFuerAufgabe.hauptbearbeitungWartetAufUebernahme &&
+        antragFuerAufgabe.zugewiesenAnGruppe;
       const sollUebertragen =
         !istBegleitungsaufgabe &&
         !istWeiterleitungsAufgabe &&
@@ -5818,29 +5824,28 @@ ${t('task.create')}
             ? '<p style="color: #0c5460;"><strong>Begleitungsaufgabe:</strong> Sie übernehmen nicht die Hauptbearbeitung. Für weitere Schritte am Antrag ist eine eigene Aufgabe mit Option „Hauptbearbeitung übertragen“ erforderlich.</p>'
             : '<p><strong>Accompaniment task:</strong> You do not take over main responsibility. Further work on the application requires a separate task with transfer of main responsibility.</p>';
       } else if (istWeiterleitungsAufgabe) {
-        if (erledigungsTypGroup) erledigungsTypGroup.style.display = '';
+        if (erledigungsTypGroup) erledigungsTypGroup.style.display = 'none';
         antwortOption.style.display = 'none';
-        const antwortHint = antwortOption.querySelector('.option-hint');
-        if (antwortHint) antwortHint.style.display = 'none';
         document.querySelector('input[name="aufgabeErledigungsTyp"][value="kenntnisnahme"]').checked = true;
         document.getElementById('aufgabeAntwortGruppe').style.display = 'none';
         document.getElementById('aufgabeAntwortPdfGruppe').style.display = 'none';
         document.getElementById('aufgabeKenntnisnahmeOptionen').style.display = 'block';
         kenntnisHint.style.display = 'block';
-        kenntnisHint.textContent =
-          currentLanguage === 'de'
-            ? 'Weiterleitungsaufgabe: Der Antrag geht nicht an den Aufgabensteller zurück.'
-            : currentLanguage === 'en'
-              ? 'Forwarding task: The application is not returned to the task creator.'
-              : 'Tâche de transmission : la demande n’est pas renvoyée au créateur de la tâche.';
-        const hbWartet =
-          antragFuerAufgabe &&
-          antragFuerAufgabe.hauptbearbeitungWartetAufUebernahme &&
-          antragFuerAufgabe.zugewiesenAnGruppe;
-        kenntnisnahmeInfo.innerHTML = hbWartet
+        kenntnisHint.textContent = hbWeiterleitungWartet
           ? (currentLanguage === 'de'
-              ? '<p style="color: #0c5460;"><strong>Weiterleitung:</strong> Nach der Kenntnisnahme können Sie die Hauptbearbeitung über „Antrag übernehmen“ übernehmen. Eine Rückgabe an den weiterleitenden Mitarbeiter erfolgt nicht.</p>'
-              : '<p><strong>Forwarding:</strong> After acknowledgement you may take main responsibility via “Take over application”. The application is not returned to the forwarder.</p>')
+              ? 'Phasen-Weiterleitung: Mit dem Abschluss übernehmen Sie die Hauptbearbeitung des Antrags.'
+              : currentLanguage === 'en'
+                ? 'Phase forwarding: Completing this task transfers main responsibility for the application to you.'
+                : 'Transmission de phase : en clôturant, vous reprenez la responsabilité principale de la demande.')
+          : (currentLanguage === 'de'
+              ? 'Weiterleitungsaufgabe: Der Antrag geht nicht an den Aufgabensteller zurück.'
+              : currentLanguage === 'en'
+                ? 'Forwarding task: The application is not returned to the task creator.'
+                : 'Tâche de transmission : la demande n’est pas renvoyée au créateur de la tâche.');
+        kenntnisnahmeInfo.innerHTML = hbWeiterleitungWartet
+          ? (currentLanguage === 'de'
+              ? '<p style="color: #0c5460;"><strong>Weiterleitung nach Phasenübergang:</strong> Die Option „Mit Antwort / zurück an Aufgabensteller“ entfällt. Nach dem Abschluss sind Sie Hauptbearbeiter/in.</p>'
+              : '<p><strong>Forwarding after phase change:</strong> “With reply / return to task creator” does not apply. After completion you are the main processor.</p>')
           : (currentLanguage === 'de'
               ? '<p style="color: #0c5460;"><strong>Weiterleitung:</strong> Sie schließen nur diese Aufgabe ab. Der Antrag bleibt bei der weiterleitenden Person.</p>'
               : '<p><strong>Forwarding:</strong> You are only completing this task. The application stays with the person who forwarded it.</p>');

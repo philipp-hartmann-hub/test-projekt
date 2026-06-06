@@ -4737,10 +4737,32 @@ class AntragSystem {
     return null;
   }
 
+  _aufgabeKurzText(aufgabe) {
+    if (!aufgabe) return '';
+    const k = aufgabe.kurzbeschreibung;
+    if (typeof k === 'string') return k;
+    return k?.text || '';
+  }
+
+  _aufgabeBeschreibungText(aufgabe) {
+    if (!aufgabe) return '';
+    const b = aufgabe.beschreibung;
+    if (typeof b === 'string') return b;
+    return b?.text || '';
+  }
+
   /** System-Aufgabe aus Gruppen-Weiterleitung (Phasenwechsel) – kein „Zurück an Aufgabensteller“. */
   istWeiterleitungsGruppenaufgabe(aufgabe, antrag) {
-    if (!aufgabe || aufgabe.zugewiesenAnTyp !== 'gruppe') return false;
+    if (!aufgabe) return false;
     if (aufgabe.weiterleitungGruppe === true) return true;
+
+    const kurz = String(this._aufgabeKurzText(aufgabe)).trim();
+    if (/^Weiterleitung:/i.test(kurz)) return true;
+
+    const desc = String(this._aufgabeBeschreibungText(aufgabe));
+    if (/Antrag wurde an .+ weitergeleitet/i.test(desc)) return true;
+
+    if (aufgabe.zugewiesenAnTyp !== 'gruppe') return false;
 
     const normGruppeKey = (g) => {
       if (!g || !g.typ) return '';
@@ -4773,11 +4795,7 @@ class AntragSystem {
       }
     }
 
-    const desc =
-      typeof aufgabe.beschreibung === 'string'
-        ? aufgabe.beschreibung
-        : aufgabe.beschreibung?.text || '';
-    return /Antrag wurde an .+ weitergeleitet/i.test(String(desc));
+    return false;
   }
 
   // Markiert, dass ein Benutzer den Antrag nach Aufgabenerledigung abgegeben hat
