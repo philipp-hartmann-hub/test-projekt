@@ -3510,10 +3510,50 @@ class AntragSystem {
         antrag.hauptbearbeitungWartetAufUebernahme = true;
         changed = true;
       }
+      if (this._bereinigeInkonsistenteBearbeitungsFlags(antrag)) {
+        changed = true;
+      }
     });
     if (changed) {
       this.saveAntraege();
     }
+  }
+
+  /**
+   * Repariert widersprüchliche Flags (z. B. erledigt/bescheid ohne Entscheidung bei status in-bearbeitung),
+   * die nach Vertretung/Sync Phasen-Buttons blockieren.
+   */
+  _bereinigeInkonsistenteBearbeitungsFlags(antrag) {
+    if (!antrag || antrag.veraktet || antrag.status !== 'in-bearbeitung') return false;
+    let changed = false;
+
+    if (antrag.erledigt === true && antrag.entscheidungGetroffen !== true) {
+      antrag.erledigt = false;
+      changed = true;
+    }
+    if (antrag.bescheidPdf && antrag.entscheidungGetroffen !== true) {
+      antrag.bescheidPdf = null;
+      changed = true;
+    }
+    if (
+      antrag.entscheidungGetroffen === true &&
+      antrag.erledigt === true &&
+      !antrag.wartetAufEroeffnung &&
+      !antrag.wartetAufVollzug
+    ) {
+      antrag.entscheidungGetroffen = false;
+      antrag.erledigt = false;
+      antrag.bescheidPdf = null;
+      antrag.bearbeitetAm = null;
+      antrag.entscheidungVon = null;
+      antrag.entscheidungVonId = null;
+      antrag.entscheidungAm = null;
+      antrag.geplantesErgebnis = null;
+      antrag.geplanteBegruendung = null;
+      changed = true;
+    }
+
+    return changed;
   }
 
   generateId() {
@@ -3682,6 +3722,7 @@ class AntragSystem {
       const alterBearbeiterName = antrag.bearbeiterName;
       antrag.status = 'in-bearbeitung';
       this._aktualisiereHauptbearbeiter(antrag, mitarbeiter);
+      this._bereinigeInkonsistenteBearbeitungsFlags(antrag);
       
       // Gruppenzuweisung löschen, da jetzt eine konkrete Person zugewiesen ist
       if (antrag.zugewiesenAnGruppe) {
@@ -3744,6 +3785,7 @@ class AntragSystem {
       if (antrag.abgegebenVon && antrag.abgegebenVon.includes(selfIdVertretung)) {
         antrag.abgegebenVon = antrag.abgegebenVon.filter((id) => String(id) !== selfIdVertretung);
       }
+      this._bereinigeInkonsistenteBearbeitungsFlags(antrag);
       antrag.zugewiesenAnGruppe = null;
       antrag.zugewiesenAnGruppeName = null;
       antrag.vertretungFreigegebenAm = null;

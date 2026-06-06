@@ -3161,8 +3161,26 @@ Persönlich eröffnet
       try {
       
       currentAntragId = antragId;
+      if (typeof antragSystem._bereinigeInkonsistenteBearbeitungsFlags === 'function') {
+        if (antragSystem._bereinigeInkonsistenteBearbeitungsFlags(antrag)) {
+          antragSystem.saveAntraege();
+        }
+      }
       const istOffen = antrag.status === 'offen';
-      const istErledigt = antrag.erledigt || ['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(antrag.status);
+      const istErledigt =
+        ['genehmigt', 'abgelehnt', 'teilweise-genehmigt'].includes(antrag.status) ||
+        (antrag.erledigt === true &&
+          antrag.entscheidungGetroffen === true &&
+          !antrag.wartetAufEroeffnung &&
+          !antrag.wartetAufVollzug);
+      const dateLocale =
+        currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE';
+      const formatSafeAntragDatum = (iso) => {
+        if (!iso) return '–';
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime()) || d.getFullYear() < 1990) return '–';
+        return d.toLocaleDateString(dateLocale);
+      };
       
       // Prüfen ob es Gruppenaufgaben für diesen Mitarbeiter gibt
       const meineGruppenAufgaben = aufgabenSystem.getOffeneGruppenAufgabenFuerMitarbeiter(antragId, currentSession);
@@ -4305,10 +4323,10 @@ ${currentLanguage === 'en' ? 'Download notice' : currentLanguage === 'fr' ? 'Té
                   <span>${t('process.reviewDone')} ${new Date(antrag.sachlichGeprueftAm).toLocaleDateString(currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE')} ${t('process.by')} ${antrag.sachlichGeprueftVon}</span>
                 </div>
               ` : ''}
-              ${istErledigt && !antrag.veraktet ? `
+              ${istErledigt && !antrag.veraktet && antrag.entscheidungGetroffen ? `
                 <div class="entscheidung-erfolgt">
                   <span class="erfolgt-icon"></span>
-                  <span>${t('hint.decisionMade')}: ${getStatusText(antrag.status)} ${t('hint.on')} ${new Date(antrag.bearbeitetAm).toLocaleDateString(currentLanguage === 'en' ? 'en-GB' : currentLanguage === 'fr' ? 'fr-FR' : 'de-DE')}</span>
+                  <span>${t('hint.decisionMade')}: ${getStatusText(antrag.status)} ${t('hint.on')} ${formatSafeAntragDatum(antrag.bearbeitetAm || antrag.entscheidungAm)}</span>
                 </div>
               ` : ''}
               
@@ -7343,7 +7361,7 @@ ${t('task.create')}
       
       // Entscheiden - wenn geprüft aber noch nicht entschieden
       // entscheidungGetroffen wird gesetzt sobald eine Entscheidung getroffen wurde (auch bei pers. Eröffnung/Vollzug)
-      if (antrag.status === 'in-bearbeitung' && antrag.sachlichGeprueft && !antrag.entscheidungGetroffen && !antrag.erledigt) {
+      if (antrag.status === 'in-bearbeitung' && antrag.sachlichGeprueft && !antrag.entscheidungGetroffen) {
         status.entscheiden = 'aktiv';
       } else if (antrag.entscheidungGetroffen || antrag.erledigt) {
         status.entscheiden = 'erledigt';
