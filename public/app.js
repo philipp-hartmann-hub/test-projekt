@@ -3681,8 +3681,7 @@ class AntragSystem {
       const alterBearbeiterId = antrag.bearbeiterId;
       const alterBearbeiterName = antrag.bearbeiterName;
       antrag.status = 'in-bearbeitung';
-      antrag.bearbeiterId = mitarbeiter.userId;
-      antrag.bearbeiterName = mitarbeiter.name;
+      this._aktualisiereHauptbearbeiter(antrag, mitarbeiter);
       
       // Gruppenzuweisung löschen, da jetzt eine konkrete Person zugewiesen ist
       if (antrag.zugewiesenAnGruppe) {
@@ -3723,6 +3722,54 @@ class AntragSystem {
       });
       maybeNotifyVorherigerBearbeiter(alterBearbeiterId, alterBearbeiterName);
       
+      return antrag;
+    }
+
+    // Fall 1b: Vertretung – Antrag liegt in der Gruppe ohne persönlichen Bearbeiter
+    if (
+      antrag.status === 'in-bearbeitung' &&
+      !antrag.bearbeiterId &&
+      antrag.zugewiesenAnGruppe &&
+      !antrag.hauptbearbeitungWartetAufUebernahme
+    ) {
+      const darfAlsGruppenmitglied = this._mitarbeiterGehoertZuGruppe(mitarbeiter, antrag.zugewiesenAnGruppe);
+      const darfAlsValPool =
+        this._istValWeitMitarbeiter(mitarbeiter) && this._valAntragSichtbar(mitarbeiter, antrag);
+      if (!darfAlsGruppenmitglied && !darfAlsValPool) {
+        return null;
+      }
+
+      this._aktualisiereHauptbearbeiter(antrag, mitarbeiter);
+      antrag.zugewiesenAnGruppe = null;
+      antrag.zugewiesenAnGruppeName = null;
+      antrag.vertretungFreigegebenAm = null;
+      antrag.vertretungFreigegebenVon = null;
+      antrag.vertretungFreigegebenVonName = null;
+
+      const gruppenAufgabenVertretung = aufgabenSystem.getAlleOffenenGruppenAufgabenFuerAntrag(antragId);
+      gruppenAufgabenVertretung.forEach((aufgabe) => {
+        aufgabe.zugewiesenAnTyp = 'mitarbeiter';
+        aufgabe.zugewiesenAnId = mitarbeiter.userId;
+        aufgabe.zugewiesenAnName = mitarbeiter.name;
+        aufgabe.zugewiesenAnGruppe = null;
+        aufgabenSystem.syncKalenderNachGruppenuebernahme(aufgabe);
+      });
+      if (gruppenAufgabenVertretung.length > 0) {
+        aufgabenSystem.saveAufgaben();
+      }
+
+      this._touchAntragUpdatedAt(antrag);
+      this.saveAntraege();
+
+      aktivitaetenSystem.logAktivitaet({
+        antragId: antragId,
+        typ: 'genommen',
+        beschreibung: 'Antrag aus Vertretung übernommen',
+        benutzerTyp: 'mitarbeiter',
+        benutzerId: mitarbeiter.userId,
+        benutzerName: mitarbeiter.name
+      });
+
       return antrag;
     }
     
@@ -3802,8 +3849,7 @@ class AntragSystem {
       }
       
       // Hauptbearbeitung übertragen
-      antrag.bearbeiterId = mitarbeiter.userId;
-      antrag.bearbeiterName = mitarbeiter.name;
+      this._aktualisiereHauptbearbeiter(antrag, mitarbeiter);
       if (antrag.abgegebenVon && antrag.abgegebenVon.includes(mitarbeiter.userId)) {
         antrag.abgegebenVon = antrag.abgegebenVon.filter((id) => id !== mitarbeiter.userId);
       }
@@ -3855,8 +3901,7 @@ class AntragSystem {
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag && antrag.status === 'in-bearbeitung') {
       const alterBearbeiter = antrag.bearbeiterName;
-      antrag.bearbeiterId = mitarbeiter.userId;
-      antrag.bearbeiterName = mitarbeiter.name;
+      this._aktualisiereHauptbearbeiter(antrag, mitarbeiter);
       this.saveAntraege();
       
       // Aktivität protokollieren
@@ -4424,6 +4469,209 @@ class AntragSystem {
     return false;
   }
 
+  /** 48 Stunden – danach automatische Rückgabe an die Gruppe (Vertretung) */
+  static get VERTRETUNG_FRIST_MS() {
+    return 48 * 60 * 60 * 1000;
+  }
+
+  _aktualisiereHauptbearbeiter(antrag, mitarbeiter) {
+    const userId = mitarbeiter.userId ?? mitarbeiter.id;
+    antrag.bearbeiterId = userId;
+    antrag.bearbeiterName = mitarbeiter.name;
+    antrag.bearbeiterSeit = new Date().toISOString();
+    const vertretungsGruppe = this._gruppeAusMitarbeiter(mitarbeiter, antrag);
+    if (vertretungsGruppe) {
+      antrag.vertretungsGruppe = vertretungsGruppe;
+      antrag.vertretungsGruppeName = this._gruppeDisplayName(vertretungsGruppe);
+    }
+  }
+
+  _gruppeAusMitarbeiter(mitarbeiter, antrag) {
+    if (!mitarbeiter) return null;
+    const rolle = this._rolleNorm(mitarbeiter.rolle);
+    let hausId = antrag?.insasseJva || null;
+    if (!hausId) {
+      if (mitarbeiter.jvas && mitarbeiter.jvas.length > 0) {
+        const first = mitarbeiter.jvas[0];
+        hausId = typeof first === 'string' ? first : first?.id;
+      } else if (mitarbeiter.jva) {
+        hausId = mitarbeiter.jva;
+      }
+    }
+    const hausNorm = hausId ? String(hausId).replace('jva', 'haus') : null;
+    const station = mitarbeiter.station ?? antrag?.insasseStation ?? null;
+
+    if (typeof istAnstaltsweiteJvaGruppeTyp === 'function' && istAnstaltsweiteJvaGruppeTyp(rolle)) {
+      return { typ: rolle, hausId: null, station: null };
+    }
+    if (rolle === 'zahlstelle') return { typ: 'zahlstelle', hausId: null, station: null };
+    if (rolle === 'arbeitskoordination') return { typ: 'arbeitskoordination', hausId: null, station: null };
+    if (rolle === 'anstaltsleitung') return { typ: 'anstaltsleitung', hausId: null, station: null };
+    if (this._istKlassischeValRolle(rolle) && hausNorm) {
+      return { typ: 'hausleitung', hausId: hausNorm, station: null };
+    }
+    if (this._istStationsleitungPortalRolle(rolle) && hausNorm) {
+      return { typ: 'stationsleitung', hausId: hausNorm, station: station };
+    }
+    if (hausNorm) {
+      return { typ: 'station', hausId: hausNorm, station: station };
+    }
+    return null;
+  }
+
+  _gruppeDisplayName(gruppe) {
+    if (!gruppe || !gruppe.typ) return 'Gruppe';
+    const typ = String(gruppe.typ).toLowerCase();
+    if (typeof getJvaGruppeDisplayName === 'function' && typeof istAnstaltsweiteJvaGruppeTyp === 'function' && istAnstaltsweiteJvaGruppeTyp(typ)) {
+      return getJvaGruppeDisplayName(typ);
+    }
+    const hausName = typeof getHausName === 'function' ? getHausName(gruppe.hausId) : (gruppe.hausId || '');
+    if (typ === 'stationsleitung') {
+      return `Stationsleitung ${hausName} Station ${gruppe.station || ''}`.trim();
+    }
+    if (typ === 'hausleitung') {
+      return `VAL ${hausName}`;
+    }
+    if (typ === 'station' || typ === 'avd') {
+      return `AVD ${hausName} Station ${gruppe.station || ''}`.trim();
+    }
+    return gruppe.typ;
+  }
+
+  _getBearbeiterSeitTimestamp(antrag) {
+    if (!antrag || !antrag.bearbeiterId) return null;
+    if (antrag.bearbeiterSeit) {
+      const t = new Date(antrag.bearbeiterSeit).getTime();
+      if (!Number.isNaN(t)) return t;
+    }
+    const akts = aktivitaetenSystem.getAktivitaetenZuAntrag(antrag.id)
+      .filter((a) =>
+        String(a.benutzerId) === String(antrag.bearbeiterId) &&
+        ['genommen', 'hauptbearbeitung-uebernommen', 'bearbeitung-uebernommen', 'uebernommen'].includes(a.typ)
+      )
+      .sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
+    if (akts.length > 0) {
+      const t = new Date(akts[0].erstelltAm).getTime();
+      if (!Number.isNaN(t)) return t;
+    }
+    if (antrag.updatedAt) {
+      const t = new Date(antrag.updatedAt).getTime();
+      if (!Number.isNaN(t)) return t;
+    }
+    if (antrag.erstelltAm) {
+      const t = new Date(antrag.erstelltAm).getTime();
+      if (!Number.isNaN(t)) return t;
+    }
+    return null;
+  }
+
+  _istVertretungsKandidat(antrag) {
+    if (!antrag || antrag.veraktet === true) return false;
+    if (!antrag.bearbeiterId) return false;
+    if (antrag.status !== 'in-bearbeitung' && antrag.status !== 'offen') return false;
+    if (antrag.zugewiesenAnGruppe && antrag.hauptbearbeitungWartetAufUebernahme) return false;
+    const seit = this._getBearbeiterSeitTimestamp(antrag);
+    if (!seit) return false;
+    return (Date.now() - seit) >= AntragSystem.VERTRETUNG_FRIST_MS;
+  }
+
+  freigabeZurVertretung(antrag) {
+    if (!this._istVertretungsKandidat(antrag)) return false;
+
+    const altBearbeiterId = antrag.bearbeiterId;
+    const altBearbeiterName = antrag.bearbeiterName;
+    let gruppe = antrag.vertretungsGruppe;
+    if (!gruppe) {
+      const bearbeiter = userSystem.getUser(altBearbeiterId);
+      gruppe = this._gruppeAusMitarbeiter(bearbeiter, antrag);
+    }
+    if (!gruppe || !gruppe.typ) return false;
+
+    const typNorm = String(gruppe.typ).toLowerCase();
+    const normierteGruppe = {
+      typ: typNorm,
+      hausId: typeof istAnstaltsweiteJvaGruppeTyp === 'function' && istAnstaltsweiteJvaGruppeTyp(typNorm)
+        ? null
+        : (gruppe.hausId ?? null),
+      station: gruppe.station ?? null
+    };
+    const gruppeName = antrag.vertretungsGruppeName || this._gruppeDisplayName(normierteGruppe);
+
+    antrag.zugewiesenAnGruppe = normierteGruppe;
+    antrag.zugewiesenAnGruppeName = gruppeName;
+    antrag.hauptbearbeitungWartetAufUebernahme = false;
+    antrag.bearbeiterId = null;
+    antrag.bearbeiterName = null;
+    antrag.bearbeiterSeit = null;
+    antrag.vertretungFreigegebenAm = new Date().toISOString();
+    antrag.vertretungFreigegebenVon = altBearbeiterId;
+    antrag.vertretungFreigegebenVonName = altBearbeiterName;
+
+    const kurz = `Vertretung: ${gruppeName}`.slice(0, 40);
+    const gruppeKey = JSON.stringify(normierteGruppe);
+    const hatBereitsGruppenaufgabe = aufgabenSystem.aufgaben.some(
+      (a) =>
+        a.antragId === antrag.id &&
+        a.status === 'offen' &&
+        a.zugewiesenAnTyp === 'gruppe' &&
+        JSON.stringify(a.zugewiesenAnGruppe || {}) === gruppeKey
+    );
+    if (!hatBereitsGruppenaufgabe) {
+      aufgabenSystem.createAufgabe({
+        antragId: antrag.id,
+        antragsNummer: antrag.antragsNummer,
+        erstelltVonId: 'system',
+        erstelltVonName: 'System (Vertretung)',
+        zugewiesenAnTyp: 'gruppe',
+        zugewiesenAnGruppe: normierteGruppe,
+        zugewiesenAnName: gruppeName,
+        kurzbeschreibung: kurz,
+        beschreibung: `Antrag wurde nach 48 Stunden automatisch an ${gruppeName} zur Vertretung zurückgegeben (vorher: ${altBearbeiterName || 'unbekannt'}).`,
+        vertretungGruppe: true
+      });
+    }
+
+    this._touchAntragUpdatedAt(antrag);
+    this.saveAntraege();
+
+    aktivitaetenSystem.logAktivitaet({
+      antragId: antrag.id,
+      typ: 'vertretung-freigabe',
+      beschreibung: `Automatische Vertretung: Antrag an ${gruppeName} zurückgegeben (48h-Frist)`,
+      details: {
+        vonId: altBearbeiterId,
+        von: altBearbeiterName,
+        anGruppe: normierteGruppe,
+        anGruppeName: gruppeName
+      },
+      benutzerTyp: 'mitarbeiter',
+      benutzerId: altBearbeiterId,
+      benutzerName: altBearbeiterName || 'System'
+    });
+
+    if (typeof notificationSystem !== 'undefined' && altBearbeiterId) {
+      notificationSystem.createNotification(
+        altBearbeiterId,
+        'vertretung',
+        'Antrag zur Vertretung freigegeben',
+        `Antrag ${antrag.antragsNummer || antrag.id} wurde nach 48 Stunden automatisch an ${gruppeName} zurückgegeben und kann von anderen Gruppenmitgliedern übernommen werden.`,
+        antrag.id
+      );
+    }
+
+    return true;
+  }
+
+  pruefeUndWendeVertretungsregelAn() {
+    let geaendert = 0;
+    this.antraege.forEach((antrag) => {
+      if (this.freigabeZurVertretung(antrag)) {
+        geaendert += 1;
+      }
+    });
+    return geaendert;
+  }
+
   // Anträge und Aufgaben der Gruppe für Mitarbeiter (basierend auf Haus/Station)
   getOffeneAntraegeMitarbeiter(mitarbeiter) {
     const istValWeit = this._istValWeitMitarbeiter(mitarbeiter);
@@ -4839,9 +5087,11 @@ class AntragSystem {
         antrag.abgegebenVon = antrag.abgegebenVon.filter(id => id !== neuBearbeiterId);
       }
       
-      // Neuen Bearbeiter setzen
-      antrag.bearbeiterId = neuBearbeiterId;
-      antrag.bearbeiterName = neuBearbeiterName;
+      const bearbeiterUser = userSystem.getUser(neuBearbeiterId) || {
+        userId: neuBearbeiterId,
+        name: neuBearbeiterName
+      };
+      this._aktualisiereHauptbearbeiter(antrag, bearbeiterUser);
       
       // Falls noch nicht in Bearbeitung, jetzt setzen
       if (antrag.status === 'offen') {

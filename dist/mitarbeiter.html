@@ -225,6 +225,9 @@
               </select>
             </div>
           </div>
+          <p class="section-hint" id="vertretungHinweis">
+            Hinweis: Liegen Anträge länger als 48&nbsp;Stunden in „Meine Anträge und Aufgaben“, werden sie automatisch an Ihre Gruppe zur Vertretung zurückgegeben. Ein anderes Gruppenmitglied muss den Antrag dann neu übernehmen.
+          </p>
           <div class="antrag-filter-wrap" id="bearbeitungTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
           <div class="antrag-list" id="bearbeitungList">
             <!-- Dynamisch gefüllt -->
@@ -2780,23 +2783,44 @@
             </div>
           `;
         }
+
+        if (antrag.vertretungFreigegebenAm) {
+          const vonName = antrag.vertretungFreigegebenVonName || 'unbekannt';
+          const freigegebenAm = formatDate(antrag.vertretungFreigegebenAm);
+          gruppenaufgabenInfo += `
+            <div class="vertretung-info" style="background: #e8f4fd; border: 1px solid #7eb8da; border-radius: 4px; padding: 8px; margin: 8px 0;">
+              <strong style="color: #0c5460;">Vertretung (48&nbsp;Std.)</strong>
+              <p style="margin: 4px 0 0 0; color: #0c5460; font-size: 0.9em;">
+                Automatisch zurück in die Gruppe${vonName ? ` (zuvor: ${vonName})` : ''}${freigegebenAm ? ` – ${freigegebenAm}` : ''}. Bitte von einem Gruppenmitglied übernehmen.
+              </p>
+            </div>
+          `;
+        }
       }
       
       let actionsHtml = '';
       let bearbeiterInfo = '';
       
       if (mode === 'offen') {
+        const istVertretungInGruppe =
+          antrag.status === 'in-bearbeitung' &&
+          !antrag.bearbeiterId &&
+          antrag.zugewiesenAnGruppe &&
+          !antrag.hauptbearbeitungWartetAufUebernahme;
         const kannAusKachelUebernehmen =
           antrag.status === 'offen' ||
           hatGruppenaufgaben ||
           hatWartendeUebergabe ||
-          hatTerminAufgabeKachel;
+          hatTerminAufgabeKachel ||
+          istVertretungInGruppe;
         let buttonText =
           antrag.status === 'offen' ? t('button.takeProcessing') : t('button.takeApplication');
         if (hatGruppenaufgaben && antrag.status === 'in-bearbeitung') {
           buttonText = currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche';
         } else if (hatWartendeUebergabe) {
           buttonText = currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande';
+        } else if (istVertretungInGruppe) {
+          buttonText = currentLanguage === 'de' ? 'Aus Vertretung übernehmen' : currentLanguage === 'en' ? 'Take over (substitution)' : 'Reprendre (suppléance)';
         }
 
         actionsHtml = `
@@ -7540,6 +7564,13 @@ ${t('task.create')}
     function renderAntraege() {
       if (!currentSession) return;
       syncWelcomeBannerBackButton();
+
+      if (typeof antragSystem.pruefeUndWendeVertretungsregelAn === 'function') {
+        const vertretungAnzahl = antragSystem.pruefeUndWendeVertretungsregelAn();
+        if (vertretungAnzahl > 0) {
+          console.log(`[Vertretung] ${vertretungAnzahl} Antrag/Anträge automatisch an die Gruppe zurückgegeben.`);
+        }
+      }
 
       // Debug-Ausgabe
       console.log('[Debug] renderAntraege - currentSession:', {
