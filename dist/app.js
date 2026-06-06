@@ -3040,6 +3040,7 @@ class AufgabenSystem {
       erledigungsTyp: null, // 'antwort' oder 'kenntnisnahme'
       erstelltAm: new Date().toISOString(),
       erledigtAm: null,
+      weiterleitungGruppe: data.weiterleitungGruppe === true,
       terminId: data.terminId || null,
       terminBegleitung: data.terminBegleitung === true,
       terminUhrzeit: data.terminUhrzeit || null
@@ -3756,33 +3757,6 @@ class AntragSystem {
           aufgabe.zugewiesenAnGruppe = null;
           aufgabenSystem.syncKalenderNachGruppenuebernahme(aufgabe);
         });
-        if (
-          !nurBegleitungsaufgabenFrueh &&
-          this._istValWeitMitarbeiter(mitarbeiter) &&
-          this._valAntragSichtbar(mitarbeiter, antrag) &&
-          (antrag.bearbeiterId == null ||
-            antrag.bearbeiterId === '' ||
-            String(antrag.bearbeiterId) !== selfIdFrueh)
-        ) {
-          const alterBearbeiterId = antrag.bearbeiterId;
-          const alterBearbeiterName = antrag.bearbeiterName;
-          if (!antrag.abgegebenVon) antrag.abgegebenVon = [];
-          if (alterBearbeiterId && !antrag.abgegebenVon.includes(alterBearbeiterId)) {
-            antrag.abgegebenVon.push(alterBearbeiterId);
-          }
-          antrag.bearbeiterId = mitarbeiter.userId;
-          antrag.bearbeiterName = mitarbeiter.name;
-          if (antrag.abgegebenVon.includes(mitarbeiter.userId)) {
-            antrag.abgegebenVon = antrag.abgegebenVon.filter((id) => id !== mitarbeiter.userId);
-          }
-          if (antrag.zugewiesenAnGruppe) {
-            antrag.zugewiesenAnGruppe = null;
-            antrag.zugewiesenAnGruppeName = null;
-          }
-          antrag.hauptbearbeitungWartetAufUebernahme = false;
-          if (antrag.status === 'offen') antrag.status = 'in-bearbeitung';
-          maybeNotifyVorherigerBearbeiter(alterBearbeiterId, alterBearbeiterName);
-        }
         aufgabenSystem.saveAufgaben();
         this._touchAntragUpdatedAt(antrag);
         this.saveAntraege();
@@ -3870,46 +3844,6 @@ class AntragSystem {
       maybeNotifyVorherigerBearbeiter(alterBearbeiterId, alterBearbeiterName);
       
       return antrag;
-    }
-    
-    // Fall 4: VAL-Übernahme ohne Gruppenaufgabe
-    if (!antrag.veraktet) {
-      const selfId = String(mitarbeiter.userId ?? mitarbeiter.id ?? '');
-      const istValWeit = this._istValWeitMitarbeiter(mitarbeiter);
-      const erlaubteStatus = ['in-bearbeitung', 'genehmigt', 'abgelehnt', 'teilweise-genehmigt'];
-      if (
-        istValWeit &&
-        erlaubteStatus.includes(antrag.status) &&
-        String(antrag.bearbeiterId ?? '') !== selfId
-      ) {
-        if (!this._valAntragSichtbar(mitarbeiter, antrag)) {
-          console.log('[Debug] nehmeAntrag Fall 4: nicht im Sichtfeld');
-        } else {
-          console.log('[Debug] nehmeAntrag Fall 4: VAL-ähnliche Rolle übernimmt Antrag (Status: ' + antrag.status + ')');
-
-          const alterBearbeiter = antrag.bearbeiterName;
-          const alterBearbeiterId = antrag.bearbeiterId;
-          antrag.bearbeiterId = mitarbeiter.userId;
-          antrag.bearbeiterName = mitarbeiter.name;
-          if (antrag.abgegebenVon && antrag.abgegebenVon.includes(mitarbeiter.userId)) {
-            antrag.abgegebenVon = antrag.abgegebenVon.filter((id) => id !== mitarbeiter.userId);
-          }
-          this._touchAntragUpdatedAt(antrag);
-          this.saveAntraege();
-
-          aktivitaetenSystem.logAktivitaet({
-            antragId: antragId,
-            typ: 'uebernommen',
-            beschreibung: `Antrag übernommen von ${alterBearbeiter || 'unbekannt'} (VAL)`,
-            benutzerTyp: 'mitarbeiter',
-            benutzerId: mitarbeiter.userId,
-            benutzerName: mitarbeiter.name
-          });
-          maybeNotifyVorherigerBearbeiter(alterBearbeiterId, alterBearbeiter);
-
-          return antrag;
-        }
-      }
     }
     
     console.log('[Debug] nehmeAntrag: Kein passender Fall gefunden, return null');
@@ -4453,20 +4387,36 @@ class AntragSystem {
     return r === 'hausleitung' || r === 'jva-leitung' || r === 'haus-leitung';
   }
 
-  /** VAL, Anstaltsleitung oder Stationsleitung/Wohngruppenleitung (VAL-Umfang) */
+  /** Stationsleitung / Wohngruppenleitung (VAL-Prinzip, aber nur eine Station) */
+  _istStationsleitungPortalRolle(rolle) {
+    const r = this._rolleNorm(rolle);
+    return r === 'stationsleitung' || r === 'stationshausleitung';
+  }
+
+  _matchesStation(mitarbeiterStation, insasseStation) {
+    return String(insasseStation ?? '') === String(mitarbeiterStation ?? '');
+  }
+
+  /** VAL, Anstaltsleitung oder Stationsleitung (haus- bzw. stationsspezifisch) */
   _istValWeitMitarbeiter(mitarbeiter) {
     const r = this._rolleNorm(mitarbeiter?.rolle);
-    return this._istKlassischeValRolle(r) || r === 'anstaltsleitung' || r === 'stationshausleitung';
+    return (
+      this._istKlassischeValRolle(r) ||
+      r === 'anstaltsleitung' ||
+      this._istStationsleitungPortalRolle(r)
+    );
   }
 
   /** Ob der Antrag im Sichtfeld dieser VAL-ähnlichen Rolle liegt */
   _valAntragSichtbar(mitarbeiter, antrag) {
     const r = this._rolleNorm(mitarbeiter?.rolle);
     if (r === 'anstaltsleitung') return !!(antrag && (antrag.insasseJva || antrag.insasseId));
-    if (r === 'stationshausleitung') {
-      return !!(antrag &&
+    if (this._istStationsleitungPortalRolle(r)) {
+      return !!(
+        antrag &&
         this._matchesHaus(mitarbeiter.jvas, antrag.insasseJva) &&
-        String(antrag.insasseStation ?? '') === String(mitarbeiter.station ?? ''));
+        this._matchesStation(mitarbeiter.station, antrag.insasseStation)
+      );
     }
     if (this._istKlassischeValRolle(r)) {
       return this._matchesHaus(mitarbeiter.jvas, antrag.insasseJva);
@@ -4512,10 +4462,11 @@ class AntragSystem {
           return this._mitarbeiterGehoertZuGruppe(mitarbeiter, a.zugewiesenAnGruppe);
         }
         
-        // Normale offene Anträge (ohne Gruppenzuweisung)
-        // Mitarbeiter und Stationsleitung sehen nur ihre Station
-        return this._matchesHaus(mitarbeiter.jvas, a.insasseJva) && 
-               a.insasseStation === mitarbeiter.station;
+        // Normale offene Anträge (ohne Gruppenzuweisung) – AVD nur eigene Station
+        return (
+          this._matchesHaus(mitarbeiter.jvas, a.insasseJva) &&
+          this._matchesStation(mitarbeiter.station, a.insasseStation)
+        );
       }
       
       // 2. Anträge in Bearbeitung mit Gruppenzuweisung (Weiterleitung an Gruppe)
@@ -4544,20 +4495,6 @@ class AntragSystem {
         if (a.veraktet) {
           return false;
         }
-        return true;
-      }
-      
-      // 4. VAL sieht ALLE Anträge des Hauses in "Anträge und Aufgaben meiner Gruppe"
-      // VAL kann alle Anträge sehen und jederzeit übernehmen, auch wenn sie bereits einem anderen Bearbeiter zugewiesen sind
-      // WICHTIG: VAL sieht auch Anträge die bereits einem Bearbeiter zugewiesen sind (z.B. AVD)
-      if (istValWeit && !a.veraktet) {
-        if (!this._valAntragSichtbar(mitarbeiter, a)) return false;
-        
-        // Nicht anzeigen wenn VAL bereits der Bearbeiter ist (erscheint dann in "Meine Anträge")
-        if (String(a.bearbeiterId) === String(mitarbeiter.userId)) return false;
-        
-        // VAL sieht ALLE anderen Anträge, unabhängig vom Status oder Bearbeiter
-        // Auch Anträge die bereits einem AVD oder anderen Mitarbeiter zugewiesen sind
         return true;
       }
       
@@ -4647,10 +4584,10 @@ class AntragSystem {
     });
 
     if (gruppeTypNorm === 'stationsleitung') {
-      if (rolleNorm !== 'stationsleitung') return false;
+      if (!this._istStationsleitungPortalRolle(rolleNorm)) return false;
       if (!normHausId) return false;
       if (!imSelbenHaus) return false;
-      return String(mitarbeiter.station ?? '') === String(gruppe.station ?? '');
+      return this._matchesStation(mitarbeiter.station, gruppe.station);
     }
 
     if (!normHausId) return false;
@@ -4694,12 +4631,6 @@ class AntragSystem {
         if (this._istValWeitMitarbeiter(mitarbeiter)) {
           return this._valAntragSichtbar(mitarbeiter, a);
         }
-        if (mitarbeiter.rolle === 'stationsleitung') {
-          return (
-            this._matchesHaus(mitarbeiter.jvas, a.insasseJva) &&
-            a.insasseStation === mitarbeiter.station
-          );
-        }
         return true;
       }
 
@@ -4710,13 +4641,6 @@ class AntragSystem {
       if (this._istValWeitMitarbeiter(mitarbeiter)) {
         if (!this._valAntragSichtbar(mitarbeiter, a)) return false;
         return hatAufgabenbezug;
-      }
-
-      if (mitarbeiter.rolle === 'stationsleitung') {
-        return (
-          this._matchesHaus(mitarbeiter.jvas, a.insasseJva) &&
-          a.insasseStation === mitarbeiter.station
-        );
       }
 
       return hatAufgabenbezug;
@@ -4731,17 +4655,11 @@ class AntragSystem {
       // Ein nur "erledigter" Antrag nach Bekanntgabe reicht dafür nicht aus.
       if (a.veraktet !== true) return false;
       
-      // VAL sieht alle verakteten Anträge ihres Hauses
+      // VAL / Stationsleitung: veraktete Anträge im Sichtfeld (Haus bzw. Station)
       if (this._istValWeitMitarbeiter(mitarbeiter)) {
         return this._valAntragSichtbar(mitarbeiter, a);
       }
-      
-      // Stationsleitung sieht alle verakteten Anträge ihrer Station
-      if (mitarbeiter.rolle === 'stationsleitung') {
-        return this._matchesHaus(mitarbeiter.jvas, a.insasseJva) && 
-               a.insasseStation === mitarbeiter.station;
-      }
-      
+
       // Normale Mitarbeiter sehen ihre persönlich bearbeiteten Anträge
       // ODER Anträge, zu denen sie eine Aufgabe hatten oder an denen sie gearbeitet haben
       const istBearbeiter = String(a.bearbeiterId) === String(mitarbeiter.userId);
@@ -4819,8 +4737,51 @@ class AntragSystem {
     return null;
   }
 
+  /** System-Aufgabe aus Gruppen-Weiterleitung (Phasenwechsel) – kein „Zurück an Aufgabensteller“. */
+  istWeiterleitungsGruppenaufgabe(aufgabe, antrag) {
+    if (!aufgabe || aufgabe.zugewiesenAnTyp !== 'gruppe') return false;
+    if (aufgabe.weiterleitungGruppe === true) return true;
+
+    const normGruppeKey = (g) => {
+      if (!g || !g.typ) return '';
+      return JSON.stringify({
+        typ: String(g.typ).toLowerCase(),
+        hausId:
+          g.hausId == null || String(g.hausId).trim() === ''
+            ? null
+            : String(g.hausId).replace(/^jva/i, 'haus'),
+        station: g.station == null || g.station === '' ? null : String(g.station)
+      });
+    };
+
+    if (antrag && Array.isArray(antrag.weiterleitungen) && antrag.weiterleitungen.length > 0) {
+      const wl = antrag.weiterleitungen[antrag.weiterleitungen.length - 1];
+      if (wl && (wl.anGruppe || wl.anGruppeName)) {
+        const wlGruppe = wl.anGruppe || {};
+        if (normGruppeKey(wlGruppe) === normGruppeKey(aufgabe.zugewiesenAnGruppe || {})) {
+          const vonId = wl.vonId;
+          if (
+            vonId &&
+            aufgabe.erstelltVonId &&
+            String(vonId) === String(aufgabe.erstelltVonId)
+          ) {
+            const tA = Date.parse(aufgabe.erstelltAm || 0);
+            const tW = Date.parse(wl.datum || 0);
+            if (!tW || !tA || Math.abs(tA - tW) < 5 * 60 * 1000) return true;
+          }
+        }
+      }
+    }
+
+    const desc =
+      typeof aufgabe.beschreibung === 'string'
+        ? aufgabe.beschreibung
+        : aufgabe.beschreibung?.text || '';
+    return /Antrag wurde an .+ weitergeleitet/i.test(String(desc));
+  }
+
   // Markiert, dass ein Benutzer den Antrag nach Aufgabenerledigung abgegeben hat
-  // Der Antrag geht zurück an den Aufgabensteller
+  // Der Antrag geht zurück an den Aufgabensteller (nur bei manuell erstellten Aufgaben mit Option „zurück“)
   markiereAufgabeAbgegeben(antragId, benutzerId) {
     const antrag = this.antraege.find(a => a.id === antragId);
     if (antrag) {
@@ -5239,7 +5200,8 @@ class AntragSystem {
           zugewiesenAnGruppe: normierteGruppe,
           zugewiesenAnName: gruppeName,
           kurzbeschreibung: kurz,
-          beschreibung: notiz || `Antrag wurde an ${gruppeName} weitergeleitet.`
+          beschreibung: notiz || `Antrag wurde an ${gruppeName} weitergeleitet.`,
+          weiterleitungGruppe: true
         });
       }
       
@@ -6529,7 +6491,7 @@ function getRolleText(rolle) {
   return rollen[rolle] || rolle;
 }
 
-/** VAL-Umfang inkl. Anstalts- und Stationsleitung/Wohngruppenleitung (für UI / Portal-Logik) */
+/** VAL-Umfang inkl. Anstalts- und Stationsleitung (haus- bzw. stationsspezifisch, für UI / Portal-Logik) */
 function istValWeitPortalRolle(rolle) {
   const r = String(rolle || '').toLowerCase();
   return (
@@ -6537,7 +6499,8 @@ function istValWeitPortalRolle(rolle) {
     r === 'jva-leitung' ||
     r === 'haus-leitung' ||
     r === 'anstaltsleitung' ||
-    r === 'stationshausleitung'
+    r === 'stationshausleitung' ||
+    r === 'stationsleitung'
   );
 }
 
