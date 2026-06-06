@@ -4422,7 +4422,7 @@ ${t('action.archive')}
                 </div>
                 ${zeigeDaueraktionen ? `
                 <div class="action-buttons-dauerhaft">
-                  ${kannAufgabeBearbeiten ? `
+                  ${kannAufgabeBearbeiten && !highlightAufgabeBearbeiten ? `
                     <button class="btn btn-primary btn-large" onclick="openAufgabeLoesungModal('${meineOffeneAufgabe.id}')">
                       ${t('task.edit')}
                     </button>
