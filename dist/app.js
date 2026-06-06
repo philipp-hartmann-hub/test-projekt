@@ -3740,6 +3740,10 @@ class AntragSystem {
       }
 
       this._aktualisiereHauptbearbeiter(antrag, mitarbeiter);
+      const selfIdVertretung = String(mitarbeiter.userId ?? mitarbeiter.id ?? '');
+      if (antrag.abgegebenVon && antrag.abgegebenVon.includes(selfIdVertretung)) {
+        antrag.abgegebenVon = antrag.abgegebenVon.filter((id) => String(id) !== selfIdVertretung);
+      }
       antrag.zugewiesenAnGruppe = null;
       antrag.zugewiesenAnGruppeName = null;
       antrag.vertretungFreigegebenAm = null;
@@ -5041,6 +5045,29 @@ class AntragSystem {
           }
         }
       }
+    }
+
+    return false;
+  }
+
+  /** System-Aufgabe nach automatischer 48h-Vertretung – Abschluss = Hauptbearbeitung übernehmen. */
+  istVertretungsGruppenaufgabe(aufgabe, antrag) {
+    if (!aufgabe) return false;
+    if (aufgabe.vertretungGruppe === true) return true;
+
+    const kurz = String(this._aufgabeKurzText(aufgabe)).trim();
+    if (/^Vertretung:/i.test(kurz)) return true;
+
+    const desc = String(this._aufgabeBeschreibungText(aufgabe));
+    if (/automatisch an .+ zur Vertretung zurückgegeben/i.test(desc)) return true;
+
+    if (
+      antrag &&
+      antrag.vertretungFreigegebenAm &&
+      aufgabe.zugewiesenAnTyp === 'gruppe' &&
+      aufgabe.erstelltVonId === 'system'
+    ) {
+      return true;
     }
 
     return false;

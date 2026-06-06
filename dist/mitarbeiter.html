@@ -3203,12 +3203,19 @@ Persönlich eröffnet
           a.zugewiesenAnTyp === 'mitarbeiter' &&
           String(a.zugewiesenAnId) === sessionUserId()
       );
+      const istVertretungInGruppe =
+        !antrag.veraktet &&
+        antrag.status === 'in-bearbeitung' &&
+        !antrag.bearbeiterId &&
+        antrag.zugewiesenAnGruppe &&
+        !antrag.hauptbearbeitungWartetAufUebernahme &&
+        antragSystem._mitarbeiterGehoertZuGruppe(currentSession, antrag.zugewiesenAnGruppe);
       // Kann der Mitarbeiter diesen Antrag/Aufgabe übernehmen?
       const kannUebernehmen =
         !antrag.veraktet &&
         !bereitsHauptbearbeiter &&
         !hatPersoenlicheOffeneAufgabeHier &&
-        (istOffen || hatAufgabeZurUebernahme || hatWartendeUebergabe);
+        (istOffen || hatAufgabeZurUebernahme || hatWartendeUebergabe || istVertretungInGruppe);
       // Nach „Kenntnisnahme“ mit Hauptbearbeitungsübergabe darf keine zweite „offen“-Zeile derselben Aufgabe bleiben (Phantom/Duplikat)
       const aufgabeAbgleichKey = (x) =>
         `${x.erstelltVonId || ''}|${String(x.zugewiesenAnId || '')}|${JSON.stringify(x.kurzbeschreibung || x.beschreibung || '')}|${x.erstelltAm || ''}`;
@@ -4391,6 +4398,18 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                   <span>${currentLanguage === 'de' ? 'Sie können nur Ihre Aufgabe bearbeiten, nicht den Antrag. Eine Antragsbearbeitung ist nur mit Option „Hauptbearbeitung übertragen“ oder als Hauptverantwortliche Person möglich.' : currentLanguage === 'en' ? 'You can only complete your task, not edit the application. Application editing requires “transfer main responsibility” or being the main responsible person.' : 'Vous ne pouvez traiter que votre tâche, pas la demande. La modification de la demande nécessite le transfert de la responsabilité principale ou d’en être responsable.'}</span>
                 </div>
               ` : ''}
+              ${!kannPhasenBearbeiten && istVertretungInGruppe && !kannUebernehmen ? `
+                <div class="offen-hinweis" style="background: #e8f4fd; border: 1px solid #7eb8da; border-radius: 4px; padding: 12px; margin: 12px 0;">
+                  <span class="hinweis-icon"></span>
+                  <span>${currentLanguage === 'de' ? 'Der Antrag liegt zur Vertretung in Ihrer Gruppe. Bitte übernehmen Sie die Hauptbearbeitung (Button „Aus Vertretung übernehmen“ in der Gruppenliste oder erneut in der Vertretungsaufgabe).' : 'This application is in your group for substitution. Please take over main responsibility.'}</span>
+                </div>
+              ` : ''}
+              ${!kannPhasenBearbeiten && hatAntragAbgegeben && !istVertretungInGruppe ? `
+                <div class="offen-hinweis" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px; margin: 12px 0;">
+                  <span class="hinweis-icon"></span>
+                  <span>${currentLanguage === 'de' ? `Sie haben den Antrag nach einer Aufgabe abgegeben. Weitere Schritte (z. B. Prüfung, Entscheidung) obliegen ${antrag.bearbeiterName ? 'der Hauptbearbeiterin/dem Hauptbearbeiter ' + antrag.bearbeiterName : 'der Hauptbearbeitung'}.` : 'You returned this application after completing a task. Further steps are for the main processor.'}</span>
+                </div>
+              ` : ''}
               
               <div class="action-buttons">
                 ${aufgabeMussErstErledigtWerden ? `
@@ -4412,15 +4431,17 @@ ${currentLanguage === 'en' ? 'Confirm execution & notify' : currentLanguage === 
                   ` : ''}
                   ${kannUebernehmen && !highlightUebernehmen && !highlightAufgabeBearbeiten ? `
                     <button class="btn btn-primary btn-large" onclick="nehmeAntragUndBleibeInDetail('${antrag.id}')">
-                      ${hatGruppenaufgaben && !hatWartendeUebergabe
-                        ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche')
-                        : hatWartendeUebergabe
-                          ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande')
-                          : hatAufgabeZurUebernahme
-                            ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche')
-                            : istOffen
-                              ? t('button.takeProcessing')
-                              : t('button.takeApplication')}
+                      ${istVertretungInGruppe
+                        ? (currentLanguage === 'de' ? 'Aus Vertretung übernehmen' : currentLanguage === 'en' ? 'Take over (substitution)' : 'Reprendre (suppléance)')
+                        : hatGruppenaufgaben && !hatWartendeUebergabe
+                          ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche')
+                          : hatWartendeUebergabe
+                            ? (currentLanguage === 'de' ? 'Antrag übernehmen' : currentLanguage === 'en' ? 'Take over application' : 'Reprendre la demande')
+                            : hatAufgabeZurUebernahme
+                              ? (currentLanguage === 'de' ? 'Aufgabe übernehmen' : currentLanguage === 'en' ? 'Take task' : 'Prendre la tâche')
+                              : istOffen
+                                ? t('button.takeProcessing')
+                                : t('button.takeApplication')}
                     </button>
                   ` : ''}
                   ${pruefungPhaseAktiv ? `
@@ -5789,6 +5810,9 @@ ${t('task.create')}
         aufgabe,
         antragFuerAufgabe
       );
+      const istVertretungsAufgabe =
+        typeof antragSystem.istVertretungsGruppenaufgabe === 'function' &&
+        antragSystem.istVertretungsGruppenaufgabe(aufgabe, antragFuerAufgabe);
 
       if (
         aufgabe.status === 'offen' &&
@@ -5821,6 +5845,7 @@ ${t('task.create')}
       const sollUebertragen =
         !istBegleitungsaufgabe &&
         !istWeiterleitungsAufgabe &&
+        !istVertretungsAufgabe &&
         aufgabe.bearbeitungNachErledigung === 'uebertragen';
       
       // Option "Mit Antwort" nur anzeigen, wenn keine Hauptbearbeitungsübergabe
@@ -5847,6 +5872,24 @@ ${t('task.create')}
           currentLanguage === 'de'
             ? '<p style="color: #0c5460;"><strong>Begleitungsaufgabe:</strong> Sie übernehmen nicht die Hauptbearbeitung. Für weitere Schritte am Antrag ist eine eigene Aufgabe mit Option „Hauptbearbeitung übertragen“ erforderlich.</p>'
             : '<p><strong>Accompaniment task:</strong> You do not take over main responsibility. Further work on the application requires a separate task with transfer of main responsibility.</p>';
+      } else if (istVertretungsAufgabe) {
+        if (erledigungsTypGroup) erledigungsTypGroup.style.display = 'none';
+        antwortOption.style.display = 'none';
+        document.querySelector('input[name="aufgabeErledigungsTyp"][value="kenntnisnahme"]').checked = true;
+        document.getElementById('aufgabeAntwortGruppe').style.display = 'none';
+        document.getElementById('aufgabeAntwortPdfGruppe').style.display = 'none';
+        document.getElementById('aufgabeKenntnisnahmeOptionen').style.display = 'block';
+        kenntnisHint.style.display = 'block';
+        kenntnisHint.textContent =
+          currentLanguage === 'de'
+            ? 'Vertretung (48 Std.): Mit dem Abschluss übernehmen Sie die Hauptbearbeitung des Antrags.'
+            : currentLanguage === 'en'
+              ? 'Substitution (48h): Completing this task transfers main responsibility to you.'
+              : 'Suppléance (48 h) : en clôturant, vous reprenez la responsabilité principale.';
+        kenntnisnahmeInfo.innerHTML =
+          currentLanguage === 'de'
+            ? '<p style="color: #0c5460;"><strong>Automatische Vertretung:</strong> Der Antrag geht nicht an den vorherigen Bearbeiter zurück. Nach dem Abschluss sind Sie Hauptbearbeiter/in und können den Antrag weiter bearbeiten.</p>'
+            : '<p><strong>Automatic substitution:</strong> The application is not returned to the previous processor. After completion you are the main processor.</p>';
       } else if (istWeiterleitungsAufgabe) {
         if (erledigungsTypGroup) erledigungsTypGroup.style.display = 'none';
         antwortOption.style.display = 'none';
@@ -6070,6 +6113,9 @@ ${t('task.create')}
         aufgabeVorab,
         antragVorab
       );
+      const istVertretungsAufgabeVorab =
+        typeof antragSystem.istVertretungsGruppenaufgabe === 'function' &&
+        antragSystem.istVertretungsGruppenaufgabe(aufgabeVorab, antragVorab);
       const sollUebertragen = !!(
         aufgabeVorab &&
         !istBegleitungsaufgabe &&
@@ -6174,6 +6220,29 @@ ${t('task.create')}
             showAlert('Änderung lokal gespeichert, Synchronisation fehlgeschlagen. Bitte Verbindung prüfen.');
           }
         }
+      }
+
+      // Vertretung (48h): Hauptbearbeitung übernehmen, nicht „an Aufgabensteller zurück“
+      if (
+        !sollUebertragen &&
+        istVertretungsAufgabeVorab &&
+        (erledigungsTyp === 'antwort' || erledigungsTyp === 'kenntnisnahme')
+      ) {
+        const genommen = antragSystem.nehmeAntrag(aufgabe.antragId, currentSession);
+        await syncAufgabeUndAntragNachErledigung(aufgabe.antragId);
+        closeModal('aufgabeLoesungModal');
+        await refreshUiNachAktion({
+          antragId: aufgabe.antragId,
+          detailAnsicht: genommen ? 'open' : 'close'
+        });
+        showAlert(
+          currentLanguage === 'de'
+            ? 'Vertretungsaufgabe erledigt. Sie haben die Hauptbearbeitung übernommen.'
+            : currentLanguage === 'en'
+              ? 'Substitution task completed. You took over main responsibility.'
+              : 'Tâche de suppléance terminée. Vous avez repris la responsabilité principale.'
+        );
+        return;
       }
 
       // Weiterleitung nach Phasenübergang: niemals „an Aufgabensteller zurück“
