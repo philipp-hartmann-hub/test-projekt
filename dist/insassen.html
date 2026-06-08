@@ -239,7 +239,7 @@
                   <label class="radio-option"><input type="radio" name="antragType" value="elektro-geraete" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Elektro-Geräte und sonstige Gegenstände</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="laufzettel-mietgeraete" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Mietgeräte (Radio & Fernseher)</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="kuendigung-tv-mietvertrag" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Kündigung des TV-Mietvertrags</span></label>
-                  <label class="radio-option"><input type="radio" name="antragType" value="telio-ueberweisung" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Antrag auf Überweisung auf das Telio-Konto</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="telio-ueberweisung" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Überweisung an das Telio-Konto</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="arbeit">
@@ -848,7 +848,7 @@
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="elektro-geraete"><span class="radio-label">Elektro-Geräte und sonstige Gegenstände</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="laufzettel-mietgeraete"><span class="radio-label">Mietgeräte (Radio & Fernseher)</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="kuendigung-tv-mietvertrag"><span class="radio-label">Kündigung des TV-Mietvertrags</span></label>
-                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="telio-ueberweisung"><span class="radio-label">Antrag auf Überweisung auf das Telio-Konto</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="telio-ueberweisung"><span class="radio-label">Überweisung an das Telio-Konto</span></label>
                 </div>
               </div>
               <div class="antrag-type-group-block" data-gruppe="arbeit">
@@ -4680,7 +4680,7 @@
           detailsHtml = '<p class="incomplete"><em>Kündigungsdatum noch nicht angegeben</em></p>';
         }
       } else if (antrag.type === 'telio-ueberweisung') {
-        typeLabel = 'Antrag auf Überweisung auf das Telio-Konto';
+        typeLabel = 'Überweisung an das Telio-Konto';
         const begrText = antrag.antragBegruendung
           ? (typeof antrag.antragBegruendung === 'object' ? (antrag.antragBegruendung.text || '') : antrag.antragBegruendung)
           : '';

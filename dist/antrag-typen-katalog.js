@@ -88,7 +88,7 @@
         ),
         mk(
           'telio-ueberweisung',
-          'Antrag auf Überweisung auf das Telio-Konto',
+          'Überweisung an das Telio-Konto',
           'finanzen-unterbringung',
           'VAL zur Prüfung → Station zur Eröffnung bei Ablehnung → Zahlstelle bei Genehmigung zur Überweisung → GPA',
           {

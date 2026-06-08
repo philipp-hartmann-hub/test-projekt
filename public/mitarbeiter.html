@@ -2658,7 +2658,7 @@
           : '–';
         detailsHtml = `<p><strong>Kündigung des Mietverhältnisses zum:</strong> ${kuendDatum}</p>`;
       } else if (antrag.type === 'telio-ueberweisung') {
-        typeLabel = 'Antrag auf Überweisung auf das Telio-Konto';
+        typeLabel = 'Überweisung an das Telio-Konto';
         const quelleLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'gebundenes-eigengeld': 'Gebundenes Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' }[antrag.ueberweisungsquelle] || antrag.ueberweisungsquelle || '–';
         const begr = antrag.antragBegruendung ? getTranslatedUserText(antrag.antragBegruendung) : '';
         detailsHtml = `
@@ -3739,7 +3739,7 @@ Persönlich eröffnet
               : 'Hinweis: Die Zustimmung der VL ist nur bei gebundenem Eigengeld und Überbrückungsgeld erforderlich (nicht bei Hausgeld oder freiem Eigengeld).';
         anliegenHtml = `
           <div class="detail-box">
-            <h4>Antrag auf Überweisung auf das Telio-Konto</h4>
+            <h4>Überweisung an das Telio-Konto</h4>
             <div class="detail-row">
               <span class="detail-label">Betrag:</span>
               <span class="detail-value">${antrag.betrag ? antrag.betrag + ' €' : '–'}</span>
@@ -7119,7 +7119,7 @@ ${t('task.create')}
         yPos += 14;
       } else if (antrag.type === 'telio-ueberweisung') {
         const quelleLbl = { hausgeld: 'Hausgeld', 'freies-eigengeld': 'Freies Eigengeld', 'gebundenes-eigengeld': 'Gebundenes Eigengeld', ueberbrueckungsgeld: 'Überbrückungsgeld' }[antrag.ueberweisungsquelle] || antrag.ueberweisungsquelle || '–';
-        doc.text('Art: Antrag auf Überweisung auf das Telio-Konto', 25, yPos);
+        doc.text('Art: Überweisung an das Telio-Konto', 25, yPos);
         doc.text(`Betrag: ${antrag.betrag ? antrag.betrag + ' €' : '–'}`, 25, yPos + 7);
         let y = yPos + 14;
         doc.text(`Überweisungsquelle: ${quelleLbl}`, 25, y);
