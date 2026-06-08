@@ -5385,6 +5385,56 @@ button.jvp-kachel.jvp-kachel-disabled:hover,
   color: var(--text-secondary);
 }
 
+.insassen-portal .insasse-antrag-list-controls {
+  margin-bottom: 0.75rem;
+}
+
+.insassen-portal .insasse-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.75rem 1.25rem;
+}
+
+.insassen-portal .insasse-sort-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.insassen-portal .insasse-toolbar-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-right: 0.15rem;
+}
+
+.insassen-portal .insasse-thema-filter {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.insassen-portal .insasse-thema-filter .antrag-filter-summary {
+  font-weight: 600;
+}
+
+/* Antragskarten in Listen sind nicht klickbar — kein Hover wie bei Links */
+.insassen-portal .antrag-list .antrag-card {
+  cursor: default;
+}
+
+.insassen-portal .antrag-list .antrag-card:hover {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border-color: var(--border-color);
+  transform: none;
+}
+
+.insassen-portal .antrag-list .antrag-card.entwurf:hover {
+  border-color: var(--border-color);
+  border-left: 4px solid var(--accent-info);
+}
+
 .insassen-portal .insasse-kalender-content {
   grid-template-columns: 1fr minmax(200px, 260px);
   gap: 1rem;

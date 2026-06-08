@@ -180,7 +180,7 @@
               <div class="section-header">
                 <h2>Eingereichte Anträge <span class="count" id="aktivCount">0</span></h2>
               </div>
-              <div class="antrag-filter-wrap" id="aktivTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
+              <div class="insasse-antrag-list-controls" id="aktivListControls" aria-label="Anträge sortieren und filtern"></div>
               <div class="antrag-list" id="aktivList">
                 <!-- Dynamisch gefüllt -->
               </div>
@@ -191,7 +191,7 @@
               <div class="section-header">
                 <h2>Abgeschlossene Anträge <span class="count" id="historieCount">0</span></h2>
               </div>
-              <div class="antrag-filter-wrap" id="historieTypeFilterBar" aria-label="Anträge nach Thema filtern"></div>
+              <div class="insasse-antrag-list-controls" id="historieListControls" aria-label="Anträge sortieren und filtern"></div>
               <div class="antrag-list" id="historieList">
                 <!-- Dynamisch gefüllt -->
               </div>
@@ -1719,6 +1719,11 @@
       entwuerfe: 'alle'
     };
 
+    let antragListeSortierung = {
+      aktiv: 'datum-neu',
+      historie: 'datum-neu'
+    };
+
     function mountAntragTypePicker(containerId, inputName, selectedValue, onChangeHandler) {
       const el = document.getElementById(containerId);
       if (!el) return;
@@ -1769,6 +1774,36 @@
       container.innerHTML = renderAntragFilterBarHtml(listKey, antragListeFilter[listKey], 'setAntragListeFilter');
     }
 
+    function renderInsassenListControls(containerId, listKey) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const sort = antragListeSortierung[listKey] || 'datum-neu';
+      const activeFilterId = antragListeFilter[listKey] || 'alle';
+      const chipsFn = typeof getAntragTypeFilterChips === 'function' ? getAntragTypeFilterChips : null;
+      const themaChips = chipsFn
+        ? chipsFn().map((chip) => `
+            <button type="button" class="antrag-filter-chip${chip.id === activeFilterId ? ' active' : ''}"
+              onclick="setAntragListeFilter('${listKey}', '${chip.id}')">${chip.titel}</button>
+          `).join('')
+        : '';
+      const activeChip = chipsFn ? chipsFn().find((c) => c.id === activeFilterId) : null;
+      const themaSuffix = activeFilterId !== 'alle' && activeChip ? ` · ${activeChip.titel}` : '';
+      container.innerHTML = `
+        <div class="insasse-list-toolbar">
+          <div class="insasse-sort-bar" role="group" aria-label="Sortierung">
+            <span class="insasse-toolbar-label">Sortieren</span>
+            <button type="button" class="antrag-filter-chip${sort === 'datum-neu' ? ' active' : ''}"
+              onclick="setAntragListeSortierung('${listKey}', 'datum-neu')">Neueste</button>
+            <button type="button" class="antrag-filter-chip${sort === 'datum-alt' ? ' active' : ''}"
+              onclick="setAntragListeSortierung('${listKey}', 'datum-alt')">Älteste</button>
+          </div>
+          <details class="antrag-filter-details insasse-thema-filter"${activeFilterId !== 'alle' ? ' open' : ''}>
+            <summary class="antrag-filter-summary">Thema${themaSuffix}</summary>
+            <div class="antrag-filter-bar">${themaChips}</div>
+          </details>
+        </div>`;
+    }
+
     function updateFilterHinweis(containerId, gefiltert, gesamt) {
       const container = document.getElementById(containerId);
       if (!container) return;
@@ -1777,7 +1812,7 @@
       if (gefiltert >= gesamt || gesamt === 0) return;
       const hint = document.createElement('p');
       hint.className = 'filter-active-hint';
-      hint.textContent = `${gesamt - gefiltert} weiterer Antrag${gesamt - gefiltert === 1 ? '' : 'e'} durch den Filter ausgeblendet. Wählen Sie „Alle“ oder einen anderen Filter.`;
+      hint.textContent = `${gesamt - gefiltert} weiterer Antrag${gesamt - gefiltert === 1 ? '' : 'e'} durch den Filter ausgeblendet. Wählen Sie „Alle“ oder ein anderes Thema.`;
       container.insertAdjacentElement('afterend', hint);
     }
 
@@ -1786,8 +1821,27 @@
       renderAntraege();
     }
 
+    function setAntragListeSortierung(listKey, sortId) {
+      antragListeSortierung[listKey] = sortId;
+      renderAntraege();
+    }
+
     function filterAntraegeByThema(antraege, listKey) {
       return antraege.filter((a) => antragTypPasstZuFilter(a.type, antragListeFilter[listKey]));
+    }
+
+    function sortInsassenAntraege(antraege, listKey) {
+      const sort = antragListeSortierung[listKey] || 'datum-neu';
+      const liste = Array.isArray(antraege) ? [...antraege] : [];
+      const datumVon = (a) =>
+        listKey === 'historie'
+          ? new Date(a.bearbeitetAm || a.erstelltAm || 0).getTime()
+          : new Date(a.erstelltAm || 0).getTime();
+      liste.sort((a, b) => {
+        const diff = datumVon(a) - datumVon(b);
+        return sort === 'datum-alt' ? diff : -diff;
+      });
+      return liste;
     }
 
     function formatAntragListenCount(gefiltert, gesamt) {
@@ -4973,12 +5027,12 @@
       const historieAntraege = sys.getHistorieInsasse(currentSession.userId, currentSession.name);
 
       renderAntragFilterBar('entwuerfeTypeFilterBar', 'entwuerfe');
-      renderAntragFilterBar('aktivTypeFilterBar', 'aktiv');
-      renderAntragFilterBar('historieTypeFilterBar', 'historie');
+      renderInsassenListControls('aktivListControls', 'aktiv');
+      renderInsassenListControls('historieListControls', 'historie');
 
       const entwuerfeGefiltert = filterAntraegeByThema(entwuerfe, 'entwuerfe');
-      const aktiveGefiltert = filterAntraegeByThema(aktiveAntraege, 'aktiv');
-      const historieGefiltert = filterAntraegeByThema(historieAntraege, 'historie');
+      const aktiveGefiltert = sortInsassenAntraege(filterAntraegeByThema(aktiveAntraege, 'aktiv'), 'aktiv');
+      const historieGefiltert = sortInsassenAntraege(filterAntraegeByThema(historieAntraege, 'historie'), 'historie');
       
       // Aufgaben für den Insassen laden
       const meineAufgaben = aufgabenSystem.getOffeneAufgaben(currentSession.userId);
@@ -4987,8 +5041,8 @@
       document.getElementById('aktivCount').textContent = formatAntragListenCount(aktiveGefiltert.length, aktiveAntraege.length);
       document.getElementById('historieCount').textContent = formatAntragListenCount(historieGefiltert.length, historieAntraege.length);
       updateFilterHinweis('entwuerfeTypeFilterBar', entwuerfeGefiltert.length, entwuerfe.length);
-      updateFilterHinweis('aktivTypeFilterBar', aktiveGefiltert.length, aktiveAntraege.length);
-      updateFilterHinweis('historieTypeFilterBar', historieGefiltert.length, historieAntraege.length);
+      updateFilterHinweis('aktivListControls', aktiveGefiltert.length, aktiveAntraege.length);
+      updateFilterHinweis('historieListControls', historieGefiltert.length, historieAntraege.length);
       document.getElementById('aufgabenCount').textContent = meineAufgaben.length;
       
       // Aufgaben anzeigen
