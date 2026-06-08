@@ -3435,7 +3435,7 @@ class AntragSystem {
   }
 
   saveAntraege() {
-    safeStorageSetItem(this.storageKey, JSON.stringify(this.antraege));
+    return safeStorageSetItem(this.storageKey, JSON.stringify(this.antraege));
   }
 
   // Migration: Bestehende Anträge mit neuen Feldern versehen
@@ -3634,8 +3634,13 @@ class AntragSystem {
       ...data
     };
     this.antraege.push(antrag);
-    this.saveAntraege();
-    
+    if (!this.saveAntraege()) {
+      this.antraege.pop();
+      throw new Error(
+        'Speicher des Browsers ist voll. Bitte alte Testdaten löschen (Browser-Daten bereinigen) oder einen anderen Browser verwenden.'
+      );
+    }
+
     // Aktivität protokollieren
     if (!alsEntwurf) {
       const typeText = this.getAntragTypLabel(type);
@@ -6611,14 +6616,37 @@ function reloadDataFromStorage() {
       aufSys.aufgaben = [];
     }
     const rawAntraege = localStorage.getItem('gefaengnis_antraege');
-    if (rawAntraege && as) {
-      try {
-        const parsedAntraege = JSON.parse(rawAntraege);
-        as.antraege = Array.isArray(parsedAntraege) ? parsedAntraege : [];
-        as.migrateAntraege();
-      } catch (e) {
-        console.warn('reloadDataFromStorage: Anträge ungültig', e);
-        if (!Array.isArray(as.antraege)) as.antraege = [];
+    if (as) {
+      const prevInMemory = Array.isArray(as.antraege) ? as.antraege : [];
+      let fromStorage = [];
+      if (rawAntraege) {
+        try {
+          const parsedAntraege = JSON.parse(rawAntraege);
+          fromStorage = Array.isArray(parsedAntraege) ? parsedAntraege : [];
+        } catch (e) {
+          console.warn('reloadDataFromStorage: Anträge ungültig', e);
+        }
+      }
+      const mergedMap = new Map();
+      fromStorage.forEach((a) => {
+        if (a && a.id != null) mergedMap.set(String(a.id), a);
+      });
+      prevInMemory.forEach((mem) => {
+        if (!mem || mem.id == null) return;
+        const id = String(mem.id);
+        const existing = mergedMap.get(id);
+        if (!existing) {
+          mergedMap.set(id, mem);
+          return;
+        }
+        const memTs = Date.parse(mem.updatedAt || mem.erstelltAm || 0);
+        const exTs = Date.parse(existing.updatedAt || existing.erstelltAm || 0);
+        if (memTs >= exTs) mergedMap.set(id, mem);
+      });
+      as.antraege = Array.from(mergedMap.values());
+      as.migrateAntraege();
+      if (prevInMemory.length > fromStorage.length) {
+        as.saveAntraege();
       }
     } else if (as && !Array.isArray(as.antraege)) {
       as.antraege = [];

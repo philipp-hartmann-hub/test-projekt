@@ -4095,7 +4095,12 @@
 
         if (window.DataSync && typeof window.DataSync.syncAntragToServer === 'function') {
           window.DataSync.syncAntragToServer(antrag.id).then((ok) => {
-            if (ok) renderAntraege();
+            renderAntraege();
+            if (!ok) {
+              insasseHinweis(
+                'Antrag wurde eingereicht, die Synchronisation mit dem Server steht noch aus. Er bleibt in Ihrer Liste sichtbar.'
+              );
+            }
           }).catch((e) => console.warn('[Insassen] Hintergrund-Sync:', e));
         }
       } catch (e) {

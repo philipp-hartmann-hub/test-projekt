@@ -614,6 +614,26 @@ function mergeAntragSnapshotAfterPut(localAntrag, serverAntrag) {
   }
   mergePhaseProgressFields(merged, localAntrag, serverAntrag);
   mergeWeiterleitungUndGruppenZuweisung(merged, localAntrag, serverAntrag);
+
+  // Insassen-Zuordnung beim Sync nicht verlieren (sonst verschwindet Antrag im Insassen-Portal).
+  const insasseKeys = [
+    'insasseId',
+    'insasseName',
+    'insassenNummer',
+    'insasseGeburtsdatum',
+    'insasseJva',
+    'insasseStation'
+  ];
+  for (const k of insasseKeys) {
+    if (localAntrag[k] != null && localAntrag[k] !== '') {
+      merged[k] = localAntrag[k];
+    }
+  }
+  // Frisch eingereicht: nicht fälschlich als erledigt aus Altlasten auf dem Server markieren.
+  if (localAntrag.status === 'offen' && localAntrag.erledigt !== true && serverAntrag.erledigt === true) {
+    merged.erledigt = false;
+  }
+
   return merged;
 }
 
@@ -1084,13 +1104,41 @@ async function syncAntragToServer(antragId) {
 
       const readLocalAntrag = () => {
         const raw = localStorage.getItem('gefaengnis_antraege');
-        if (!raw) return null;
-        const list = JSON.parse(raw);
-        return list.find((a) => a.id === antragId) || null;
+        if (raw) {
+          try {
+            const list = JSON.parse(raw);
+            const found = Array.isArray(list) ? list.find((a) => a.id === antragId) : null;
+            if (found) return found;
+          } catch (_) {}
+        }
+        if (typeof antragSystem !== 'undefined' && Array.isArray(antragSystem.antraege)) {
+          return antragSystem.antraege.find((a) => a.id === antragId) || null;
+        }
+        return null;
+      };
+
+      const persistAntragInLocalStorage = (snapshot) => {
+        if (!snapshot || !snapshot.id) return false;
+        const fresh = JSON.parse(localStorage.getItem('gefaengnis_antraege') || '[]');
+        const idx = fresh.findIndex((a) => a.id === snapshot.id);
+        if (idx !== -1) fresh[idx] = snapshot;
+        else fresh.push(snapshot);
+        return safeLsSetItem('gefaengnis_antraege', JSON.stringify(fresh));
       };
 
       let antrag = readLocalAntrag();
       if (!antrag) return false;
+      let antragInLocalStorage = false;
+      try {
+        const rawLs = localStorage.getItem('gefaengnis_antraege');
+        if (rawLs) {
+          const parsedLs = JSON.parse(rawLs);
+          antragInLocalStorage = Array.isArray(parsedLs) && parsedLs.some((a) => a.id === antragId);
+        }
+      } catch (_) {}
+      if (!antragInLocalStorage) {
+        persistAntragInLocalStorage(antrag);
+      }
 
       async function putAntragSnapshot(snapshot, baseUpdatedAt) {
         const putPayload = { ...snapshot, _baseUpdatedAt: baseUpdatedAt || null };
@@ -1101,10 +1149,55 @@ async function syncAntragToServer(antragId) {
         });
       }
 
+      async function postAntragSnapshot(snapshot) {
+        return fetch(base + '/antraege', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(snapshot)
+        });
+      }
+
+      async function fetchServerAntragById(id) {
+        try {
+          const all = await apiCall('/antraege');
+          return Array.isArray(all) ? all.find((a) => String(a.id) === String(id)) : null;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      async function finalizeAntragSync(serverAntrag) {
+        if (serverAntrag && serverAntrag.id) {
+          storeMergedAntragInLocalStorage(serverAntrag);
+        }
+        if (localStorage.getItem('gefaengnis_aufgaben')) {
+          await enqueueSyncJob('gefaengnis_aufgaben', () => syncToServerImpl('gefaengnis_aufgaben'));
+        }
+        if (localStorage.getItem('gefaengnis_aktivitaeten')) {
+          await enqueueSyncJob('gefaengnis_aktivitaeten', () => syncToServerImpl('gefaengnis_aktivitaeten'));
+        }
+        if (localStorage.getItem('gefaengnis_notifications')) {
+          await enqueueSyncJob('gefaengnis_notifications', () => syncToServerImpl('gefaengnis_notifications'));
+        }
+        await waitForPendingSync(8000);
+        return true;
+      }
+
       console.log('[Sync] Synchronisiere Antrag:', antragId, 'Bearbeiter:', antrag.bearbeiterId);
       let antragResponse = await putAntragSnapshot(antrag, antrag.updatedAt || null);
 
       if (!antragResponse.ok) {
+        if (antragResponse.status === 404) {
+          console.log('[Sync] Antrag noch nicht auf Server — lege per POST an:', antragId);
+          const postResponse = await postAntragSnapshot(antrag);
+          if (!postResponse.ok) {
+            throw new Error(`HTTP ${postResponse.status}: POST fehlgeschlagen`);
+          }
+          const fromServer = await fetchServerAntragById(antragId);
+          const serverAntrag = fromServer || mergeAntragSnapshotAfterPut(antrag, await postResponse.json().catch(() => ({})));
+          console.log('[Sync] Antrag per POST angelegt:', antragId);
+          return finalizeAntragSync(serverAntrag);
+        }
         if (antragResponse.status === 409) {
           const conflict = await antragResponse.json().catch(() => null);
           const latest = conflict && conflict.latestAntrag ? conflict.latestAntrag : null;
@@ -1158,32 +1251,7 @@ async function syncAntragToServer(antragId) {
 
       const serverAntrag = await antragResponse.json();
       console.log('[Sync] Antrag synchronisiert:', serverAntrag.id, 'Bearbeiter:', serverAntrag.bearbeiterId);
-
-      if (localStorage.getItem('gefaengnis_aufgaben')) {
-        console.log('[Sync] Synchronisiere Aufgaben...');
-        await enqueueSyncJob('gefaengnis_aufgaben', () => syncToServerImpl('gefaengnis_aufgaben'));
-        console.log('[Sync] Aufgaben synchronisiert');
-      }
-
-      // KRITISCH für Bearbeitungsverlauf bei Weiterleitung:
-      // Aktivitäten explizit mitsynchronisieren, damit der nächste Bearbeiter sie sofort vom Server sieht.
-      if (localStorage.getItem('gefaengnis_aktivitaeten')) {
-        console.log('[Sync] Synchronisiere Aktivitäten...');
-        await enqueueSyncJob('gefaengnis_aktivitaeten', () => syncToServerImpl('gefaengnis_aktivitaeten'));
-        console.log('[Sync] Aktivitäten synchronisiert');
-      }
-
-      if (localStorage.getItem('gefaengnis_notifications')) {
-        await enqueueSyncJob('gefaengnis_notifications', () => syncToServerImpl('gefaengnis_notifications'));
-        console.log('[Sync] Benachrichtigungen synchronisiert');
-      }
-
-      if (serverAntrag.id) {
-        storeMergedAntragInLocalStorage(serverAntrag);
-      }
-
-      await waitForPendingSync(8000);
-      return true;
+      return finalizeAntragSync(serverAntrag);
     } catch (error) {
       console.warn('Explizite Antrag-Synchronisation fehlgeschlagen:', error);
       scheduleReconnect('syncAntragToServer failed');
