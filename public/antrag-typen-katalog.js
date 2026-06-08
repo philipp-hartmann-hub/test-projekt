@@ -180,13 +180,27 @@
 
     applyKatalog(katalog) {
       if (!katalog || !Array.isArray(katalog.typen)) return;
+      const labelsBefore = JSON.stringify(
+        (katalog.typen || []).map((t) => ({ id: t.id, label: t.label }))
+      );
       this.katalog = this._normalizeKatalog(katalog);
+      const labelsAfter = JSON.stringify(
+        (this.katalog.typen || []).map((t) => ({ id: t.id, label: t.label }))
+      );
       this.save();
       window.dispatchEvent(new CustomEvent('antragTypenKatalogUpdated'));
+      if (
+        labelsBefore !== labelsAfter &&
+        window.DataSync &&
+        typeof window.DataSync.syncAntragTypenKatalogToServer === 'function'
+      ) {
+        window.DataSync.syncAntragTypenKatalogToServer().catch(() => {});
+      }
     }
 
     _normalizeKatalog(katalog) {
       const def = buildDefaultKatalog();
+      const defTypById = new Map(def.typen.map((t) => [t.id, t]));
       const gruppen =
         Array.isArray(katalog.gruppen) && katalog.gruppen.length ? katalog.gruppen : def.gruppen;
       const typen = Array.isArray(katalog.typen) ? katalog.typen : def.typen;
@@ -199,24 +213,29 @@
           titel: g.titel || g.id,
           sortOrder: g.sortOrder != null ? g.sortOrder : i
         })),
-        typen: typen.map((t, i) => ({
+        typen: typen.map((t, i) => {
+          const defTyp = defTypById.get(t.id);
+          const builtin = t.builtin === true || !!(defTyp && defTyp.builtin);
+          const label = builtin && defTyp ? defTyp.label : (t.label || t.id);
+          return {
           id: t.id,
-          label: t.label || t.id,
-          gruppeId: t.gruppeId || 'sonstiges',
+          label,
+          gruppeId: t.gruppeId || defTyp?.gruppeId || 'sonstiges',
           aktiv: t.aktiv !== false,
-          builtin: t.builtin === true,
+          builtin,
           formularModus: t.formularModus === 'freitext' ? 'freitext' : 'builtin',
           sortOrder: t.sortOrder != null ? t.sortOrder : i,
           verfuegungsvorschlag: {
-            kette: t.verfuegungsvorschlag?.kette || '',
-            ketteFreiesEigengeld: t.verfuegungsvorschlag?.ketteFreiesEigengeld || null,
-            ketteMitVl: t.verfuegungsvorschlag?.ketteMitVl || null,
-            vlHinweis: t.verfuegungsvorschlag?.vlHinweis || null,
+            kette: t.verfuegungsvorschlag?.kette || defTyp?.verfuegungsvorschlag?.kette || '',
+            ketteFreiesEigengeld: t.verfuegungsvorschlag?.ketteFreiesEigengeld || defTyp?.verfuegungsvorschlag?.ketteFreiesEigengeld || null,
+            ketteMitVl: t.verfuegungsvorschlag?.ketteMitVl || defTyp?.verfuegungsvorschlag?.ketteMitVl || null,
+            vlHinweis: t.verfuegungsvorschlag?.vlHinweis || defTyp?.verfuegungsvorschlag?.vlHinweis || null,
             extraHinweise: Array.isArray(t.verfuegungsvorschlag?.extraHinweise)
               ? t.verfuegungsvorschlag.extraHinweise
               : []
           }
-        }))
+        };
+        })
       };
     }
 
