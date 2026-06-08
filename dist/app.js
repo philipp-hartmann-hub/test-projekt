@@ -1746,21 +1746,6 @@ class NotificationSystem {
     }
   }
 
-  // Alle Benachrichtigungen eines Benutzers als gelesen markieren
-  markAllAsRead(userId) {
-    const uid = String(userId);
-    let changed = false;
-    this.notifications.forEach(n => {
-      if (String(n.userId) === uid && !n.gelesen) {
-        n.gelesen = true;
-        changed = true;
-      }
-    });
-    if (changed) {
-      this.saveNotifications();
-    }
-  }
-
   // Anzahl ungelesener Benachrichtigungen
   getUnreadCount(userId) {
     const uid = String(userId);

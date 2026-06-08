@@ -123,9 +123,6 @@
               <span class="postfach-toggle-icon" id="postfachToggleIcon">▶</span>
               <h2>Postfach <span class="count" id="notificationCount">0</span></h2>
             </div>
-            <button class="btn btn-sm" onclick="markAllNotificationsRead(); event.stopPropagation();" id="markAllReadBtn" style="display: none;">
-              Alle als gelesen markieren
-            </button>
           </div>
           <!-- Vorschau: Nur neueste Nachricht (wenn eingeklappt) -->
           <div class="notification-preview" id="notificationPreview">
@@ -2220,13 +2217,8 @@
       });
       const inboxItems = [...notifications, ...aufgabenInboxItems]
         .sort((a, b) => new Date(b.erstelltAm) - new Date(a.erstelltAm));
-      const unreadCount = notificationSystem.getUnreadCount(currentSession.userId);
       
       document.getElementById('notificationCount').textContent = String(inboxItems.length);
-      
-      // "Alle als gelesen" Button nur anzeigen, wenn es ungelesene gibt
-      const markAllBtn = document.getElementById('markAllReadBtn');
-      markAllBtn.style.display = unreadCount > 0 ? 'inline-block' : 'none';
       
       section.style.display = 'flex';
 
@@ -2420,12 +2412,6 @@
           openAntragDetail(antrag.id);
         }
       }
-    }
-    
-    function markAllNotificationsRead() {
-      if (!currentSession) return;
-      notificationSystem.markAllAsRead(currentSession.userId);
-      renderNotifications();
     }
     
     function getEffektiverMitarbeiter() {
