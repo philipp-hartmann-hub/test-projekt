@@ -93,6 +93,7 @@
               <h2>Nachrichten <span class="count" id="notificationCount">0</span></h2>
             </div>
           </div>
+          <div id="notificationUnreadBanner" class="notification-unread-banner" hidden></div>
           <!-- Vorschau: Nur neueste Nachricht (wenn eingeklappt) -->
           <div class="notification-preview" id="notificationPreview">
             <!-- Dynamisch gefüllt -->
@@ -2318,11 +2319,57 @@
       renderInsasseKalender();
     }
     
+    function renderInsasseNotificationCardHtml(n) {
+      const typeClass = n.type || 'info';
+      const unread = !n.gelesen;
+      const unreadClass = unread ? 'unread pending-read-confirm' : 'read';
+      const safeId = String(n.id).replace(/'/g, "\\'");
+      const safeAntragId = n.antragId ? String(n.antragId).replace(/'/g, "\\'") : '';
+      const hatKontext = n.type === 'termin-vereinbart' || !!n.antragId;
+      const kontextLabel = n.type === 'termin-vereinbart' ? 'Zu meinen Terminen' : 'Zum Antrag';
+
+      const aktionenHtml = unread
+        ? `
+          <div class="notification-read-pflicht" role="alert">
+            <p class="notification-read-pflicht-text">Bitte bestätigen Sie, dass Sie diese Nachricht gelesen haben.</p>
+            <button type="button" class="btn btn-primary btn-sm notification-confirm-read-btn"
+              onclick="confirmNotificationRead('${safeId}'); event.stopPropagation();">
+              Lesen bestätigen
+            </button>
+          </div>
+        `
+        : `
+          <div class="notification-read-done">
+            <span class="notification-read-done-label">Lesen bestätigt</span>
+            ${hatKontext ? `
+              <button type="button" class="btn btn-secondary btn-sm"
+                onclick="openNotificationContext('${safeId}', '${safeAntragId}'); event.stopPropagation();">
+                ${kontextLabel}
+              </button>
+            ` : ''}
+          </div>
+        `;
+
+      return `
+        <div class="notification-card ${typeClass} ${unreadClass}" data-notification-id="${safeId}">
+          <div class="notification-card-icon">${getNotificationIcon(n.type)}</div>
+          <div class="notification-card-content">
+            <div class="notification-card-title">${n.title}</div>
+            <div class="notification-card-message">${n.message}</div>
+            <div class="notification-card-time">${formatDate(n.erstelltAm)}</div>
+            ${aktionenHtml}
+          </div>
+          ${unread ? '<div class="notification-card-dot"></div>' : ''}
+        </div>
+      `;
+    }
+
     function renderNotifications() {
       if (!currentSession) return;
       
       const list = document.getElementById('notificationList');
       const preview = document.getElementById('notificationPreview');
+      const banner = document.getElementById('notificationUnreadBanner');
       const notifications = [...notificationSystem.getAllNotifications(currentSession.userId)]
         .sort((a, b) => {
           const ta = new Date(a?.erstelltAm || 0).getTime();
@@ -2330,67 +2377,59 @@
           return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
         });
       const section = document.getElementById('notificationSection');
+      const unreadCount = notificationSystem.getUnreadCount(currentSession.userId);
       
       if (notifications.length === 0) {
         section.style.display = 'none';
+        section.classList.remove('has-unread-messages');
+        if (banner) banner.hidden = true;
         return;
       }
       
       section.style.display = 'flex';
+      section.classList.toggle('has-unread-messages', unreadCount > 0);
+      if (banner) {
+        if (unreadCount > 0) {
+          banner.hidden = false;
+          banner.textContent =
+            unreadCount === 1
+              ? 'Sie haben 1 unbestätigte Nachricht. Bitte bestätigen Sie das Lesen über die Schaltfläche „Lesen bestätigen“.'
+              : `Sie haben ${unreadCount} unbestätigte Nachrichten. Bitte bestätigen Sie für jede Nachricht das Lesen über „Lesen bestätigen“.`;
+        } else {
+          banner.hidden = true;
+        }
+      }
       
       // Vorschau: Nur neueste Nachricht
       if (notifications.length > 0) {
         const newest = notifications[0];
-        const typeClass = newest.type || 'info';
-        const unreadClass = newest.gelesen ? 'read' : 'unread';
-        
         preview.innerHTML = `
-          <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${newest.id}', '${newest.antragId || ''}'); event.stopPropagation();">
-            <div class="notification-card-icon">${getNotificationIcon(newest.type)}</div>
-            <div class="notification-card-content">
-              <div class="notification-card-title">${newest.title}</div>
-              <div class="notification-card-message">${newest.message}</div>
-              <div class="notification-card-time">${formatDate(newest.erstelltAm)}</div>
-            </div>
-            ${!newest.gelesen ? '<div class="notification-card-dot"></div>' : ''}
-          </div>
-          ${notifications.length > 1 ? `<div class="notification-more-hint">+ ${notifications.length - 1} weitere Nachrichten</div>` : ''}
+          ${renderInsasseNotificationCardHtml(newest)}
+          ${notifications.length > 1 ? `<div class="notification-more-hint" onclick="togglePostfach(); event.stopPropagation();">+ ${notifications.length - 1} weitere Nachrichten – Postfach öffnen</div>` : ''}
         `;
       }
       
-      // Vollständige Liste
-      list.innerHTML = notifications.map(n => {
-        const typeClass = n.type || 'info';
-        const unreadClass = n.gelesen ? 'read' : 'unread';
-        
-        return `
-          <div class="notification-card ${typeClass} ${unreadClass}" onclick="handleNotificationClick('${n.id}', '${n.antragId || ''}'); event.stopPropagation();">
-            <div class="notification-card-icon">${getNotificationIcon(n.type)}</div>
-            <div class="notification-card-content">
-              <div class="notification-card-title">${n.title}</div>
-              <div class="notification-card-message">${n.message}</div>
-              <div class="notification-card-time">${formatDate(n.erstelltAm)}</div>
-            </div>
-            ${!n.gelesen ? '<div class="notification-card-dot"></div>' : ''}
-          </div>
-        `;
-      }).join('');
+      list.innerHTML = notifications.map((n) => renderInsasseNotificationCardHtml(n)).join('');
     }
     
     function getNotificationIcon(type) {
       return '';
     }
-    
-    function handleNotificationClick(notificationId, antragId) {
-      const notification = currentSession
-        ? notificationSystem.getAllNotifications(currentSession.userId).find((n) => n.id === notificationId)
-        : null;
 
+    function confirmNotificationRead(notificationId) {
+      if (!currentSession) return;
       notificationSystem.markAsRead(notificationId);
       updateNotificationBadge();
       renderNotifications();
+    }
+    
+    function openNotificationContext(notificationId, antragId) {
+      const notification = currentSession
+        ? notificationSystem.getAllNotifications(currentSession.userId).find((n) => n.id === notificationId)
+        : null;
+      if (!notification || !notification.gelesen) return;
 
-      if (notification?.type === 'termin-vereinbart') {
+      if (notification.type === 'termin-vereinbart') {
         const section = document.getElementById('insasseKalenderSection');
         if (section && !insasseKalenderExpanded) {
           toggleInsasseKalender();
@@ -2401,11 +2440,12 @@
         return;
       }
       
-      // Wenn ein Antrag verknüpft ist, zur entsprechenden Ansicht wechseln
       if (antragId) {
         const antrag = getAntragSystem().getAntrag(antragId);
         if (antrag && antrag.erledigt) {
           switchTab('historie');
+        } else {
+          switchTab('aktiv');
         }
       }
     }
