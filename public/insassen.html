@@ -237,7 +237,7 @@
                   <label class="radio-option"><input type="radio" name="antragType" value="teilhabegeld" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Teilhabegeld</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="eigentum" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Eigentum in der Kammer</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="elektro-geraete" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Elektro-Geräte und sonstige Gegenstände</span></label>
-                  <label class="radio-option"><input type="radio" name="antragType" value="laufzettel-mietgeraete" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Eintragung in Laufzettel Mietgeräte (TV oder Radio)</span></label>
+                  <label class="radio-option"><input type="radio" name="antragType" value="laufzettel-mietgeraete" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Mietgeräte (Radio & Fernseher)</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="kuendigung-tv-mietvertrag" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Kündigung des TV-Mietvertrags</span></label>
                   <label class="radio-option"><input type="radio" name="antragType" value="telio-ueberweisung" onchange="if(typeof toggleAntragFields==='function')toggleAntragFields()"><span class="radio-label">Antrag auf Überweisung auf das Telio-Konto</span></label>
                 </div>
@@ -846,7 +846,7 @@
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="teilhabegeld"><span class="radio-label">Teilhabegeld</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="eigentum"><span class="radio-label">Eigentum in der Kammer</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="elektro-geraete"><span class="radio-label">Elektro-Geräte und sonstige Gegenstände</span></label>
-                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="laufzettel-mietgeraete"><span class="radio-label">Eintragung in Laufzettel Mietgeräte (TV oder Radio)</span></label>
+                  <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="laufzettel-mietgeraete"><span class="radio-label">Mietgeräte (Radio & Fernseher)</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="kuendigung-tv-mietvertrag"><span class="radio-label">Kündigung des TV-Mietvertrags</span></label>
                   <label class="radio-option"><input type="radio" name="entwurfType" onchange="if(typeof toggleEntwurfFields==='function')toggleEntwurfFields()" value="telio-ueberweisung"><span class="radio-label">Antrag auf Überweisung auf das Telio-Konto</span></label>
                 </div>
@@ -4662,7 +4662,7 @@
           ${antrag.bezahlung ? `<p><strong>Bezahlung:</strong> ${bezLbl}</p>` : '<p class="incomplete"><em>Bezahlungsart noch nicht gewählt</em></p>'}
         `;
       } else if (antrag.type === 'laufzettel-mietgeraete') {
-        typeLabel = 'Eintragung in Laufzettel Mietgeräte (TV oder Radio)';
+        typeLabel = 'Mietgeräte (Radio & Fernseher)';
         const geraetLbl = antrag.mietgeraet === 'tv' ? 'TV' : antrag.mietgeraet === 'radio' ? 'Radio' : null;
         detailsHtml = geraetLbl
           ? `<p><strong>Gerät:</strong> ${geraetLbl}</p>`

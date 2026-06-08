@@ -74,7 +74,7 @@
         ),
         mk(
           'laufzettel-mietgeraete',
-          'Eintragung in Laufzettel Mietgeräte (TV oder Radio)',
+          'Mietgeräte (Radio & Fernseher)',
           'finanzen-unterbringung',
           'VAL zur Genehmigung → Zahlstelle zur Notierung auf der Miet-TV/Radio-Liste → GPA',
           { sortOrder: 3 }

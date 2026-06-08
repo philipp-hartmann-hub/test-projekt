@@ -2648,7 +2648,7 @@
           <p><strong>Bezahlung:</strong> ${bezahlungLabel}</p>
         `;
       } else if (antrag.type === 'laufzettel-mietgeraete') {
-        typeLabel = 'Eintragung in Laufzettel Mietgeräte (TV oder Radio)';
+        typeLabel = 'Mietgeräte (Radio & Fernseher)';
         const geraetLabel = antrag.mietgeraet === 'tv' ? 'TV' : antrag.mietgeraet === 'radio' ? 'Radio' : (antrag.mietgeraet || '–');
         detailsHtml = `<p><strong>Gerät:</strong> ${geraetLabel}</p>`;
       } else if (antrag.type === 'kuendigung-tv-mietvertrag') {
@@ -3829,7 +3829,7 @@ Persönlich eröffnet
         const verfuegungKetteLZ = 'VAL zur Genehmigung → Zahlstelle zur Notierung auf der Miet-TV/Radio-Liste → GPA';
         anliegenHtml = `
           <div class="detail-box">
-            <h4>Eintragung in Laufzettel Mietgeräte (TV oder Radio)</h4>
+            <h4>Mietgeräte (Radio & Fernseher)</h4>
             <div class="detail-row">
               <span class="detail-label">Gerät:</span>
               <span class="detail-value">${geraetLabelLZ}</span>
@@ -4868,7 +4868,7 @@ ${t('task.create')}
         anliegenText = `${t('notice.applicationFor')} Elektro-Geräte und sonstige Gegenstände: ${antrag.gegenstand || '–'} (${antrag.kosten ? antrag.kosten + ' €' : '–'})`;
       } else if (antrag.type === 'laufzettel-mietgeraete') {
         const geraetLbl = antrag.mietgeraet === 'tv' ? 'TV' : antrag.mietgeraet === 'radio' ? 'Radio' : (antrag.mietgeraet || '–');
-        anliegenText = `${t('notice.applicationFor')} Eintragung in Laufzettel Mietgeräte (${geraetLbl})`;
+        anliegenText = `${t('notice.applicationFor')} Mietgeräte (Radio & Fernseher)`;
       } else if (antrag.type === 'kuendigung-tv-mietvertrag') {
         const kuendDatum = antrag.kuendigungZum
           ? new Date(antrag.kuendigungZum + 'T12:00:00').toLocaleDateString('de-DE')
@@ -7107,7 +7107,7 @@ ${t('task.create')}
         yPos = y + 14;
       } else if (antrag.type === 'laufzettel-mietgeraete') {
         const geraetLbl = antrag.mietgeraet === 'tv' ? 'TV' : antrag.mietgeraet === 'radio' ? 'Radio' : (antrag.mietgeraet || '–');
-        doc.text('Art: Eintragung in Laufzettel Mietgeräte (TV oder Radio)', 25, yPos);
+        doc.text('Art: Mietgeräte (Radio & Fernseher)', 25, yPos);
         doc.text(`Gerät: ${geraetLbl}`, 25, yPos + 7);
         yPos += 14;
       } else if (antrag.type === 'kuendigung-tv-mietvertrag') {
