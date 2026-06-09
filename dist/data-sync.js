@@ -5,9 +5,12 @@
 
 const API_BASE = window.location.origin + '/api';
 
+// Native setItem VOR dem Patch speichern — safeLsSetItem darf nicht das gepatchte setItem aufrufen (Stack Overflow).
+const originalSetItem = localStorage.setItem.bind(localStorage);
+
 function safeLsSetItem(key, value) {
   try {
-    localStorage.setItem(key, value);
+    originalSetItem(key, value);
     return true;
   } catch (e) {
     const isQuota =
@@ -25,10 +28,10 @@ function safeLsSetItem(key, value) {
         if (!raw) return;
         const arr = JSON.parse(raw);
         if (Array.isArray(arr) && arr.length > 200) {
-          localStorage.setItem(k, JSON.stringify(arr.slice(-150)));
+          originalSetItem(k, JSON.stringify(arr.slice(-150)));
         }
       });
-      localStorage.setItem(key, value);
+      originalSetItem(key, value);
       return true;
     } catch (e2) {
       console.warn('[Sync] Quota nach Bereinigung:', key, e2);
@@ -141,7 +144,7 @@ async function fetchAktivitaetenForAntrag(antragId) {
     const data = await apiCall('/aktivitaeten?antragId=' + encodeURIComponent(String(antragId)));
     const prev = JSON.parse(localStorage.getItem('gefaengnis_aktivitaeten') || '[]');
     const merged = mergeAktivitaetenArrays(prev, Array.isArray(data) ? data : []);
-    localStorage.setItem('gefaengnis_aktivitaeten', JSON.stringify(merged));
+    originalSetItem('gefaengnis_aktivitaeten', JSON.stringify(merged));
     if (typeof window.reloadDataFromStorage === 'function') {
       window.reloadDataFromStorage();
     }
@@ -830,7 +833,7 @@ function storeMergedUsersFromServer(serverUsersRaw) {
   const prevUsers = readLocalUsersArray();
   const serverMapped = (Array.isArray(serverUsersRaw) ? serverUsersRaw : []).map(mapServerUserToFrontend);
   const merged = mergeUsersArraysAfterFetch(prevUsers, serverMapped);
-  localStorage.setItem('gefaengnis_users', JSON.stringify(merged));
+  originalSetItem('gefaengnis_users', JSON.stringify(merged));
   return {
     merged,
     shouldPushToServer: merged.length > serverMapped.length
@@ -1268,8 +1271,6 @@ async function syncAntragToServer(antragId) {
 // ============================================
 // LOCALSTORAGE PATCHEN
 // ============================================
-
-const originalSetItem = localStorage.setItem.bind(localStorage);
 
 localStorage.setItem = function(key, value) {
   if (!safeLsSetItem(key, value)) {
