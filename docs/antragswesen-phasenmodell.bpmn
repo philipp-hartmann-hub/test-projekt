@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI"
+             id="Definitions_Antragswesen"
+             targetNamespace="http://jvp-hamburg.de/bpmn/antragswesen"
+             exporter="JVP Prototyp Lastenheft"
+             exporterVersion="1.0">
+
+  <!-- ============================================================ -->
+  <!-- Nachrichten (Message Flows zwischen Pools)                    -->
+  <!-- ============================================================ -->
+  <message id="Message_AntragEingereicht" name="Antrag eingereicht"/>
+  <message id="Message_EntscheidungInsasse" name="Entscheidung an Insasse"/>
+  <message id="Message_AufgabeAnInsasse" name="Aufgabe an Insasse"/>
+  <message id="Message_AufgabeAntwort" name="Aufgabe beantwortet"/>
+
+  <!-- ============================================================ -->
+  <!-- Collaboration: drei Pools                                     -->
+  <!-- ============================================================ -->
+  <collaboration id="Collaboration_Antragswesen">
+    <participant id="Participant_Insasse" name="Insasse" processRef="Process_Insasse"/>
+    <participant id="Participant_Mitarbeiter" name="Mitarbeiter / Gruppe" processRef="Process_Mitarbeiter_Haupt"/>
+    <participant id="Participant_System" name="System (Automatik)" processRef="Process_System"/>
+    <messageFlow id="MF_Einreichung" sourceRef="Task_Insasse_Einreichen" targetRef="Event_MA_AntragEingegangen"/>
+    <messageFlow id="MF_Entscheidung" sourceRef="Task_MA_Benachrichtigen" targetRef="Event_Insasse_Entscheidung"/>
+    <messageFlow id="MF_AufgabeZu" sourceRef="Task_MA_AufgabeErstellen" targetRef="Event_Insasse_Aufgabe"/>
+    <messageFlow id="MF_AufgabeAntwort" sourceRef="Task_Insasse_AufgabeErledigen" targetRef="Event_MA_AufgabeErledigt"/>
+    <messageFlow id="MF_48h" sourceRef="Event_System_48h" targetRef="Event_MA_Vertretung"/>
+  </collaboration>
+
+  <!-- ============================================================ -->
+  <!-- POOL 1: Insasse                                               -->
+  <!-- ============================================================ -->
+  <process id="Process_Insasse" name="Insassen-Journey" isExecutable="false">
+    <laneSet id="LaneSet_Insasse">
+      <lane id="Lane_Insasse" name="Insasse">
+        <flowNodeRef>Start_Insasse</flowNodeRef>
+        <flowNodeRef>Gateway_EntwurfOderEinreichen</flowNodeRef>
+        <flowNodeRef>Task_Insasse_Entwurf</flowNodeRef>
+        <flowNodeRef>Task_Insasse_Einreichen</flowNodeRef>
+        <flowNodeRef>Event_Insasse_Warten</flowNodeRef>
+        <flowNodeRef>Event_Insasse_Entscheidung</flowNodeRef>
+        <flowNodeRef>Event_Insasse_Aufgabe</flowNodeRef>
+        <flowNodeRef>Task_Insasse_AufgabeErledigen</flowNodeRef>
+        <flowNodeRef>End_Insasse</flowNodeRef>
+      </lane>
+    </laneSet>
+
+    <startEvent id="Start_Insasse" name="Antrag gewünscht"/>
+    <exclusiveGateway id="Gateway_EntwurfOderEinreichen" name="Entwurf oder Einreichen?"/>
+    <userTask id="Task_Insasse_Entwurf" name="Als Entwurf speichern&#10;(status: entwurf)"/>
+    <userTask id="Task_Insasse_Einreichen" name="Antrag einreichen&#10;(status: offen)"/>
+    <intermediateCatchEvent id="Event_Insasse_Warten" name="Warten auf Bearbeitung"/>
+    <intermediateCatchEvent id="Event_Insasse_Entscheidung" name="Entscheidung erhalten">
+      <messageEventDefinition messageRef="Message_EntscheidungInsasse"/>
+    </intermediateCatchEvent>
+    <intermediateCatchEvent id="Event_Insasse_Aufgabe" name="Aufgabe erhalten">
+      <messageEventDefinition messageRef="Message_AufgabeAnInsasse"/>
+    </intermediateCatchEvent>
+    <userTask id="Task_Insasse_AufgabeErledigen" name="Aufgabe beantworten&#10;(antwort / kenntnisnahme)"/>
+    <endEvent id="End_Insasse" name="Antrag abgeschlossen (Historie)"/>
+
+    <sequenceFlow id="SF_I1" sourceRef="Start_Insasse" targetRef="Gateway_EntwurfOderEinreichen"/>
+    <sequenceFlow id="SF_I2" name="Entwurf" sourceRef="Gateway_EntwurfOderEinreichen" targetRef="Task_Insasse_Entwurf"/>
+    <sequenceFlow id="SF_I3" name="Einreichen" sourceRef="Gateway_EntwurfOderEinreichen" targetRef="Task_Insasse_Einreichen"/>
+    <sequenceFlow id="SF_I4" sourceRef="Task_Insasse_Einreichen" targetRef="Event_Insasse_Warten"/>
+    <sequenceFlow id="SF_I5" sourceRef="Event_Insasse_Warten" targetRef="Event_Insasse_Entscheidung"/>
+    <sequenceFlow id="SF_I6" sourceRef="Event_Insasse_Entscheidung" targetRef="End_Insasse"/>
+    <sequenceFlow id="SF_I7" sourceRef="Event_Insasse_Aufgabe" targetRef="Task_Insasse_AufgabeErledigen"/>
+    <sequenceFlow id="SF_I8" sourceRef="Task_Insasse_AufgabeErledigen" targetRef="Event_Insasse_Warten"/>
+  </process>
+
+  <!-- ============================================================ -->
+  <!-- POOL 2: Mitarbeiter — Hauptprozess (6 Phasen)                 -->
+  <!-- ============================================================ -->
+  <process id="Process_Mitarbeiter_Haupt" name="Antragsbearbeitung Mitarbeiter" isExecutable="false">
+    <laneSet id="LaneSet_MA">
+      <lane id="Lane_Gruppe" name="Gruppe / Pool">
+        <flowNodeRef>Event_MA_AntragEingegangen</flowNodeRef>
+        <flowNodeRef>Task_MA_Uebernehmen</flowNodeRef>
+        <flowNodeRef>Event_MA_Vertretung</flowNodeRef>
+      </lane>
+      <lane id="Lane_Hauptbearbeiter" name="Hauptbearbeiter">
+        <flowNodeRef>Start_MA</flowNodeRef>
+        <flowNodeRef>SubProcess_Phase_Pruefung</flowNodeRef>
+        <flowNodeRef>SubProcess_Phase_Entscheiden</flowNodeRef>
+        <flowNodeRef>SubProcess_Phase_Bekanntgabe</flowNodeRef>
+        <flowNodeRef>Gateway_VollzugNoetig</flowNodeRef>
+        <flowNodeRef>SubProcess_Phase_Vollzug</flowNodeRef>
+        <flowNodeRef>SubProcess_Phase_Abschluss</flowNodeRef>
+        <flowNodeRef>Task_MA_Benachrichtigen</flowNodeRef>
+        <flowNodeRef>Task_MA_AufgabeErstellen</flowNodeRef>
+        <flowNodeRef>Event_MA_AufgabeErledigt</flowNodeRef>
+        <flowNodeRef>SubProcess_Weiterleitung</flowNodeRef>
+        <flowNodeRef>End_MA_Veraktet</flowNodeRef>
+      </lane>
+    </laneSet>
+
+    <startEvent id="Start_MA" name="Antrag im Pool"/>
+
+    <!-- Phase 1+2: Eingang → Übernahme → Prüfung -->
+    <intermediateCatchEvent id="Event_MA_AntragEingegangen" name="Antrag eingegangen">
+      <messageEventDefinition messageRef="Message_AntragEingereicht"/>
+    </intermediateCatchEvent>
+    <userTask id="Task_MA_Uebernehmen" name="Antrag übernehmen&#10;(nehmeAntrag)&#10;status: in-bearbeitung"/>
+    <subProcess id="SubProcess_Phase_Pruefung" name="Phase 2: PRÜFUNG">
+      <documentation>Sachlich/fachlich prüfen. Flag: sachlichGeprueft=true</documentation>
+      <startEvent id="Start_Pruefung"/>
+      <userTask id="Task_MA_Pruefen" name="Als geprüft markieren&#10;(markiereAlsGeprueft)"/>
+      <endEvent id="End_Pruefung"/>
+      <sequenceFlow id="SF_P1" sourceRef="Start_Pruefung" targetRef="Task_MA_Pruefen"/>
+      <sequenceFlow id="SF_P2" sourceRef="Task_MA_Pruefen" targetRef="End_Pruefung"/>
+    </subProcess>
+
+    <!-- Phase 3: Entscheiden -->
+    <subProcess id="SubProcess_Phase_Entscheiden" name="Phase 3: ENTSCHEIDEN">
+      <documentation>Entscheidung: genehmigt | teilweise-genehmigt | abgelehnt. Flag: entscheidungGetroffen=true</documentation>
+      <startEvent id="Start_Entscheiden"/>
+      <exclusiveGateway id="Gateway_Entscheidungsart" name="Entscheidung"/>
+      <userTask id="Task_MA_Genehmigen" name="Genehmigen"/>
+      <userTask id="Task_MA_Teilweise" name="Teilweise genehmigen"/>
+      <userTask id="Task_MA_Ablehnen" name="Ablehnen"/>
+      <exclusiveGateway id="Gateway_EntscheidungMerge" name=""/>
+      <exclusiveGateway id="Gateway_BekanntgabeModus" name="Bekanntgabe-Modus?"/>
+      <endEvent id="End_Entscheiden"/>
+      <sequenceFlow id="SF_E1" sourceRef="Start_Entscheiden" targetRef="Gateway_Entscheidungsart"/>
+      <sequenceFlow id="SF_E2" name="genehmigt" sourceRef="Gateway_Entscheidungsart" targetRef="Task_MA_Genehmigen"/>
+      <sequenceFlow id="SF_E3" name="teilweise" sourceRef="Gateway_Entscheidungsart" targetRef="Task_MA_Teilweise"/>
+      <sequenceFlow id="SF_E4" name="abgelehnt" sourceRef="Gateway_Entscheidungsart" targetRef="Task_MA_Ablehnen"/>
+      <sequenceFlow id="SF_E5" sourceRef="Task_MA_Genehmigen" targetRef="Gateway_EntscheidungMerge"/>
+      <sequenceFlow id="SF_E6" sourceRef="Task_MA_Teilweise" targetRef="Gateway_EntscheidungMerge"/>
+      <sequenceFlow id="SF_E7" sourceRef="Task_MA_Ablehnen" targetRef="Gateway_EntscheidungMerge"/>
+      <sequenceFlow id="SF_E8" sourceRef="Gateway_EntscheidungMerge" targetRef="Gateway_BekanntgabeModus"/>
+      <sequenceFlow id="SF_E9" name="sofort" sourceRef="Gateway_BekanntgabeModus" targetRef="End_Entscheiden"/>
+      <sequenceFlow id="SF_E10" name="pers. Eröffnung" sourceRef="Gateway_BekanntgabeModus" targetRef="End_Entscheiden"/>
+      <sequenceFlow id="SF_E11" name="Vollzug vor Bekanntgabe" sourceRef="Gateway_BekanntgabeModus" targetRef="End_Entscheiden"/>
+    </subProcess>
+
+    <!-- Phase 4: Bekanntgabe -->
+    <subProcess id="SubProcess_Phase_Bekanntgabe" name="Phase 4: BEKANNTGABE">
+      <documentation>wartetAufEroeffnung | wartetAufVollzug | sofort erledigt</documentation>
+      <startEvent id="Start_Bekanntgabe"/>
+      <exclusiveGateway id="Gateway_BekanntgabePfad" name="Pfad?"/>
+      <serviceTask id="Task_MA_AutoBekanntgabe" name="Automatische Bekanntgabe&#10;(erledigt=true)"/>
+      <userTask id="Task_MA_PersEroeffnung" name="Persönliche Eröffnung bestätigen&#10;(bestaetigePersoenlicheEroeffnung)"/>
+      <userTask id="Task_MA_VollzugVorBekanntgabe" name="Vollzug vor Bekanntgabe bestätigen&#10;(bestaetigeVollzugVorBekanntgabe)"/>
+      <exclusiveGateway id="Gateway_BekanntgabeMerge" name=""/>
+      <endEvent id="End_Bekanntgabe"/>
+      <sequenceFlow id="SF_B1" sourceRef="Start_Bekanntgabe" targetRef="Gateway_BekanntgabePfad"/>
+      <sequenceFlow id="SF_B2" name="sofort" sourceRef="Gateway_BekanntgabePfad" targetRef="Task_MA_AutoBekanntgabe"/>
+      <sequenceFlow id="SF_B3" name="pers. Eröffnung" sourceRef="Gateway_BekanntgabePfad" targetRef="Task_MA_PersEroeffnung"/>
+      <sequenceFlow id="SF_B4" name="Vollzug vor Bek." sourceRef="Gateway_BekanntgabePfad" targetRef="Task_MA_VollzugVorBekanntgabe"/>
+      <sequenceFlow id="SF_B5" sourceRef="Task_MA_AutoBekanntgabe" targetRef="Gateway_BekanntgabeMerge"/>
+      <sequenceFlow id="SF_B6" sourceRef="Task_MA_PersEroeffnung" targetRef="Gateway_BekanntgabeMerge"/>
+      <sequenceFlow id="SF_B7" sourceRef="Task_MA_VollzugVorBekanntgabe" targetRef="Gateway_BekanntgabeMerge"/>
+      <sequenceFlow id="SF_B8" sourceRef="Gateway_BekanntgabeMerge" targetRef="End_Bekanntgabe"/>
+    </subProcess>
+
+    <serviceTask id="Task_MA_Benachrichtigen" name="Insasse benachrichtigen&#10;(NotificationSystem)"/>
+
+    <!-- Phase 5: Vollzug -->
+    <exclusiveGateway id="Gateway_VollzugNoetig" name="Vollzug erforderlich?"/>
+    <subProcess id="SubProcess_Phase_Vollzug" name="Phase 5: VOLLZUG">
+      <startEvent id="Start_Vollzug"/>
+      <userTask id="Task_MA_Vollzug" name="Antragsvollzug bestätigen&#10;(markiereAlsVollzogen)&#10;vollzogen=true"/>
+      <endEvent id="End_Vollzug"/>
+      <sequenceFlow id="SF_V1" sourceRef="Start_Vollzug" targetRef="Task_MA_Vollzug"/>
+      <sequenceFlow id="SF_V2" sourceRef="Task_MA_Vollzug" targetRef="End_Vollzug"/>
+    </subProcess>
+
+    <!-- Phase 6: Abschluss -->
+    <subProcess id="SubProcess_Phase_Abschluss" name="Phase 6: ABSCHLUSS">
+      <startEvent id="Start_Abschluss"/>
+      <serviceTask id="Task_MA_PDF" name="Veraktungs-PDF erzeugen&#10;(generateAntragPdf)"/>
+      <userTask id="Task_MA_Verakten" name="Verakten&#10;(verakteAntrag)&#10;veraktet=true"/>
+      <endEvent id="End_Abschluss"/>
+      <sequenceFlow id="SF_A1" sourceRef="Start_Abschluss" targetRef="Task_MA_PDF"/>
+      <sequenceFlow id="SF_A2" sourceRef="Task_MA_PDF" targetRef="Task_MA_Verakten"/>
+      <sequenceFlow id="SF_A3" sourceRef="Task_MA_Verakten" targetRef="End_Abschluss"/>
+    </subProcess>
+
+    <endEvent id="End_MA_Veraktet" name="Antrag veraktet"/>
+
+    <!-- Nebenprozesse (querliegend) -->
+    <subProcess id="SubProcess_Weiterleitung" name="Weiterleitung (optional)" triggeredByEvent="false">
+      <documentation>weiterleitenAntrag | weiterleitenAnGruppe — jederzeit bis Veraktung</documentation>
+      <startEvent id="Start_Weiterleitung"/>
+      <exclusiveGateway id="Gateway_WeiterleitungZiel" name="Ziel?"/>
+      <userTask id="Task_MA_WeiterleitenMA" name="An Mitarbeiter weiterleiten"/>
+      <userTask id="Task_MA_WeiterleitenGruppe" name="An Gruppe weiterleiten&#10;+ Gruppenaufgabe"/>
+      <endEvent id="End_Weiterleitung"/>
+      <sequenceFlow id="SF_W1" sourceRef="Start_Weiterleitung" targetRef="Gateway_WeiterleitungZiel"/>
+      <sequenceFlow id="SF_W2" name="Mitarbeiter" sourceRef="Gateway_WeiterleitungZiel" targetRef="Task_MA_WeiterleitenMA"/>
+      <sequenceFlow id="SF_W3" name="Gruppe" sourceRef="Gateway_WeiterleitungZiel" targetRef="Task_MA_WeiterleitenGruppe"/>
+      <sequenceFlow id="SF_W4" sourceRef="Task_MA_WeiterleitenMA" targetRef="End_Weiterleitung"/>
+      <sequenceFlow id="SF_W5" sourceRef="Task_MA_WeiterleitenGruppe" targetRef="End_Weiterleitung"/>
+    </subProcess>
+
+    <userTask id="Task_MA_AufgabeErstellen" name="Aufgabe erstellen&#10;(createAufgabe)"/>
+    <intermediateCatchEvent id="Event_MA_AufgabeErledigt" name="Aufgabe erledigt">
+      <messageEventDefinition messageRef="Message_AufgabeAntwort"/>
+    </intermediateCatchEvent>
+    <intermediateCatchEvent id="Event_MA_Vertretung" name="48h-Vertretung">
+      <messageEventDefinition messageRef="Message_AntragEingereicht"/>
+    </intermediateCatchEvent>
+
+    <!-- Hauptsequenz -->
+    <sequenceFlow id="SF_M1" sourceRef="Event_MA_AntragEingegangen" targetRef="Task_MA_Uebernehmen"/>
+    <sequenceFlow id="SF_M2" sourceRef="Task_MA_Uebernehmen" targetRef="SubProcess_Phase_Pruefung"/>
+    <sequenceFlow id="SF_M3" sourceRef="SubProcess_Phase_Pruefung" targetRef="SubProcess_Phase_Entscheiden"/>
+    <sequenceFlow id="SF_M4" sourceRef="SubProcess_Phase_Entscheiden" targetRef="SubProcess_Phase_Bekanntgabe"/>
+    <sequenceFlow id="SF_M5" sourceRef="SubProcess_Phase_Bekanntgabe" targetRef="Task_MA_Benachrichtigen"/>
+    <sequenceFlow id="SF_M6" sourceRef="Task_MA_Benachrichtigen" targetRef="Gateway_VollzugNoetig"/>
+    <sequenceFlow id="SF_M7" name="genehmigt/teilweise" sourceRef="Gateway_VollzugNoetig" targetRef="SubProcess_Phase_Vollzug"/>
+    <sequenceFlow id="SF_M8" name="abgelehnt" sourceRef="Gateway_VollzugNoetig" targetRef="SubProcess_Phase_Abschluss"/>
+    <sequenceFlow id="SF_M9" sourceRef="SubProcess_Phase_Vollzug" targetRef="SubProcess_Phase_Abschluss"/>
+    <sequenceFlow id="SF_M10" sourceRef="SubProcess_Phase_Abschluss" targetRef="End_MA_Veraktet"/>
+  </process>
+
+  <!-- ============================================================ -->
+  <!-- POOL 3: System                                                -->
+  <!-- ============================================================ -->
+  <process id="Process_System" name="System-Automatik" isExecutable="false">
+    <startEvent id="Start_System" name="Bearbeitung gestartet"/>
+    <intermediateCatchEvent id="Event_System_48h" name="48h Timer">
+      <timerEventDefinition>
+        <timeDuration>PT48H</timeDuration>
+      </timerEventDefinition>
+    </intermediateCatchEvent>
+    <serviceTask id="Task_System_Vertretung" name="freigabeZurVertretung&#10;Bearbeiter entfernen&#10;Gruppenaufgabe"/>
+    <endEvent id="End_System"/>
+    <sequenceFlow id="SF_S1" sourceRef="Start_System" targetRef="Event_System_48h"/>
+    <sequenceFlow id="SF_S2" sourceRef="Event_System_48h" targetRef="Task_System_Vertretung"/>
+    <sequenceFlow id="SF_S3" sourceRef="Task_System_Vertretung" targetRef="End_System"/>
+  </process>
+
+  <!-- ============================================================ -->
+  <!-- Unterprozess: Aufgabe bearbeiten (Mitarbeiter)                -->
+  <!-- ============================================================ -->
+  <process id="Process_Aufgabe_MA" name="Aufgabe bearbeiten (Mitarbeiter)" isExecutable="false">
+    <startEvent id="Start_AufgabeMA" name="Aufgabe zugewiesen"/>
+    <exclusiveGateway id="Gateway_AufgabeTyp" name="Typ?"/>
+    <userTask id="Task_Aufgabe_Antwort" name="Antwort eingeben"/>
+    <userTask id="Task_Aufgabe_Kenntnis" name="Kenntnisnahme"/>
+    <exclusiveGateway id="Gateway_NachErledigung" name="Nach Erledigung?"/>
+    <userTask id="Task_Aufgabe_Zurueck" name="Zurück an Ersteller&#10;(markiereAufgabeAbgegeben)"/>
+    <userTask id="Task_Aufgabe_Uebertragen" name="Bearbeitung übernehmen&#10;(uebernehmBearbeitung)"/>
+    <userTask id="Task_Aufgabe_UebernahmeHB" name="Hauptbearbeitung übernehmen&#10;(nehmeAntrag)"/>
+    <endEvent id="End_AufgabeMA"/>
+    <sequenceFlow id="SF_AM1" sourceRef="Start_AufgabeMA" targetRef="Gateway_AufgabeTyp"/>
+    <sequenceFlow id="SF_AM2" name="antwort" sourceRef="Gateway_AufgabeTyp" targetRef="Task_Aufgabe_Antwort"/>
+    <sequenceFlow id="SF_AM3" name="kenntnisnahme" sourceRef="Gateway_AufgabeTyp" targetRef="Task_Aufgabe_Kenntnis"/>
+    <sequenceFlow id="SF_AM4" sourceRef="Task_Aufgabe_Antwort" targetRef="Gateway_NachErledigung"/>
+    <sequenceFlow id="SF_AM5" sourceRef="Task_Aufgabe_Kenntnis" targetRef="Gateway_NachErledigung"/>
+    <sequenceFlow id="SF_AM6" name="zurueck" sourceRef="Gateway_NachErledigung" targetRef="Task_Aufgabe_Zurueck"/>
+    <sequenceFlow id="SF_AM7" name="uebertragen" sourceRef="Gateway_NachErledigung" targetRef="Task_Aufgabe_Uebertragen"/>
+    <sequenceFlow id="SF_AM8" name="Weiterleitung/Vertretung" sourceRef="Gateway_NachErledigung" targetRef="Task_Aufgabe_UebernahmeHB"/>
+    <sequenceFlow id="SF_AM9" sourceRef="Task_Aufgabe_Zurueck" targetRef="End_AufgabeMA"/>
+    <sequenceFlow id="SF_AM10" sourceRef="Task_Aufgabe_Uebertragen" targetRef="End_AufgabeMA"/>
+    <sequenceFlow id="SF_AM11" sourceRef="Task_Aufgabe_UebernahmeHB" targetRef="End_AufgabeMA"/>
+  </process>
+
+  <!-- Diagramm (BPMN DI — grobe Layout-Positionen für bpmn.io) -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Antragswesen">
+      <bpmndi:BPMNShape id="Participant_Insasse_di" bpmnElement="Participant_Insasse" isHorizontal="true">
+        <omgdc:Bounds x="160" y="80" width="1200" height="200"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Mitarbeiter_di" bpmnElement="Participant_Mitarbeiter" isHorizontal="true">
+        <omgdc:Bounds x="160" y="320" width="1200" height="480"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_System_di" bpmnElement="Participant_System" isHorizontal="true">
+        <omgdc:Bounds x="160" y="840" width="600" height="120"/>
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</definitions>
