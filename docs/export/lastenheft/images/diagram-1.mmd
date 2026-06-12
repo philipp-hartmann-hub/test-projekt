@@ -1,0 +1,20 @@
+flowchart LR
+  subgraph P1["Phase 1: EINGANG"]
+    A1[Antrag offen]
+  end
+  subgraph P2["Phase 2: PRÜFUNG"]
+    A2[sachlichGeprueft]
+  end
+  subgraph P3["Phase 3: ENTSCHEIDEN"]
+    A3[entscheidungGetroffen]
+  end
+  subgraph P4["Phase 4: BEKANNTGABE"]
+    A4[erledigt / persoenlichEroeffnet]
+  end
+  subgraph P5["Phase 5: VOLLZUG"]
+    A5[vollzogen]
+  end
+  subgraph P6["Phase 6: ABSCHLUSS"]
+    A6[veraktet]
+  end
+  P1 --> P2 --> P3 --> P4 --> P5 --> P6

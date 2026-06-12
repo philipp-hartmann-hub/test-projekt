@@ -1,0 +1,33 @@
+flowchart TB
+  subgraph Insasse["Pool: Insasse"]
+    I1[Antragstyp + Formular]
+    I2{Entwurf?}
+    I3[Einreichen]
+    I4[Aufgabe beantworten]
+    I1 --> I2
+    I2 -->|nein| I3
+    I3 -.->|Message| M1
+  end
+
+  subgraph MA["Pool: Mitarbeiter / Gruppe"]
+    M1[Antrag eingegangen]
+    M2[Übernehmen]
+    M3[Prüfung]
+    M4[Entscheiden]
+    M5[Bekanntgabe]
+    M6{Vollzug?}
+    M7[Vollzug]
+    M8[Verakten]
+    M1 --> M2 --> M3 --> M4 --> M5 --> M6
+    M6 -->|ja| M7 --> M8
+    M6 -->|nein| M8
+  end
+
+  subgraph SYS["Pool: System"]
+    S1[48h Timer]
+    S2[Vertretung]
+    S1 --> S2
+    S2 -.->|Message| M1
+  end
+
+  M5 -.->|Message| I4

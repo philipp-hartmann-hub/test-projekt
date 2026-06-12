@@ -1,0 +1,9 @@
+flowchart TD
+  Start[Aufgabe zugewiesen] --> Typ{Typ?}
+  Typ -->|antwort| Antwort[Antwort eingeben]
+  Typ -->|kenntnisnahme| Kenntnis[Kenntnisnahme]
+  Antwort --> Nach{Nach Erledigung?}
+  Kenntnis --> Nach
+  Nach -->|zurueck| Zurueck[Zurück an Ersteller]
+  Nach -->|uebertragen| Uebertragen[Bearbeitung übernehmen]
+  Nach -->|Weiterleitung/Vertretung| HB[Hauptbearbeitung übernehmen]
